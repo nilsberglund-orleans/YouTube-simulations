@@ -1,21 +1,17 @@
 /*********************************************************************************/
 /*                                                                               */
-/*  Animation of wave equation in a planar domain                                */
+/*  Animation of Schrödinger equation in a planar domain                         */
 /*                                                                               */
-/*  N. Berglund, december 2012, may  2021                                        */
-/*                                                                               */
-/*  UPDATE 24/04: distinction between damping and "elasticity" parameters        */
-/*  UPDATE 27/04: new billiard shapes, bug in color scheme fixed                 */
-/*  UPDATE 28/04: code made more efficient, with help of Marco Mancini           */
+/*  N. Berglund, May 2021                                                        */
 /*                                                                               */
 /*  Feel free to reuse, but if doing so it would be nice to drop a               */
 /*  line to nils.berglund@univ-orleans.fr - Thanks!                              */
 /*                                                                               */
 /*  compile with                                                                 */
-/*  gcc -o wave_billiard wave_billiard.c                                         */
+/*  gcc -o schrodinger schrodinger.c                                             */
 /* -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp        */
 /*                                                                               */
-/*  To make a video, set MOVIE to 1 and create subfolder tif_wave                */
+/*  To make a video, set MOVIE to 1 and create subfolder tif_schrod              */
 /*  It may be possible to increase parameter PAUSE                               */
 /*                                                                               */
 /*  create movie using                                                           */
@@ -59,7 +55,7 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 8      /* choice of domain shape */
+#define B_DOMAIN 3      /* choice of domain shape */
 
 #define D_RECTANGLE 0   /* rectangular domain */
 #define D_ELLIPSE 1     /* elliptical domain */
@@ -74,51 +70,63 @@
 #define D_GRATING 10    /* diffraction grating */
 #define D_EHRENFEST 11  /* Ehrenfest urn type geometry */
 
-#define LAMBDA 1.0	    /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.2	    /* parameter controlling the dimensions of domain */
 #define MU 0.05	            /* parameter controlling the dimensions of domain */
-#define NPOLY 8             /* number of sides of polygon */
+#define NPOLY 6             /* number of sides of polygon */
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
 
 /* You can add more billiard tables by adapting the functions */
-/* xy_in_billiard and draw_billiard below */
+/* xy_in_billiard and draw_billiard in sub_wave.c */
 
 /* Physical patameters of wave equation */
 
-#define COURANT 0.01       /* Courant number */
-#define GAMMA 0.0      /* damping factor in wave equation */
-// #define GAMMA 5.0e-10      /* damping factor in wave equation */
-#define KAPPA 5.0e-6       /* "elasticity" term enforcing oscillations */
-// #define KAPPA 5.0e-9       /* "elasticity" term enforcing oscillations */
-// #define KAPPA 5.0e-8       /* "elasticity" term enforcing oscillations */
-/* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
-/* The physical damping coefficient is given by GAMMA/(DT)^2 */
-/* Increasing COURANT speeds up the simulation, but decreases accuracy */
-/* For similar wave forms, COURANT^2*GAMMA should be kept constant */
+#define DT 0.00000002
+// #define DT 0.000000005
+#define HBAR 1.0
+
+/* Boundary conditions */
+
+#define B_COND 1
+
+#define BC_DIRICHLET 0   /* Dirichlet boundary conditions */
+#define BC_PERIODIC 1    /* periodic boundary conditions */
+#define BC_ABSORBING 2   /* absorbing boundary conditions (beta version) */
+
+/* Parameters for length and speed of simulation */
+
+#define NSTEPS 4500      /* number of frames of movie */
+#define NVID 750         /* number of iterations between images displayed on screen */
+#define NSEG 100         /* number of segments of boundary */
+
+#define PAUSE 1000       /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1        /* final sleeping time */
 
 /* For debugging purposes only */
 #define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
 #define VMAX 10.0       /* max value of wave amplitude */
 
-/* Parameters for length and speed of simulation */
 
-#define NSTEPS 5000      /* number of frames of movie */
-#define NVID 25          /* number of iterations between images displayed on screen */
-#define NSEG 100         /* number of segments of boundary */
+/* Plot type */
 
-#define PAUSE 1000         /* number of frames after which to pause */
-#define PSLEEP 1         /* sleep time during pause */
-#define SLEEP1  1        /* initial sleeping time */
-#define SLEEP2  1   /* final sleeping time */
+#define PLOT 0
+
+#define P_MODULE 0        /* plot module of wave function squared */
+#define P_PHASE 1         /* plot phase of wave function */
+#define P_REAL 2          /* plot real part */
+#define P_IMAGINARY 3     /* plot imaginary part */
 
 /* Color schemes */
 
-#define BLACK 1          /* background */
+#define BLACK 1          /* black background */
 
 #define COLOR_SCHEME 1   /* choice of color scheme */
 
 #define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
 #define C_HUE 1          /* color scheme modifies hue */
+#define C_PHASE 2        /* color scheme shows phase */
 
 #define SCALE 1          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
@@ -128,10 +136,8 @@
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
 #define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
 #define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
-#define HUEMEAN 100.0    /* mean value of hue for color scheme C_HUE */
-#define HUEAMP 80.0      /* amplitude of variation of hue for color scheme C_HUE */
-// #define HUEMEAN 320.0    /* mean value of hue for color scheme C_HUE */
-// #define HUEAMP 100.0      /* amplitude of variation of hue for color scheme C_HUE */
+#define HUEMEAN 150.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP -150.0      /* amplitude of variation of hue for color scheme C_HUE */
 
 /* Basic math */
 
@@ -142,48 +148,75 @@
 #include "sub_wave.c"
 
 double courant2;  /* Courant parameter squared */
+double dx2;       /* spatial step size squared */
+double intstep;   /* integration step */
+double intstep1;  /* integration step used in absorbing boundary conditions */
 
-void init_wave(x, y, phi, psi, xy_in)
-/* initialise field with drop at (x,y) - phi is wave height, psi is phi at time t-1 */
-    double x, y, *phi[NX], *psi[NX]; short int * xy_in[NX];
+
+
+
+void init_coherent_state(x, y, px, py, scalex, phi, psi, xy_in)
+/* initialise field with coherent state of position (x,y) and momentum (px, py) */
+/* phi is real part, psi is imaginary part */
+    double x, y, px, py, scalex, *phi[NX], *psi[NX]; 
+    short int * xy_in[NX];
 
 {
     int i, j;
-    double xy[2], dist2;
+    double xy[2], dist2, module, phase, scale2;    
 
+    scale2 = scalex*scalex;
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
             ij_to_xy(i, j, xy);
-            dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
 	    xy_in[i][j] = xy_in_billiard(xy[0],xy[1]);
-	    phi[i][j] = 0.2*exp(-dist2/0.001)*cos(-sqrt(dist2)/0.01);
-            psi[i][j] = 0.0;
+
+            if (xy_in[i][j])
+            {
+                dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+                module = exp(-dist2/scale2);
+                if (module < 1.0e-15) module = 1.0e-15;
+                phase = (px*(xy[0]-x) + py*(xy[1]-y))/scalex;
+
+                phi[i][j] = module*cos(phase);
+                psi[i][j] = module*sin(phase);
+            }
+            else
+            {
+                phi[i][j] = 0.0;
+                psi[i][j] = 0.0;
+            }
         }
 }
-
-void add_drop_to_wave(factor, x, y, phi, psi)
-/* add drop at (x,y) to the field with given prefactor */
-double factor, x, y, *phi[NX], *psi[NX];
-{
-    int i, j;
-    double xy[2], dist2;
-
-    for (i=0; i<NX; i++)
-        for (j=0; j<NY; j++)
-        {
-            ij_to_xy(i, j, xy);
-            dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
-            phi[i][j] += 0.2*factor*exp(-dist2/0.001)*cos(-sqrt(dist2)/0.01);
-        }
-}
-
 
 
 
 /*********************/
 /* animation part    */
 /*********************/
+
+void schrodinger_color_scheme(phi, psi, scale, time, rgb)
+double phi, psi, scale, rgb[3];
+int time;
+{
+    double phase, amp, lum;
+    
+    if (PLOT == P_MODULE)
+        color_scheme(COLOR_SCHEME, 2.0*module2(phi, psi)-1.0, scale, time, rgb);
+    else if (PLOT == P_PHASE)
+    {
+        amp = module2(phi,psi);
+//         if (amp < 1.0e-10) amp = 1.0e-10;
+        phase = argument(phi/amp, psi/amp);
+        if (phase < 0.0) phase += DPI;
+        lum = (color_amplitude(amp, scale, time))*0.5;
+        if (lum < 0.0) lum = 0.0;
+        hsl_to_rgb(phase*360.0/DPI, 0.9, lum, rgb);
+    }
+    else if (PLOT == P_REAL) color_scheme(COLOR_SCHEME, phi, scale, time, rgb);
+    else if (PLOT == P_IMAGINARY) color_scheme(COLOR_SCHEME, psi, scale, time, rgb);
+}
 
 
 void draw_wave(phi, psi, xy_in, scale, time)
@@ -193,7 +226,7 @@ short int *xy_in[NX];
 int time;
 {
     int i, j;
-    double rgb[3], xy[2], x1, y1, x2, y2;
+    double rgb[3], xy[2], x1, y1, x2, y2, amp, phase;
 
     glBegin(GL_QUADS);
 
@@ -202,7 +235,8 @@ int time;
         {
             if (xy_in[i][j])
             {
-                color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
+                schrodinger_color_scheme(phi[i][j],psi[i][j], scale, time, rgb);
+                    
                 glColor3f(rgb[0], rgb[1], rgb[2]);
 
                 glVertex2i(i, j);
@@ -217,36 +251,80 @@ int time;
 
 void evolve_wave(phi, psi, xy_in)
 /* time step of field evolution */
-/* phi is value of field at time t, psi at time t-1 */
+/* phi is real part, psi is imaginary part */
     double *phi[NX], *psi[NX]; short int *xy_in[NX];
 {
     int i, j, iplus, iminus, jplus, jminus;
-    double delta, x, y;
+    double delta1, delta2, x, y;
 
-    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta,x,y)
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta1,delta2,x,y)
     for (i=0; i<NX; i++){
         for (j=0; j<NY; j++){
             if (xy_in[i][j]){
-                /* discretized Laplacian */
-		iplus = (i+1) % NX;
-		iminus = (i-1) % NX;
-		if (iminus < 0) iminus += NX;
-                jplus = (j+1) % NY;
-                jminus = (j-1) % NY;
-                if (jminus < 0) jminus += NY;
-                delta = phi[iplus][j] + phi[iminus][j] + phi[i][jplus] + phi[i][jminus] - 4.0*phi[i][j];
+                /* discretized Laplacian depending on boundary conditions */
+                if ((B_COND == BC_DIRICHLET)||(B_COND == BC_ABSORBING))
+                {
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    jplus = (j+1);   if (jplus == NY) jplus = NY-1;
+                    jminus = (j-1);  if (jminus == -1) jminus = 0;
+                }
+                else if (B_COND == BC_PERIODIC)
+                {
+                    iplus = (i+1) % NX;
+                    iminus = (i-1) % NX;
+                    if (iminus < 0) iminus += NX;
+                    jplus = (j+1) % NY;
+                    jminus = (j-1) % NY;
+                    if (jminus < 0) jminus += NY;
+                }
+                
+                delta1 = phi[iplus][j] + phi[iminus][j] + phi[i][jplus] + phi[i][jminus] - 4.0*phi[i][j];
+                delta2 = psi[iplus][j] + psi[iminus][j] + psi[i][jplus] + psi[i][jminus] - 4.0*psi[i][j];
 
                 x = phi[i][j];
 		y = psi[i][j];
 
-                /* evolve phi */
-                phi[i][j] = -y + 2*x + courant2*delta - KAPPA*x - GAMMA*(x-y);
+                /* evolve phi and psi */
+                if (B_COND != BC_ABSORBING)
+                {
+                    phi[i][j] = x - intstep*delta2;
+                    psi[i][j] = y + intstep*delta1;
+                }
+                else        /* case of absorbing b.c. - this is only an approximation of correct way of implementing */
+                {
+                    /* in the bulk */
+                    if ((i>0)&&(i<NX-1)&&(j>0)&&(j<NY-1))
+                    {
+                        phi[i][j] = x - intstep*delta2;
+                        psi[i][j] = y + intstep*delta1;
+                    }
+                     /* right border */
+                    else if (i==NX-1) 
+                    {
+                        phi[i][j] = x - intstep1*(y - psi[i-1][j]);
+                        psi[i][j] = y + intstep1*(x - phi[i-1][j]);
+                    }
+                    /* upper border */
+                    else if (j==NY-1) 
+                    {
+                        phi[i][j] = x - intstep1*(y - psi[i][j-1]);
+                        psi[i][j] = y + intstep1*(x - phi[i][j-1]);
+                    }
+                    /* left border */
+                    else if (i==0) 
+                    {
+                        phi[i][j] = x - intstep1*(y - psi[1][j]);
+                        psi[i][j] = y + intstep1*(x - phi[1][j]);
+                    }
+                   /* lower border */
+                    else if (j==0) 
+                    {
+                        phi[i][j] = x - intstep1*(y - psi[i][1]);
+                        psi[i][j] = y + intstep1*(x - phi[i][1]);
+                    }
+                }
 
-                /* Old versions of the simulation used this: */
-//                 phi[i][j] = (-psi[i][j] + 2*phi[i][j] + courant2*delta)*damping;
-//                 where damping = 1.0 - 0.0001;
-
-                psi[i][j] = x;
 
                 if (FLOOR)
                 {
@@ -263,8 +341,8 @@ void evolve_wave(phi, psi, xy_in)
 
 
 double compute_variance(phi, psi, xy_in)
-/* compute the variance of the field, to adjust color scheme */
-    double *phi[NX], *psi[NX]; short int * xy_in[NX];
+/* compute the variance (total probability) of the field */
+double *phi[NX], *psi[NX]; short int * xy_in[NX];
 {
     int i, j, n = 0;
     double variance = 0.0;
@@ -275,17 +353,38 @@ double compute_variance(phi, psi, xy_in)
             if (xy_in[i][j])
             {
                 n++;
-                variance += phi[i][j]*phi[i][j];
+                variance += phi[i][j]*phi[i][j] + psi[i][j]*psi[i][j];
             }
         }
     if (n==0) n=1;
     return(variance/(double)n);
 }
 
+void renormalise_field(phi, psi, xy_in, variance)
+/* renormalise variance of field */
+double *phi[NX], *psi[NX], variance; 
+short int * xy_in[NX];
+{
+    int i, j;
+    double stdv;
+    
+    stdv = sqrt(variance);
+
+    for (i=1; i<NX; i++)
+        for (j=1; j<NY; j++)
+        {
+            if (xy_in[i][j])
+            {
+                phi[i][j] = phi[i][j]/stdv;
+                psi[i][j] = psi[i][j]/stdv;
+            }
+        }
+}
+
 
 void animation()
 {
-    double time, scale;
+    double time, scale, dx, var;
     double *phi[NX], *psi[NX];
     short int *xy_in[NX];
     int i, j, s;
@@ -298,20 +397,27 @@ void animation()
         xy_in[i] = (short int *)malloc(NY*sizeof(short int));
     }
 
-    courant2 = COURANT*COURANT;
+    dx = (XMAX-XMIN)/((double)NX);
+    intstep = DT/(dx*dx*HBAR);
+    intstep1 = DT/(dx*HBAR);
+    
+    printf("Integration step %.3lg\n", intstep);
 
-    /* initialize wave with a drop at one point, zero elsewhere */
-    init_wave(0.0, 0.0, phi, psi, xy_in);
-
-    /* add a drop at another point */
-//     add_drop_to_wave(1.0, 0.7, 0.0, phi, psi);
-//     add_drop_to_wave(1.0, -0.7, 0.0, phi, psi);
-//     add_drop_to_wave(1.0, 0.0, -0.7, phi, psi);
+    /* initialize wave wave function */
+    init_coherent_state(-1.2, 0.0, 20.0, 0.0, 0.2, phi, psi, xy_in);
+//     init_coherent_state(0.0, 0.0, 0.0, 5.0, 0.03, phi, psi, xy_in);
+//     init_coherent_state(-0.5, 0.0, 1.0, 1.0, 0.05, phi, psi, xy_in);
+    
+    
+    if (SCALE)
+    {
+        var = compute_variance(phi,psi, xy_in);
+        scale = sqrt(1.0 + var);
+        renormalise_field(phi, psi, xy_in, var);
+    }
 
     blank();
     glColor3f(0.0, 0.0, 0.0);
-    draw_wave(phi, psi, xy_in, 1.0, 0);
-    draw_billiard();
 
     glutSwapBuffers();
 
@@ -321,22 +427,22 @@ void animation()
 
     for (i=0; i<=NSTEPS; i++)
     {
-	//printf("%d\n",i);
         /* compute the variance of the field to adjust color scheme */
         /* the color depends on the field divided by sqrt(1 + variance) */
         if (SCALE)
         {
-            scale = sqrt(1.0 + compute_variance(phi,psi, xy_in));
-//             printf("Scaling factor: %5lg\n", scale);
+            var = compute_variance(phi,psi, xy_in);
+            scale = sqrt(1.0 + var);
+//             printf("Norm: %5lg\t Scaling factor: %5lg\n", var, scale);
+            renormalise_field(phi, psi, xy_in, var);
         }
-
         else scale = 1.0;
 
-
         draw_wave(phi, psi, xy_in, scale, i);
-        for (j=0; j<NVID; j++) evolve_wave(phi, psi, xy_in);
-        draw_billiard();
 
+        for (j=0; j<NVID; j++) evolve_wave(phi, psi, xy_in);
+
+        draw_billiard();
 
 	glutSwapBuffers();
 
@@ -350,16 +456,16 @@ void animation()
             {
                 printf("Making a short pause\n");
                 sleep(PSLEEP);
-                s = system("mv wave*.tif tif_wave/");
+                s = system("mv wave*.tif tif_schrod/");
             }
         }
 
     }
 
-    if (MOVIE) 
+    if (MOVIE)
     {
         for (i=0; i<20; i++) save_frame();
-        s = system("mv wave*.tif tif_wave/");
+        s = system("mv wave*.tif tif_schrod/");
     }
     for (i=0; i<NX; i++)
     {
@@ -394,7 +500,7 @@ int main(int argc, char** argv)
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(WINWIDTH,WINHEIGHT);
-    glutCreateWindow("Wave equation in a planar domain");
+    glutCreateWindow("Schrodinger equation in a planar domain");
 
     init();
 

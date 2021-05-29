@@ -1,4 +1,73 @@
+long int global_time = 0;    /* counter to keep track of global time of simulation */
 int nparticles=NPART; 
+
+/*********************/
+/* some basic math   */
+/*********************/
+
+ double vabs(x)     /* absolute value */
+ double x;
+ {
+	double res;
+	
+	if (x<0.0) res = -x;
+	else res = x;
+	return(res);
+ }
+
+ double module2(x, y)   /* Euclidean norm */
+ double x, y;
+
+ {
+	double m;
+
+	m = sqrt(x*x + y*y);
+	return(m);
+ }
+
+ double argument(x, y)
+ double x, y;
+
+ {
+	double alph;
+	
+	if (x!=0.0)
+	{
+		alph = atan(y/x);
+		if (x<0.0)
+			alph += PI;
+	}
+	else 
+	{
+		alph = PID;
+		if (y<0.0)
+			alph = PI*1.5;
+	}
+// 	if (alph < 0.0) alph += DPI;
+	return(alph);
+ }
+ 
+ int polynome(a, b, c, r)
+ double a, b, c, r[2];
+ {
+	double delta, rdelta;
+	int im = 1;
+	
+	delta = b*b - 4*a*c;
+	if (delta<0.0)
+	{
+	/*	printf("ca deconne!");*/
+		rdelta = 0.0;
+		im = 0;
+	}
+	else rdelta = sqrt(delta);
+
+	r[0] = (-b + rdelta)/(2.0*a);
+	r[1] = (-b - rdelta)/(2.0*a);
+
+	return(im);
+ }
+
 
 /*********************/
 /* Graphics routines */
@@ -125,7 +194,14 @@ double rgb[3];
 
 void blank()
 {
-    if (BLACK) glClearColor(0.0, 0.0, 0.0, 1.0);
+    double rgb[3];
+    
+    if (COLOR_OUTSIDE)
+    {
+        hsl_to_rgb(OUTER_COLOR, 0.9, 0.15, rgb); 
+        glClearColor(rgb[0], rgb[1], rgb[2], 1.0);
+    }
+    else if (BLACK) glClearColor(0.0, 0.0, 0.0, 1.0);
     else glClearColor(1.0, 1.0, 1.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 }
@@ -162,16 +238,60 @@ void write_text( double x, double y, char *st)
     }
 } 
 
- 
+
+void paint_billiard_interior()      /* points billiard interior, for use before draw_conf */
+{
+    double x0, x, y, phi, r = 0.01, alpha, dphi, omega;
+    int i, k, c;
+    
+    glLineWidth(4);
+    
+    glEnable(GL_LINE_SMOOTH);
+    
+    switch (B_DOMAIN) {
+        case (D_POLYGON):
+        {
+            omega = DPI/((double)NPOLY);
+            
+            if (PAINT_INT)
+            {
+                if (BLACK) glColor3f(1.0, 1.0, 1.0);
+                else glColor3f(0.0, 0.0, 0.0);
+                
+                glBegin(GL_TRIANGLE_FAN);
+                glVertex2d(0.0, 0.0);
+                for (i=0; i<=NPOLY; i++)
+                {
+                    x = cos(i*omega + APOLY*PID);
+                    y = sin(i*omega + APOLY*PID);
+                    glVertex2d(x, y);
+                    x = cos((i+1)*omega + APOLY*PID);
+                    y = sin((i+1)*omega + APOLY*PID);
+                    glVertex2d(x, y);
+               }
+                glEnd();
+            }
+            break;
+        }
+        default: 
+        {
+            
+        }
+    }
+}
 
 void draw_billiard()      /* draws the billiard boundary */
 {
-    double x0, x, y, phi, r = 0.01, alpha, dphi;
-    int i;
+    double x0, x, y, phi, r = 0.01, alpha, dphi, omega, x1, y1, x2, beta2, angle, s;
+    int i, j, k, c;
     
-    if (BLACK) glColor3f(1.0, 1.0, 1.0);
-    else glColor3f(0.0, 0.0, 0.0);
-    glLineWidth(4);
+    if (PAINT_INT) glColor3f(0.5, 0.5, 0.5);
+    else
+    {
+        if (BLACK) glColor3f(1.0, 1.0, 1.0);
+        else glColor3f(0.0, 0.0, 0.0);
+    }
+    glLineWidth(BILLIARD_WIDTH);
     
     glEnable(GL_LINE_SMOOTH);
     
@@ -324,80 +444,148 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd();
             break; 
         }
+        case (D_ANNULUS):
+        {
+            /* color inner circle */
+            glColor3f(0.5, 0.5, 0.5);
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex2d(MU, 0.0);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*DPI/(double)NSEG;
+                x = LAMBDA*cos(phi) + MU;
+                y = LAMBDA*sin(phi);
+                glVertex2d(x, y);
+            }
+            glEnd();
+            
+            /* color outer domain */
+            glColor3f(0.2, 0.2, 0.2);
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex2d(XMAX, YMAX);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*PID/(double)NSEG;
+                x = cos(phi);
+                y = sin(phi);
+                glVertex2d(x, y);
+            }
+            glEnd();
+
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex2d(XMIN, YMAX);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*PID/(double)NSEG + PID;
+                x = cos(phi);
+                y = sin(phi);
+                glVertex2d(x, y);
+            }
+            glEnd();
+
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex2d(XMIN, YMIN);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*PID/(double)NSEG + PI;
+                x = cos(phi);
+                y = sin(phi);
+                glVertex2d(x, y);
+            }
+            glEnd();
+
+            glBegin(GL_TRIANGLE_FAN);
+            glVertex2d(XMAX, YMIN);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*PID/(double)NSEG + 3.0*PID;
+                x = cos(phi);
+                y = sin(phi);
+                glVertex2d(x, y);
+            }
+            glEnd();
+            
+            glBegin(GL_TRIANGLES);
+            glVertex2d(XMAX, YMAX);
+            glVertex2d(1.0, 0.0);
+            glVertex2d(XMAX, YMIN);
+            glVertex2d(XMAX, YMIN);
+            glVertex2d(0.0, -1.0);
+            glVertex2d(XMIN, YMIN);
+            glVertex2d(XMIN, YMIN);
+            glVertex2d(-1.0, 0.0);
+            glVertex2d(XMIN, YMAX);
+            glVertex2d(XMIN, YMAX);
+            glVertex2d(0.0, 1.0);
+            glVertex2d(XMAX, YMAX);
+            glEnd();
+
+            /* draw circles */
+            if (BLACK) glColor3f(1.0, 1.0, 1.0);
+            else glColor3f(0.0, 0.0, 0.0);
+            
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*DPI/(double)NSEG;
+                x = LAMBDA*cos(phi) + MU;
+                y = LAMBDA*sin(phi);
+                glVertex2d(x, y);
+            }
+            glEnd ();
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*DPI/(double)NSEG;
+                x = cos(phi);
+                y = sin(phi);
+                glVertex2d(x, y);
+            }
+            glEnd ();      
+            break;
+        }
+        case (D_POLYGON):
+        {
+            omega = DPI/((double)NPOLY);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NPOLY; i++)
+            {
+                x = cos(i*omega + APOLY*PID);
+                y = sin(i*omega + APOLY*PID);
+                glVertex2d(x, y);
+            }
+            glEnd ();
+            break;
+        }
+        case (D_REULEAUX):
+        {
+            omega = DPI/((double)NPOLY);
+            beta2 = asin(sin(omega*0.5)/LAMBDA);
+            if (LAMBDA > 0.0) x2 = cos(omega*0.5) + sqrt(LAMBDA*LAMBDA - sin(omega*0.5)*sin(omega*0.5));
+            else x2 = cos(omega*0.5) - sqrt(LAMBDA*LAMBDA - sin(omega*0.5)*sin(omega*0.5));
+            glBegin(GL_LINE_STRIP);
+            for (i=0; i<=NPOLY; i++)
+            {
+                for (j=0; j<NSEG; j++)
+                {
+                    s = 2.0*(((double)j/(double)NSEG)-0.5)*beta2;
+                    x1 = x2 - LAMBDA*cos(s);
+                    y1 = LAMBDA*sin(s);
+                    angle = i*omega + APOLY*PID;
+                    x = cos(angle)*x1 - sin(angle)*y1;
+                    y = sin(angle)*x1 + cos(angle)*y1;
+                    glVertex2d(x, y);
+                }
+            }
+            glEnd ();
+            break;
+        }
         default: 
         {
             printf("Function draw_billiard not defined for this billiard \n");
         }
     }
 }
-
-
-/*********************/
-/* some basic math   */
-/*********************/
-
- double vabs(x)     /* absolute value */
- double x;
- {
-	double res;
-	
-	if (x<0.0) res = -x;
-	else res = x;
-	return(res);
- }
-
- double module2(x, y)   /* Euclidean norm */
- double x, y;
-
- {
-	double m;
-
-	m = sqrt(x*x + y*y);
-	return(m);
- }
-
- double argument(x, y)
- double x, y;
-
- {
-	double alph;
-	
-	if (x!=0.0)
-	{
-		alph = atan(y/x);
-		if (x<0.0)
-			alph += PI;
-	}
-	else 
-	{
-		alph = PID;
-		if (y<0.0)
-			alph = PI*1.5;
-	}
-// 	if (alph < 0.0) alph += DPI;
-	return(alph);
- }
- 
- int polynome(a, b, c, r)
- double a, b, c, r[2];
- {
-	double delta, rdelta;
-	int im = 1;
-	
-	delta = b*b - 4*a*c;
-	if (delta<0.0)
-	{
-	/*	printf("ca deconne!");*/
-		rdelta = 0.0;
-		im = 0;
-	}
-	else rdelta = sqrt(delta);
-
-	r[0] = (-b + rdelta)/(2.0*a);
-	r[1] = (-b - rdelta)/(2.0*a);
-
-	return(im);
- }
 
 
 
@@ -423,9 +611,25 @@ double conf[8];
     printf("s = %.3lg, u = %.3lg, t = %.3lg, L = %.3lg, x0 = %.3lg, y0 = %.3lg, x1 = %.3lg, y1 = %.3lg\n", conf[0], conf[1]/PI, conf[2], conf[3], conf[4], conf[5], conf[6], conf[7]);
 }
 
+void print_config_23(conf)  /* for debugging purposes */
+double conf[8];
+{
+    printf("t = %.8f, L = %.8f\n", conf[2], conf[3]);
+}
+
+void print_colors(color)  /* for debugging purposes */
+int color[NPARTMAX];
+{
+    int i;
+    
+    for (i=0; i<NPART; i++) printf("%i ", color[i]);
+    printf("\n");
+}
 
 
+/****************************************************************************************/
 /* rectangle billiard */
+/****************************************************************************************/
  
  
  int pos_rectangle(conf, pos, alpha)
@@ -696,8 +900,10 @@ double conf[8];
 	return(1);
  }
  
- /* stadium billiard */
- 
+/****************************************************************************************/
+/* stadium billiard */
+/****************************************************************************************/
+
  int pos_stade(conf, pos, alpha)
  /* determine position on boundary of stadium */
  double conf[2], pos[2], *alpha;
@@ -869,7 +1075,9 @@ double conf[8];
         return(c);
  }
  
-  /* Sinai billiard */
+/****************************************************************************************/
+/* Sinai billiard */
+/****************************************************************************************/
  
  int pos_sinai(conf, pos, alpha)
  /* determine position on boundary of Sinai billiard */
@@ -1066,7 +1274,9 @@ double conf[8];
  }
  
  
- /* triangle billiard */
+/****************************************************************************************/
+/* triangle billiard */
+/****************************************************************************************/
  
  
  int pos_triangle(conf, pos, alpha)
@@ -1187,9 +1397,396 @@ double conf[8];
         return(c);
  }
  
+
+/****************************************************************************************/
+ /* annulus billiard */
+/****************************************************************************************/
+
+ int pos_annulus(conf, pos, alpha)
+ /* determine position on boundary of annulus */
+ double conf[2], pos[2], *alpha;
+
+ {
+	double s, theta, psi0, psi, s1, s2, s3, s4;
+
+	s = conf[0]; 
+        theta = conf[1];
+        if (conf[1] < 0.0) conf[1] += DPI;
  
+        if (conf[0] < DPI)      /* inner circle */
+        {
+            pos[0] = LAMBDA*cos(conf[0]) + MU;
+            pos[1] = LAMBDA*sin(conf[0]);
+        
+            theta = PID + conf[0];
+            *alpha = theta - conf[1]; 
+            return(0);
+        }
+        else                    /* outer circle */
+        {
+            pos[0] = cos(conf[0]);
+            pos[1] = sin(conf[0]);
+        
+            theta = argument(-pos[1],pos[0]);
+            *alpha = theta + conf[1]; 
+            return(1);
+        }
+ }
  
- /* general billiard */
+ int vannulus_xy(config, alpha, pos)
+ /* determine initial configuration for start at point pos = (x,y) */
+ double config[8], alpha, pos[2];
+
+ {
+	double l, s0, c0, t, t1, x, y, x1, y1, a, b, delta, res[2], s, r;
+	double psi, lam2, margin = 1.0e-14, theta;
+// 	double psi, lam2, margin = 1.0e-14, theta;
+	int c, intb=1, intc, i;
+
+	/* initial position and velocity */
+
+        c0 = cos(alpha);
+        s0 = sin(alpha);
+       
+        /* intersection with inner circle, using parametric equation of line */
+        b = (pos[0]-MU)*c0 + pos[1]*s0;
+        a = (pos[0]-MU)*(pos[0]-MU) + pos[1]*pos[1] - LAMBDA*LAMBDA;
+        delta = b*b - a;
+                
+        if ((delta > margin)&&(a > margin))
+        {
+            t = - b - sqrt(delta);  
+            x1 = pos[0] + t*c0;
+            y1 = pos[1] + t*s0;
+            s = argument(x1-MU,y1);
+            while (s<0.0) s += DPI;
+            while (s>=DPI) s -= DPI;
+            config[0] = s;
+            config[1] = 3.0*PID - s + alpha;
+            c = 0;
+        }
+        else    /* intersection with outer circle, using parametric equation of line */
+        {
+            b = pos[0]*c0 + pos[1]*s0;
+            a = pos[0]*pos[0] + pos[1]*pos[1] - 1.0;
+        
+            t = (-b+sqrt(b*b - a));
+            x1 = pos[0] + t*c0;
+            y1 = pos[1] + t*s0;
+        
+            /* parameter of intersection with outer circle */
+            config[0] = argument(x1, y1);
+            while (config[0] < DPI) config[0] += DPI;
+            while (config[0] >= 2.0*DPI) config[0] -= DPI;
+        
+            /* computation of outgoing angle after collision with outer circle */
+            theta = argument(-y1,x1);
+            config[1] = theta - alpha; 
+//             while (config[1] < 0.0) config[1] += DPI;
+//             while (config[1] > DPI) config[1] -= DPI; 
+            c = 1;
+        }
+   
+        if (config[1] < 0.0) config[1] += DPI;
+
+//         config[2] = 1.0e-12;	/* running time */ 
+        config[2] = 0.0;	/* running time */ 
+	config[3] = module2(x1-pos[0], y1-pos[1]);     /* distance to collision */
+	config[4] = pos[0];    /* start position */
+	config[5] = pos[1];
+	config[6] = x1;        /* position of collision */
+	config[7] = y1;
+	
+	return(c);
+ }
+
+ int vannulus(config)
+ /* determine initial configuration when starting from boundary */
+ double config[8];
+
+ {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_annulus(config, pos, &alpha);
+        
+        vannulus_xy(config, alpha, pos);
+	
+	return(c);
+ }
+ 
+/****************************************************************************************/
+/* polygonal billiard */
+/****************************************************************************************/
+
+ int pos_polygon(conf, pos, alpha)
+ /* determine position on boundary of polygon */
+ /* conf[0] is arclength on boundary */
+ double conf[2], pos[2], *alpha;
+
+ {
+	double s, theta, omega, length, s1, angle, x, y;
+        int c;
+
+	s = conf[0]; 
+        theta = conf[1];
+        
+        omega = DPI/((double)NPOLY);
+        length = 2.0*sin(0.5*omega);
+
+        c = (int)(s/length);         /* side of polygon */
+        
+        s1 = s - ((double)c)*length;
+        
+        x = 1.0 + (cos(omega) - 1.0)*s1/length;
+        y = sin(omega)*s1/length;
+        
+        angle = (double)c*omega + PID*APOLY;
+        
+        pos[0] = x*cos(angle) - y*sin(angle);
+        pos[1] = x*sin(angle) + y*cos(angle);
+        
+        *alpha = (0.5 + (double)c)*omega + theta + PID*(1.0 + APOLY);
+        
+        return(c);
+ }
+ 
+ int vpolygon_xy(config, alpha, pos)
+ /* determine initial configuration for start at point pos = (x,y) */
+ double config[8], alpha, pos[2];
+
+ {
+	double s, theta, omega, length, rlength, s1, rangle, x, y, xp, yp, x1, y1, ca, sa;
+	int k, c, intb=1, intc, i;
+
+        /* dimensions/angles of polygon */
+        omega = DPI/((double)NPOLY);
+        length = 2.0*sin(0.5*omega);
+        rlength = cos(0.5*omega);
+        
+        for (k=0; k<NPOLY; k++)
+        {
+            /* rotate position so that kth side is vertical */
+            rangle = (0.5 + (double)k)*omega + APOLY*PID;
+            theta = alpha - rangle;
+                
+            if ((cos(theta) > 0.0)&&(intb))
+            {
+                ca = cos(rangle);
+                sa = sin(rangle);
+                
+                x = pos[0]*ca + pos[1]*sa;
+                y = -pos[0]*sa + pos[1]*ca;
+            
+                xp = rlength;
+                yp = y + (xp-x)*tan(theta);
+                
+                if (vabs(yp) < 0.5*length) 
+                {
+                    /* rotate back */
+                    x1 = xp*ca - yp*sa;
+                    y1 = xp*sa + yp*ca;
+                    
+                    intb = 0;
+                    c = k;
+                    config[0] = ((double)k + 0.5)*length + yp;
+                    config[1] = PID - theta;
+                }
+            }
+        }
+       
+        if (config[1] < 0.0) config[1] += DPI;
+
+        config[2] = 0.0;	/* running time */ 
+	config[3] = module2(x1-pos[0], y1-pos[1]);     /* distance to collision */
+	config[4] = pos[0];    /* start position */
+	config[5] = pos[1];
+	config[6] = x1;        /* position of collision */
+	config[7] = y1;
+	
+	return(c);
+ }
+
+ int vpolygon(config)
+ /* determine initial configuration when starting from boundary */
+ double config[8];
+
+ {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_polygon(config, pos, &alpha);
+        
+        vpolygon_xy(config, alpha, pos);
+	
+	return(c);
+ }
+ 
+/****************************************************************************************/
+/* Reuleaux-type and star-shaped billiard */
+/****************************************************************************************/
+
+ int pos_reuleaux(conf, pos, alpha)
+ /* determine position on boundary of polygon */
+ /* conf[0] is arclength on boundary */
+ double conf[2], pos[2], *alpha;
+
+ {
+	double s, theta, omega2, beta2, beta, s1, angle, x2, x, y;
+        int c;
+
+	s = conf[0]; 
+        theta = conf[1];
+        
+        omega2 = PI/((double)NPOLY);
+        beta2 = asin(sin(omega2)/vabs(LAMBDA));
+        beta = beta2*2.0;
+
+        c = (int)(s/beta);         /* side of shape */
+        
+        s1 = s - ((double)c)*beta;
+        
+        if (LAMBDA > 0.0) x2 = cos(omega2) + sqrt(LAMBDA*LAMBDA - sin(omega2)*sin(omega2));
+        else x2 = cos(omega2) - sqrt(LAMBDA*LAMBDA - sin(omega2)*sin(omega2));
+        
+        x = x2 - LAMBDA*cos(s1 - beta2);
+        y = LAMBDA*sin(s1 - beta2);
+        
+        angle = 2.0*((double)c)*omega2 + PID*APOLY;
+        
+        pos[0] = x*cos(angle) - y*sin(angle);
+        pos[1] = x*sin(angle) + y*cos(angle);
+        
+        *alpha = PID - s1 + beta2 + theta + 2.0*(double)c*omega2 + APOLY*PID;
+        
+//         printf("alpha = %.5lg\t", *alpha);
+        
+        return(c);
+ }
+ 
+ int vreuleaux_xy(config, alpha, pos)
+ /* determine initial configuration for start at point pos = (x,y) */
+ double config[8], alpha, pos[2];
+
+ {
+	double s, theta, omega2, beta, s1, rangle, x, y, x1[NPOLY], y1[NPOLY], xi, yi, t, x2;
+        double ca, sa, a, b, margin = 1.0e-14, tmin, tval[NPOLY], tempconf[NPOLY][2];
+	int k, c, intb=1, intc, i, nt = 0, cval[NPOLY], ntmin;
+
+        /* dimensions/angles of polygon */
+        omega2 = PI/((double)NPOLY);
+        beta = 2.0*asin(sin(omega2)/vabs(LAMBDA));
+//         printf("beta = %.5lg\n", beta);
+        
+        if (LAMBDA > 0.0) x2 = cos(omega2) + sqrt(LAMBDA*LAMBDA - sin(omega2)*sin(omega2));
+        else x2 = cos(omega2) - sqrt(LAMBDA*LAMBDA - sin(omega2)*sin(omega2));
+//         printf("x2 = %.5lg\n", x2);
+        
+        for (k=0; k<NPOLY; k++)
+        {
+            /* rotate position so that kth side is vertical */
+            rangle = 2.0*(double)k*omega2 + APOLY*PID;
+            theta = alpha - rangle;
+            
+//             if ((intb))     /* check if condition is ok */
+//             if ((cos(theta) > 0.0)&&(intb))     /* check if condition is ok */
+            {
+                ca = cos(rangle);
+                sa = sin(rangle);
+                
+//                 printf("theta = %.5lg\n", theta);
+//                 printf("rangle = %.5lg x0 = %.5lg y0 = %.5lg \n", rangle, pos[0], pos[1]);
+                
+                x = pos[0]*ca + pos[1]*sa;
+                y = -pos[0]*sa + pos[1]*ca;
+                
+//                 printf("x = %.5lg\t y = %.5lg\n", x, y);
+            
+                a = (x-x2)*cos(theta) + y*sin(theta);
+                b = (x-x2)*(x-x2) + y*y - LAMBDA*LAMBDA;
+                
+//                 printf("a = %.5lg\t b = %.5lg\n", a, b);
+                
+                if (a*a - b > margin)
+                {
+//                     t = vabs(a) - sqrt(a*a - b);
+                    if (LAMBDA > 0.0) t = -a - sqrt(a*a - b);
+                    else t = -a + sqrt(a*a - b);
+                    
+                    xi = x + t*cos(theta);
+                    yi = y + t*sin(theta);
+                    
+//                     printf("t = %.5lg\t xi = %.5lg\t yi = %.5lg\n", t, xi, yi);
+                
+                    if ((t > margin)&&(vabs(yi) <= sin(omega2))) 
+                    {
+                        cval[nt] = k;
+                        tval[nt] = t;
+                        
+                        /* rotate back */
+                        x1[nt] = xi*ca - yi*sa;
+                        y1[nt] = xi*sa + yi*ca;
+                    
+//                         intb = 0;
+//                         c = k;
+                        tempconf[nt][0] = ((double)k + 0.5)*beta + asin(yi/LAMBDA);
+                        tempconf[nt][1] = PID - asin(yi/LAMBDA) - theta;      
+//                         tempconf[nt][0] = ((double)k + 0.5)*beta + asin(yi/vabs(LAMBDA));
+//                         tempconf[nt][1] = PID - asin(yi/vabs(LAMBDA)) - theta;      
+                        nt++;
+                    }
+                }
+            }
+        }
+//         printf("nt = %i\n", nt);
+        
+        /* find earliest intersection */
+        tmin = tval[0];
+        ntmin = 0;
+        for (i=1; i<nt; i++) 
+            if (tval[i] < tmin) 
+            {
+                tmin = tval[i];
+                ntmin = i;
+            }
+            
+        config[0] = tempconf[ntmin][0];
+        config[1] = tempconf[ntmin][1];
+        c = cval[ntmin];
+ 
+//         printf("nt = %i\t ntmin = %i \tcmin = %i\n", nt, ntmin, c);
+        
+
+        if (config[1] < 0.0) config[1] += DPI;
+
+        config[2] = 0.0;	/* running time */ 
+	config[3] = module2(x1[ntmin]-pos[0], y1[ntmin]-pos[1]);     /* distance to collision */
+	config[4] = pos[0];    /* start position */
+	config[5] = pos[1];
+	config[6] = x1[ntmin];        /* position of collision */
+	config[7] = y1[ntmin];
+	
+	return(c);
+ }
+
+ int vreuleaux(config)
+ /* determine initial configuration when starting from boundary */
+ double config[8];
+
+ {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_reuleaux(config, pos, &alpha);
+        
+        vreuleaux_xy(config, alpha, pos);
+	
+	return(c);
+ }
+ 
+/****************************************************************************************/
+/* general billiard */
+/****************************************************************************************/
  
  int pos_billiard(conf, pos, alpha)
  /* determine initial configuration for start at point pos = (x,y) */
@@ -1221,9 +1818,24 @@ double conf[8];
             return(pos_triangle(conf, pos, &alpha));
             break;
         }
+        case (D_ANNULUS):
+        {
+            return(pos_annulus(conf, pos, &alpha));
+            break;
+        }
+        case (D_POLYGON):
+        {
+            return(pos_polygon(conf, pos, &alpha));
+            break;
+        }
+        case (D_REULEAUX):
+        {
+            return(pos_reuleaux(conf, pos, &alpha));
+            break;
+        }
         default: 
         {
-            printf("Function vbilliard_xy not defined for this billiard \n");
+            printf("Function pos_billiard not defined for this billiard \n");
         }
     }
  }
@@ -1258,6 +1870,21 @@ double conf[8];
         case (D_TRIANGLE):
         {
             return(vtriangle_xy(config, alpha, pos));
+            break;
+        }
+        case (D_ANNULUS):
+        {
+            return(vannulus_xy(config, alpha, pos));
+            break;
+        }
+        case (D_POLYGON):
+        {
+            return(vpolygon_xy(config, alpha, pos));
+            break;
+        }
+        case (D_REULEAUX):
+        {
+            return(vreuleaux_xy(config, alpha, pos));
             break;
         }
         default: 
@@ -1312,9 +1939,30 @@ double conf[8];
             return(vtriangle(config, alpha, pos));
             break;
         }
+        case (D_ANNULUS):
+        {
+            c = pos_annulus(config, pos, &alpha);
+        
+            return(vannulus(config, alpha, pos));
+            break;
+        }
+        case (D_POLYGON):
+        {
+            c = pos_polygon(config, pos, &alpha);
+        
+            return(vpolygon(config, alpha, pos));
+            break;
+        }
+        case (D_REULEAUX):
+        {
+            c = pos_reuleaux(config, pos, &alpha);
+        
+            return(vreuleaux(config, alpha, pos));
+            break;
+        }
         default: 
         {
-            printf("Function vbilliard_xy not defined for this billiard \n");
+            printf("Function vbilliard not defined for this billiard \n");
         }
     }
  }
@@ -1323,8 +1971,9 @@ double conf[8];
  /* returns 1 if (x,y) represents a point in the billiard */
  double x, y;
  {
-    double l2, r2;
-    
+    double l2, r2, omega, omega2, c, angle, x1, y1, x2, co, so;
+    int condition, k;
+ 
     switch (B_DOMAIN) {
         case D_RECTANGLE: 
         {
@@ -1369,6 +2018,56 @@ double conf[8];
             else return(0);
             break;
         }
+        case D_ANNULUS:
+        {
+            l2 = LAMBDA*LAMBDA;
+            r2 = x*x + y*y;
+            if ((r2 > l2)&&(r2 < 1.0)) return(1);
+            else return(0);
+            break;
+        }
+        case D_POLYGON:
+        {
+            condition = 1;
+            omega = DPI/((double)NPOLY);
+            c = cos(omega*0.5);
+            for (k=0; k<NPOLY; k++)  
+            {
+                angle = APOLY*PID + (k+0.5)*omega;
+                condition = condition*(x*cos(angle) + y*sin(angle) < c);
+            }
+            return(condition);
+            break;
+        }
+        case D_REULEAUX:
+        {
+            condition = 1;
+            omega2 = PI/((double)NPOLY);
+            co = cos(omega2);
+            so = sin(omega2);
+            if (LAMBDA > 0.0) x2 = co + sqrt(LAMBDA*LAMBDA - so*so);
+            else x2 = co - sqrt(LAMBDA*LAMBDA - so*so);
+                        
+            for (k=0; k<NPOLY; k++)  
+            {
+                angle = 2.0*(double)k*omega2 + APOLY*PID;
+                
+                x1 = x*cos(angle) + y*sin(angle);
+                y1 = -x*sin(angle) + y*cos(angle);
+                if (LAMBDA > 0.0) condition = condition*((x1-x2)*(x1-x2) + y1*y1 > LAMBDA*LAMBDA);
+                else condition = condition*((x1-x2)*(x1-x2) + y1*y1 < LAMBDA*LAMBDA);
+                
+//                 if (!condition)
+//                 {
+//                     printf("x = %.5lg \t y = %.5lg \t x1 = %.5lg \t y1 = %.5lg \t angle = %.5lg \n", x, y, x1, y1, angle);
+//                     printf("k = %i \t condition = %i\n", k, condition);
+//                     sleep(1);
+//                 }
+            }
+            return(condition);
+            break;            
+        }
+        /* D_REULEAUX : distance to all centers of arcs should be larger than LAMBDA */
         default: 
         {
             printf("Function ij_in_billiard not defined for this billiard \n");

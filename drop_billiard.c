@@ -33,14 +33,18 @@
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
-#define YMIN -1.125
-#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+#define XMIN -1.8
+#define XMAX 1.8	/* x interval */
+#define YMIN -0.91
+#define YMAX 1.115	/* y interval for 9/16 aspect ratio */
+// #define XMIN -2.0
+// #define XMAX 2.0	/* x interval */
+// #define YMIN -1.125
+// #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 5      /* choice of domain shape */
+#define B_DOMAIN 9      /* choice of domain shape */
 
 #define D_RECTANGLE 0   /* rectangular domain */
 #define D_ELLIPSE 1     /* elliptical domain */
@@ -48,35 +52,58 @@
 #define D_SINAI 3       /* Sinai billiard */
 #define D_DIAMOND 4     /* diamond-shaped billiard */
 #define D_TRIANGLE 5    /* triangular billiard */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+#define D_REULEAUX 9    /* Reuleaux and star shapes */
 
-// #define LAMBDA 1.5	/* parameter controlling shape of billiard */
-#define LAMBDA 1.73205080756888	/* sqrt(3) for triangle tiling plane */
+// #define LAMBDA 1.0	/* parameter controlling shape of billiard */
+#define LAMBDA 1.124950941	/* sin(36°)/sin(31.5°) for 5-star shape with 45° angles */
+// #define LAMBDA 1.445124904	/* sin(36°)/sin(24°) for 5-star shape with 60° angles */
+// #define LAMBDA 3.75738973	/* sin(36°)/sin(9°) for 5-star shape with 90° angles */
+// #define LAMBDA -1.73205080756888	/* -sqrt(3) for Reuleaux triangle */
+// #define LAMBDA 1.73205080756888	/* sqrt(3) for triangle tiling plane */
+#define MU 0.1          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
+#define NPOLY 5             /* number of sides of polygon */
+#define APOLY -1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 
 #define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
 
-#define NPART 10000	/* number of particles */
-#define NPARTMAX 20000	/* maximal number of particles after resampling */
-#define LMAX 0.01       /* minimal segment length triggering resampling */ 
-#define LPERIODIC 2.0   /* lines longer than this are not drawn (useful for Sinai billiard) */
-#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
-#define MARGIN 1.0      /* distance above which points of curve are not drawn */
-#define CYCLE 0         /* set to 1 for closed curve (start in all directions) */
+#define NPART 100000	/* number of particles */
+#define NPARTMAX 100000	/* maximal number of particles after resampling */
 
-#define NSTEPS 10000     /* number of frames of movie */
-#define TIME 100         /* time between movie frames, for fluidity of real-time simulation */ 
-#define DPHI 0.0001     /* integration step */
-#define NVID 50         /* number of iterations between images displayed on screen */
-#define NCOLORS 10      /* number of colors */
-#define COLORSHIFT 200  /* hue of initial color */ 
-#define NSEG 100        /* number of segments of boundary */
-
-#define BLACK 1         /* set to 1 for black background */
+#define NSTEPS 4000         /* number of frames of movie */
+#define TIME 15             /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.0001         /* integration step */
+#define NVID 10             /* number of iterations between images displayed on screen */
 
 /* Decreasing TIME accelerates the animation and the movie               */
 /* For constant speed of movie, TIME*DPHI should be kept constant        */
 /* However, increasing DPHI too much deterioriates quality of simulation */
 /* For a good quality movie, take for instance TIME = 50, DPHI = 0.0002  */
+
+/* simulation parameters */
+
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define LPERIODIC 1.0   /* lines longer than this are not drawn (useful for Sinai billiard) */
+#define LCUT 1000.0        /* controls the max size of segments not considered as being cut */
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 0         /* set to 1 for closed curve (start in all directions) */
+#define ORDER_COLORS 1  /* set to 1 if colors should be drawn in order */ 
+
+/* color and other graphical parameters */
+
+#define NCOLORS 10          /* number of colors */
+#define COLORSHIFT 200      /* hue of initial color */ 
+#define NSEG 100            /* number of segments of boundary */
+#define BILLIARD_WIDTH 4    /* width of billiard */
+#define FRONT_WIDTH 3       /* width of wave front */
+
+#define BLACK 1             /* set to 1 for black background */
+#define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 
+#define OUTER_COLOR 300.0   /* color outside billiard */
+#define PAINT_INT 1         /* set to 1 to paint interior in other color (for polygon) */
+
 
 #define PAUSE 1000          /* number of frames after which to pause */
 #define PSLEEP 1         /* sleep time during pause */
@@ -88,6 +115,7 @@
 #define PID 	1.570796327
 
 #include "sub_part_billiard.c"
+
 
 /*********************/
 /* animation part    */
@@ -126,7 +154,8 @@ double *configs[NPARTMAX];
     double dalpha, alpha, pos[2];
   
     while (angle2 < angle1) angle2 += DPI;
-    dalpha = (angle2 - angle1)/((double)(NPART-1));
+    dalpha = (angle2 - angle1)/((double)(NPART));
+//     dalpha = (angle2 - angle1)/((double)(NPART-1));
     for (i=0; i<NPART; i++) 
     {
         alpha = angle1 + dalpha*((double)i);  
@@ -227,37 +256,26 @@ double *configs[NPARTMAX];
     else return(1);
 }
 
-
 void draw_config(color, configs)
-/* draw the wave front */
+/* draw the wave front by ordering colors */
 int color[NPARTMAX];
 double *configs[NPARTMAX];
 {
     int i;
-    double x1, y1, x2, y2, cosphi, sinphi, rgb[3], dist;
+    double x1, y1, x2, y2, cosphi, sinphi, rgb[3], dist, dmax;
 
     glutSwapBuffers(); 
     blank();
+    if (PAINT_INT) paint_billiard_interior();
       
-    glLineWidth(5.0);
+    glLineWidth(FRONT_WIDTH);
     
     glEnable(GL_LINE_SMOOTH);
     if (CYCLE) glBegin (GL_LINE_LOOP);
     else glBegin(GL_LINE_STRIP);
-
+    
     for (i=0; i<nparticles; i++)
-    {
-//      print_config(configs[i]);
-      
-        if (configs[i][2]<0.0) 
-        {    
-            vbilliard(configs[i]);
-            color[i]++;
-            if (color[i] >= NCOLORS) color[i] -= NCOLORS;
-        }
-
-        configs[i][2] += DPHI; 
-        
+    {        
         cosphi = (configs[i][6] - configs[i][4])/configs[i][3];
         sinphi = (configs[i][7] - configs[i][5])/configs[i][3];
         x2 = configs[i][4] + configs[i][2]*cosphi;
@@ -266,18 +284,20 @@ double *configs[NPARTMAX];
         /* determine length of segment to avoid drawing too long segments */
         if (i>0) dist = module2(x2-x1,y2-y1);
         else dist = 0.0;
+        
+        dmax = DPI*((double)global_time)*DPHI/((double)nparticles);
+        /* expected maximal distance between points for growing circle */
     
         rgb_color_scheme(color[i], rgb);
         glColor3d(rgb[0], rgb[1], rgb[2]);
         
-        /* draw line only if it does not exceed */
-        if ((xy_in_billiard(x2, y2))&&(dist < LPERIODIC)) glVertex2d(x2, y2);
+        /* draw line only if it does not exceed LPERIODIC and 2*dmax */
+        if ((xy_in_billiard(x2, y2))&&(dist < LPERIODIC)&&(dist < LCUT*dmax)) glVertex2d(x2, y2);
         else 
         {
             glEnd();
             glBegin (GL_LINE_STRIP);
         }
-
         
         if (configs[i][2] > configs[i][3] - DPHI) configs[i][2] -= configs[i][3];
 
@@ -286,6 +306,67 @@ double *configs[NPARTMAX];
         y1 = y2;
     }
     glEnd ();
+    draw_billiard(LAMBDA);    
+}
+
+
+void draw_ordered_config(color, configs)
+/* draw the wave front, one color after the other */
+int color[NPARTMAX];
+double *configs[NPARTMAX];
+{
+    int i, col;
+    double x1, y1, x2, y2, cosphi, sinphi, rgb[3], dist, dmax;
+
+    glutSwapBuffers(); 
+    blank();
+    if (PAINT_INT) paint_billiard_interior();
+      
+    glLineWidth(FRONT_WIDTH);
+    
+    glEnable(GL_LINE_SMOOTH);
+    
+    
+    for (col=0; col<NCOLORS; col++)
+    {
+        glBegin(GL_LINE_STRIP);
+        for (i=0; i<nparticles; i++)
+        {
+            if (color[i] == col)
+            {        
+                cosphi = (configs[i][6] - configs[i][4])/configs[i][3];
+                sinphi = (configs[i][7] - configs[i][5])/configs[i][3];
+                x2 = configs[i][4] + configs[i][2]*cosphi;
+                y2 = configs[i][5] + configs[i][2]*sinphi;
+        
+                /* determine length of segment to avoid drawing too long segments */
+                if (i>0) dist = module2(x2-x1,y2-y1);
+                else dist = 0.0;
+        
+                dmax = DPI*((double)global_time)*DPHI/((double)nparticles);
+                /* expected maximal distance between points for growing circle */
+    
+                rgb_color_scheme(color[i], rgb);
+                glColor3d(rgb[0], rgb[1], rgb[2]);
+        
+                /* draw line only if it does not exceed LPERIODIC and 2*dmax */
+                if ((i>0)&&(xy_in_billiard(x2, y2))&&(dist < LPERIODIC)&&(dist < LCUT*dmax)) glVertex2d(x2, y2);
+                else 
+                {
+                    glEnd();
+                    glBegin (GL_LINE_STRIP);
+                }
+        
+                if (configs[i][2] > configs[i][3] - DPHI) configs[i][2] -= configs[i][3];
+
+                /* keep track of previous point to determine segment length */
+                x1 = x2;
+                y1 = y2;
+            }
+        }
+        glEnd ();
+    }
+    
     draw_billiard(LAMBDA);    
 }
 
@@ -299,6 +380,7 @@ double *configs[NPARTMAX];
 
     for (j=0; j<time; j++)
     {
+        global_time++;
         for (i=0; i<nparticles; i++)
         {
 //      print_config(configs[i]);
@@ -315,9 +397,6 @@ double *configs[NPARTMAX];
             if (configs[i][2] > configs[i][3] - DPHI) configs[i][2] -= configs[i][3];
         }
     }
-    
-    draw_config(color, configs);
-
 }
 
 void graph_no_movie(time, color, configs)
@@ -329,10 +408,9 @@ double *configs[NPARTMAX];
 
     for (j=0; j<time; j++)
     {
+        global_time++;
         for (i=0; i<nparticles; i++)
         {
-//         print_config(configs[i]);
-      
             if (configs[i][2]<0.0) 
             {    
                 vbilliard(configs[i]);
@@ -347,9 +425,6 @@ double *configs[NPARTMAX];
             if (configs[i][2] > configs[i][3] - DPHI) configs[i][2] -= configs[i][3];
         }
     }
-    
-    draw_config(color, configs);
-    draw_billiard(color, configs);
 }
 
 
@@ -368,20 +443,15 @@ void animation()
     for (i=0; i<NPARTMAX; i++)
         configs[i] = (double *)malloc(8*sizeof(double));
   
-    init_drop_config(0.0, -0.5, 0.0, DPI, configs);
-//     init_drop_config(0.0, -1.0, 0.0, PI, configs);
-//     init_drop_config(0.95, 0.95, PI, 3.0*DPI, configs);
-//     init_drop_config(1.4, 0.9, DPI, configs);
+    init_drop_config(0.0, 0.1, 0.0, DPI, configs);
 //     init_boundary_config(1.5, 1.5, 0.0, PI, configs);
 
-//  other possible initial conditions :
-//     init_drop_config(sqrt(LAMBDA*LAMBDA-1.0) - 0.1,0.0, 0.0, DPI, configs); /* Start at focus */
-//  init_boundary_config(0.0, 0.0, 0.0, PI, configs);
-//  init_drop_config(LAMBDA-0.01, 0.0, PID, 3.0*PID, configs);
   
     blank();  
     glColor3d(0.0, 0.0, 0.0);
     draw_billiard(LAMBDA);
+    if (PAINT_INT) paint_billiard_interior();
+
   
     glutSwapBuffers();   
   
@@ -394,6 +464,11 @@ void animation()
     {
 	if (MOVIE) graph_movie(TIME, color, configs);
         else graph_no_movie(NVID, color, configs);
+        
+        if (ORDER_COLORS) draw_ordered_config(color, configs);
+        else draw_config(color, configs);
+        draw_billiard();
+
         
         /* for the ellipse, paths passing close to the foci are stronly divergent 
          * and the configurations may need to be resampled be adding extra points */ 
