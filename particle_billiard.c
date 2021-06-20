@@ -39,6 +39,9 @@
 #define XMAX 2.0	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define SCALING_FACTOR 1.0       /* scaling factor of drawing, needed for flower billiards, otherwise set to 1.0 */
+
 // #define XMIN -1.8
 // #define XMAX 1.8	/* x interval */
 // #define YMIN -0.91
@@ -57,31 +60,39 @@
 #define D_ANNULUS 7     /* annulus */
 #define D_POLYGON 8     /* polygon */
 #define D_REULEAUX 9    /* Reuleaux and star shapes */
+#define D_FLOWER 10     /* Bunimovich flower */
+#define D_ALT_REU 11    /* alternating between star and Reuleaux */
 
-// #define LAMBDA 5.0	/* parameter controlling shape of billiard */
-#define LAMBDA -1.949855824	/* 7-sided Reuleaux triangle */
+#define LAMBDA -3.346065215	/* sin(60°)/sin(15°) for Reuleaux-type triangle with 90° angles */
+// #define LAMBDA 3.0	/* parameter controlling shape of billiard */
+// #define LAMBDA 0.6	/* parameter controlling shape of billiard */
+// #define LAMBDA 0.4175295	/* sin(20°)/sin(55°) for 9-star shape with 30° angles */
+// #define LAMBDA -1.949855824	/* 7-sided Reuleaux triangle */
 // #define LAMBDA 3.75738973	/* sin(36°)/sin(9°) for 5-star shape with 90° angles */
 // #define LAMBDA -1.73205080756888	/* -sqrt(3) for Reuleaux triangle */
 // #define LAMBDA 1.73205080756888	/* sqrt(3) for triangle tiling plane */
 #define MU 0.1          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
-#define NPOLY 7             /* number of sides of polygon */
-#define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define NPOLY 6             /* number of sides of polygon */
+#define APOLY 2.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
+#define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
 
 #define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
 #define DEBUG 0         /* draw trajectories, for debugging purposes */
 
 /* Simulation parameters */
 
-#define NPART 10000     /* number of particles */
+#define NPART 20000     /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
 
-#define NSTEPS 4000     /* number of frames of movie */
-#define TIME 125       /* time between movie frames, for fluidity of real-time simulation */ 
-#define DPHI 0.00001    /* integration step */
+#define NSTEPS 6000     /* number of frames of movie */
+#define TIME 1000       /* time between movie frames, for fluidity of real-time simulation */ 
+// #define DPHI 0.000005    /* integration step */
+#define DPHI 0.00002    /* integration step */
 #define NVID 150         /* number of iterations between images displayed on screen */
 
 /* Decreasing TIME accelerates the animation and the movie                               */
@@ -92,18 +103,19 @@
 
 /* Colors and other graphical parameters */
 
-#define NCOLORS -7      /* number of colors */
-#define COLORSHIFT 220    /* hue of initial color */ 
-#define NSEG 100        /* number of segments of boundary */
-#define LENGTH 0.01     /* length of velocity vectors */
-#define BILLIARD_WIDTH 4    /* width of billiard */
-#define PARTICLE_WIDTH 2       /* width of particles */
+#define NCOLORS -10      /* number of colors */
+#define COLORSHIFT 200     /* hue of initial color */ 
+#define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
+#define NSEG 100         /* number of segments of boundary */
+#define LENGTH 0.04      /* length of velocity vectors */
+#define BILLIARD_WIDTH 3    /* width of billiard */
+#define PARTICLE_WIDTH 2    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
 
 #define BLACK 1             /* set to 1 for black background */
 #define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 
 #define OUTER_COLOR 270.0   /* color outside billiard */
-#define PAINT_INT 1         /* set to 1 to paint interior in other color (for polygon) */
+#define PAINT_INT 0         /* set to 1 to paint interior in other color (for polygon/Reuleaux) */
 
 
 #define PAUSE 1000       /* number of frames after which to pause */
@@ -230,6 +242,7 @@ double *configs[NPARTMAX];
 
     glutSwapBuffers(); 
     blank();
+    if (PAINT_INT) paint_billiard_interior();
       
     glLineWidth(PARTICLE_WIDTH);
     
@@ -262,40 +275,40 @@ double *configs[NPARTMAX];
             glColor3f(rgb[0], rgb[1], rgb[2]);
         
             glBegin(GL_LINE_STRIP);
-            glVertex2d(x1, y1);
-            glVertex2d(x2, y2);
+            glVertex2d(SCALING_FACTOR*x1, SCALING_FACTOR*y1);
+            glVertex2d(SCALING_FACTOR*x2, SCALING_FACTOR*y2);
             glEnd ();
         
             /* taking care of boundary conditions - only needed for periodic boundary conditions */
-            if (x2 > XMAX)
+            if (SCALING_FACTOR*x2 > XMAX)
             {
                 glBegin(GL_LINE_STRIP);
-                glVertex2d(x1+XMIN-XMAX, y1);
-                glVertex2d(x2+XMIN-XMAX, y2);
+                glVertex2d(SCALING_FACTOR*(x1+XMIN-XMAX), SCALING_FACTOR*y1);
+                glVertex2d(SCALING_FACTOR*(x2+XMIN-XMAX), SCALING_FACTOR*y2);
                 glEnd ();
             }
         
-            if (x2 < XMIN)
+            if (SCALING_FACTOR*x2 < XMIN)
             {
                 glBegin(GL_LINE_STRIP);
-                glVertex2d(x1-XMIN+XMAX, y1);
-                glVertex2d(x2-XMIN+XMAX, y2);
+                glVertex2d(SCALING_FACTOR*(x1-XMIN+XMAX), SCALING_FACTOR*y1);
+                glVertex2d(SCALING_FACTOR*(x2-XMIN+XMAX), SCALING_FACTOR*y2);
                 glEnd ();
             }
 
-            if (y2 > YMAX)
+            if (SCALING_FACTOR*y2 > YMAX)
             {
                 glBegin(GL_LINE_STRIP);
-                glVertex2d(x1, y1+YMIN-YMAX);
-                glVertex2d(x2, y2+YMIN-YMAX);
+                glVertex2d(SCALING_FACTOR*x1, SCALING_FACTOR*(y1+YMIN-YMAX));
+                glVertex2d(SCALING_FACTOR*x2, SCALING_FACTOR*(y2+YMIN-YMAX));
                 glEnd ();
             }
 
-            if (y2 < YMIN)
+            if (SCALING_FACTOR*y2 < YMIN)
             {
                 glBegin(GL_LINE_STRIP);
-                glVertex2d(x1, y1+YMAX-YMIN);
-                glVertex2d(x2, y2+YMAX-YMIN);
+                glVertex2d(SCALING_FACTOR*x1, SCALING_FACTOR*(y1+YMAX-YMIN));
+                glVertex2d(SCALING_FACTOR*x2, SCALING_FACTOR*(y2+YMAX-YMIN));
                 glEnd ();
             }
         }
@@ -305,15 +318,15 @@ double *configs[NPARTMAX];
         {
             glLineWidth(1.0);
             glBegin(GL_LINES);
-            glVertex2d(configs[i][4], configs[i][5]);
-            glVertex2d(configs[i][6], configs[i][7]);
+            glVertex2d(SCALING_FACTOR*configs[i][4], SCALING_FACTOR*configs[i][5]);
+            glVertex2d(SCALING_FACTOR*configs[i][6], SCALING_FACTOR*configs[i][7]);
             glEnd ();
             glLineWidth(3.0);
         }
     
         if (configs[i][2] > configs[i][3] - DPHI) configs[i][2] -= configs[i][3];
     }
-    draw_billiard();    
+    if (DRAW_BILLIARD) draw_billiard();    
 }
 
 
@@ -355,9 +368,9 @@ double *configs[NPARTMAX];
 
 void animation()
 {
-    double time, dt, alpha;
+    double time, dt, alpha, r;
     double *configs[NPARTMAX];
-    int i, j, resamp = 1, s;
+    int i, j, resamp = 1, s, i1, i2;
     int *color, *newcolor, *active;
     
     /* Since NPARTMAX can be big, it seemed wiser to use some memory allocation here */
@@ -368,19 +381,21 @@ void animation()
         configs[i] = (double *)malloc(8*sizeof(double));
       
     /* initialize system by putting particles in a given point with a range of velocities */
-    alpha = 3.0*PI/7.0;
-    init_sym_drop_config(-0.99, 0.0, -alpha, alpha, configs);
+    r = cos(PI/(double)NPOLY)/cos(DPI/(double)NPOLY);
+
+//     init_drop_config(0.0, 0.0, -0.2, 0.2, configs);    
+//     init_drop_config(0.5, 0.5, -1.0, 1.0, configs);    
+//     init_sym_drop_config(-1.0, 0.5, -PID, PID, configs);
 //     init_drop_config(-0.999, 0.0, -alpha, alpha, configs);
-//     init_drop_config(0.0, 0.5, 0.0, DPI, configs);
 
 //  other possible initial conditions :
 //     init_line_config(-0.6, 0.2, -0.6, 0.7, 0.0, configs);
 //     init_line_config(-0.7, -0.45, -0.7, 0.45, 0.0, configs);
-//     init_line_config(0.0, 0.1, 0.0, 0.7, 0.0, configs);
+    init_line_config(0.0, -0.3, 0.0, 0.3, 0.0, configs);
   
     blank();  
     glColor3f(0.0, 0.0, 0.0);
-    draw_billiard();
+    if (DRAW_BILLIARD) draw_billiard();
   
     glutSwapBuffers();   
   
@@ -391,6 +406,24 @@ void animation()
         newcolor[i] = 0;
         active[i] = 1;
     }
+    
+    if (FLOWER_COLOR)   /* adapt color scheme to flower configuration (beta implementation) */
+    {
+//         i1 = (int)((double)NPART*0.2538);     /* the 0.27 is just a trial-and-error guess, to be improved */
+//         i1 = (int)((double)NPART*0.1971);     /* the 0.27 is just a trial-and-error guess, to be improved */
+        i1 = (int)((double)NPART*0.3015);     /* the 0.27 is just a trial-and-error guess, to be improved */
+        i2 = NPART-i1;
+        for (i=i1; i<i2; i++) 
+        {
+            color[i] += NCOLORS/3;
+            newcolor[i] = NCOLORS/3;
+        }
+        for (i=i2; i<NPART; i++) 
+        {
+            color[i] += 2*NCOLORS/3;
+            newcolor[i] = 2*NCOLORS/3;
+        }
+    }
   
     sleep(SLEEP1);
   
@@ -399,7 +432,7 @@ void animation()
         graph_movie(TIME, newcolor, configs, active);
         
         draw_config(newcolor, configs, active);
-        draw_billiard();
+        if (DRAW_BILLIARD) draw_billiard();
         for (j=0; j<NPARTMAX; j++) color[j] = newcolor[j];
 
         

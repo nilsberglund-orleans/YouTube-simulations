@@ -198,6 +198,7 @@ void write_text( double x, double y, char *st)
 
 
 
+
 /*********************/
 /* some basic math   */
 /*********************/
@@ -296,6 +297,22 @@ double xy[2];
     xy[1] = YMIN + ((double)j)*(YMAX-YMIN)/((double)NY);
 }
 
+void draw_rectangle(x1, y1, x2, y2)
+double x1, y1, x2, y2;
+{
+    double pos[2];
+    
+    glBegin(GL_LINE_LOOP);
+    xy_to_pos(x1, y1, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x2, y1, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x2, y2, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x1, y2, pos);
+    glVertex2d(pos[0], pos[1]);
+    glEnd();    
+}
 
 
 
@@ -303,7 +320,7 @@ int xy_in_billiard(x, y)
 /* returns 1 if (x,y) represents a point in the billiard */
 double x, y;
 {
-    double l2, r2, omega, c, angle, z;
+    double l2, r2, r2mu, omega, c, angle, z, x1, y1, u, v, u1, v1;
     int i, k, k1, k2, condition;
 
     switch (B_DOMAIN) {
@@ -399,6 +416,124 @@ double x, y;
         {
             return(((x-1.0)*(x-1.0) + y*y < LAMBDA*LAMBDA)||((x+1.0)*(x+1.0) + y*y < LAMBDA*LAMBDA)||((vabs(x) < 1.0)&&(vabs(y) < MU)));
         }
+        case D_MENGER:       
+        {
+            x1 = 0.5*(x+1.0);
+            y1 = 0.5*(y+1.0);
+            for (k=0; k<MDEPTH; k++)
+            {
+                x1 = x1*(double)MRATIO;
+                y1 = y1*(double)MRATIO;
+                if ((vabs(x)<1.0)&&(vabs(y)<1.0)&&(((int)x1 % MRATIO)==MRATIO/2)&&(((int)y1 % MRATIO)==MRATIO/2)) return(0);
+            }
+            return(1);
+        }
+        case D_JULIA_INT:  
+        {
+            u = x/JULIA_SCALE;
+            v = y/JULIA_SCALE;
+            i = 0;
+            while ((i<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+            {
+                u1 = u*u - v*v + julia_x;
+                v = 2.0*u*v + julia_y;
+                u = u1;
+                i++;
+            }
+            if (u*u + v*v < MANDELLIMIT) return(1);
+            else return(0);
+        }
+        case D_ANNULUS_HEATED:      /* returns 2 if in inner circle */ 
+        {
+            l2 = LAMBDA*LAMBDA;
+            r2 = x*x + y*y;
+            r2mu = (x-MU)*(x-MU) + y*y;
+            if ((r2mu > l2)&&(r2 < 1.0)) return(1);
+            else if (r2mu <= l2) return(2);
+            else return (0);
+        }
+        case D_MENGER_HEATED: 
+        {
+            if ((vabs(x) >= 1.0)||(vabs(y) >= 1.0)) return(0);
+            else
+            {
+                x1 = 0.5*(x+1.0);
+                y1 = 0.5*(y+1.0);
+                for (k=0; k<MDEPTH; k++)
+                {
+                    x1 = x1*(double)MRATIO;
+                    y1 = y1*(double)MRATIO;
+                    if ((((int)x1 % MRATIO)==MRATIO/2)&&(((int)y1 % MRATIO)==MRATIO/2)) return(k+2);
+                }
+                return(1);
+            }
+        }
+        case D_MENGER_H_OPEN:       /* returns 2 if in inner circle */ 
+        {
+            x1 = 0.5*(x+1.0);
+            y1 = 0.5*(y+1.0);
+            for (k=0; k<MDEPTH; k++)
+            {
+                x1 = x1*(double)MRATIO;
+                y1 = y1*(double)MRATIO;
+                if ((vabs(x)<1.0)&&(vabs(y)<1.0)&&(((int)x1 % MRATIO)==MRATIO/2)&&(((int)y1 % MRATIO)==MRATIO/2)) return(k+2);
+            }
+            return(1);
+        }
+        case D_MANDELBROT:  
+        {
+            u = 0.0;
+            v = 0.0;
+            i = 0;
+            while ((i<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+            {
+                u1 = u*u - v*v + x;
+                v = 2.0*u*v + y;
+                u = u1;
+                i++;
+                /* old version used */
+                /* u1 = u*u - v*v - x; */
+                /* v = 2.0*u*v - y; */
+            }
+            if (u*u + v*v < MANDELLIMIT) return(0);
+            else if ((x-0.5)*(x-0.5)/3.0 + y*y/1.0 > 1.2) return(2);
+            else return(1);
+        }
+        case D_MANDELBROT_CIRCLE:  
+        {
+            u = 0.0;
+            v = 0.0;
+            i = 0;
+            while ((i<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+            {
+                u1 = u*u - v*v + x;
+                v = 2.0*u*v + y;
+                u = u1;
+                i++;
+            }
+            if (u*u + v*v < MANDELLIMIT) return(0);
+            else if ((x-LAMBDA)*(x-LAMBDA) + (y-0.5)*(y-0.5) < MU*MU) return(2);
+            else return(1);
+        }
+        case D_JULIA:  
+        {
+            u = x/JULIA_SCALE;
+            v = y/JULIA_SCALE;
+            i = 0;
+            while ((i<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+            {
+                u1 = u*u - v*v + julia_x;
+                v = 2.0*u*v + julia_y;
+                u = u1;
+                i++;
+//                 printf("x = %.5lg y = %.5lg i = %i r2 = %.5lg\n", x, y, i, u*u+v*v);
+            }
+//             printf("i = %i x = %.5lg y = %.5lg r2 = %.5lg\n", i, x, y, u*u+v*v);
+            if (u*u + v*v < MANDELLIMIT) return(0);
+            else if (x*x/3.0 + y*y/1.0 > 1.2) return(2);
+//             else if ((vabs(x) > XMAX - 0.01)||(vabs(y) > YMAX - 0.01)) return(2);
+            else return(1);
+        }
         default:
         {
             printf("Function ij_in_billiard not defined for this billiard \n");
@@ -423,8 +558,8 @@ int i, j;
 
 void draw_billiard()      /* draws the billiard boundary */
 {
-    double x0, x, y, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z;
-    int i, j, k1, k2;
+    double x0, x, y, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l;
+    int i, j, k1, k2, mr2;
 
     if (BLACK) glColor3f(1.0, 1.0, 1.0);
     else glColor3f(0.0, 0.0, 0.0);
@@ -710,7 +845,195 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd ();
             break;
         }
-        default:
+        case (D_MENGER):
+        {
+            glLineWidth(3);
+//             draw_rectangle(XMIN, -1.0, XMAX, 1.0);
+            
+            /* level 1 */
+            if (MDEPTH > 0)
+            {
+                glLineWidth(2);
+                x = 1.0/((double)MRATIO);
+                draw_rectangle(x, x, -x, -x);
+            }
+            
+            /* level 2 */
+            if (MDEPTH > 1)
+            {
+                glLineWidth(1);
+                mr2 = MRATIO*MRATIO;
+                l = 2.0/((double)mr2);
+                
+                for (i=0; i<MRATIO; i++)
+                    for (j=0; j<MRATIO; j++)
+                        if ((i!=MRATIO/2)||(j!=MRATIO/2))
+                        {
+                            x = -1.0 - 0.5*l + 2.0*((double)i + 0.5)/((double)MRATIO);
+                            y = -1.0 - 0.5*l + 2.0*((double)j + 0.5)/((double)MRATIO);
+                            draw_rectangle(x, y, x+l, y+l);
+                        }
+            }
+            
+            /* level 3 */
+            if (MDEPTH > 2)
+            {
+                glLineWidth(1);
+                l = 2.0/((double)(mr2*MRATIO));
+                
+                for (i=0; i<mr2; i++)
+                    for (j=0; j<mr2; j++)
+                        if ( (((i%MRATIO!=MRATIO/2))||(j%MRATIO!=MRATIO/2)) && (((i/MRATIO!=MRATIO/2))||(j/MRATIO!=MRATIO/2)) )
+                        {
+                            x = -1.0 - 0.5*l + 2.0*((double)i + 0.5)/((double)mr2);
+                            y = -1.0 - 0.5*l + 2.0*((double)j + 0.5)/((double)mr2);
+                            draw_rectangle(x, y, x+l, y+l);
+                        }
+            }
+            
+            break;
+        }        
+         case (D_JULIA_INT):
+        {
+            /* Do nothing */
+            break;
+        }
+        case (D_ANNULUS_HEATED):
+        {
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*DPI/(double)NSEG;
+                x = MU + LAMBDA*cos(phi);
+                y = LAMBDA*sin(phi);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*DPI/(double)NSEG;
+                x = cos(phi);
+                y = sin(phi);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();      
+            break;
+        }
+        case (D_MENGER_HEATED):
+        {
+            glLineWidth(3);
+            draw_rectangle(-1.0, -1.0, 1.0, 1.0);
+            
+            /* level 1 */
+            if (MDEPTH > 0)
+            {
+                glLineWidth(2);
+                x = 1.0/((double)MRATIO);
+                draw_rectangle(x, x, -x, -x);
+            }
+            
+            /* level 2 */
+            if (MDEPTH > 1)
+            {
+                glLineWidth(1);
+                mr2 = MRATIO*MRATIO;
+                l = 2.0/((double)mr2);
+                
+                for (i=0; i<MRATIO; i++)
+                    for (j=0; j<MRATIO; j++)
+                        if ((i!=MRATIO/2)||(j!=MRATIO/2))
+                        {
+                            x = -1.0 - 0.5*l + 2.0*((double)i + 0.5)/((double)MRATIO);
+                            y = -1.0 - 0.5*l + 2.0*((double)j + 0.5)/((double)MRATIO);
+                            draw_rectangle(x, y, x+l, y+l);
+                        }
+            }
+            
+            /* level 3 */
+            if (MDEPTH > 2)
+            {
+                glLineWidth(1);
+                l = 2.0/((double)(mr2*MRATIO));
+                
+                for (i=0; i<mr2; i++)
+                    for (j=0; j<mr2; j++)
+                        if ( (((i%MRATIO!=MRATIO/2))||(j%MRATIO!=MRATIO/2)) && (((i/MRATIO!=MRATIO/2))||(j/MRATIO!=MRATIO/2)) )
+                        {
+                            x = -1.0 - 0.5*l + 2.0*((double)i + 0.5)/((double)mr2);
+                            y = -1.0 - 0.5*l + 2.0*((double)j + 0.5)/((double)mr2);
+                            draw_rectangle(x, y, x+l, y+l);
+                        }
+            }
+            
+            break;
+        }
+        case (D_MENGER_H_OPEN):
+        {
+            glLineWidth(3);
+//             draw_rectangle(XMIN, -1.0, XMAX, 1.0);
+            
+            /* level 1 */
+            if (MDEPTH > 0)
+            {
+                glLineWidth(2);
+                x = 1.0/((double)MRATIO);
+                draw_rectangle(x, x, -x, -x);
+            }
+            
+            /* level 2 */
+            if (MDEPTH > 1)
+            {
+                glLineWidth(1);
+                mr2 = MRATIO*MRATIO;
+                l = 2.0/((double)mr2);
+                
+                for (i=0; i<MRATIO; i++)
+                    for (j=0; j<MRATIO; j++)
+                        if ((i!=MRATIO/2)||(j!=MRATIO/2))
+                        {
+                            x = -1.0 - 0.5*l + 2.0*((double)i + 0.5)/((double)MRATIO);
+                            y = -1.0 - 0.5*l + 2.0*((double)j + 0.5)/((double)MRATIO);
+                            draw_rectangle(x, y, x+l, y+l);
+                        }
+            }
+            
+            /* level 3 */
+            if (MDEPTH > 2)
+            {
+                glLineWidth(1);
+                l = 2.0/((double)(mr2*MRATIO));
+                
+                for (i=0; i<mr2; i++)
+                    for (j=0; j<mr2; j++)
+                        if ( (((i%MRATIO!=MRATIO/2))||(j%MRATIO!=MRATIO/2)) && (((i/MRATIO!=MRATIO/2))||(j/MRATIO!=MRATIO/2)) )
+                        {
+                            x = -1.0 - 0.5*l + 2.0*((double)i + 0.5)/((double)mr2);
+                            y = -1.0 - 0.5*l + 2.0*((double)j + 0.5)/((double)mr2);
+                            draw_rectangle(x, y, x+l, y+l);
+                        }
+            }
+            
+            break;
+        }        
+        case (D_MANDELBROT):
+        {
+            /* Do nothing */
+            break;
+        }
+        case (D_MANDELBROT_CIRCLE):
+        {
+            /* Do nothing */
+            break;
+        }
+        case (D_JULIA):
+        {
+            /* Do nothing */
+            break;
+        }
+       default:
         {
             printf("Function draw_billiard not defined for this billiard \n");
         }

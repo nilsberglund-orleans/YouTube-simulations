@@ -42,6 +42,8 @@
 // #define YMIN -1.125
 // #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
+#define SCALING_FACTOR 1.0       /* scaling factor of drawing, needed for flower billiards, otherwise set to 1.0 */
+
 /* Choice of the billiard table */
 
 #define B_DOMAIN 9      /* choice of domain shape */
@@ -55,6 +57,8 @@
 #define D_ANNULUS 7     /* annulus */
 #define D_POLYGON 8     /* polygon */
 #define D_REULEAUX 9    /* Reuleaux and star shapes */
+#define D_FLOWER 10     /* Bunimovich flower */
+#define D_ALT_REU 11    /* alternating between star and Reuleaux */
 
 // #define LAMBDA 1.0	/* parameter controlling shape of billiard */
 #define LAMBDA 1.124950941	/* sin(36°)/sin(31.5°) for 5-star shape with 45° angles */
@@ -66,6 +70,8 @@
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 5             /* number of sides of polygon */
 #define APOLY -1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
+#define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
 
 #define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
 
