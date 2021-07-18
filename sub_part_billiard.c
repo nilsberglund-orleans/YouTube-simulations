@@ -1,6 +1,7 @@
 long int global_time = 0;    /* counter to keep track of global time of simulation */
 int nparticles=NPART; 
 
+
 /*********************/
 /* some basic math   */
 /*********************/
@@ -660,7 +661,7 @@ void draw_billiard()      /* draws the billiard boundary */
             {
                 x = cos(i*omega + APOLY*PID);
                 y = sin(i*omega + APOLY*PID);
-                glVertex2d(x, y);
+                glVertex2d(SCALING_FACTOR*x, SCALING_FACTOR*y);
             }
             glEnd ();
             break;
@@ -682,7 +683,7 @@ void draw_billiard()      /* draws the billiard boundary */
                     angle = i*omega + APOLY*PID;
                     x = cos(angle)*x1 - sin(angle)*y1;
                     y = sin(angle)*x1 + cos(angle)*y1;
-                    glVertex2d(x, y);
+                    glVertex2d(SCALING_FACTOR*x, SCALING_FACTOR*y);
                 }
             }
             glEnd ();
@@ -767,6 +768,78 @@ void draw_billiard()      /* draws the billiard boundary */
             }
             glEnd ();
             break;
+        }
+        case (D_ANGLE):
+        {
+            if (DRAW_CONSTRUCTION_LINES)
+            {
+                glColor3f(0.5, 0.5, 0.5);
+                glBegin(GL_LINE_STRIP);
+                phi = LAMBDA*PI;
+                r = 2.0*YMAX;
+                for (i=-(int)(PI/phi)-1; i <= (int)(PI/phi)+2; i++)
+                {
+//                     printf("%i \n", i);
+                    glVertex2d(0.0, 0.0);
+                    glVertex2d(-r*cos((double)i*phi), r*sin((double)i*phi));
+                }
+                glEnd();
+            }
+            
+            if (PAINT_INT) glColor3f(0.5, 0.5, 0.5);
+            else
+            {
+                if (BLACK) glColor3f(1.0, 1.0, 1.0);
+                else glColor3f(0.0, 0.0, 0.0);
+            }
+            
+            glBegin(GL_LINE_STRIP);
+            glVertex2d(XMIN, 0.0);
+            glVertex2d(0.0, 0.0);
+            glVertex2d(-YMAX/tan(LAMBDA*PI), YMAX);
+            glEnd ();
+            break;
+        }
+        case (D_LSHAPE):
+        {
+            glBegin(GL_LINE_LOOP);    
+            glVertex2d(-1.0, -1.0);
+            glVertex2d(1.0, -1.0);
+            glVertex2d(1.0, 0.0);
+            glVertex2d(0.0, 0.0);
+            glVertex2d(0.0, 1.0);
+            glVertex2d(-1.0, 1.0);
+            glEnd();
+            break; 
+        }
+        case (D_GENUSN):    /* like for polygon */
+        {
+            omega = DPI/((double)NPOLY);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NPOLY; i++)
+            {
+                x = cos(i*omega + APOLY*PID);
+                y = sin(i*omega + APOLY*PID);
+                glVertex2d(SCALING_FACTOR*x, SCALING_FACTOR*y);
+            }
+            glEnd ();
+            break;
+        }
+        case (D_CIRCLES):
+        {
+            for (k=0; k<ncircles; k++) if (circleactive[k])
+            {
+                glBegin(GL_LINE_LOOP);
+                for (i=0; i<=NSEG; i++)
+                {
+                    phi = (double)i*DPI/(double)NSEG;
+                    x = circlex[k] + circlerad[k]*cos(phi);
+                    y = circley[k] + circlerad[k]*sin(phi);
+                    glVertex2d(x, y);
+                }
+                glEnd ();
+            }
+            break; 
         }
         default: 
         {
@@ -1008,7 +1081,9 @@ int color[NPARTMAX];
  }
  
 
+/****************************************************************************************/
 /* elliptic billiard */
+/****************************************************************************************/
 
  int pos_ellipse(conf, pos, alpha)
  /* determine position on boundary of ellipse */
@@ -2335,6 +2410,602 @@ int color[NPARTMAX];
 	return(c);
  }
 
+/****************************************************************************************/
+/* angle billiard */
+/****************************************************************************************/
+ 
+ 
+ int pos_angle(conf, pos, alpha)
+ /* determine position on boundary of triangle */
+ /* corner of angle is at (0,0), sides are horizontal and x*sin(a) = -y*cos(a), a=LAMBDA*PI */
+ /* we use arclength for horizontal and vertical side, y for diagonal */
+  double conf[2], pos[2], *alpha;
+
+ {
+	double s, theta;
+
+	s = conf[0]; 
+        theta = conf[1];
+
+        if (s<=0)
+        {
+            pos[0] = s;
+            pos[1] = 0.0;
+            *alpha = theta;
+            return(0);
+        }
+        else 
+        {
+            pos[0] = - s/tan(LAMBDA*PI);
+            pos[1] = s;
+            *alpha = theta + (1.0-LAMBDA)*PI;
+            return(1);
+        }
+ }
+ 
+ 
+ int vangle_xy(config, alpha, pos)
+ /* determine initial configuration for start at point pos = (x,y) */
+ /* Warning: reflection in the corners is not yet implemented correctly */
+ double config[8], alpha, pos[2];
+
+ {
+	double s0, c0, t, x, y, x1, y1, phi;
+	int c, intb=1, intc, i;
+
+	/* initial position and velocity */
+
+	s0 = sin(alpha);
+	c0 = cos(alpha);
+
+	/* intersection with lower part of boundary */
+	if (s0<0.0)
+	{
+            x1 = pos[0] - pos[1]*c0/s0;
+            y1 = 0.0;
+            if (x1<=0.0)
+            {
+                config[0] = x1;
+                config[1] = -alpha;
+                intb = 0;
+            }
+	}
+	/* intersection with diagonal part of boundary */
+	if ((intb)&&(sin(alpha+LAMBDA*PI)>0.0))
+	{
+            phi = LAMBDA*PI;
+            t = -(pos[0]*sin(phi) + pos[1]*cos(phi))/sin(alpha+phi);
+            x1 = pos[0] + t*c0;
+            y1 = pos[1] + t*s0;
+            if (y1 > 0.0)
+            {
+                config[0] = y1;
+                config[1] = PI - alpha - phi;
+                intb = 0;
+            }
+	}
+	/* other cases, assign a dummy coordinate */
+	if (intb)
+        {
+            if (s0 > 0.0)
+            {
+                t = (1000.0 - pos[0])/s0;
+                x1 = pos[0] + t*c0;
+                y1 = 1000.0;
+            }
+            else
+            {
+                t = -(1000.0 + pos[0])/c0;
+                x1 = -1000.0;
+                y1 = pos[1] + t*s0;
+            }
+            config[0] = -1000.0;
+            config[1] = PID;
+        }
+
+	config[2] = 0.0;	/* running time */ 
+	config[3] = module2(x1-pos[0], y1-pos[1]);
+	config[4] = pos[0];
+	config[5] = pos[1];
+	config[6] = x1;
+	config[7] = y1;
+ 
+	return(c);
+ }
+ 
+ int vangle(config)
+ double config[8];
+
+ {
+	double alpha, pos[2];
+	int c;
+
+	/* position et vitesse de depart */
+
+	c = pos_angle(config, pos, &alpha);
+        
+        vangle_xy(config, alpha, pos);
+
+        return(c);
+ }
+ 
+/****************************************************************************************/
+/* L-shaped billiard (conical singularity) */
+/****************************************************************************************/
+ 
+ 
+ int pos_lshape(conf, pos, alpha)
+ /* determine position on boundary of L-shaped billiard */
+ /* the corners of the L shape are (-1,-1), (1,-1), (1,0), (0,0), (0,1), (-1,1) */
+ /* returns the number of the side hit, or 0 if hitting a corner */
+ double conf[2], pos[2], *alpha;
+
+ {
+	double s, theta;
+
+	s = conf[0]; 
+        if (s<0.0) s = 0.0;
+        if (s>8.0) s = 8.0;
+        
+        theta = conf[1];
+
+
+        /* bottom side */
+        if ((s>0)&&(s<2.0))
+        {
+            pos[0] = s -1.0;
+            pos[1] = -1.0;
+            *alpha = theta;
+            return(1);
+        }
+        /* lower right side */
+        else if (s<3.0)
+        {
+            pos[0] = 1.0;
+            pos[1] = s - 3.0;
+            *alpha = theta + PID;
+            return(2);
+        }
+        /* lower top side */
+        else if (s<4.0)
+        {
+            pos[0] = 4.0 - s;
+            pos[1] = 0.0;
+            *alpha = theta + PI;
+            return(3);
+        }
+        /* upper right side */
+        else if (s<5.0)
+        {
+            pos[0] = 0.0;
+            pos[1] = s - 4.0;
+            *alpha = theta + PID;
+            return(4);
+        }
+        /* upper top side */
+        else if (s<6.0)
+        {
+            pos[0] = 5.0 - s;
+            pos[1] = 1.0;
+            *alpha = theta + PI;
+            return(5);
+        }
+        /* left side */
+        else
+        {
+            pos[0] = -1.0;
+            pos[1] = 7.0 - s;
+            *alpha = theta - PID;
+            return(6);
+        }
+
+ }
+ 
+ 
+ int vlshape_xy(config, alpha, pos)
+ /* determine initial configuration for start at point pos = (x,y) */
+ double config[8], alpha, pos[2];
+ {
+    double t, l, s0, c0, margin = 1e-12, tmin;
+    double x1[6], y1[6], tval[6], tempconf[6][2];
+    int i, c, intb=1, cval[6], nt = 0, ntmin;
+
+    /* initial position and velocity */
+
+    s0 = sin(alpha);
+    c0 = cos(alpha);
+    
+//     print_config(config);
+
+    /* intersection with lower part of boundary */
+    if (s0<0.0)
+    {
+        t = - (1.0 + pos[1])/s0;
+        x1[nt] = pos[0] + c0*t;
+        y1[nt] = -1.0;
+        if ((x1[nt]>=-1.0)&&(x1[nt]<=0.0))
+        {
+            tempconf[nt][0] = 5.0 - x1[nt];
+            tempconf[nt][1] = alpha + PI;
+            cval[nt] = 5;
+            tval[nt] = t;
+            nt++;
+        }
+        else if ((x1[nt]>0.0)&&(x1[nt]<=1.0))
+        {
+            tempconf[nt][0] = 4.0 - x1[nt];
+            tempconf[nt][1] = alpha + PI;
+            cval[nt] = 3;
+            tval[nt] = t;
+            nt++;
+        }
+    }
+    /* intersection with lower part of right-hand boundary */
+    if (c0>0.0)
+    {
+        t = (1.0 - pos[0])/c0;
+        x1[nt] = 1.0;
+        y1[nt] = pos[1] + s0*t;
+        if ((y1[nt]>=-1.0)&&(y1[nt]<=0.0))
+        {
+            tempconf[nt][0] = 7.0 - y1[nt];
+            tempconf[nt][1] = PID + alpha;
+            cval[nt] = 6;
+            tval[nt] = t;
+            nt++;
+        }
+    }
+    /* intersection with upper part of right-hand boundary */
+    if ((pos[0] < 0.0)&&(c0>0.0))
+    {
+        t = - pos[0]/c0;
+        x1[nt] = 0.0;
+        y1[nt] = pos[1] + s0*t;
+        if ((y1[nt]>=0.0)&&(y1[nt]<=1.0))
+        {
+            tempconf[nt][0] = 7.0 - y1[nt];
+            tempconf[nt][1] = PID + alpha;
+            cval[nt] = 4;
+            tval[nt] = t;
+            nt++;
+        }
+    }
+    /* intersection with right-hand part of upper boundary */
+    if ((pos[1] < 0.0)&&(s0>0.0))
+    {
+        t = - pos[1]/s0;
+        x1[nt] = pos[0] + c0*t;
+        y1[nt] = 0.0;
+        if ((x1[nt]>=-0.0)&&(x1[nt]<=1.0))
+        {
+            tempconf[nt][0] = 1.0 + x1[nt];
+            tempconf[nt][1] = alpha;
+            cval[nt] = 1;
+            tval[nt] = t;
+            nt++;
+        }
+    }
+    /* intersection with left-hand part of upper boundary */
+    if (s0>0.0)
+    {
+        t = (1.0 - pos[1])/s0;
+        x1[nt] = pos[0] + c0*t;
+        y1[nt] = 1.0;
+        if ((x1[nt]>=-1.0)&&(x1[nt]<=0.0))
+        {
+            tempconf[nt][0] = 1.0 + x1[nt];
+            tempconf[nt][1] = alpha;
+            cval[nt] = 1;
+            tval[nt] = t;
+            nt++;
+        }
+    }
+    /* intersection with left-hand part of boundary */
+    if (c0<0.0)
+    {
+        t = (-1.0 - pos[0])/c0;
+        x1[nt] = -1.0;
+        y1[nt] = pos[1] + s0*t;
+        if ((y1[nt]>=0.0)&&(y1[nt]<=1.0))
+        {
+            tempconf[nt][0] = 4.0 + y1[nt];
+            tempconf[nt][1] = alpha - PID;
+            cval[nt] = 4;
+            tval[nt] = t;
+            nt++;
+        }
+        else if ((y1[nt]>=-1.0)&&(y1[nt]<0.0))
+        {
+            tempconf[nt][0] = 3.0 + y1[nt];
+            tempconf[nt][1] = alpha - PID;
+            cval[nt] = 2;
+            tval[nt] = t;
+            nt++;
+        }
+    }
+    
+    /* find earliest intersection */
+    tmin = tval[0];
+    ntmin = 0;
+    for (i=1; i<nt; i++) 
+        if (tval[i] < tmin) 
+        {
+            tmin = tval[i];
+            ntmin = i;
+        }
+        
+//         printf("nt = %i, ntmin = %i, cmin = %i\n", nt, ntmin, cval[ntmin]);
+            
+    config[0] = tempconf[ntmin][0];
+    config[1] = tempconf[ntmin][1];
+    c = cval[ntmin];
+
+    if (config[1] < 0.0) config[1] += DPI;
+    
+      
+    config[2] = 0.0;	/* running time */ 
+    config[3] = module2(x1[ntmin]-pos[0], y1[ntmin]-pos[1]);
+    config[4] = pos[0];
+    config[5] = pos[1];
+    config[6] = x1[ntmin];
+    config[7] = y1[ntmin];
+    
+//     print_config(config);
+ 
+    return(c);	
+ }
+ 
+ int vlshape(config)
+ double config[8];
+
+ {
+	double pos[2], alpha;
+	int c;
+
+	/* position et vitesse de depart */
+
+	c = pos_lshape(config, pos, &alpha);
+        
+        vlshape_xy(config, alpha, pos);
+
+        return(c);
+ }
+ 
+ /****************************************************************************************/
+/* genus n surface - polygon with opposite sides identified */
+/****************************************************************************************/
+
+ int pos_genusn(conf, pos, alpha)
+ /* determine position on boundary of polygon */
+ /* conf[0] is arclength on boundary */
+ double conf[2], pos[2], *alpha;
+
+ {
+	double s, theta, omega, length, s1, angle, x, y;
+        int c;
+
+	s = conf[0]; 
+        theta = conf[1];
+        
+        omega = DPI/((double)NPOLY);
+        length = 2.0*sin(0.5*omega);
+
+        c = (int)(s/length);         /* side of polygon */
+        
+        s1 = s - ((double)c)*length;
+        
+        x = 1.0 + (cos(omega) - 1.0)*s1/length;
+        y = sin(omega)*s1/length;
+        
+        angle = (double)c*omega + PID*APOLY;
+        
+        pos[0] = x*cos(angle) - y*sin(angle);
+        pos[1] = x*sin(angle) + y*cos(angle);
+        
+        *alpha = (0.5 + (double)c)*omega + theta + PID*(1.0 + APOLY);
+        
+        return(c);
+ }
+ 
+ int vgenusn_xy(config, alpha, pos)
+ /* determine initial configuration for start at point pos = (x,y) */
+ double config[8], alpha, pos[2];
+
+ {
+	double s, theta, omega, length, rlength, s1, rangle, x, y, xp, yp, x1, y1, ca, sa, margin = 1.0e-14;
+	int k, c, intb=1, intc, i;
+
+        /* dimensions/angles of polygon */
+        omega = DPI/((double)NPOLY);
+        length = 2.0*sin(0.5*omega);
+        rlength = cos(0.5*omega);
+        
+        for (k=0; k<NPOLY; k++)
+        {
+            /* rotate position so that kth side is vertical */
+            rangle = (0.5 + (double)k)*omega + APOLY*PID;
+            theta = alpha - rangle;
+                
+            if ((cos(theta) > 0.0)&&(intb))
+            {
+                ca = cos(rangle);
+                sa = sin(rangle);
+                
+                x = pos[0]*ca + pos[1]*sa;
+                y = -pos[0]*sa + pos[1]*ca;
+            
+//                 xp = -rlength;
+                xp = rlength;
+                yp = y + (xp-x)*tan(theta);
+                
+                if (vabs(yp) < 0.5*length - margin) 
+                {
+                    /* rotate back */
+                    x1 = xp*ca - yp*sa;
+                    y1 = xp*sa + yp*ca;
+                    
+                    intb = 0;
+                    c = k + NPOLY/2;
+                    if (c > NPOLY) c -= NPOLY;
+                    config[0] = ((double)c + 0.5)*length - yp;
+//                     if (config[0] > (double)NPOLY*length) config[0] -= (double)NPOLY*length;
+                    config[1] = PID + theta;
+//                     config[0] = ((double)k + 0.5)*length + yp;
+//                     config[1] = PID - theta;
+                }
+            }
+        }
+        if (intb) x1 = 1.0e12;  /* to make inactive particles too close to a corner */
+       
+        if (config[1] < 0.0) config[1] += DPI;
+
+        config[2] = 0.0;	/* running time */ 
+	config[3] = module2(x1-pos[0], y1-pos[1]);     /* distance to collision */
+	config[4] = pos[0];    /* start position */
+	config[5] = pos[1];
+	config[6] = x1;        /* position of collision */
+	config[7] = y1;
+	
+	return(c);
+ }
+
+ int vgenusn(config)
+ /* determine initial configuration when starting from boundary */
+ double config[8];
+
+ {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_genusn(config, pos, &alpha);
+        
+        vgenusn_xy(config, alpha, pos);
+	
+	return(c);
+ }
+ 
+
+/****************************************************************************************/
+/* elliptic billiard */
+/****************************************************************************************/
+
+ int pos_circles(conf, pos, alpha)
+ /* determine position on boundary of circle */
+ /* position varies between 0 and ncircles*2Pi */
+ /* returns number of hit circle */
+ double conf[2], pos[2], *alpha;
+
+ {
+	double angle;
+        int ncirc;
+        
+        ncirc = (int)(conf[0]/DPI);
+        if (ncirc >= ncircles) ncirc = ncircles - 1;
+        
+        angle = conf[0] - (double)ncirc*DPI;
+
+        pos[0] = circlex[ncirc] + circlerad[ncirc]*cos(angle);
+        pos[1] = circley[ncirc] + circlerad[ncirc]*sin(angle);
+        
+        *alpha = angle + PID + conf[1]; 
+        
+        return(ncirc);
+ }
+ 
+ 
+ int vcircles_xy(config, alpha, pos)
+ /* determine initial configuration for start at point pos = (x,y) */
+ double config[8], alpha, pos[2];
+
+ {
+	double c0, s0, b, c, t, theta, delta, margin = 1.0e-12, tmin, rlarge = 1.0e10;
+        double tval[ncircles], xint[ncircles], yint[ncircles], phiint[ncircles];
+	int i, nt = 0, nscat[ncircles], ntmin;
+
+        c0 = cos(alpha);
+        s0 = sin(alpha);
+        
+        for (i=0; i<ncircles; i++)
+        {
+            b = (pos[0]-circlex[i])*c0 + (pos[1]-circley[i])*s0;
+            c = (pos[0]-circlex[i])*(pos[0]-circlex[i]) + (pos[1]-circley[i])*(pos[1]-circley[i]) - circlerad[i]*circlerad[i];
+        
+            delta = b*b - c;
+            if (delta > margin)     /* there is an intersection with circle i */
+            {
+                t = -b - sqrt(delta);            
+                if (t > margin) 
+                {
+                    nscat[nt] = i;
+                
+                    tval[nt] = t;
+                    xint[nt] = pos[0] + t*c0;
+                    yint[nt] = pos[1] + t*s0;
+                    phiint[nt] = argument(xint[nt] - circlex[i], yint[nt] - circley[i]);
+
+                    nt++;
+                }
+            }
+        }
+        
+        if (nt > 0)     /* there is at least one intersection */
+        {
+            /* find earliest intersection */
+            tmin = tval[0];
+            ntmin = 0;
+            for (i=1; i<nt; i++) 
+            if (tval[i] < tmin) 
+            {
+                tmin = tval[i];
+                ntmin = i;
+            }
+            while (phiint[ntmin] < 0.0) phiint[ntmin] += DPI;
+            while (phiint[ntmin] >= DPI) phiint[ntmin] -= DPI;
+            
+            config[0] = (double)nscat[ntmin]*DPI + phiint[ntmin];
+            config[1] = PID - alpha + phiint[ntmin];        /* CHECK */
+            if (config[1] < 0.0) config[1] += DPI;
+            if (config[1] >= PI) config[1] -= DPI;
+            
+            config[2] = 0.0;	/* running time */ 
+            config[3] = module2(xint[ntmin]-pos[0], yint[ntmin]-pos[1]);     /* distance to collision */
+            config[4] = pos[0];    /* start position */
+            config[5] = pos[1];
+            config[6] = xint[ntmin];        /* position of collision */
+            config[7] = yint[ntmin];
+            
+            return(nscat[ntmin]);
+        }
+        else    /* there is no intersection - set dummy values */
+        {
+            config[0] = 0.0;
+            config[1] = 0.0;
+            config[2] = 0.0;
+            config[3] = rlarge;
+            config[4] = pos[0];    /* start position */
+            config[5] = pos[1];
+            config[6] = rlarge*cos(alpha);
+            config[7] = rlarge*sin(alpha);
+            
+            return(-1);
+        }
+ }
+
+ int vcircles(config)
+ /* determine initial configuration when starting from boundary */
+ double config[8];
+
+  {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_circles(config, pos, &alpha);
+        
+        vcircles_xy(config, alpha, pos);
+	
+	return(c);
+ }
+ 
 
  
 /****************************************************************************************/
@@ -2394,6 +3065,26 @@ int color[NPARTMAX];
         case (D_ALT_REU):
         {
             return(pos_alt_reuleaux(conf, pos, &alpha));
+            break;
+        }
+        case (D_ANGLE):
+        {
+            return(pos_angle(conf, pos, &alpha));
+            break;
+        }
+        case (D_LSHAPE):
+        {
+            return(pos_lshape(conf, pos, &alpha));
+            break;
+        }
+        case (D_GENUSN):
+        {
+            return(pos_genusn(conf, pos, &alpha));
+            break;
+        }
+        case (D_CIRCLES):
+        {
+            return(pos_circles(conf, pos, &alpha));
             break;
         }
         default: 
@@ -2458,6 +3149,26 @@ int color[NPARTMAX];
         case (D_ALT_REU):
         {
             return(valt_reuleaux_xy(config, alpha, pos));
+            break;
+        }
+        case (D_ANGLE):
+        {
+            return(vangle_xy(config, alpha, pos));
+            break;
+        }
+        case (D_LSHAPE):
+        {
+            return(vlshape_xy(config, alpha, pos));
+            break;
+        }
+        case (D_GENUSN):
+        {
+            return(vgenusn_xy(config, alpha, pos));
+            break;
+        }
+        case (D_CIRCLES):
+        {
+            return(vcircles_xy(config, alpha, pos));
             break;
         }
         default: 
@@ -2545,6 +3256,34 @@ int color[NPARTMAX];
             c = pos_alt_reuleaux(config, pos, &alpha);
         
             return(valt_reuleaux(config, alpha, pos));
+            break;
+        }
+        case (D_ANGLE):
+        {
+            c = pos_angle(config, pos, &alpha);
+        
+            return(vangle(config, alpha, pos));
+            break;
+        }
+        case (D_LSHAPE):
+        {
+            c = pos_lshape(config, pos, &alpha);
+        
+            return(vlshape(config, alpha, pos));
+            break;
+        }
+        case (D_GENUSN):
+        {
+            c = pos_genusn(config, pos, &alpha);
+        
+            return(vgenusn(config, alpha, pos));
+            break;
+        }
+        case (D_CIRCLES):
+        {
+            c = pos_circles(config, pos, &alpha);
+        
+            return(vcircles(config, alpha, pos));
             break;
         }
         default: 
@@ -2675,6 +3414,44 @@ int color[NPARTMAX];
             }
             return(condition);
             break;            
+        }
+        case D_ANGLE:
+        {
+            if (y <= 0.0) return(0);
+            else if (x*sin(LAMBDA*PI) < -y*cos(LAMBDA*PI)) return(1);
+            else return(0);
+            break;
+        }
+        case D_LSHAPE:
+        {
+            if ((y <= 0.0)&&(x >= -1.0)&&(x <= 1.0)) return(1);
+            else if ((x >= -1.0)&&(x <= 0.0)) return(1);
+            else return(0);
+            break;
+        }
+        case D_GENUSN:      /* same as polygon */
+        {
+            condition = 1;
+            omega = DPI/((double)NPOLY);
+            c = cos(omega*0.5);
+            for (k=0; k<NPOLY; k++)  
+            {
+                angle = APOLY*PID + (k+0.5)*omega;
+                condition = condition*(x*cos(angle) + y*sin(angle) < c);
+            }
+            return(condition);
+            break;
+        }
+        case D_CIRCLES:      
+        {
+            condition = 1;
+            for (k=0; k<ncircles; k++)  
+            {
+                r2 = (x-circlex[k])*(x-circlex[k]) + (y-circley[k])*(y-circley[k]);
+                condition = condition*(r2 > circlerad[k]*circlerad[k])*circleactive[k];
+            }
+            return(condition);
+            break;
         }
         default: 
         {
