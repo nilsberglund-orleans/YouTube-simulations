@@ -42,8 +42,10 @@
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define NX 640          /* number of grid points on x axis */
-#define NY 360          /* number of grid points on y axis */
+#define NX 1280          /* number of grid points on x axis */
+#define NY 720          /* number of grid points on y axis */
+// #define NX 640          /* number of grid points on x axis */
+// #define NY 360          /* number of grid points on y axis */
 
 /* setting NX to WINWIDTH and NY to WINHEIGHT increases resolution */
 /* but will multiply run time by 4                                 */
@@ -55,67 +57,45 @@
 
 #define JULIA_SCALE 1.0 /* scaling for Julia sets */
 
-/* Choice of the billiard table */
+/* Choice of the billiard table, see list in global_pdes.c  */
 
-#define B_DOMAIN 3      /* choice of domain shape */
+#define B_DOMAIN 9      /* choice of domain shape */
 
-#define D_RECTANGLE 0   /* rectangular domain */
-#define D_ELLIPSE 1     /* elliptical domain */
-#define D_STADIUM 2     /* stadium-shaped domain */
-#define D_SINAI 3       /* Sinai billiard */
-#define D_DIAMOND 4     /* diamond-shaped billiard */
-#define D_TRIANGLE 5    /* triangular billiard */
-#define D_FLAT 6        /* flat interface */
-#define D_ANNULUS 7     /* annulus */
-#define D_POLYGON 8     /* polygon */
-#define D_YOUNG 9       /* Young diffraction slits */
-#define D_GRATING 10    /* diffraction grating */
-#define D_EHRENFEST 11  /* Ehrenfest urn type geometry */
+#define CIRCLE_PATTERN 0    /* pattern of circles, see list in global_pdes.c */
 
-#define D_MENGER 15     /* Menger-Sierpinski carpet */ 
-#define D_JULIA_INT 16  /* interior of Julia set */ 
+#define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
+#define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 
-/* Billiard tables for heat equation */
-
-#define D_ANNULUS_HEATED 21 /* annulus with different temperatures */
-#define D_MENGER_HEATED 22  /* Menger gasket with different temperatures */
-#define D_MENGER_H_OPEN 23  /* Menger gasket with different temperatures and larger domain */
-#define D_MANDELBROT 24     /* Mandelbrot set */
-#define D_JULIA 25          /* Julia set */
-#define D_MANDELBROT_CIRCLE 26     /* Mandelbrot set with circular conductor */
-
-#define LAMBDA 0.2	    /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.3	    /* parameter controlling the dimensions of domain */
 #define MU 0.05	            /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
-#define MDEPTH 2            /* depth of computation of Menger gasket */
-#define MRATIO 5            /* ratio defining Menger gasket */
+#define MDEPTH 3            /* depth of computation of Menger gasket */
+#define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0     /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
+#define NGRIDX 15            /* number of grid point for grid of disks */
+#define NGRIDY 20           /* number of grid point for grid of disks */
 
 /* You can add more billiard tables by adapting the functions */
 /* xy_in_billiard and draw_billiard in sub_wave.c */
 
 /* Physical patameters of wave equation */
 
-#define DT 0.00000005
-// #define DT 0.00000002
+// #define DT 0.00000005
+#define DT 0.000000005
 // #define DT 0.000000005
 #define HBAR 1.0
 
-/* Boundary conditions */
+/* Boundary conditions, see list in global_pdes.c  */
 
 #define B_COND 1
 
-#define BC_DIRICHLET 0   /* Dirichlet boundary conditions */
-#define BC_PERIODIC 1    /* periodic boundary conditions */
-#define BC_ABSORBING 2   /* absorbing boundary conditions (beta version) */
-
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 4500      /* number of frames of movie */
-#define NVID 250         /* number of iterations between images displayed on screen */
+#define NSTEPS 200      /* number of frames of movie */
+#define NVID 1200         /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
 
 #define PAUSE 1000       /* number of frames after which to pause */
@@ -128,24 +108,16 @@
 #define VMAX 10.0       /* max value of wave amplitude */
 
 
-/* Plot type */
+/* Plot type, see list in global_pdes.c  */
 
-#define PLOT 0
+#define PLOT 10
 
-#define P_MODULE 0        /* plot module of wave function squared */
-#define P_PHASE 1         /* plot phase of wave function */
-#define P_REAL 2          /* plot real part */
-#define P_IMAGINARY 3     /* plot imaginary part */
 
-/* Color schemes */
+/* Color schemes, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
 
 #define COLOR_SCHEME 1   /* choice of color scheme */
-
-#define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
-#define C_HUE 1          /* color scheme modifies hue */
-#define C_PHASE 2        /* color scheme shows phase */
 
 #define SCALE 1          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
@@ -158,14 +130,7 @@
 #define HUEMEAN 150.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -150.0      /* amplitude of variation of hue for color scheme C_HUE */
 
-/* Basic math */
-
-#define PI 	3.141592654
-#define DPI 	6.283185307
-#define PID 	1.570796327
-
-double julia_x = 0.0, julia_y = 0.0;    /* parameters for Julia sets */
-
+#include "global_pdes.c"
 #include "sub_wave.c"
 
 double courant2;  /* Courant parameter squared */
@@ -269,22 +234,14 @@ int time;
     glEnd ();
 }
 
-void evolve_wave(phi, psi, xy_in)
+void evolve_wave_half(phi_in, psi_in, phi_out, psi_out, xy_in)
 /* time step of field evolution */
 /* phi is real part, psi is imaginary part */
-    double *phi[NX], *psi[NX]; 
-    short int *xy_in[NX];
+    double *phi_in[NX], *psi_in[NX], *phi_out[NX], *psi_out[NX]; short int *xy_in[NX];
 {
     int i, j, iplus, iminus, jplus, jminus;
-    double delta1, delta2, x, y, *newphi[NX], *newpsi[NX];
+    double delta1, delta2, x, y;
     
-    for (i=0; i<NX; i++) 
-    {
-        newphi[i] = (double *)malloc(NY*sizeof(double));
-        newpsi[i] = (double *)malloc(NY*sizeof(double));        
-    }
-    
-
     #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta1,delta2,x,y)
     for (i=0; i<NX; i++){
         for (j=0; j<NY; j++){
@@ -307,79 +264,74 @@ void evolve_wave(phi, psi, xy_in)
                     if (jminus < 0) jminus += NY;
                 }
                 
-                delta1 = phi[iplus][j] + phi[iminus][j] + phi[i][jplus] + phi[i][jminus] - 4.0*phi[i][j];
-                delta2 = psi[iplus][j] + psi[iminus][j] + psi[i][jplus] + psi[i][jminus] - 4.0*psi[i][j];
+                delta1 = phi_in[iplus][j] + phi_in[iminus][j] + phi_in[i][jplus] + phi_in[i][jminus] - 4.0*phi_in[i][j];
+                delta2 = psi_in[iplus][j] + psi_in[iminus][j] + psi_in[i][jplus] + psi_in[i][jminus] - 4.0*psi_in[i][j];
 
-                x = phi[i][j];
-		y = psi[i][j];
+                x = phi_in[i][j];
+		y = psi_in[i][j];
 
                 /* evolve phi and psi */
                 if (B_COND != BC_ABSORBING)
                 {
-                    newphi[i][j] = x - intstep*delta2;
-                    newpsi[i][j] = y + intstep*delta1;
+                    phi_out[i][j] = x - intstep*delta2;
+                    psi_out[i][j] = y + intstep*delta1;
                 }
                 else        /* case of absorbing b.c. - this is only an approximation of correct way of implementing */
                 {
                     /* in the bulk */
                     if ((i>0)&&(i<NX-1)&&(j>0)&&(j<NY-1))
                     {
-                        newphi[i][j] = x - intstep*delta2;
-                        newpsi[i][j] = y + intstep*delta1;
+                        phi_out[i][j] = x - intstep*delta2;
+                        psi_out[i][j] = y + intstep*delta1;
                     }
                      /* right border */
                     else if (i==NX-1) 
                     {
-                        newphi[i][j] = x - intstep1*(y - psi[i-1][j]);
-                        newpsi[i][j] = y + intstep1*(x - phi[i-1][j]);
+                        phi_out[i][j] = x - intstep1*(y - psi_in[i-1][j]);
+                        psi_out[i][j] = y + intstep1*(x - phi_in[i-1][j]);
                     }
                     /* upper border */
                     else if (j==NY-1) 
                     {
-                        newphi[i][j] = x - intstep1*(y - psi[i][j-1]);
-                        newpsi[i][j] = y + intstep1*(x - phi[i][j-1]);
+                        phi_out[i][j] = x - intstep1*(y - psi_in[i][j-1]);
+                        psi_out[i][j] = y + intstep1*(x - phi_in[i][j-1]);
                     }
                     /* left border */
                     else if (i==0) 
                     {
-                        newphi[i][j] = x - intstep1*(y - psi[1][j]);
-                        newpsi[i][j] = y + intstep1*(x - phi[1][j]);
+                        phi_out[i][j] = x - intstep1*(y - psi_in[1][j]);
+                        psi_out[i][j] = y + intstep1*(x - phi_in[1][j]);
                     }
                    /* lower border */
                     else if (j==0) 
                     {
-                        newphi[i][j] = x - intstep1*(y - psi[i][1]);
-                        newpsi[i][j] = y + intstep1*(x - phi[i][1]);
+                        phi_out[i][j] = x - intstep1*(y - psi_in[i][1]);
+                        psi_out[i][j] = y + intstep1*(x - phi_in[i][1]);
                     }
                 }
 
 
                 if (FLOOR)
                 {
-                    if (newphi[i][j] > VMAX) newphi[i][j] = VMAX;
-                    if (newphi[i][j] < -VMAX) newphi[i][j] = -VMAX;
-                    if (newpsi[i][j] > VMAX) newpsi[i][j] = VMAX;
-                    if (newpsi[i][j] < -VMAX) newpsi[i][j] = -VMAX;
+                    if (phi_out[i][j] > VMAX) phi_out[i][j] = VMAX;
+                    if (phi_out[i][j] < -VMAX) phi_out[i][j] = -VMAX;
+                    if (psi_out[i][j] > VMAX) psi_out[i][j] = VMAX;
+                    if (psi_out[i][j] < -VMAX) psi_out[i][j] = -VMAX;
                 }
             }
         }
     }
     
-    
-    for (i=0; i<NX; i++){
-        for (j=0; j<NY; j++){
-            if (xy_in[i][j] == 1) phi[i][j] = newphi[i][j];
-            if (xy_in[i][j] == 1) psi[i][j] = newpsi[i][j];
-        }
-    }
-    
-    for (i=0; i<NX; i++)
-    {
-        free(newphi[i]);
-        free(newpsi[i]);
-    }
-
 //     printf("phi(0,0) = %.3lg, psi(0,0) = %.3lg\n", phi[NX/2][NY/2], psi[NX/2][NY/2]);
+}
+
+void evolve_wave(phi, psi, phi_tmp, psi_tmp, xy_in)
+/* time step of field evolution */
+/* phi is value of field at time t, psi at time t-1 */
+    double *phi[NX], *psi[NX], *phi_tmp[NX], *psi_tmp[NX]; short int *xy_in[NX];
+{
+    evolve_wave_half(phi, psi, phi_tmp, psi_tmp, xy_in);
+    evolve_wave_half(phi_tmp, psi_tmp, phi, psi, xy_in);
 }
 
 
@@ -428,7 +380,7 @@ short int * xy_in[NX];
 void animation()
 {
     double time, scale, dx, var;
-    double *phi[NX], *psi[NX];
+    double *phi[NX], *psi[NX], *phi_tmp[NX], *psi_tmp[NX];
     short int *xy_in[NX];
     int i, j, s;
 
@@ -437,6 +389,8 @@ void animation()
     {
         phi[i] = (double *)malloc(NY*sizeof(double));
         psi[i] = (double *)malloc(NY*sizeof(double));
+        phi_tmp[i] = (double *)malloc(NY*sizeof(double));
+        psi_tmp[i] = (double *)malloc(NY*sizeof(double));
         xy_in[i] = (short int *)malloc(NY*sizeof(short int));
     }
 
@@ -447,7 +401,7 @@ void animation()
     printf("Integration step %.3lg\n", intstep);
 
     /* initialize wave wave function */
-    init_coherent_state(-1.2, 0.0, 20.0, 0.0, 0.2, phi, psi, xy_in);
+    init_coherent_state(-1.2, 0.0, 20.0, 0.0, 0.25, phi, psi, xy_in);
 //     init_coherent_state(0.0, 0.0, 0.0, 5.0, 0.03, phi, psi, xy_in);
 //     init_coherent_state(-0.5, 0.0, 1.0, 1.0, 0.05, phi, psi, xy_in);
     
@@ -488,7 +442,7 @@ void animation()
         
 //         printf("Wave drawn\n");
         
-        for (j=0; j<NVID; j++) evolve_wave(phi, psi, xy_in);
+        for (j=0; j<NVID; j++) evolve_wave(phi, psi, phi_tmp, psi_tmp, xy_in);
         
         draw_billiard();
         
@@ -510,15 +464,18 @@ void animation()
 
     }
 
-    if (MOVIE)
-    {
-        for (i=0; i<20; i++) save_frame();
-        s = system("mv wave*.tif tif_schrod/");
-    }
+//     if (MOVIE)
+//     {
+//         for (i=0; i<20; i++) save_frame();
+//         s = system("mv wave*.tif tif_schrod/");
+//     }
     for (i=0; i<NX; i++)
     {
         free(phi[i]);
         free(psi[i]);
+        free(phi_tmp[i]);
+        free(psi_tmp[i]);
+        free(xy_in[i]);
     }
 
 }

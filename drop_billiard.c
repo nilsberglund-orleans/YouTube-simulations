@@ -33,32 +33,28 @@
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define XMIN -1.8
-#define XMAX 1.8	/* x interval */
-#define YMIN -0.91
-#define YMAX 1.115	/* y interval for 9/16 aspect ratio */
-// #define XMIN -2.0
-// #define XMAX 2.0	/* x interval */
-// #define YMIN -1.125
-// #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+// #define XMIN -1.8
+// #define XMAX 1.8	/* x interval */
+// #define YMIN -0.91
+// #define YMAX 1.115	/* y interval for 9/16 aspect ratio */
 
 #define SCALING_FACTOR 1.0       /* scaling factor of drawing, needed for flower billiards, otherwise set to 1.0 */
 
-/* Choice of the billiard table */
+/* Choice of the billiard table, see global_particles.c  */
 
-#define B_DOMAIN 9      /* choice of domain shape */
+#define B_DOMAIN 13      /* choice of domain shape */
 
-#define D_RECTANGLE 0   /* rectangular domain */
-#define D_ELLIPSE 1     /* elliptical domain */
-#define D_STADIUM 2     /* stadium-shaped domain */
-#define D_SINAI 3       /* Sinai billiard */
-#define D_DIAMOND 4     /* diamond-shaped billiard */
-#define D_TRIANGLE 5    /* triangular billiard */
-#define D_ANNULUS 7     /* annulus */
-#define D_POLYGON 8     /* polygon */
-#define D_REULEAUX 9    /* Reuleaux and star shapes */
-#define D_FLOWER 10     /* Bunimovich flower */
-#define D_ALT_REU 11    /* alternating between star and Reuleaux */
+#define CIRCLE_PATTERN 0    /* pattern of circles */
+
+#define NMAXCIRCLES 1000        /* total number of circles (must be at least NCX*NCY for square grid) */
+// #define NCX 10            /* number of circles in x direction */
+// #define NCY 15            /* number of circles in y direction */
+#define NCX 15            /* number of circles in x direction */
+#define NCY 20            /* number of circles in y direction */
 
 // #define LAMBDA 1.0	/* parameter controlling shape of billiard */
 #define LAMBDA 1.124950941	/* sin(36°)/sin(31.5°) for 5-star shape with 45° angles */
@@ -72,16 +68,17 @@
 #define APOLY -1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
 #define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
+#define PERIODIC_BC 0       /* set to 1 to enforce periodic boundary conditions when drawing particles */
 
 #define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
 
-#define NPART 100000	/* number of particles */
+#define NPART 50000	/* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 
-#define NSTEPS 4000         /* number of frames of movie */
-#define TIME 15             /* time between movie frames, for fluidity of real-time simulation */ 
+#define NSTEPS 5500         /* number of frames of movie */
+#define TIME 40             /* time between movie frames, for fluidity of real-time simulation */ 
 #define DPHI 0.0001         /* integration step */
-#define NVID 10             /* number of iterations between images displayed on screen */
+#define NVID 20             /* number of iterations between images displayed on screen */
 
 /* Decreasing TIME accelerates the animation and the movie               */
 /* For constant speed of movie, TIME*DPHI should be kept constant        */
@@ -91,16 +88,17 @@
 /* simulation parameters */
 
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
-#define LPERIODIC 1.0   /* lines longer than this are not drawn (useful for Sinai billiard) */
-#define LCUT 1000.0        /* controls the max size of segments not considered as being cut */
+#define LPERIODIC 0.1   /* lines longer than this are not drawn (useful for Sinai billiard) */
+#define LCUT 2.0        /* controls the max size of segments not considered as being cut */
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 0         /* set to 1 for closed curve (start in all directions) */
 #define ORDER_COLORS 1  /* set to 1 if colors should be drawn in order */ 
 
 /* color and other graphical parameters */
 
-#define NCOLORS 10          /* number of colors */
+#define NCOLORS 16          /* number of colors */
 #define COLORSHIFT 200      /* hue of initial color */ 
+#define RAINBOW_COLOR 1     /* set to 1 to use different colors for all particles */
 #define NSEG 100            /* number of segments of boundary */
 #define BILLIARD_WIDTH 4    /* width of billiard */
 #define FRONT_WIDTH 3       /* width of wave front */
@@ -120,6 +118,7 @@
 #define DPI 	6.283185307
 #define PID 	1.570796327
 
+#include "global_particles.c"
 #include "sub_part_billiard.c"
 
 
@@ -394,8 +393,11 @@ double *configs[NPARTMAX];
             if (configs[i][2]<0.0) 
             {    
                 vbilliard(configs[i]);
-                color[i]++;
-                if (color[i] >= NCOLORS) color[i] -= NCOLORS;
+                if (!RAINBOW_COLOR)
+                {
+                    color[i]++;
+                    if (color[i] >= NCOLORS) color[i] -= NCOLORS;
+                }
             }
 
             configs[i][2] += DPHI; 
@@ -449,7 +451,8 @@ void animation()
     for (i=0; i<NPARTMAX; i++)
         configs[i] = (double *)malloc(8*sizeof(double));
   
-    init_drop_config(0.0, 0.1, 0.0, DPI, configs);
+    init_drop_config(-1.0 + 0.3*sqrt(2.0), -1.0 + 0.5*sqrt(2.0), 0.0, DPI, configs);
+//     init_drop_config(-0.5, -0.5, 0.0, DPI, configs);
 //     init_boundary_config(1.5, 1.5, 0.0, PI, configs);
 
   
@@ -463,6 +466,9 @@ void animation()
   
   
     for (i=0; i<NPARTMAX; i++) color[i] = 0;
+    
+    if (RAINBOW_COLOR)      /* rainbow color scheme */
+        for (i=0; i<NPART; i++) color[i] = (i*NCOLORS)/NPART;
   
     sleep(SLEEP1);
   

@@ -47,23 +47,20 @@
 // #define YMIN -0.91
 // #define YMAX 1.115	/* y interval for 9/16 aspect ratio */
 
-/* Choice of the billiard table */
+/* Choice of the billiard table, see global_particles.c */
 
-#define B_DOMAIN 9      /* choice of domain shape */
+#define B_DOMAIN 14      /* choice of domain shape */
 
-#define D_RECTANGLE 0   /* rectangular domain */
-#define D_ELLIPSE 1     /* elliptical domain */
-#define D_STADIUM 2     /* stadium-shaped domain */
-#define D_SINAI 3       /* Sinai billiard */
-#define D_DIAMOND 4     /* diamond-shaped billiard */
-#define D_TRIANGLE 5    /* triangular billiard */
-#define D_ANNULUS 7     /* annulus */
-#define D_POLYGON 8     /* polygon */
-#define D_REULEAUX 9    /* Reuleaux and star shapes */
-#define D_FLOWER 10     /* Bunimovich flower */
-#define D_ALT_REU 11    /* alternating between star and Reuleaux */
+#define CIRCLE_PATTERN 0    /* pattern of circles */
 
-#define LAMBDA -3.346065215	/* sin(60°)/sin(15°) for Reuleaux-type triangle with 90° angles */
+#define NMAXCIRCLES 1000        /* total number of circles (must be at least NCX*NCY for square grid) */
+// #define NCX 10            /* number of circles in x direction */
+// #define NCY 15            /* number of circles in y direction */
+#define NCX 15            /* number of circles in x direction */
+#define NCY 20            /* number of circles in y direction */
+
+#define LAMBDA 0.75	/* parameter controlling shape of billiard */
+// #define LAMBDA -3.346065215	/* sin(60°)/sin(15°) for Reuleaux-type triangle with 90° angles */
 // #define LAMBDA 3.0	/* parameter controlling shape of billiard */
 // #define LAMBDA 0.6	/* parameter controlling shape of billiard */
 // #define LAMBDA 0.4175295	/* sin(20°)/sin(55°) for 9-star shape with 30° angles */
@@ -71,28 +68,30 @@
 // #define LAMBDA 3.75738973	/* sin(36°)/sin(9°) for 5-star shape with 90° angles */
 // #define LAMBDA -1.73205080756888	/* -sqrt(3) for Reuleaux triangle */
 // #define LAMBDA 1.73205080756888	/* sqrt(3) for triangle tiling plane */
-#define MU 0.1          /* second parameter controlling shape of billiard */
+#define MU 0.035          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
-#define NPOLY 6             /* number of sides of polygon */
-#define APOLY 2.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define NPOLY 8             /* number of sides of polygon */
+#define APOLY 0.25           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
 #define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
+#define PERIODIC_BC 0       /* set to 1 to enforce periodic boundary conditions when drawing particles */
 
 #define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
 #define DEBUG 0         /* draw trajectories, for debugging purposes */
 
 /* Simulation parameters */
 
-#define NPART 20000     /* number of particles */
+#define NPART 5000       /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
 
-#define NSTEPS 6000     /* number of frames of movie */
+#define NSTEPS 3000     /* number of frames of movie */
 #define TIME 1000       /* time between movie frames, for fluidity of real-time simulation */ 
-// #define DPHI 0.000005    /* integration step */
-#define DPHI 0.00002    /* integration step */
+// #define DPHI 0.000002    /* integration step */
+// #define DPHI 0.00002    /* integration step */
+#define DPHI 0.000005    /* integration step */
 #define NVID 150         /* number of iterations between images displayed on screen */
 
 /* Decreasing TIME accelerates the animation and the movie                               */
@@ -103,12 +102,13 @@
 
 /* Colors and other graphical parameters */
 
-#define NCOLORS -10      /* number of colors */
-#define COLORSHIFT 200     /* hue of initial color */ 
+#define NCOLORS 16      /* number of colors */
+#define COLORSHIFT 0     /* hue of initial color */ 
+#define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
-#define LENGTH 0.04      /* length of velocity vectors */
-#define BILLIARD_WIDTH 3    /* width of billiard */
+#define LENGTH 0.02      /* length of velocity vectors */
+#define BILLIARD_WIDTH 2    /* width of billiard */
 #define PARTICLE_WIDTH 2    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
 
@@ -123,10 +123,8 @@
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1000      /* final sleeping time */
 
-#define PI 	3.141592654
-#define DPI 	6.283185307
-#define PID 	1.570796327
 
+#include "global_particles.c"
 #include "sub_part_billiard.c"
 
 
@@ -169,7 +167,8 @@ double *configs[NPARTMAX];
     double conf[2], pos[2];
   
     while (angle2 < angle1) angle2 += DPI;
-    dalpha = (angle2 - angle1)/((double)(NPART-1));
+    if (NPART > 1) dalpha = (angle2 - angle1)/((double)(NPART-1));
+    else dalpha = 0.0;
     for (i=0; i<NPART; i++) 
     {
         alpha = angle1 + dalpha*((double)i);  
@@ -253,8 +252,11 @@ double *configs[NPARTMAX];
         if (configs[i][2]<0.0) 
         {    
             vbilliard(configs[i]);
-            color[i]++;
-            if (color[i] >= NCOLORS) color[i] -= NCOLORS;
+            if (!RAINBOW_COLOR)
+            {
+                color[i]++;
+                if (color[i] >= NCOLORS) color[i] -= NCOLORS;
+            }
         }
 
         configs[i][2] += DPHI; 
@@ -280,36 +282,39 @@ double *configs[NPARTMAX];
             glEnd ();
         
             /* taking care of boundary conditions - only needed for periodic boundary conditions */
-            if (SCALING_FACTOR*x2 > XMAX)
+            if (PERIODIC_BC)
             {
-                glBegin(GL_LINE_STRIP);
-                glVertex2d(SCALING_FACTOR*(x1+XMIN-XMAX), SCALING_FACTOR*y1);
-                glVertex2d(SCALING_FACTOR*(x2+XMIN-XMAX), SCALING_FACTOR*y2);
-                glEnd ();
-            }
+                if (SCALING_FACTOR*x2 > XMAX)
+                {
+                    glBegin(GL_LINE_STRIP);
+                    glVertex2d(SCALING_FACTOR*(x1+XMIN-XMAX), SCALING_FACTOR*y1);
+                    glVertex2d(SCALING_FACTOR*(x2+XMIN-XMAX), SCALING_FACTOR*y2);
+                    glEnd ();
+                }
         
-            if (SCALING_FACTOR*x2 < XMIN)
-            {
-                glBegin(GL_LINE_STRIP);
-                glVertex2d(SCALING_FACTOR*(x1-XMIN+XMAX), SCALING_FACTOR*y1);
-                glVertex2d(SCALING_FACTOR*(x2-XMIN+XMAX), SCALING_FACTOR*y2);
-                glEnd ();
-            }
+                if (SCALING_FACTOR*x2 < XMIN)
+                {
+                    glBegin(GL_LINE_STRIP);
+                    glVertex2d(SCALING_FACTOR*(x1-XMIN+XMAX), SCALING_FACTOR*y1);
+                    glVertex2d(SCALING_FACTOR*(x2-XMIN+XMAX), SCALING_FACTOR*y2);
+                    glEnd ();
+                }
 
-            if (SCALING_FACTOR*y2 > YMAX)
-            {
-                glBegin(GL_LINE_STRIP);
-                glVertex2d(SCALING_FACTOR*x1, SCALING_FACTOR*(y1+YMIN-YMAX));
-                glVertex2d(SCALING_FACTOR*x2, SCALING_FACTOR*(y2+YMIN-YMAX));
-                glEnd ();
-            }
+                if (SCALING_FACTOR*y2 > YMAX)
+                {
+                    glBegin(GL_LINE_STRIP);
+                    glVertex2d(SCALING_FACTOR*x1, SCALING_FACTOR*(y1+YMIN-YMAX));
+                    glVertex2d(SCALING_FACTOR*x2, SCALING_FACTOR*(y2+YMIN-YMAX));
+                    glEnd ();
+                }
 
-            if (SCALING_FACTOR*y2 < YMIN)
-            {
-                glBegin(GL_LINE_STRIP);
-                glVertex2d(SCALING_FACTOR*x1, SCALING_FACTOR*(y1+YMAX-YMIN));
-                glVertex2d(SCALING_FACTOR*x2, SCALING_FACTOR*(y2+YMAX-YMIN));
-                glEnd ();
+                if (SCALING_FACTOR*y2 < YMIN)
+                {
+                    glBegin(GL_LINE_STRIP);
+                    glVertex2d(SCALING_FACTOR*x1, SCALING_FACTOR*(y1+YMAX-YMIN));
+                    glVertex2d(SCALING_FACTOR*x2, SCALING_FACTOR*(y2+YMAX-YMIN));
+                    glEnd ();
+                }
             }
         }
         
@@ -343,11 +348,14 @@ double *configs[NPARTMAX];
         {      
             if (configs[i][2]<0.0) 
             {    
+//                 printf("reflecting particle %i\n", i);
                 c = vbilliard(configs[i]);
 //                 if (c>=0) color[i]++;
-                color[i]++;
-                if (color[i] >= NCOLORS) color[i] -= NCOLORS;
-                
+                if (!RAINBOW_COLOR)
+                {
+                    color[i]++;
+                    if (color[i] >= NCOLORS) color[i] -= NCOLORS;
+                }                
             }
 
             configs[i][2] += DPHI; 
@@ -363,7 +371,74 @@ double *configs[NPARTMAX];
 }
 
 
+void init_circle_config()
+{
+    int i, j, n; 
+    double dx, dy;
+    
+    switch (CIRCLE_PATTERN) {
+        case (C_FOUR_CIRCLES):
+        {
+            ncircles = 4;
+            
+            circlex[0] = 1.0;
+            circley[0] = 0.0;
+            circlerad[0] = 0.8;
+            
+            circlex[1] = -1.0;
+            circley[1] = 0.0;
+            circlerad[1] = 0.8;
+            
+            circlex[2] = 0.0;
+            circley[2] = 0.8;
+            circlerad[2] = 0.4;
+            
+            circlex[3] = 0.0;
+            circley[3] = -0.8;
+            circlerad[3] = 0.4;
+            
+            for (i=0; i<4; i++) circleactive[i] = 1;
 
+            break;
+        }
+        case (C_SQUARE):
+        {
+            ncircles = NCX*NCY;
+            dy = (YMAX - YMIN)/((double)NCY);
+            for (i = 0; i < NCX; i++)
+                for (j = 0; j < NCY; j++)
+                {
+                    n = NCY*i + j;
+                    circlex[n] = ((double)(i-NCX/2) + 0.5)*dy;
+                    circley[n] = YMIN + ((double)j + 0.5)*dy;
+                    circlerad[n] = MU;
+                    circleactive[n] = 1;
+                }
+            break;
+        }
+        case (C_HEX):
+        {
+            ncircles = NCX*(NCY+1);
+            dy = (YMAX - YMIN)/((double)NCY);
+            dx = dy*0.5*sqrt(3.0);
+            for (i = 0; i < NCX; i++)
+                for (j = 0; j < NCY+1; j++)
+                {
+                    n = (NCY+1)*i + j;
+                    circlex[n] = ((double)(i-NCX/2) + 0.5)*dy;
+                    circley[n] = YMIN + ((double)j - 0.5)*dy;
+                    if ((i+NCX)%2 == 1) circley[n] += 0.5*dy;
+                    circlerad[n] = MU;
+                    circleactive[n] = 1;
+                }
+            break;
+        }
+        default: 
+        {
+            printf("Function init_circle_config not defined for this pattern \n");
+        }
+    }
+}
 
 
 void animation()
@@ -379,19 +454,24 @@ void animation()
     active = malloc(sizeof(int)*(NPARTMAX));
     for (i=0; i<NPARTMAX; i++)
         configs[i] = (double *)malloc(8*sizeof(double));
+    
+    /* init circle configuration if the domain is D_CIRCLES */
+    if (B_DOMAIN == D_CIRCLES) init_circle_config();
+    
       
     /* initialize system by putting particles in a given point with a range of velocities */
     r = cos(PI/(double)NPOLY)/cos(DPI/(double)NPOLY);
 
-//     init_drop_config(0.0, 0.0, -0.2, 0.2, configs);    
+//     init_drop_config(0.0, 0.0, 0.0, PI, configs);    
 //     init_drop_config(0.5, 0.5, -1.0, 1.0, configs);    
 //     init_sym_drop_config(-1.0, 0.5, -PID, PID, configs);
 //     init_drop_config(-0.999, 0.0, -alpha, alpha, configs);
 
 //  other possible initial conditions :
-//     init_line_config(-0.6, 0.2, -0.6, 0.7, 0.0, configs);
+//     init_line_config(-1.25, -0.5, -1.25, 0.5, 0.0, configs);
+    init_line_config(0.0, -1.0, -1.0, 1.0, 0.25*PID, configs);
 //     init_line_config(-0.7, -0.45, -0.7, 0.45, 0.0, configs);
-    init_line_config(0.0, -0.3, 0.0, 0.3, 0.0, configs);
+//     init_line_config(-1.5, 0.1, -0.1, 1.0, -0.5*PID, configs);
   
     blank();  
     glColor3f(0.0, 0.0, 0.0);
@@ -425,7 +505,14 @@ void animation()
         }
     }
   
-    sleep(SLEEP1);
+    if (RAINBOW_COLOR)      /* rainbow color scheme */
+        for (i=0; i<NPART; i++) 
+        {
+            color[i] = (i*NCOLORS)/NPART;
+            newcolor[i] = (i*NCOLORS)/NPART;  
+        }
+
+        sleep(SLEEP1);
   
     for (i=0; i<=NSTEPS; i++)
     {

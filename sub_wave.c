@@ -315,13 +315,129 @@ double x1, y1, x2, y2;
 }
 
 
+void draw_rotated_rectangle(x1, y1, x2, y2)
+double x1, y1, x2, y2;
+{
+    double pos[2];
+    double xa, ya, xb, yb, xc, yc;
+    
+    xa = 0.5*(x1 - y2);
+    xb = 0.5*(x2 - y1);
+    xc = 0.5*(x1 - y1);
+    ya = 0.5*(x1 + y1);
+    yb = 0.5*(x2 + y2);
+    yc = 0.5*(x2 + y1);
+    
+    glBegin(GL_LINE_LOOP);
+    xy_to_pos(xc, ya, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(xb, yc, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(xc, yb, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(xa, yc, pos);
+    glVertex2d(pos[0], pos[1]);
+    glEnd();    
+}
+
+void init_circle_config()
+/* initialise the arrays circlex, circley, circlerad and circleactive */
+/* for billiard shape D_CIRCLES */
+{
+    int i, j, n; 
+    double dx, dy, p;
+    
+    switch (CIRCLE_PATTERN) {
+        case (C_SQUARE):
+        {
+            ncircles = NGRIDX*NGRIDY;
+            dy = (YMAX - YMIN)/((double)NGRIDY);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY; j++)
+                {
+                    n = NGRIDY*i + j;
+                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    circley[n] = YMIN + ((double)j + 0.5)*dy;
+                    circlerad[n] = MU;
+                    circleactive[n] = 1;
+                }
+            break;
+        }
+        case (C_HEX):
+        {
+            ncircles = NGRIDX*(NGRIDY+1);
+            dy = (YMAX - YMIN)/((double)NGRIDY);
+            dx = dy*0.5*sqrt(3.0);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY+1; j++)
+                {
+                    n = (NGRIDY+1)*i + j;
+                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    circley[n] = YMIN + ((double)j - 0.5)*dy;
+                    if ((i+NGRIDX)%2 == 1) circley[n] += 0.5*dy;
+                    circlerad[n] = MU;
+                    circleactive[n] = 1;
+                }
+            break;
+        }
+        case (C_RAND_DISPLACED):
+        {
+            ncircles = NGRIDX*NGRIDY;
+            dy = (YMAX - YMIN)/((double)NGRIDY);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY; j++)
+                {
+                    n = NGRIDY*i + j;
+                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5 + 0.5*(double)rand()/RAND_MAX)*dy;
+                    circley[n] = YMIN + ((double)j + 0.5 + 0.5*(double)rand()/RAND_MAX)*dy;
+                    circlerad[n] = MU*(1.0 + 0.35*(double)rand()/RAND_MAX);
+                    circleactive[n] = 1;
+                }
+            break;
+        }
+        case (C_RAND_PERCOL):
+        {
+            ncircles = NGRIDX*NGRIDY;
+            dy = (YMAX - YMIN)/((double)NGRIDY);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY; j++)
+                {
+                    n = NGRIDY*i + j;
+                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    circley[n] = YMIN + ((double)j + 0.5)*dy;
+                    circlerad[n] = MU;
+                    p = (double)rand()/RAND_MAX;
+                    if (p < P_PERCOL) circleactive[n] = 1;
+                    else circleactive[n] = 0;
+                }
+            break;
+        }
+        case (C_RAND_POISSON):
+        {
+            ncircles = NPOISSON;
+            for (n = 0; n < NPOISSON; n++)
+            {
+                circlex[n] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+                circley[n] = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
+                circlerad[n] = MU;
+                circleactive[n] = 1;
+            }
+            break;
+        }
+        default: 
+        {
+            printf("Function init_circle_config not defined for this pattern \n");
+        }
+    }
+}
+
 
 int xy_in_billiard(x, y)
 /* returns 1 if (x,y) represents a point in the billiard */
 double x, y;
 {
-    double l2, r2, r2mu, omega, c, angle, z, x1, y1, u, v, u1, v1;
-    int i, k, k1, k2, condition;
+    double l2, r2, r2mu, omega, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy;
+    int i, j, k, k1, k2, condition;
 
     switch (B_DOMAIN) {
         case D_RECTANGLE:
@@ -416,6 +532,44 @@ double x, y;
         {
             return(((x-1.0)*(x-1.0) + y*y < LAMBDA*LAMBDA)||((x+1.0)*(x+1.0) + y*y < LAMBDA*LAMBDA)||((vabs(x) < 1.0)&&(vabs(y) < MU)));
         }
+        case D_DISK_GRID:
+        {
+            dy = (YMAX - YMIN)/((double)NGRIDY);
+            for (i = -NGRIDX/2; i < NGRIDX/2; i++)
+                for (j = 0; j < NGRIDY; j++)
+                {
+                    x1 = ((double)i + 0.5)*dy;
+                    y1 = YMIN + ((double)j + 0.5)*dy;
+                    if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < MU*MU) return(0); 
+                }
+            return(1);
+        }
+        case D_DISK_HEX:
+        {
+            dy = (YMAX - YMIN)/((double)NGRIDY);
+            dx = dy*0.5*sqrt(3.0);
+            for (i = -NGRIDX/2; i < NGRIDX/2; i++)
+                for (j = -1; j < NGRIDY; j++)
+                {
+                    x1 = ((double)i + 0.5)*dy;
+                    y1 = YMIN + ((double)j + 0.5)*dy;
+                    if ((i+NGRIDX)%2 == 1) y1 += 0.5*dy;
+                    if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < MU*MU) return(0); 
+                }
+            return(1);
+        }
+        case D_CIRCLES:
+        {
+            for (i = 0; i < ncircles; i++)
+                if (circleactive[i]) 
+                {
+                    x1 = circlex[i];
+                    y1 = circley[i];
+                    r2 = circlerad[i]*circlerad[i];
+                    if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2) return(0); 
+                }
+            return(1);
+        }
         case D_MENGER:       
         {
             x1 = 0.5*(x+1.0);
@@ -442,6 +596,23 @@ double x, y;
             }
             if (u*u + v*v < MANDELLIMIT) return(1);
             else return(0);
+        }
+        case D_MENGER_ROTATED:       
+        {
+            x2 = 1.0*(x + y);
+            y2 = 1.0*(x - y);
+            if ((vabs(x2) < 1.0)&&(vabs(y2) < 1.0))
+            {
+                x1 = 0.5*(x2 + 1.0);
+                y1 = 0.5*(y2 + 1.0);
+                for (k=0; k<MDEPTH; k++)
+                {
+                    x1 = x1*(double)MRATIO;
+                    y1 = y1*(double)MRATIO;
+                    if ((vabs(x)<1.0)&&(vabs(y)<1.0)&&(((int)x1 % MRATIO)==MRATIO/2)&&(((int)y1 % MRATIO)==MRATIO/2)) return(0);
+                }                
+            }
+            return(1);
         }
         case D_ANNULUS_HEATED:      /* returns 2 if in inner circle */ 
         {
@@ -558,8 +729,8 @@ int i, j;
 
 void draw_billiard()      /* draws the billiard boundary */
 {
-    double x0, x, y, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l;
-    int i, j, k1, k2, mr2;
+    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l;
+    int i, j, k, k1, k2, mr2;
 
     if (BLACK) glColor3f(1.0, 1.0, 1.0);
     else glColor3f(0.0, 0.0, 0.0);
@@ -845,6 +1016,71 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd ();
             break;
         }
+        case D_DISK_GRID:
+        {
+            glLineWidth(2);
+            for (i = -NGRIDX/2; i < NGRIDX/2; i++)
+                for (j = 0; j < NGRIDY; j++)
+                {
+                    dy = (YMAX - YMIN)/((double)NGRIDY);
+                    dx = dy*0.5*sqrt(3.0);
+                    x1 = ((double)i + 0.5)*dy;
+                    y1 = YMIN + ((double)j + 0.5)*dy;
+                    glBegin(GL_LINE_LOOP);
+                    for (k=0; k<=NSEG; k++)
+                    {
+                        phi = (double)k*DPI/(double)NSEG;
+                        x = x1 + MU*cos(phi);
+                        y = y1 + MU*sin(phi);
+                        xy_to_pos(x, y, pos);
+                        glVertex2d(pos[0], pos[1]);
+                    }
+                    glEnd ();
+                }
+            break;
+        }
+        case D_DISK_HEX:
+        {
+            glLineWidth(2);
+            for (i = -NGRIDX/2; i < NGRIDX/2; i++)
+                for (j = -1; j < NGRIDY; j++)
+                {
+                    dy = (YMAX - YMIN)/((double)NGRIDY);
+                    x1 = ((double)i + 0.5)*dy;
+                    y1 = YMIN + ((double)j + 0.5)*dy;
+                    if ((i+NGRIDX)%2 == 1) y1 += 0.5*dy;
+                    glBegin(GL_LINE_LOOP);
+                    for (k=0; k<=NSEG; k++)
+                    {
+                        phi = (double)k*DPI/(double)NSEG;
+                        x = x1 + MU*cos(phi);
+                        y = y1 + MU*sin(phi);
+                        xy_to_pos(x, y, pos);
+                        glVertex2d(pos[0], pos[1]);
+                    }
+                    glEnd ();
+                }
+            break;
+        }
+        case (D_CIRCLES):
+        {
+            glLineWidth(2);
+            for (i = 0; i < ncircles; i++) 
+                if (circleactive[i]) 
+                {
+                    glBegin(GL_LINE_LOOP);
+                    for (k=0; k<=NSEG; k++)
+                    {
+                        phi = (double)k*DPI/(double)NSEG;
+                        x = circlex[i] + circlerad[i]*cos(phi);
+                        y = circley[i] + circlerad[i]*sin(phi);
+                        xy_to_pos(x, y, pos);
+                        glVertex2d(pos[0], pos[1]);
+                    }
+                    glEnd ();
+                }
+            break;
+        }
         case (D_MENGER):
         {
             glLineWidth(3);
@@ -893,11 +1129,59 @@ void draw_billiard()      /* draws the billiard boundary */
             
             break;
         }        
-         case (D_JULIA_INT):
+        case (D_JULIA_INT):
         {
             /* Do nothing */
             break;
         }
+        case (D_MENGER_ROTATED):
+        {
+            glLineWidth(3);
+//             draw_rectangle(XMIN, -1.0, XMAX, 1.0);
+
+            /* level 1 */
+            if (MDEPTH > 0)
+            {
+                glLineWidth(2);
+                x = 1.0/((double)MRATIO);
+                draw_rotated_rectangle(x, x, -x, -x);
+            }
+            
+            /* level 2 */
+            if (MDEPTH > 1)
+            {
+                glLineWidth(1);
+                mr2 = MRATIO*MRATIO;
+                l = 2.0/((double)mr2);
+                
+                for (i=0; i<MRATIO; i++)
+                    for (j=0; j<MRATIO; j++)
+                        if ((i!=MRATIO/2)||(j!=MRATIO/2))
+                        {
+                            x = -1.0 - 0.5*l + 2.0*((double)i + 0.5)/((double)MRATIO);
+                            y = -1.0 - 0.5*l + 2.0*((double)j + 0.5)/((double)MRATIO);
+                            draw_rotated_rectangle(x, y, x+l, y+l);
+                        }
+            }
+            
+            /* level 3 */
+            if (MDEPTH > 2)
+            {
+                glLineWidth(1);
+                l = 2.0/((double)(mr2*MRATIO));
+                
+                for (i=0; i<mr2; i++)
+                    for (j=0; j<mr2; j++)
+                        if ( (((i%MRATIO!=MRATIO/2))||(j%MRATIO!=MRATIO/2)) && (((i/MRATIO!=MRATIO/2))||(j/MRATIO!=MRATIO/2)) )
+                        {
+                            x = -1.0 - 0.5*l + 2.0*((double)i + 0.5)/((double)mr2);
+                            y = -1.0 - 0.5*l + 2.0*((double)j + 0.5)/((double)mr2);
+                            draw_rotated_rectangle(x, y, x+l, y+l);
+                        }
+            }
+            
+            break;
+        }        
         case (D_ANNULUS_HEATED):
         {
             glBegin(GL_LINE_LOOP);
