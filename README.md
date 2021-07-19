@@ -58,4 +58,4 @@ gcc -o schrodinger schrodinger.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -l
 
 - Generate movie with 
 
-ffmpeg -i wave.%05d.tif -vcodec libx264 part.mp4
+ffmpeg -i wave.%05d.tif -vcodec libx264 wave.mp4
