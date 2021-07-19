@@ -11,6 +11,7 @@ There are two groups of 4 files:
 ### Simulations of classical particles in billiards.
 
 global_particles.c
+
 sub_part_billiard.c
 
 particle_billiard.c
