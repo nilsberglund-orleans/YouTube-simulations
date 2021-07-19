@@ -18,17 +18,17 @@ There are two groups of 4 files:
 
 4. drop_billiard.c
 
-Create subfolders 'tif_part', 'tif_drop'
+- Create subfolders 'tif_part', 'tif_drop'
 
-Customize constants at beginning of .c file
+- Customize constants at beginning of .c file
 
-Compile with 
+- Compile with 
 
 gcc -o particle_billiard particle_billiard.c-O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut
 
 gcc -o drop_billiard drop_billiard.c-O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut
 
-Generate movie with 
+- Generate movie with 
 
 ffmpeg -i part.%05d.tif -vcodec libx264 part.mp4
 
@@ -44,11 +44,11 @@ ffmpeg -i part.%05d.tif -vcodec libx264 part.mp4
 
 5. schrodinger.c
 
-Create subfolders 'tif_wave', 'tif_heat', 'tif_schrod'
+- Create subfolders 'tif_wave', 'tif_heat', 'tif_schrod'
 
-Customize constants at beginning of .c file
+- Customize constants at beginning of .c file
 
-Compile with 
+- Compile with 
 
 gcc -o wave_billiard wave_billiard.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp
 
@@ -56,6 +56,6 @@ gcc -o heat heat.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3
 
 gcc -o schrodinger schrodinger.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp
 
-Generate movie with 
+- Generate movie with 
 
 ffmpeg -i wave.%05d.tif -vcodec libx264 part.mp4
