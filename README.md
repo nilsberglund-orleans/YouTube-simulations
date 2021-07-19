@@ -10,13 +10,13 @@ There are two groups of 4 files:
 
 ### Simulations of classical particles in billiards.
 
-global_particles.c
+1. global_particles.c
 
-sub_part_billiard.c
+2. sub_part_billiard.c
 
-particle_billiard.c
+3. particle_billiard.c
 
-drop_billiard.c
+4. drop_billiard.c
 
 Create subfolders 'tif_part', 'tif_drop'
 
@@ -34,15 +34,15 @@ ffmpeg -i part.%05d.tif -vcodec libx264 part.mp4
 
 ### Simulations of wave equation, heat equation and Schrodinger equation.
 
-global_pdes.c
+1. global_pdes.c
 
-sub_wave.c
+2. sub_wave.c
 
-wave_billiard.c
+3. wave_billiard.c
 
-heat.c
+4. heat.c
 
-schrodinger.c
+5. schrodinger.c
 
 Create subfolders 'tif_wave', 'tif_heat', 'tif_schrod'
 
