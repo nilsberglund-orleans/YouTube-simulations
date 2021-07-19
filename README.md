@@ -1,4 +1,4 @@
-### Tool to create videos of particles of waves in different 2D domains.
+### Tool to create videos of particles or waves in different 2D domains.
 
 Created by **Nils Berglund** and optimized by **Marco Mancini**
 
