@@ -29,7 +29,7 @@ updated gradually.
 > 
 > #define JULIA_SCALE 1.0 /* scaling for Julia sets */
 
-/* Choice of the billiard table */
+```/* Choice of the billiard table */
 
 #define B_DOMAIN 3      /* choice of domain shape */
 
@@ -155,6 +155,6 @@ updated gradually.
 #define PID 	1.570796327
 
 
-init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);`
+init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);```
 
 
