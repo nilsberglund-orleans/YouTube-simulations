@@ -10,7 +10,7 @@ updated gradually.
 
 ### 18 July 21 - Refraction (and diffraction) through a raindrop ###
 
-**Program: wave_billiard.c**
+**Program:** `wave_billiard.c`
 
 ``` #define MOVIE 1         /* set to 1 to generate movie */
 
