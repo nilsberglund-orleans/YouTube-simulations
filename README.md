@@ -4,7 +4,7 @@ Created by **Nils Berglund** and optimized by **Marco Mancini**
 
 C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
-We plan to add a list of parameter values used in specific simulations later on. 
+Parameter values used in specific simulations will be gradually added to file `Parameters.md`. 
 
 There are two groups of 4 files and 5 files:
 
