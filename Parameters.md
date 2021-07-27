@@ -8,6 +8,158 @@ Below are parameter values used for different simulations, as well as initial co
 function animation. Some simulations use variants of the published code. The list is going to be 
 updated gradually. 
 
+### 20 July 21 - The amplitude of the fish ###
+
+**Program:** `wave_billiard.c`
+
+```
+#define MOVIE 1         /* set to 1 to generate movie */
+
+/* General geometrical parameters */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define NX 1280          /* number of grid points on x axis */
+#define NY 720          /* number of grid points on y axis */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define JULIA_SCALE 1.1 /* scaling for Julia sets */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 18      /* choice of domain shape */
+/* superseded in later versions by D_DOMAIN 20 with D_CIRCLES 20 
+   and CIRCLE_PATTERN 4 with C_RAND_POISSON 4 */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_FLAT 6        /* flat interface */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+#define D_YOUNG 9       /* Young diffraction slits */
+#define D_GRATING 10    /* diffraction grating */
+#define D_EHRENFEST 11  /* Ehrenfest urn type geometry */
+#define D_DISK_GRID 12  /* grid of disks */
+#define D_DISK_RANDOM 13    /* grid of randomly displaced disks */
+#define D_DISK_PERCOL 14    /* random grid of percolation type */
+
+#define D_MENGER 15     /* Menger-Sierpinski carpet */ 
+#define D_JULIA_INT 16  /* interior of Julia set */ 
+#define D_MENGER_ROTATED 17  /* rotated Menger-Sierpinski carpet */
+
+#define D_DISK_POISSON 18   /* random grid given by Poisson process */ 
+/* superseded in later versions by D_DOMAIN 20 with D_CIRCLES 20 
+   and CIRCLE_PATTERN 4 with C_RAND_POISSON 4 */
+
+/* Billiard tables for heat equation */
+
+#define D_ANNULUS_HEATED 21 /* annulus with different temperatures */
+#define D_MENGER_HEATED 22  /* Menger gasket with different temperatures */
+#define D_MENGER_H_OPEN 23  /* Menger gasket with different temperatures and larger domain */
+#define D_MANDELBROT 24     /* Mandelbrot set */
+#define D_JULIA 25          /* Julia set */
+#define D_MANDELBROT_CIRCLE 26     /* Mandelbrot set with circular conductor */
+
+#define LAMBDA 0.85	    /* parameter controlling the dimensions of domain */
+#define MU 0.02 	    /* parameter controlling the dimensions of domain */
+#define NPOLY 8             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define MDEPTH 4            /* depth of computation of Menger gasket */
+#define MRATIO 3            /* ratio defining Menger gasket */
+#define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
+#define MANDELLIMIT 10.0     /* limit value for approximation of Mandelbrot set */
+#define FOCI 1              /* set to 1 to draw focal points of ellipse */
+#define NGRIDX 30            /* number of grid point for grid of disks */
+#define NGRIDY 40           /* number of grid point for grid of disks */
+#define NSCATTERERS 300       /* number of scatterers for Poisson random grid */
+
+/* You can add more billiard tables by adapting the functions */
+/* xy_in_billiard and draw_billiard below */
+
+/* Physical parameters of wave equation */
+
+#define OMEGA 0.9           /* frequency of periodic excitation */
+#define COURANT 0.01       /* Courant number */
+#define GAMMA 0.0      /* damping factor in wave equation */
+#define GAMMA_BC 1.0e-4      /* damping factor on boundary */
+#define KAPPA 0.0       /* "elasticity" term enforcing oscillations */
+#define KAPPA_BC 5.0e-4       /* "elasticity" term on absorbing boundary */
+/* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
+/* The physical damping coefficient is given by GAMMA/(DT)^2 */
+/* Increasing COURANT speeds up the simulation, but decreases accuracy */
+/* For similar wave forms, COURANT^2*GAMMA should be kept constant */
+
+/* Boundary conditions */
+
+#define B_COND 3
+
+#define BC_DIRICHLET 0   /* Dirichlet boundary conditions */
+#define BC_PERIODIC 1    /* periodic boundary conditions */
+#define BC_ABSORBING 2   /* absorbing boundary conditions (beta version) */
+#define BC_VPER_HABS 3   /* vertically periodic and horizontally absorbing boundary conditions */
+
+
+/* For debugging purposes only */
+#define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
+#define VMAX 10.0       /* max value of wave amplitude */
+
+/* Parameters for length and speed of simulation */
+
+#define NSTEPS 5800      /* number of frames of movie */
+#define NVID 40          /* number of iterations between images displayed on screen */
+#define NSEG 100         /* number of segments of boundary */
+
+#define PAUSE 1000         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1   /* final sleeping time */
+
+/* Plot type */
+
+#define PLOT 0
+
+#define P_AMPLITUDE 0    /* plot amplitude of wave */
+#define P_ENERGY 1       /* plot energy of wave */
+#define P_MIXED 2        /* plot amplitude in upper half, energy in lower half */
+
+
+/* Color schemes */
+
+#define BLACK 1          /* background */
+
+#define COLOR_SCHEME 1   /* choice of color scheme */
+
+#define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
+#define C_HUE 1          /* color scheme modifies hue */
+
+#define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+#define E_SCALE 1000.0    /* scaling factor for energy representation */
+
+#define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
+#define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
+#define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
+#define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
+#define HUEMEAN 240.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP -240.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+/* Basic math */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+```
+
 ### 19 July 21 - 10,000 particles on a genus 10 surface ###
 
 **Program:** `particle_billiard.c`
@@ -66,8 +218,6 @@ updated gradually.
 
 #define NSTEPS 7650     /* number of frames of movie */
 #define TIME 1000       /* time between movie frames, for fluidity of real-time simulation */ 
-// #define DPHI 0.000002    /* integration step */
-// #define DPHI 0.00002    /* integration step */
 #define DPHI 0.000005    /* integration step */
 #define NVID 150         /* number of iterations between images displayed on screen */
 
@@ -362,4 +512,156 @@ init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);
 
 
 init_drop_config(0.0, 0.0, -0.1*PID, 0.1*PID, configs); 
+```
+
+### 16 July 21 - So long and thanks for all the fish - linear wave hitting a Poisson process of obstacles ###
+
+**Program:** variant of `wave_billiard.c`
+
+```
+#define MOVIE 1         /* set to 1 to generate movie */
+
+/* General geometrical parameters */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define NX 1280          /* number of grid points on x axis */
+#define NY 720          /* number of grid points on y axis */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define JULIA_SCALE 1.1 /* scaling for Julia sets */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 18      /* choice of domain shape */
+/* superseded in later versions by D_DOMAIN 20 with D_CIRCLES 20 
+   and CIRCLE_PATTERN 4 with C_RAND_POISSON 4 */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_FLAT 6        /* flat interface */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+#define D_YOUNG 9       /* Young diffraction slits */
+#define D_GRATING 10    /* diffraction grating */
+#define D_EHRENFEST 11  /* Ehrenfest urn type geometry */
+#define D_DISK_GRID 12  /* grid of disks */
+#define D_DISK_RANDOM 13    /* grid of randomly displaces disks */
+#define D_DISK_PERCOL 14    /* random grid of percolation type */
+
+#define D_MENGER 15     /* Menger-Sierpinski carpet */ 
+#define D_JULIA_INT 16  /* interior of Julia set */ 
+#define D_MENGER_ROTATED 17  /* rotated Menger-Sierpinski carpet */
+
+#define D_DISK_POISSON 18   /* random grid given by Poisson process */ 
+/* superseded in later versions by D_DOMAIN 20 with D_CIRCLES 20 
+   and CIRCLE_PATTERN 4 with C_RAND_POISSON 4 */
+
+/* Billiard tables for heat equation */
+
+#define D_ANNULUS_HEATED 21 /* annulus with different temperatures */
+#define D_MENGER_HEATED 22  /* Menger gasket with different temperatures */
+#define D_MENGER_H_OPEN 23  /* Menger gasket with different temperatures and larger domain */
+#define D_MANDELBROT 24     /* Mandelbrot set */
+#define D_JULIA 25          /* Julia set */
+#define D_MANDELBROT_CIRCLE 26     /* Mandelbrot set with circular conductor */
+
+#define LAMBDA 0.85	    /* parameter controlling the dimensions of domain */
+#define MU 0.02 	    /* parameter controlling the dimensions of domain */
+#define NPOLY 8             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define MDEPTH 4            /* depth of computation of Menger gasket */
+#define MRATIO 3            /* ratio defining Menger gasket */
+#define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
+#define MANDELLIMIT 10.0     /* limit value for approximation of Mandelbrot set */
+#define FOCI 1              /* set to 1 to draw focal points of ellipse */
+#define NGRIDX 30            /* number of grid point for grid of disks */
+#define NGRIDY 40           /* number of grid point for grid of disks */
+#define NSCATTERERS 300       /* number of scatterers for Poisson random grid */
+
+/* You can add more billiard tables by adapting the functions */
+/* xy_in_billiard and draw_billiard below */
+
+/* Physical parameters of wave equation */
+
+#define OMEGA 0.9           /* frequency of periodic excitation */
+#define COURANT 0.01       /* Courant number */
+#define GAMMA 0.0      /* damping factor in wave equation */
+#define GAMMA_BC 1.0e-4      /* damping factor on boundary */
+#define KAPPA 0.0       /* "elasticity" term enforcing oscillations */
+#define KAPPA_BC 5.0e-4       /* "elasticity" term on absorbing boundary */
+/* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
+/* The physical damping coefficient is given by GAMMA/(DT)^2 */
+/* Increasing COURANT speeds up the simulation, but decreases accuracy */
+/* For similar wave forms, COURANT^2*GAMMA should be kept constant */
+
+/* Boundary conditions */
+
+#define B_COND 3
+
+#define BC_DIRICHLET 0   /* Dirichlet boundary conditions */
+#define BC_PERIODIC 1    /* periodic boundary conditions */
+#define BC_ABSORBING 2   /* absorbing boundary conditions (beta version) */
+#define BC_VPER_HABS 3   /* vertically periodic and horizontally absorbing boundary conditions */
+
+
+/* For debugging purposes only */
+#define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
+#define VMAX 10.0       /* max value of wave amplitude */
+
+/* Parameters for length and speed of simulation */
+
+#define NSTEPS 5800      /* number of frames of movie */
+#define NVID 40          /* number of iterations between images displayed on screen */
+#define NSEG 100         /* number of segments of boundary */
+
+#define PAUSE 1000         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1   /* final sleeping time */
+
+/* Plot type */
+
+#define PLOT 2
+
+#define P_AMPLITUDE 0    /* plot amplitude of wave */
+#define P_ENERGY 1       /* plot energy of wave */
+#define P_MIXED 2        /* plot amplitude in upper half, energy in lower half */
+
+
+/* Color schemes */
+
+#define BLACK 1          /* background */
+
+#define COLOR_SCHEME 1   /* choice of color scheme */
+
+#define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
+#define C_HUE 1          /* color scheme modifies hue */
+
+#define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+#define E_SCALE 1000.0    /* scaling factor for energy representation */
+
+#define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
+#define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
+#define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
+#define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
+#define HUEMEAN 240.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP -240.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+/* Basic math */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
 ```
