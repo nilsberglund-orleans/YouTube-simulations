@@ -158,6 +158,10 @@ updated gradually.
 #define PI 	3.141592654
 #define DPI 	6.283185307
 #define PID 	1.570796327
+
+
+init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);
+
 ```
 
 ### 19 July 21 - 10,000 particles on a genus 10 surface ###
@@ -516,7 +520,7 @@ init_drop_config(0.0, 0.0, -0.1*PID, 0.1*PID, configs);
 
 ### 16 July 21 - So long and thanks for all the fish - linear wave hitting a Poisson process of obstacles ###
 
-**Program:** variant of `wave_billiard.c`
+**Program:** `wave_billiard.c`
 
 ```
 #define MOVIE 1         /* set to 1 to generate movie */
@@ -664,4 +668,107 @@ init_drop_config(0.0, 0.0, -0.1*PID, 0.1*PID, configs);
 #define PI 	3.141592654
 #define DPI 	6.283185307
 #define PID 	1.570796327
+
+
+init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);
+
+```
+
+### 15 July 21 - Octagonal representation of a genus 2 surface ###
+
+**Program:** `particle_billiard.c`
+
+```
+#define MOVIE 1         /* set to 1 to generate movie */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define SCALING_FACTOR 1.0       /* scaling factor of drawing, needed for flower billiards, otherwise set to 1.0 */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 14      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+#define D_REULEAUX 9    /* Reuleaux and star shapes */
+#define D_FLOWER 10     /* Bunimovich flower */
+#define D_ALT_REU 11    /* alternating between star and Reuleaux */
+#define D_ANGLE 12      /* angular sector */
+#define D_LSHAPE 13     /* L-shaped billiard for conical singularity */
+#define D_GENUSN 14     /* polygon with identifies opposite sides */
+
+#define LAMBDA 0.75	/* parameter controlling shape of billiard */
+#define MU 0.1          /* second parameter controlling shape of billiard */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+#define NPOLY 8             /* number of sides of polygon */
+#define APOLY 0.25           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
+#define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
+#define PERIODIC_BC 0       /* set to 1 to enforce periodic boundary conditions when drawing particles */
+
+#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+#define DEBUG 0         /* draw trajectories, for debugging purposes */
+
+/* Simulation parameters */
+
+#define NPART 20002     /* number of particles */
+#define NPARTMAX 100000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 7000     /* number of frames of movie */
+#define TIME 1000       /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.000005    /* integration step */
+#define NVID 150         /* number of iterations between images displayed on screen */
+
+/* Decreasing TIME accelerates the animation and the movie                               */
+/* For constant speed of movie, TIME*DPHI should be kept constant                        */
+/* However, increasing DPHI too much deterioriates quality of simulation                 */
+/* NVID tells how often a picture is drawn in the animation, increase it for faster anim */
+/* For a good quality movie, take for instance TIME = 400, DPHI = 0.00005, NVID = 100    */
+
+/* Colors and other graphical parameters */
+
+#define NCOLORS 16      /* number of colors */
+#define COLORSHIFT 200     /* hue of initial color */ 
+#define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
+#define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
+#define NSEG 100         /* number of segments of boundary */
+#define LENGTH 0.02      /* length of velocity vectors */
+#define BILLIARD_WIDTH 3    /* width of billiard */
+#define PARTICLE_WIDTH 2    /* width of particles */
+#define FRONT_WIDTH 3       /* width of wave front */
+
+#define BLACK 1             /* set to 1 for black background */
+#define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 
+#define OUTER_COLOR 270.0   /* color outside billiard */
+#define PAINT_INT 0         /* set to 1 to paint interior in other color (for polygon/Reuleaux) */
+
+
+#define PAUSE 1000       /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1000      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+
+init_drop_config(0.0, 0.0, -0.5*PID, 0.5*PID, configs);    
+
 ```
