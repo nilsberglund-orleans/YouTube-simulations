@@ -12,7 +12,7 @@ updated gradually.
 
 **Program: wave_billiard.c**
 
-#define MOVIE 1         /* set to 1 to generate movie */
+`#define MOVIE 1         /* set to 1 to generate movie */
 
 /* General geometrical parameters */
 
@@ -155,6 +155,6 @@ updated gradually.
 #define PID 	1.570796327
 
 
-init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);
+init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);`
 
 
