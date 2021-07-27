@@ -12,7 +12,7 @@ updated gradually.
 
 **Program: wave_billiard.c**
 
-`#define MOVIE 1         /* set to 1 to generate movie */
+>#define MOVIE 1         /* set to 1 to generate movie */
 
 /* General geometrical parameters */
 
