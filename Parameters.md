@@ -12,22 +12,22 @@ updated gradually.
 
 **Program: wave_billiard.c**
 
->#define MOVIE 1         /* set to 1 to generate movie */
-
-/* General geometrical parameters */
-
-#define WINWIDTH 	1280  /* window width */
-#define WINHEIGHT 	720   /* window height */
-
-#define NX 1280          /* number of grid points on x axis */
-#define NY 720          /* number of grid points on y axis */
-
-#define XMIN -1.8
-#define XMAX 1.8	/* x interval */
-#define YMIN -1.0125
-#define YMAX 1.0125	/* y interval for 9/16 aspect ratio */
-
-#define JULIA_SCALE 1.0 /* scaling for Julia sets */
+> #define MOVIE 1         /* set to 1 to generate movie */
+> 
+> /* General geometrical parameters */
+> 
+> #define WINWIDTH 	1280  /* window width */
+> #define WINHEIGHT 	720   /* window height */
+> 
+> #define NX 1280          /* number of grid points on x axis */
+> #define NY 720          /* number of grid points on y axis */
+> 
+> #define XMIN -1.8
+> #define XMAX 1.8	/* x interval */
+> #define YMIN -1.0125
+> #define YMAX 1.0125	/* y interval for 9/16 aspect ratio */
+> 
+> #define JULIA_SCALE 1.0 /* scaling for Julia sets */
 
 /* Choice of the billiard table */
 
