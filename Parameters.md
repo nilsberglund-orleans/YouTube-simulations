@@ -8,7 +8,7 @@ Below are parameter values used for different simulations, as well as initial co
 function animation. Some simulations use variants of the published code. The list is going to be 
 updated gradually. 
 
-### 18 July - Refraction (and diffraction) through a raindrop ###
+### 18 July 21 - Refraction (and diffraction) through a raindrop ###
 
 **Program: wave_billiard.c**
 
@@ -155,6 +155,9 @@ updated gradually.
 #define PID 	1.570796327
 
 
-init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);```
+init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);
+```
+
+### 17 July 21 ###
 
 
