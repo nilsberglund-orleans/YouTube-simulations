@@ -23,6 +23,12 @@ gcc -o particle_billiard particle_billiard.c-O3 -L/usr/X11R6/lib -ltiff -lm -lGL
 
 gcc -o drop_billiard drop_billiard.c-O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut
 
+- Many laptops claim to have 4 cores, but two of those are virtual. OMP acceleration may be more effective after executing           
+
+export OMP_NUM_THREADS=2 
+
+in the shell before running the program
+
 - Generate movie with 
 
 ffmpeg -i part.%05d.tif -vcodec libx264 part.mp4
@@ -44,6 +50,12 @@ gcc -o wave_billiard wave_billiard.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX1
 gcc -o heat heat.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp
 
 gcc -o schrodinger schrodinger.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp
+
+- Many laptops claim to have 4 cores, but two of those are virtual. OMP acceleration may be more effective after executing           
+
+export OMP_NUM_THREADS=2 
+
+in the shell before running the program
 
 - Generate movie with 
 
