@@ -110,7 +110,7 @@ updated gradually. Some constants have been moved to global files in later versi
 
 **Initial condition in function `animation()`:** `init_wave(-0.77, 0.18, phi, psi, xy_in);`
 
-**In function `init_wave()`: ** `phi[i][j] = 0.2*exp(-dist2/0.00025)*cos(-sqrt(dist2)/0.005);`
+**In function `init_wave()`:** `phi[i][j] = 0.2*exp(-dist2/0.00025)*cos(-sqrt(dist2)/0.005);`
 
 
 ```
