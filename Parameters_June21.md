@@ -2997,7 +2997,7 @@ short int *xy_in[NX];
 
 ### 4 June 21 - Water flowing through a heated Sierpinski-type carpet ###
 
-**Program:** Varient of `heat.c`
+**Program:** Variant of `heat.c`
 
 **Initial condition in function `animation()`:** ` init_gaussian(0.7, 0.7, 0.0, 0.1, phi, xy_in, mdepth);`
 
