@@ -168,6 +168,8 @@ updated gradually.
 
 **Program:** `particle_billiard.c`
 
+**Initial condition in function `animation()`:** `init_drop_config(0.0, 0.0, PI, DPI, configs);`
+
 ```
 #define MOVIE 1         /* set to 1 to generate movie */
 
@@ -257,14 +259,14 @@ updated gradually.
 #define PI 	3.141592654
 #define DPI 	6.283185307
 #define PID 	1.570796327
-
-
-init_drop_config(0.0, 0.0, PI, DPI, configs); 
+ 
 ```
 
 ### 18 July 21 - Refraction (and diffraction) through a raindrop ###
 
 **Program:** `wave_billiard.c`
+
+**Initial condition in function `animation()`:** `init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);`
 
 ``` 
 #define MOVIE 1         /* set to 1 to generate movie */
@@ -409,13 +411,13 @@ init_drop_config(0.0, 0.0, PI, DPI, configs);
 #define DPI 	6.283185307
 #define PID 	1.570796327
 
-
-init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);
 ```
 
 ### 17 July 21 - Mystery billiard 8 ###
 
 **Program:** variant of `particle_billiard.c`
+
+**Initial condition in function `animation()`:** `init_drop_config(0.0, 0.0, -0.1*PID, 0.1*PID, configs);`
 
 ```
 #define MOVIE 1         /* set to 1 to generate movie */
@@ -514,13 +516,13 @@ init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);
 #define DPI 	6.283185307
 #define PID 	1.570796327
 
-
-init_drop_config(0.0, 0.0, -0.1*PID, 0.1*PID, configs); 
 ```
 
 ### 16 July 21 - So long and thanks for all the fish - linear wave hitting a Poisson process of obstacles ###
 
 **Program:** `wave_billiard.c`
+
+**Initial condition in function `animation()`:** `init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);`
 
 ```
 #define MOVIE 1         /* set to 1 to generate movie */
@@ -669,14 +671,13 @@ init_drop_config(0.0, 0.0, -0.1*PID, 0.1*PID, configs);
 #define DPI 	6.283185307
 #define PID 	1.570796327
 
-
-init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);
-
 ```
 
 ### 15 July 21 - Octagonal representation of a genus 2 surface ###
 
 **Program:** `particle_billiard.c`
+
+**Initial condition in function `animation()`:** `init_drop_config(0.0, 0.0, -0.5*PID, 0.5*PID, configs);`
 
 ```
 #define MOVIE 1         /* set to 1 to generate movie */
@@ -766,9 +767,6 @@ init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);
 
 #define PI 	3.141592654
 #define DPI 	6.283185307
-#define PID 	1.570796327
-
-
-init_drop_config(0.0, 0.0, -0.5*PID, 0.5*PID, configs);    
+#define PID 	1.570796327    
 
 ```
