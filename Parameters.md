@@ -633,6 +633,8 @@ updated gradually.
 
 **Initial condition in function `animation()`:** `init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);`
 
+Up to this date, constants were not yet moved to files `global_pdes.c` or `global_particles.c`
+
 ```
 #define MOVIE 1         /* set to 1 to generate movie */
 
