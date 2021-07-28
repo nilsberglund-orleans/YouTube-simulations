@@ -12,6 +12,8 @@ updated gradually.
 
 **Program:** `wave_billiard.c`
 
+**Initial condition in function `animation()`:** `init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);`
+
 ```
 #define MOVIE 1         /* set to 1 to generate movie */
 
@@ -159,8 +161,6 @@ updated gradually.
 #define DPI 	6.283185307
 #define PID 	1.570796327
 
-
-init_planar_wave(XMIN + 0.05, 0.0, phi, psi, xy_in);
 
 ```
 
