@@ -2676,7 +2676,7 @@ short int *xy_in[NX];
 
 ### 7 June 21 - A Bunimovich elliptical flower billiard ###
 
-**Program:** `particle.c`
+**Program:** `particle_billiard.c`
 
 **Initial condition in function `animation()`:** `init_sym_drop_config(-0.99*r, 0.0, -PID, PID, configs);`
 
