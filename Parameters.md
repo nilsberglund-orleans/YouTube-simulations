@@ -8,7 +8,7 @@ Below are parameter values used for different simulations, as well as initial co
 function animation. Some simulations use variants of the published code. The list is going to be 
 updated gradually. 
 
-```
+
 ### 28 July 21 - An invisibility cloak (first optimized version) ###
 
 **Program:** `wave_billiard.c`
