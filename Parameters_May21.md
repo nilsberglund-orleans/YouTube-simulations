@@ -2038,21 +2038,245 @@ updated gradually. Some constants have been moved to global files in later versi
 
 ### 10 May 21 - A perfect wave front in the Bermuda triangle billiard ###
 
-**Program:** `xxx.c`
+**Program:** `drop_billiard.c`
 
-**Initial condition in function `animation()`:** `xxx`
+**Initial condition in function `animation()`:** `init_drop_config(0.0, 0.0, 0.0, DPI, configs);`
 
 ```
+#define MOVIE 0         /* set to 1 to generate movie */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 8      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+
+#define LAMBDA 1.0	/* parameter controlling shape of billiard */
+#define MU 0.1          /* second parameter controlling shape of billiard */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+#define NPOLY 3             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+
+#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+
+#define NPART 10000	/* number of particles */
+#define NPARTMAX 20000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define LPERIODIC 0.01   /* lines longer than this are not drawn (useful for Sinai billiard) */
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define MARGIN 0.02      /* distance above which points of curve are not drawn */
+#define CYCLE 0         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 5000     /* number of frames of movie */
+#define TIME 150        /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.0001     /* integration step */
+#define NVID 25        /* number of iterations between images displayed on screen */
+#define NCOLORS 10      /* number of colors */
+#define COLORSHIFT 60   /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+
+#define BLACK 1         /* set to 1 for black background */
+
+/* Decreasing TIME accelerates the animation and the movie               */
+/* For constant speed of movie, TIME*DPHI should be kept constant        */
+/* However, increasing DPHI too much deterioriates quality of simulation */
+/* For a good quality movie, take for instance TIME = 50, DPHI = 0.0002  */
+
+#define PAUSE 1000          /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
 
 ```
 
 ### 9 May 21 - Waves around a conical singularity ###
 
-**Program:** `xxx.c`
+**Program:** Special code `wave_conical.c`, not yet incorporated 
 
-**Initial condition in function `animation()`:** `xxx`
+Main changes: 
 
 ```
+#define D_CONICAL 999     /* L-shape with conical singularity */
+
+#define LAMBDA 0.3	    /* parameter controlling the dimensions of domain */
+#define NPOLY 6             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define FOCI 1              /* set to 1 to draw focal points of ellipse */
+
+/* You can add more billiard tables by adapting the functions */
+/* xy_in_billiard and draw_billiard below */
+
+/* Physical patameters of wave equation */
+
+#define COURANT 0.01       /* Courant number */
+#define GAMMA 0.0      /* damping factor in wave equation */
+#define KAPPA 5.0e-7       /* "elasticity" term enforcing oscillations */
+/* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
+/* The physical damping coefficient is given by GAMMA/(DT)^2 */
+/* Increasing COURANT speeds up the simulation, but decreases accuracy */
+/* For similar wave forms, COURANT^2*GAMMA should be kept constant */
+
+/* For debugging purposes only */
+#define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
+#define VMAX 10.0       /* max value of wave amplitude */
+
+/* Parameters for length and speed of simulation */
+
+#define NSTEPS 7500     //7500      /* number of frames of movie */
+#define NVID 50          /* number of iterations between images displayed on screen */
+#define NSEG 100         /* number of segments of boundary */
+
+#define PAUSE 1000         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1   /* final sleeping time */
+
+/* Color schemes */
+
+#define COLOR_SCHEME 1   /* choice of color scheme */
+
+#define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
+#define C_HUE 1          /* color scheme modifies hue */
+
+#define SCALE 1          /* set to 1 to adjust color scheme to variance of field */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+
+#define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
+#define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
+#define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
+#define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
+#define HUEMEAN 120.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP 120.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+/* Basic math */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+int xy_in_billiard(x, y)
+/* returns 1 if (x,y) represents a point in the billiard */
+double x, y;
+{
+    double l2, r2, omega, c, angle;
+    int k, condition;
+
+    switch (B_DOMAIN) {
+         case D_CONICAL:
+        {
+            if ((vabs(x) < 1.0)&&(y > -1.0)&&(y < 0.0)) return(1);
+            else if ((vabs(y) < 1.0)&&(x > -1.0)&&(x < 0.0)) return(1);
+            else return(0);
+        }
+}
+
+void draw_billiard()      /* draws the billiard boundary */
+{
+    double x0, x, y, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, rgb[3];
+    int i;
+
+    glColor3f(0.0, 0.0, 0.0);
+    glLineWidth(5);
+
+    glEnable(GL_LINE_SMOOTH);
+
+    switch (B_DOMAIN) {
+        case (D_CONICAL):
+        {
+            draw_segment(-1.0, -1.0, 0.0, -1.0, 0.0, 1.0, 0.5);
+            draw_segment(-1.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.5);
+            draw_segment(-1.0, -1.0, -1.0, 0.0, 220.0, 1.0, 0.5);
+            draw_segment(1.0, -1.0, 1.0, 0.0, 220.0, 1.0, 0.5);
+            draw_segment(0.0, -1.0, 1.0, -1.0, 60.0, 1.0, 0.5);
+            draw_segment(0.0, 0.0, 1.0, 0.0, 60.0, 1.0, 0.5);
+            draw_segment(-1.0, 0.0, -1.0, 1.0, 180.0, 1.0, 0.5);
+            draw_segment(0.0, 0.0, 0.0, 1.0, 180.0, 1.0, 0.5);
+            break;
+        }
+    }
+}
+
+void evolve_wave(phi, psi, xy_in)
+/* time step of field evolution */
+/* phi is value of field at time t, psi at time t-1 */
+    double *phi[NX], *psi[NX]; short int *xy_in[NX];
+{
+    int i, j, iplus, iminus, jplus, jminus, i1, i2, i3, j1, j2, j3, ij[2];
+    double delta, x, y;
+
+    /* boundaries */
+    xy_to_ij(-1.0, -1.0, ij);
+    i1 = ij[0];     j1 = ij[1];
+    xy_to_ij(0.0, 0.0, ij);
+    i2 = ij[0];     j2 = ij[1];
+    xy_to_ij(1.0, 1.0, ij);
+    i3 = ij[0];     j3 = ij[1];
+    
+    #pragma omp parallel for private(i,j,iplus,iminus,delta,x,y)
+    for (i=0; i<NX; i++){
+        for (j=0; j<NY; j++){
+            if (xy_in[i][j]){
+                /* boundary conditions */
+                iplus = i+1;
+                if ((iplus == i2)&&(j > j2)) iplus = i1+1;
+                else if ((iplus == i3)&&(j <= j2)) iplus = i1+1;
+                
+                iminus = i-1;
+                if ((iminus == i1)&&(j > j2)) iminus = i2-1;
+                else if ((iminus == i1)&&(j <= j2)) iminus = i3-1;
+                
+                jplus = j+1;
+                if ((jplus == j2)&&(i > i2)) jplus = j1+1;
+                else if ((jplus == j3)&&(i <= i2)) jplus = j1+1;
+                
+                jminus = j-1;
+                if ((jminus == j1)&&(i > i2)) jminus = j2-1;
+                else if ((jminus == j1)&&(i <= i2)) jminus = j3-1;
+
+                /* discretized Laplacian */
+                delta = phi[iplus][j] + phi[iminus][j] + phi[i][jplus] + phi[i][jminus] - 4.0*phi[i][j];
+
+                x = phi[i][j];
+		y = psi[i][j];
+
+                /* evolve phi */
+                phi[i][j] = -y + 2*x + courant2*delta - KAPPA*x - GAMMA*(x-y);
+
+                psi[i][j] = x;
+
+                if (FLOOR)
+                {
+                    if (phi[i][j] > VMAX) phi[i][j] = VMAX;
+                    if (phi[i][j] < -VMAX) phi[i][j] = -VMAX;
+                    if (psi[i][j] > VMAX) psi[i][j] = VMAX;
+                    if (psi[i][j] < -VMAX) psi[i][j] = -VMAX;
+                }
+            }
+        }
+    }
+}
+
+
 
 ```
 
