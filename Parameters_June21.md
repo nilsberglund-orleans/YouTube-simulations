@@ -469,6 +469,9 @@ it may be necessary to modify two constants as follows:
 #define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
 #define HUEMEAN 250.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -250.0      /* amplitude of variation of hue for color scheme C_HUE */
+// Maybe wrong version, if colors look wrong try 
+// #define HUEMEAN 220.0    /* mean value of hue for color scheme C_HUE */
+// #define HUEAMP -240.0      /* amplitude of variation of hue for color scheme C_HUE */
 
 /* Basic math */
 
