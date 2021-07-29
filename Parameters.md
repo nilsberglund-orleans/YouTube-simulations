@@ -8,6 +8,13 @@ Below are parameter values used for different simulations, as well as initial co
 function animation. Some simulations use variants of the published code. The list is going to be 
 updated gradually. 
 
+I changed the way the energy density is computed around 7 July. If you use a recent version of the code, 
+it may be necessary to modify two constants as follows: 
+```
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define E_SCALE 750.0     /* scaling factor for energy representation
+```
+
 
 ### 28 July 21 - An invisibility cloak (first optimized version) ###
 

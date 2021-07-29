@@ -1117,7 +1117,1016 @@ updated gradually. Some constants have been moved to global files in later versi
 
 ```
 
-### xx May 21 -  ###
+### 20 May 21 - How to distinguish an icosikaipentagon from a circle ###
+
+**Program:** `drop_billiard.c`
+
+**Initial condition in function `animation()`:** `init_drop_config(0.0, 0.0, 0.0, DPI, configs);`
+
+```
+#define MOVIE 1         /* set to 1 to generate movie */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 8      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+#define D_REULEAUX 9    /* Reuleaux and star shapes */
+
+#define LAMBDA 1.0	/* parameter controlling shape of billiard */
+#define MU 0.1          /* second parameter controlling shape of billiard */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+#define NPOLY 25             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+
+#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+
+#define NPART 40000	/* number of particles */
+#define NPARTMAX 100000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define LPERIODIC 1.0   /* lines longer than this are not drawn (useful for Sinai billiard) */
+#define LCUT 2.0        /* controls the max size of segments not considered as being cut */
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 0         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 8000     /* number of frames of movie */
+#define TIME 50         /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.0001     /* integration step */
+#define NVID 25         /* number of iterations between images displayed on screen */
+#define NCOLORS -6      /* number of colors */
+#define COLORSHIFT 240  /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+
+#define BLACK 1             /* set to 1 for black background */
+#define COLOR_OUTSIDE 1     /* set to 1 for colored outside */ 
+#define OUTER_COLOR 300.0   /* color outside billiard */
+#define PAINT_INT 1         /* set to 1 to paint interior in other color (for polygon) */
+
+/* Decreasing TIME accelerates the animation and the movie               */
+/* For constant speed of movie, TIME*DPHI should be kept constant        */
+/* However, increasing DPHI too much deterioriates quality of simulation */
+/* For a good quality movie, take for instance TIME = 50, DPHI = 0.0002  */
+
+#define PAUSE 1000          /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+```
+
+### 19 May 21 - The hexagonal quantum billiard: probability density ###
+
+**Program:** `schrodinger.c`
+
+**Initial condition in function `animation()`:** `init_coherent_state(0.0, 0.0, 10.0, 0.0, 0.1, phi, psi, xy_in);`
+
+```
+#define MOVIE 0         /* set to 1 to generate movie */
+
+/* General geometrical parameters */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define NX 640          /* number of grid points on x axis */
+#define NY 360          /* number of grid points on y axis */
+
+/* setting NX to WINWIDTH and NY to WINHEIGHT increases resolution */
+/* but will multiply run time by 4                                 */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 8      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_FLAT 6        /* flat interface */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+
+#define LAMBDA 1.5	    /* parameter controlling the dimensions of domain */
+#define NPOLY 6             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define FOCI 1              /* set to 1 to draw focal points of ellipse */
+
+/* You can add more billiard tables by adapting the functions */
+/* xy_in_billiard and draw_billiard below */
+
+/* Physical patameters of wave equation */
+
+#define DT 0.00000005
+#define HBAR 1.0
+/* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
+/* The physical damping coefficient is given by GAMMA/(DT)^2 */
+/* Increasing COURANT speeds up the simulation, but decreases accuracy */
+/* For similar wave forms, COURANT^2*GAMMA should be kept constant */
+
+/* For debugging purposes only */
+#define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
+#define VMAX 10.0       /* max value of wave amplitude */
+
+/* Parameters for length and speed of simulation */
+
+#define NSTEPS 6000     //7500      /* number of frames of movie */
+#define NVID 750          /* number of iterations between images displayed on screen */
+#define NSEG 100         /* number of segments of boundary */
+
+#define PAUSE 1000         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1   /* final sleeping time */
+
+/* Plot type */
+
+#define PLOT 0
+
+#define P_MODULE 0        /* plot module of wave function squared */
+#define P_PHASE 1         /* plot phase of wave function */
+#define P_REAL 2          /* plot real part */
+#define P_IMAGINARY 3     /* plot imaginary part */
+
+/* Color schemes */
+
+#define BLACK 1          /* background */
+
+#define COLOR_SCHEME 1   /* choice of color scheme */
+
+#define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
+#define C_HUE 1          /* color scheme modifies hue */
+#define C_PHASE 2        /* color scheme shows phase */
+
+#define SCALE 1          /* set to 1 to adjust color scheme to variance of field */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+
+#define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
+#define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
+#define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
+#define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
+#define HUEMEAN 200.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP -120.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+/* Basic math */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+```
+
+### 18 May 21 - Diamonds are a nerd's best friend - A finite horizon Sinai billiard ###
+
+**Program:** `particle_billiard.c`
+
+**Initial condition in function `animation()`:** `init_line_config(0.0, 0.1, 0.0, 0.3, 0.0, configs);`
+
+```
+#define MOVIE 1         /* set to 1 to generate movie */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 9      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+#define D_REULEAUX 9    /* Reuleaux and star shapes */
+
+#define LAMBDA 10.0	/* parameter controlling shape of billiard */
+#define MU 0.1          /* second parameter controlling shape of billiard */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+#define NPOLY 4             /* number of sides of polygon */
+#define APOLY 0.5           /* angle by which to turn polygon, in units of Pi/2 */ 
+
+#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+#define DEBUG 0         /* draw trajectories, for debugging purposes */
+
+#define NPART 5000      /* number of particles */
+#define NPARTMAX 50000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 10000     /* number of frames of movie */
+#define TIME 500       /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.00001    /* integration step */
+#define NVID 75         /* number of iterations between images displayed on screen */
+
+#define NCOLORS 14      /* number of colors */
+#define COLORSHIFT 0    /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+#define LENGTH 0.007     /* length of velocity vectors */
+
+#define BLACK 1             /* set to 1 for black background */
+#define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 
+#define OUTER_COLOR 270.0   /* color outside billiard */
+#define PAINT_INT 1         /* set to 1 to paint interior in other color (for polygon) */
+
+/* Decreasing TIME accelerates the animation and the movie                               */
+/* For constant speed of movie, TIME*DPHI should be kept constant                        */
+/* However, increasing DPHI too much deterioriates quality of simulation                 */
+/* NVID tells how often a picture is drawn in the animation, increase it for faster anim */
+/* For a good quality movie, take for instance TIME = 400, DPHI = 0.00005, NVID = 100    */
+
+#define PAUSE 1000       /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1000      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+```
+
+### 17 May 21 - The hexagonal quantum billiard: real part of the wave function ###
+
+**Program:** `schrodinger.c`
+
+**Initial condition in function `animation()`:** `init_coherent_state(0.0, 0.0, 0.0, 10.0, 0.1, phi, psi, xy_in);`
+
+```
+#define MOVIE 1         /* set to 1 to generate movie */
+
+/* General geometrical parameters */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define NX 640          /* number of grid points on x axis */
+#define NY 360          /* number of grid points on y axis */
+
+/* setting NX to WINWIDTH and NY to WINHEIGHT increases resolution */
+/* but will multiply run time by 4                                 */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 8      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_FLAT 6        /* flat interface */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+
+#define LAMBDA 1.5	    /* parameter controlling the dimensions of domain */
+#define NPOLY 6             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define FOCI 1              /* set to 1 to draw focal points of ellipse */
+
+/* You can add more billiard tables by adapting the functions */
+/* xy_in_billiard and draw_billiard below */
+
+/* Physical patameters of wave equation */
+
+#define DT 0.00000002
+#define HBAR 1.0
+/* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
+/* The physical damping coefficient is given by GAMMA/(DT)^2 */
+/* Increasing COURANT speeds up the simulation, but decreases accuracy */
+/* For similar wave forms, COURANT^2*GAMMA should be kept constant */
+
+/* For debugging purposes only */
+#define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
+#define VMAX 10.0       /* max value of wave amplitude */
+
+/* Parameters for length and speed of simulation */
+
+#define NSTEPS 6000     //7500      /* number of frames of movie */
+#define NVID 750          /* number of iterations between images displayed on screen */
+#define NSEG 100         /* number of segments of boundary */
+
+#define PAUSE 1000         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1   /* final sleeping time */
+
+/* Plot type */
+
+#define PLOT 2
+
+#define P_MODULE 0        /* plot module of wave function squared */
+#define P_PHASE 1         /* plot phase of wave function */
+#define P_REAL 2          /* plot real part */
+#define P_IMAGINARY 3     /* plot imaginary part */
+
+/* Color schemes */
+
+#define BLACK 1          /* background */
+
+#define COLOR_SCHEME 1   /* choice of color scheme */
+
+#define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
+#define C_HUE 1          /* color scheme modifies hue */
+#define C_PHASE 2        /* color scheme shows phase */
+
+#define SCALE 1          /* set to 1 to adjust color scheme to variance of field */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+
+#define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
+#define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
+#define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
+#define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
+#define HUEMEAN 200.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP -120.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+/* Basic math */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+```
+
+### 16 May 21 - Hexing the circle: are hexagons really bestagons? ###
+
+**Program:** `drop_billiard.c`
+
+**Initial condition in function `animation()`:** `init_drop_config(0.0, 0.0, 0.0, DPI, configs);`
+
+```
+#define MOVIE 1         /* set to 1 to generate movie */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 8      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+
+#define LAMBDA 1.0	/* parameter controlling shape of billiard */
+#define MU 0.1          /* second parameter controlling shape of billiard */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+#define NPOLY 6             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+
+#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+
+#define NPART 40000	/* number of particles */
+#define NPARTMAX 100000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define LPERIODIC 1.0   /* lines longer than this are not drawn (useful for Sinai billiard) */
+#define LCUT 2.0        /* controls the max size of segments not considered as being cut */
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 0         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 5175     /* number of frames of movie */
+#define TIME 50         /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.0001     /* integration step */
+#define NVID 25         /* number of iterations between images displayed on screen */
+#define NCOLORS -12      /* number of colors */
+#define COLORSHIFT 240  /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+
+#define BLACK 1             /* set to 1 for black background */
+#define COLOR_OUTSIDE 1     /* set to 1 for colored outside */ 
+#define OUTER_COLOR 270.0   /* color outside billiard */
+#define PAINT_INT 1         /* set to 1 to paint interior in other color (for polygon) */
+
+/* Decreasing TIME accelerates the animation and the movie               */
+/* For constant speed of movie, TIME*DPHI should be kept constant        */
+/* However, increasing DPHI too much deterioriates quality of simulation */
+/* For a good quality movie, take for instance TIME = 50, DPHI = 0.0002  */
+
+#define PAUSE 1000          /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+```
+
+### 15 May 21 - Scarred for life, no compensation - Schrödinger's equation in a stadium ###
+
+**Program:** `schrodinger.c`
+
+**Initial condition in function `animation()`:** `init_coherent_state(0.0, 0.0, 0.0, 5.0, 0.03, phi, psi, xy_in);`
+
+```
+#define MOVIE 1         /* set to 1 to generate movie */
+
+/* General geometrical parameters */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define NX 640          /* number of grid points on x axis */
+#define NY 360          /* number of grid points on y axis */
+
+/* setting NX to WINWIDTH and NY to WINHEIGHT increases resolution */
+/* but will multiply run time by 4                                 */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 2      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_FLAT 6        /* flat interface */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+
+#define LAMBDA 1.5	    /* parameter controlling the dimensions of domain */
+#define NPOLY 6             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define FOCI 1              /* set to 1 to draw focal points of ellipse */
+
+/* You can add more billiard tables by adapting the functions */
+/* xy_in_billiard and draw_billiard below */
+
+/* Physical patameters of wave equation */
+
+#define DT 0.00000002
+#define HBAR 1.0
+/* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
+/* The physical damping coefficient is given by GAMMA/(DT)^2 */
+/* Increasing COURANT speeds up the simulation, but decreases accuracy */
+/* For similar wave forms, COURANT^2*GAMMA should be kept constant */
+
+/* For debugging purposes only */
+#define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
+#define VMAX 10.0       /* max value of wave amplitude */
+
+/* Parameters for length and speed of simulation */
+
+#define NSTEPS 6000     //7500      /* number of frames of movie */
+#define NVID 500          /* number of iterations between images displayed on screen */
+#define NSEG 100         /* number of segments of boundary */
+
+#define PAUSE 1000         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1   /* final sleeping time */
+
+/* Plot type */
+
+#define PLOT 0
+
+#define P_MODULE 0        /* plot module of wave function squared */
+#define P_PHASE 1         /* plot phase of wave function */
+#define P_REAL 2          /* plot real part */
+#define P_IMAGINARY 3     /* plot imaginary part */
+
+/* Color schemes */
+
+#define BLACK 1          /* background */
+
+#define COLOR_SCHEME 1   /* choice of color scheme */
+
+#define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
+#define C_HUE 1          /* color scheme modifies hue */
+#define C_PHASE 2        /* color scheme shows phase */
+
+#define SCALE 1          /* set to 1 to adjust color scheme to variance of field */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+
+#define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
+#define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
+#define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
+#define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
+#define HUEMEAN 160.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP -120.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+/* Basic math */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+```
+
+### 14 May 21 - What's going on with the pentagon? ###
+
+**Program:** `drop_billiard.c`
+
+**Initial condition in function `animation()`:** `init_drop_config(0.0, 0.0, 0.0, DPI, configs);`
+
+```
+#define MOVIE 1         /* set to 1 to generate movie */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 8      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+
+#define LAMBDA 1.0	/* parameter controlling shape of billiard */
+#define MU 0.1          /* second parameter controlling shape of billiard */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+#define NPOLY 5             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+
+#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+
+#define NPART 10000	/* number of particles */
+#define NPARTMAX 20000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define LPERIODIC 1.0   /* lines longer than this are not drawn (useful for Sinai billiard) */
+#define LCUT 2.0        /* controls the max size of segments not considered as being cut */
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 0         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 5000     /* number of frames of movie */
+#define TIME 50         /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.0001     /* integration step */
+#define NVID 25         /* number of iterations between images displayed on screen */
+#define NCOLORS 8       /* number of colors */
+#define COLORSHIFT 180  /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+
+#define BLACK 1         /* set to 1 for black background */
+#define PAINT_INT 1     /* set to 1 to paint interior in other color (for polygon) */
+
+/* Decreasing TIME accelerates the animation and the movie               */
+/* For constant speed of movie, TIME*DPHI should be kept constant        */
+/* However, increasing DPHI too much deterioriates quality of simulation */
+/* For a good quality movie, take for instance TIME = 50, DPHI = 0.0002  */
+
+#define PAUSE 1000          /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+```
+
+### 13 May 21 - Quantum of focus: Schrödinger's equation in an elliptical domain ###
+
+**Program:** `schrodinger.c`
+
+**Initial condition in function `animation()`:** `init_coherent_state(-0.5, 0.0, 1.0, 1.0, 0.03, phi, psi, xy_in);`
+
+```
+#define MOVIE 0         /* set to 1 to generate movie */
+
+/* General geometrical parameters */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define NX 640          /* number of grid points on x axis */
+#define NY 360          /* number of grid points on y axis */
+
+/* setting NX to WINWIDTH and NY to WINHEIGHT increases resolution */
+/* but will multiply run time by 4                                 */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 1      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_FLAT 6        /* flat interface */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+
+#define LAMBDA 1.5	    /* parameter controlling the dimensions of domain */
+#define NPOLY 6             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define FOCI 1              /* set to 1 to draw focal points of ellipse */
+
+/* You can add more billiard tables by adapting the functions */
+/* xy_in_billiard and draw_billiard below */
+
+/* Physical patameters of wave equation */
+
+#define DT 0.00000002
+#define HBAR 1.0
+/* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
+/* The physical damping coefficient is given by GAMMA/(DT)^2 */
+/* Increasing COURANT speeds up the simulation, but decreases accuracy */
+/* For similar wave forms, COURANT^2*GAMMA should be kept constant */
+
+/* For debugging purposes only */
+#define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
+#define VMAX 10.0       /* max value of wave amplitude */
+
+/* Parameters for length and speed of simulation */
+
+#define NSTEPS 4000     //7500      /* number of frames of movie */
+#define NVID 500          /* number of iterations between images displayed on screen */
+#define NSEG 100         /* number of segments of boundary */
+
+#define PAUSE 1000         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1   /* final sleeping time */
+
+/* Plot type */
+
+#define PLOT 0
+
+#define P_MODULE 0        /* plot module of wave function squared */
+#define P_PHASE 1         /* plot phase of wave function */
+#define P_REAL 2          /* plot real part */
+#define P_IMAGINARY 3     /* plot imaginary part */
+
+/* Color schemes */
+
+#define BLACK 1          /* background */
+
+#define COLOR_SCHEME 1   /* choice of color scheme */
+
+#define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
+#define C_HUE 1          /* color scheme modifies hue */
+#define C_PHASE 2        /* color scheme shows phase */
+
+#define SCALE 1          /* set to 1 to adjust color scheme to variance of field */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+
+#define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
+#define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
+#define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
+#define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
+#define HUEMEAN 120.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP -120.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+/* Basic math */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+```
+
+### 12 May 21 - The eccentric annular billiard, or how to mix a Pan Galactic Gargle Blaster ###
+
+**Program:** `particle_billiard.c`
+
+**Initial condition in function `animation()`:** `init_line_config(-0.7, 0.2, -0.7, 0.7, 0.0, configs);`
+
+```
+#define MOVIE 0         /* set to 1 to generate movie */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 7      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+
+#define LAMBDA 0.5	/* parameter controlling shape of billiard */
+// #define LAMBDA 1.73205080756888	/* sqrt(3) for triangle tiling plane */
+#define MU 0.1          /* second parameter controlling shape of billiard */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+#define NPOLY 8             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+
+#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+#define DEBUG 0         /* draw trajectories, for debugging purposes */
+
+#define NPART 50      /* number of particles */
+// #define NPART 50      /* number of particles */
+#define NPARTMAX 50000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 7500     /* number of frames of movie */
+#define TIME 750       /* time between movie frames, for fluidity of real-time simulation */ 
+// #define TIME 1500       /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.00001    /* integration step */
+#define NVID 150        /* number of iterations between images displayed on screen */
+// #define NVID 500        /* number of iterations between images displayed on screen */
+
+#define NCOLORS 5      /* number of colors */
+// #define NCOLORS 14      /* number of colors */
+#define COLORSHIFT 0    /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+#define LENGTH 0.05     /* length of velocity vectors */
+
+#define BLACK 1         /* set to 1 for black background */
+
+/* Decreasing TIME accelerates the animation and the movie                               */
+/* For constant speed of movie, TIME*DPHI should be kept constant                        */
+/* However, increasing DPHI too much deterioriates quality of simulation                 */
+/* NVID tells how often a picture is drawn in the animation, increase it for faster anim */
+/* For a good quality movie, take for instance TIME = 400, DPHI = 0.00005, NVID = 100    */
+
+#define PAUSE 1000       /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1000      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+```
+
+### 11 May 21 - Diffraction of a wave on a grating ###
+
+**Program:** `wave_billiard.c`
+
+**Initial condition in function `animation()`:** `init_wave(-1.0, 0.0, phi, psi, xy_in);`
+
+```
+#define MOVIE 1         /* set to 1 to generate movie */
+
+/* General geometrical parameters */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define NX 640          /* number of grid points on x axis */
+#define NY 360          /* number of grid points on y axis */
+
+/* setting NX to WINWIDTH and NY to WINHEIGHT increases resolution */
+/* but will multiply run time by 4                                 */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+/* Choice of the billiard table */
+
+#define B_DOMAIN 10      /* choice of domain shape */
+
+#define D_RECTANGLE 0   /* rectangular domain */
+#define D_ELLIPSE 1     /* elliptical domain */
+#define D_STADIUM 2     /* stadium-shaped domain */
+#define D_SINAI 3       /* Sinai billiard */
+#define D_DIAMOND 4     /* diamond-shaped billiard */
+#define D_TRIANGLE 5    /* triangular billiard */
+#define D_FLAT 6        /* flat interface */
+#define D_ANNULUS 7     /* annulus */
+#define D_POLYGON 8     /* polygon */
+#define D_YOUNG 9       /* Young diffraction slits */
+#define D_GRATING 10    /* diffraction grating */
+
+#define LAMBDA 0.08	    /* parameter controlling the dimensions of domain */
+#define MU 0.02	            /* parameter controlling the dimensions of domain */
+#define NPOLY 8             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define FOCI 1              /* set to 1 to draw focal points of ellipse */
+
+/* You can add more billiard tables by adapting the functions */
+/* xy_in_billiard and draw_billiard below */
+
+/* Physical patameters of wave equation */
+
+#define OMEGA 0.7           /* frequency of periodic excitation */
+#define COURANT 0.01       /* Courant number */
+#define GAMMA 0.0      /* damping factor in wave equation */
+#define KAPPA 0.0       /* "elasticity" term enforcing oscillations */
+/* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
+/* The physical damping coefficient is given by GAMMA/(DT)^2 */
+/* Increasing COURANT speeds up the simulation, but decreases accuracy */
+/* For similar wave forms, COURANT^2*GAMMA should be kept constant */
+
+/* For debugging purposes only */
+#define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
+#define VMAX 10.0       /* max value of wave amplitude */
+
+/* Parameters for length and speed of simulation */
+
+#define NSTEPS 4500     //7500      /* number of frames of movie */
+#define NVID 50          /* number of iterations between images displayed on screen */
+#define NSEG 100         /* number of segments of boundary */
+
+#define PAUSE 100         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  1   /* final sleeping time */
+
+/* Color schemes */
+
+#define COLOR_SCHEME 0   /* choice of color scheme */
+
+#define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
+#define C_HUE 1          /* color scheme modifies hue */
+
+#define SCALE 1          /* set to 1 to adjust color scheme to variance of field */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+
+#define COLORHUE 270     /* initial hue of water color for scheme C_LUM */
+#define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
+#define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
+#define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
+#define HUEMEAN 220.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP 60.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+/* Basic math */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
+
+```
+
+### 10 May 21 - A perfect wave front in the Bermuda triangle billiard ###
+
+**Program:** `xxx.c`
+
+**Initial condition in function `animation()`:** `xxx`
+
+```
+
+```
+
+### 9 May 21 - Waves around a conical singularity ###
+
+**Program:** `xxx.c`
+
+**Initial condition in function `animation()`:** `xxx`
+
+```
+
+```
+
+### 8 May 21 - If life gives you a lemon billiard, use it to make lemonade! ###
+
+**Program:** `xxx.c`
+
+**Initial condition in function `animation()`:** `xxx`
+
+```
+
+```
+
+### 7 May 21 - Diffraction - Young's double-slit experiment with waves ###
+
+**Program:** `xxx.c`
+
+**Initial condition in function `animation()`:** `xxx`
+
+```
+
+```
+
+### 6 May 21 - Wave fronts in a square: Dr Jekyll shouting from Hyde Park Corner ###
+
+**Program:** `xxx.c`
+
+**Initial condition in function `animation()`:** `xxx`
+
+```
+
+```
+
+### 5 May 21 - Winter is coming ###
+
+**Program:** `xxx.c`
+
+**Initial condition in function `animation()`:** `xxx`
+
+```
+
+```
+
+### 4 May 21 - Why the Bunimovich stadium is chaotic ###
+
+**Program:** `xxx.c`
+
+**Initial condition in function `animation()`:** `xxx`
+
+```
+
+```
+
+### 3 May 21 - The Revelation of Sonmi 451 ###
+
+**Program:** `xxx.c`
+
+**Initial condition in function `animation()`:** `xxx`
+
+```
+
+```
+
+### 2 May 21 - Triangulating the circle ###
+
+**Program:** `xxx.c`
+
+**Initial condition in function `animation()`:** `xxx`
+
+```
+
+```
+
+### 1 May 21 - Snell's law of refraction ###
 
 **Program:** `xxx.c`
 
