@@ -22,7 +22,6 @@ it may be necessary to modify two constants as follows:
 **Initial condition in function `animation()`:** `init_drop_config(x_shooter, y_shooter, 0.0, DPI, configs);`
 
 The effect of showing trails is achieved by switching off double-buffering like this:
-```
 
 ```
 int main(int argc, char** argv)
@@ -41,6 +40,8 @@ int main(int argc, char** argv)
 
     return 0;
 }
+```
+
 ```
 #define MOVIE 1         /* set to 1 to generate movie */
 
