@@ -7,6 +7,7 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 Below are parameter values used for different simulations, as well as initial conditions used in 
 function animation. Some simulations use variants of the published code. The list is going to be 
 updated gradually. Some constants have been moved to global files in later versions.
+Some parameters in early versions may be off, since not all versions were backed up. 
 
 
 ### 30 April 21 - Why the Sinai billiard is chaotic ###
@@ -936,11 +937,71 @@ while (!in_bill)
 
 ### 17 April 21 - Waves in an elliptical swimming pool 2 ###
 
-**Program:** `xxx.c`
+**Program:** `vid_wave_ellipse.c` (old version of `wave_billiard.c`)
 
-**Initial condition in function `animation()`:** `xxx`
+**Initial condition in function `animation()`:** `init_wave(0.8, 0.6, phi, psi);`
 
 ```
+#include <math.h>
+#include <string.h>
+#include <GL/glut.h>
+#include <GL/glu.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <tiffio.h>     /* Sam Leffler's libtiff library. */
+
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define NX 640          /* number of grid points on x axis */
+#define NY 360          /* number of grid points on y axis */
+
+#define B_DOMAIN 1        /* choice of domain shape */
+
+#define D_ELLIPSE 0     /* elliptical domain */
+#define D_STADIUM 1     /* stadium-shaped domain */
+
+#define LAMBDA 1.0	/* parameter controlling the dimensions of domain */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+#define K 20.0          /* coupling constant */
+#define GAMMA 0.00005   /* damping factor in wave equation */
+#define DT 0.05         /* time step */ 
+
+#define MOVIE 0         /* set to 1 to generate movie */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define VMAX 10.0       /* max value of wave amplitude */
+#define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
+
+#define NSTEPS 4500     /* number of frames of movie */
+#define NVID 60         /* number of iterations between images displayed on screen */
+#define NCOLORS 20      /* number of colors */
+#define COLORHUE 200    /* hue of water color */ 
+#define NSEG 100        /* number of segments of boundary */
+#define SLOPE 1.25      /* for color scheme: sensitivity of color on wave amplitude */
+#define ATTENUATION 0.0 /* exponential attenuation coefficient of contrat with time */
+#define LUMMEAN 0.5      /* amplitude of luminosity variation */
+#define LUMAMP 0.2       /* amplitude of luminosity variation */
+#define SCALE 1          /* set to 1 to adjust color scheme to variance of field */
+
+/* Decreasing TIME accelerates the animation and the movie                               */
+/* For constant speed of movie, TIME*DPHI should be kept constant                        */
+/* However, increasing DPHI too much deterioriates quality of simulation                 */
+/* NVID tells how often a picture is drawn in the animation, increase it for faster anim */
+/* For a good quality movie, take for instance TIME = 400, DPHI = 0.00005, NVID = 100    */
+
+#define PAUSE 10         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100000   /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
 
 ```
 
@@ -948,7 +1009,7 @@ while (!in_bill)
 
 **Program:** `vid_wave_billiard.c` (old version of `wave_billiard.c`)
 
-**Initial condition in function `animation()`:** `init_wave(0.0, 0.0, phi, psi);`
+**Initial condition in function `animation()`:** `init_wave(0.8, 0.6, phi, psi);`
 
 ```
 #define WINWIDTH 	1280  /* window width */
