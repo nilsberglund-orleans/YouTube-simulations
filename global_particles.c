@@ -27,7 +27,9 @@ int ncircles = NMAXCIRCLES;            /* actual number of circles, can be decre
 #define D_GENUSN 14     /* polygon with identifies opposite sides */
 
 #define D_CIRCLES 20     /* several circles */
+#define D_CIRCLES_IN_RECT 21     /* several circles inside a rectangle */
 
 #define C_FOUR_CIRCLES 0  /* four circles almost touching each other */
 #define C_SQUARE 1        /* square grid of circles */
 #define C_HEX 2           /* hexagonal/triangular grid of circles */
+#define C_LASER 3         /* laser fight in a room of mirrors */

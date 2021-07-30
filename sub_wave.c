@@ -345,7 +345,7 @@ void init_circle_config()
 /* for billiard shape D_CIRCLES */
 {
     int i, j, n; 
-    double dx, dy, p;
+    double dx, dy, p, phi, r, ra[5], sa[5];
     
     switch (CIRCLE_PATTERN) {
         case (C_SQUARE):
@@ -422,6 +422,43 @@ void init_circle_config()
                 circlerad[n] = MU;
                 circleactive[n] = 1;
             }
+            break;
+        }
+        case (C_CLOAK):
+        {
+            ncircles = 200;
+            for (i = 0; i < 40; i++)
+                for (j = 0; j < 5; j++)
+                {
+                    n = 5*i + j;
+                    phi = (double)i*DPI/40.0;
+                    r = LAMBDA*0.5*(1.0 + (double)j/5.0);
+                    circlex[n] = r*cos(phi);
+                    circley[n] = r*sin(phi);
+                    circlerad[n] = MU;
+                    circleactive[n] = 1;
+                }
+            break;
+        }
+        case (C_CLOAK_A):   /* optimized model A1 by C. Jo et al */
+        {
+            ncircles = 200;
+            ra[0] = 0.0731;     sa[0] = 1.115;
+            ra[1] = 0.0768;     sa[1] = 1.292;
+            ra[2] = 0.0652;     sa[2] = 1.464;
+            ra[3] = 0.056;      sa[3] = 1.633;
+            ra[4] = 0.0375;     sa[4] = 1.794;
+            for (i = 0; i < 40; i++)
+                for (j = 0; j < 5; j++)
+                {
+                    n = 5*i + j;
+                    phi = (double)i*DPI/40.0;
+                    r = LAMBDA*sa[j];
+                    circlex[n] = r*cos(phi);
+                    circley[n] = r*sin(phi);
+                    circlerad[n] = LAMBDA*ra[j];
+                    circleactive[n] = 1;
+                }
             break;
         }
         default: 
@@ -734,7 +771,7 @@ void draw_billiard()      /* draws the billiard boundary */
 
     if (BLACK) glColor3f(1.0, 1.0, 1.0);
     else glColor3f(0.0, 0.0, 0.0);
-    glLineWidth(5);
+    glLineWidth(BOUNDARY_WIDTH);
 
     glEnable(GL_LINE_SMOOTH);
 
@@ -1064,7 +1101,7 @@ void draw_billiard()      /* draws the billiard boundary */
         }
         case (D_CIRCLES):
         {
-            glLineWidth(2);
+            glLineWidth(BOUNDARY_WIDTH);
             for (i = 0; i < ncircles; i++) 
                 if (circleactive[i]) 
                 {

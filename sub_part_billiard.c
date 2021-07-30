@@ -374,18 +374,30 @@ void paint_billiard_interior()      /* paints billiard interior, for use before 
     }
 }
 
-void draw_billiard()      /* draws the billiard boundary */
+void init_billiard_color()
+/* initialise the color in which the billiard is drawn */
 {
-    double x0, x, y, phi, r = 0.01, alpha, dphi, omega, x1, y1, x2, beta2, angle, s, x2plus, x2minus;
-    double omega2, co, so, axis1, axis2, phimax;
-    int i, j, k, c;
-    
     if (PAINT_INT) glColor3f(0.5, 0.5, 0.5);
     else
     {
         if (BLACK) glColor3f(1.0, 1.0, 1.0);
         else glColor3f(0.0, 0.0, 0.0);
     }
+}
+
+void draw_billiard()      /* draws the billiard boundary */
+{
+    double x0, x, y, phi, r = 0.01, alpha, dphi, omega, x1, y1, x2, beta2, angle, s, x2plus, x2minus;
+    double omega2, co, so, axis1, axis2, phimax, rgb[3];
+    int i, j, k, c;
+    
+    init_billiard_color();
+//     if (PAINT_INT) glColor3f(0.5, 0.5, 0.5);
+//     else
+//     {
+//         if (BLACK) glColor3f(1.0, 1.0, 1.0);
+//         else glColor3f(0.0, 0.0, 0.0);
+//     }
     glLineWidth(BILLIARD_WIDTH);
     
     glEnable(GL_LINE_SMOOTH);
@@ -786,12 +798,13 @@ void draw_billiard()      /* draws the billiard boundary */
                 glEnd();
             }
             
-            if (PAINT_INT) glColor3f(0.5, 0.5, 0.5);
-            else
-            {
-                if (BLACK) glColor3f(1.0, 1.0, 1.0);
-                else glColor3f(0.0, 0.0, 0.0);
-            }
+            init_billiard_color();
+//             if (PAINT_INT) glColor3f(0.5, 0.5, 0.5);
+//             else
+//             {
+//                 if (BLACK) glColor3f(1.0, 1.0, 1.0);
+//                 else glColor3f(0.0, 0.0, 0.0);
+//             }
             
             glBegin(GL_LINE_STRIP);
             glVertex2d(XMIN, 0.0);
@@ -839,6 +852,55 @@ void draw_billiard()      /* draws the billiard boundary */
                 }
                 glEnd ();
             }
+            break; 
+        }
+        case (D_CIRCLES_IN_RECT):
+        {
+            for (k=0; k<ncircles; k++) if (circleactive[k] >= 1)
+            {
+                if (circleactive[k] == 2) 
+                {
+                    hsl_to_rgb(220.0, 0.9, 0.5, rgb);
+                    glColor3f(rgb[0], rgb[1], rgb[2]);
+                }
+                glBegin(GL_LINE_LOOP);
+                for (i=0; i<=NSEG; i++)
+                {
+                    phi = (double)i*DPI/(double)NSEG;
+                    x = circlex[k] + circlerad[k]*cos(phi);
+                    y = circley[k] + circlerad[k]*sin(phi);
+                    glVertex2d(x, y);
+                }
+                glEnd ();
+                
+                init_billiard_color();
+            }
+            
+            /* draw shooter position for laser pattern */
+            if (CIRCLE_PATTERN == C_LASER)
+            {
+                hsl_to_rgb(0.0, 0.9, 0.5, rgb);
+                glColor3f(rgb[0], rgb[1], rgb[2]);
+                    
+                glBegin(GL_LINE_LOOP);
+                for (i=0; i<=NSEG; i++)
+                {
+                    phi = (double)i*DPI/(double)NSEG;
+                    x = X_SHOOTER + circlerad[ncircles-1]*cos(phi);
+                    y = Y_SHOOTER + circlerad[ncircles-1]*sin(phi);
+                    glVertex2d(x, y);
+                }
+                glEnd ();
+            }
+            
+            init_billiard_color();
+
+            glBegin(GL_LINE_LOOP);    
+            glVertex2d(LAMBDA, -1.0);
+            glVertex2d(LAMBDA, 1.0);
+            glVertex2d(-LAMBDA, 1.0);
+            glVertex2d(-LAMBDA, -1.0);
+            glEnd();
             break; 
         }
         default: 
@@ -2886,7 +2948,7 @@ int color[NPARTMAX];
  
 
 /****************************************************************************************/
-/* elliptic billiard */
+/* billiard with circular scatterers */
 /****************************************************************************************/
 
  int pos_circles(conf, pos, alpha)
@@ -3006,6 +3068,142 @@ int color[NPARTMAX];
 	return(c);
  }
  
+/****************************************************************************************/
+/* billiard with circular scatterers in a rectangle */
+/****************************************************************************************/
+
+ int pos_circles_in_rect(conf, pos, alpha)
+ /* determine position on boundary of circle */
+ /* position varies between 0 and ncircles*2Pi for circles and between -4*(LAMBDA + 1) and 0 for boundary*/
+ /* returns number of hit circle */
+ double conf[2], pos[2], *alpha;
+
+ {
+	double angle;
+        int ncirc, c;
+        
+        if (conf[0] >= 0)
+        {
+            ncirc = (int)(conf[0]/DPI);
+            if (ncirc >= ncircles) ncirc = ncircles - 1;
+        
+            angle = conf[0] - (double)ncirc*DPI;
+
+            pos[0] = circlex[ncirc] + circlerad[ncirc]*cos(angle);
+            pos[1] = circley[ncirc] + circlerad[ncirc]*sin(angle);
+        
+            *alpha = angle + PID + conf[1]; 
+        
+            return(ncirc);
+        }
+        else /* particle starts on boundary */
+        {
+            conf[0] += 4.0*(LAMBDA + 1.0);
+            c = pos_rectangle(conf, pos, alpha);
+            
+            conf[0] -= 4.0*(LAMBDA + 1.0);
+            
+            return(-c);
+        }
+ }
+ 
+ 
+ int vcircles_in_rect_xy(config, alpha, pos)
+ /* determine initial configuration for start at point pos = (x,y) */
+ double config[8], alpha, pos[2];
+
+ {
+	double c0, s0, b, c, t, theta, delta, margin = 1.0e-12, tmin, rlarge = 1.0e10;
+        double tval[ncircles], xint[ncircles], yint[ncircles], phiint[ncircles];
+	int i, nt = 0, nscat[ncircles], ntmin, side;
+
+        c0 = cos(alpha);
+        s0 = sin(alpha);
+        
+        for (i=0; i<ncircles; i++)
+        {
+            b = (pos[0]-circlex[i])*c0 + (pos[1]-circley[i])*s0;
+            c = (pos[0]-circlex[i])*(pos[0]-circlex[i]) + (pos[1]-circley[i])*(pos[1]-circley[i]) - circlerad[i]*circlerad[i];
+        
+            delta = b*b - c;
+            if (delta > margin)     /* there is an intersection with circle i */
+            {
+                t = -b - sqrt(delta);            
+                if (t > margin) 
+                {
+                    nscat[nt] = i;
+                
+                    tval[nt] = t;
+                    xint[nt] = pos[0] + t*c0;
+                    yint[nt] = pos[1] + t*s0;
+                    phiint[nt] = argument(xint[nt] - circlex[i], yint[nt] - circley[i]);
+
+                    /* test wether intersection is in rectangle */
+                    if ((vabs(xint[nt]) < LAMBDA)&&(vabs(yint[nt]) < 1.0)) nt++;
+                }
+            }
+        }
+        
+        if (nt > 0)     /* there is at least one intersection */
+        {
+            /* find earliest intersection */
+            tmin = tval[0];
+            ntmin = 0;
+            for (i=1; i<nt; i++) 
+            if (tval[i] < tmin) 
+            {
+                tmin = tval[i];
+                ntmin = i;
+            }
+            while (phiint[ntmin] < 0.0) phiint[ntmin] += DPI;
+            while (phiint[ntmin] >= DPI) phiint[ntmin] -= DPI;
+            
+            config[0] = (double)nscat[ntmin]*DPI + phiint[ntmin];
+            config[1] = PID - alpha + phiint[ntmin];        /* CHECK */
+            if (config[1] < 0.0) config[1] += DPI;
+            if (config[1] >= PI) config[1] -= DPI;
+            
+            config[2] = 0.0;	/* running time */ 
+            config[3] = module2(xint[ntmin]-pos[0], yint[ntmin]-pos[1]);     /* distance to collision */
+            config[4] = pos[0];    /* start position */
+            config[5] = pos[1];
+            config[6] = xint[ntmin];        /* position of collision */
+            config[7] = yint[ntmin];
+            
+            
+            /* set dummy coordinates if circles are absorbing */
+            if (ABSORBING_CIRCLES)
+            {
+                config[0] = -1.0;
+                config[1] = PI;
+            }
+            
+            return(nscat[ntmin]);
+        }
+        else    /* there is no intersection with the circles - compute intersection with boundary */
+        {
+            side = vrectangle_xy(config, alpha, pos);
+            config[0] -= 4.0*(LAMBDA+1.0);
+            
+            return(side);
+        }
+ }
+
+ int vcircles_in_rect(config)
+ /* determine initial configuration when starting from boundary */
+ double config[8];
+
+  {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_circles_in_rect(config, pos, &alpha);
+        
+        vcircles_in_rect_xy(config, alpha, pos);
+	
+	return(c);
+ }
+ 
 
  
 /****************************************************************************************/
@@ -3085,6 +3283,11 @@ int color[NPARTMAX];
         case (D_CIRCLES):
         {
             return(pos_circles(conf, pos, &alpha));
+            break;
+        }
+        case (D_CIRCLES_IN_RECT):
+        {
+            return(pos_circles_in_rect(conf, pos, &alpha));
             break;
         }
         default: 
@@ -3169,6 +3372,11 @@ int color[NPARTMAX];
         case (D_CIRCLES):
         {
             return(vcircles_xy(config, alpha, pos));
+            break;
+        }
+        case (D_CIRCLES_IN_RECT):
+        {
+            return(vcircles_in_rect_xy(config, alpha, pos));
             break;
         }
         default: 
@@ -3284,6 +3492,13 @@ int color[NPARTMAX];
             c = pos_circles(config, pos, &alpha);
         
             return(vcircles(config, alpha, pos));
+            break;
+        }
+        case (D_CIRCLES_IN_RECT):
+        {
+            c = pos_circles_in_rect(config, pos, &alpha);
+        
+            return(vcircles_in_rect(config, alpha, pos));
             break;
         }
         default: 
@@ -3451,6 +3666,22 @@ int color[NPARTMAX];
                 condition = condition*(r2 > circlerad[k]*circlerad[k])*circleactive[k];
             }
             return(condition);
+            break;
+        }
+        case D_CIRCLES_IN_RECT:      
+        {
+//             if ((vabs(x) <LAMBDA)&&(vabs(y) < 1.0)) return(1);
+            if ((vabs(x) >= LAMBDA)||(vabs(y) >= 1.0)) return(0);
+            else 
+            {
+                condition = 1;
+                for (k=0; k<ncircles; k++)  
+                {
+                    r2 = (x-circlex[k])*(x-circlex[k]) + (y-circley[k])*(y-circley[k]);
+                    condition = condition*(r2 > circlerad[k]*circlerad[k])*circleactive[k];
+                }
+                return(condition);
+            }
             break;
         }
         default: 

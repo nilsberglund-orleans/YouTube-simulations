@@ -39,6 +39,11 @@
 #define C_RAND_DISPLACED 2  /* randomly displaced square grid */
 #define C_RAND_PERCOL 3     /* random percolation arrangement */
 #define C_RAND_POISSON 4    /* random Poisson point process */
+#define C_CLOAK 5           /* invisibility cloak */
+#define C_CLOAK_A 6         /* first optimized invisibility cloak */
+
+#define C_NOTHING 99        /* no circle at all, for comparisons */
+
 
 /* Billiard tables for heat equation */
 
