@@ -15,7 +15,7 @@ it may be necessary to modify two constants as follows:
 #define E_SCALE 750.0     /* scaling factor for energy representation */
 ```
 
-### 39 July 21 - Wave protection comparison 2: square grid versus triangular grid ###
+### 30 July 21 - Wave protection comparison 2: square grid versus triangular grid ###
 
 **Program:** `wave_comparison.c` (variant of `wave_billiard.c`)
 
