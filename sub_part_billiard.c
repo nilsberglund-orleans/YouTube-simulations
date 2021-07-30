@@ -876,22 +876,22 @@ void draw_billiard()      /* draws the billiard boundary */
                 init_billiard_color();
             }
             
-            /* draw shooter position for laser pattern */
-            if (CIRCLE_PATTERN == C_LASER)
-            {
-                hsl_to_rgb(0.0, 0.9, 0.5, rgb);
-                glColor3f(rgb[0], rgb[1], rgb[2]);
-                    
-                glBegin(GL_LINE_LOOP);
-                for (i=0; i<=NSEG; i++)
-                {
-                    phi = (double)i*DPI/(double)NSEG;
-                    x = X_SHOOTER + circlerad[ncircles-1]*cos(phi);
-                    y = Y_SHOOTER + circlerad[ncircles-1]*sin(phi);
-                    glVertex2d(x, y);
-                }
-                glEnd ();
-            }
+//             /* draw shooter position for laser pattern */
+//             if (CIRCLE_PATTERN == C_LASER)
+//             {
+//                 hsl_to_rgb(0.0, 0.9, 0.5, rgb);
+//                 glColor3f(rgb[0], rgb[1], rgb[2]);
+//                     
+//                 glBegin(GL_LINE_LOOP);
+//                 for (i=0; i<=NSEG; i++)
+//                 {
+//                     phi = (double)i*DPI/(double)NSEG;
+//                     x = X_SHOOTER + circlerad[ncircles-1]*cos(phi);
+//                     y = Y_SHOOTER + circlerad[ncircles-1]*sin(phi);
+//                     glVertex2d(x, y);
+//                 }
+//                 glEnd ();
+//             }
             
             init_billiard_color();
 
@@ -3172,11 +3172,11 @@ int color[NPARTMAX];
             
             
             /* set dummy coordinates if circles are absorbing */
-            if (ABSORBING_CIRCLES)
-            {
-                config[0] = -1.0;
-                config[1] = PI;
-            }
+//             if (ABSORBING_CIRCLES)
+//             {
+//                 config[0] = -1.0;
+//                 config[1] = PI;
+//             }
             
             return(nscat[ntmin]);
         }
