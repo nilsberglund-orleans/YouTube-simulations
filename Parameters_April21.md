@@ -998,31 +998,160 @@ while (!in_bill)
 
 ### 15 April 21 - Starting near a focus in the elliptical billiard ###
 
-**Program:** `xxx.c`
+**Program:** `vid_particle_ellipse.c` (Old version of `particle_billiard.c`)
 
-**Initial condition in function `animation()`:** `xxx`
+**Initial condition in function `animation()`:** `init_drop_config(sqrt(LAMBDA*LAMBDA-1.0)-0.01,0.0, 0.0, DPI);`
 
 ```
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define LAMBDA 1.2	/* aspect ratio of ellipse */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+
+#define MOVIE 1         /* set to 1 to generate movie */
+#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define NPART 500       /* number of particles */
+#define NPARTMAX 50000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 4500     /* number of frames of movie */
+#define TIME 2000       /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.00001    /* integration step */
+#define NVID 500        /* number of iterations between images displayed on screen */
+#define NCOLORS 20      /* number of colors */
+#define COLORSHIFT 220  /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+#define LENGTH 0.05     /* length of velocity vectors */
+
+/* Decreasing TIME accelerates the animation and the movie                               */
+/* For constant speed of movie, TIME*DPHI should be kept constant                        */
+/* However, increasing DPHI too much deterioriates quality of simulation                 */
+/* NVID tells how often a picture is drawn in the animation, increase it for faster anim */
+/* For a good quality movie, take for instance TIME = 400, DPHI = 0.00005, NVID = 100    */
+
+#define PAUSE 10         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
 
 ```
 
 ### 14 April 21 - Billiard in an ellipse ###
 
-**Program:** `xxx.c`
+**Program:** `vid_particle_ellipse.c` (Old version of `particle_billiard.c`)
 
-**Initial condition in function `animation()`:** `xxx`
+**Initial condition in function `animation()`:** ?
 
 ```
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define LAMBDA 1.2	/* aspect ratio of ellipse */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+
+#define MOVIE 1         /* set to 1 to generate movie */
+#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define NPART 500       /* number of particles */
+#define NPARTMAX 50000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 4500     /* number of frames of movie */
+#define TIME 2000       /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.00001    /* integration step */
+#define NVID 500        /* number of iterations between images displayed on screen */
+#define NCOLORS 20      /* number of colors */
+#define COLORSHIFT 220  /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+#define LENGTH 0.05     /* length of velocity vectors */
+
+/* Decreasing TIME accelerates the animation and the movie                               */
+/* For constant speed of movie, TIME*DPHI should be kept constant                        */
+/* However, increasing DPHI too much deterioriates quality of simulation                 */
+/* NVID tells how often a picture is drawn in the animation, increase it for faster anim */
+/* For a good quality movie, take for instance TIME = 400, DPHI = 0.00005, NVID = 100    */
+
+#define PAUSE 10         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
 
 ```
 
 ### 14 April 21 - Billiard in an ellipse ###
 
-**Program:** `xxx.c`
+**Program:** `vid_particle_ellipse.c` (Old version of `particle_billiard.c`)
 
-**Initial condition in function `animation()`:** `xxx`
+**Initial condition in function `animation()`:** ?
 
 ```
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define LAMBDA 1.2	/* aspect ratio of ellipse */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+
+#define MOVIE 1         /* set to 1 to generate movie */
+#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define NPART 500       /* number of particles */
+#define NPARTMAX 50000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 4500     /* number of frames of movie */
+#define TIME 2000       /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.00001    /* integration step */
+#define NVID 500        /* number of iterations between images displayed on screen */
+#define NCOLORS 20      /* number of colors */
+#define COLORSHIFT 220  /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+#define LENGTH 0.05     /* length of velocity vectors */
+
+/* Decreasing TIME accelerates the animation and the movie                               */
+/* For constant speed of movie, TIME*DPHI should be kept constant                        */
+/* However, increasing DPHI too much deterioriates quality of simulation                 */
+/* NVID tells how often a picture is drawn in the animation, increase it for faster anim */
+/* For a good quality movie, take for instance TIME = 400, DPHI = 0.00005, NVID = 100    */
+
+#define PAUSE 10         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
 
 ```
 
@@ -1038,11 +1167,52 @@ while (!in_bill)
 
 ### 11 April 21 - Drop in an elliptic pond ###
 
-**Program:** `xxx.c`
+**Program:** `vid_drop_ellipse.c` (Old version of `drop_billiard.c`)
 
-**Initial condition in function `animation()`:** `xxx`
+**Initial condition in function `animation()`:** `init_boundary_config(0.0, 0.0, 0.0, PI, configs);`
 
 ```
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define LAMBDA 1.5	/* aspect ratio of ellipse */
+#define FOCI 1          /* set to 1 to draw focal points of ellipse */
+
+#define MOVIE 0         /* set to 1 to generate movie */
+#define RESAMPLE 1      /* set to 1 if particles should be added when dispersion too large */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define NPART 2000	/* number of particles */
+#define NPARTMAX 50000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 2000     /* number of frames of movie */
+#define TIME 25         /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.0004     /* integration step */
+#define NVID 10         /* number of iterations between images displayed on screen */
+#define NCOLORS 10      /* number of colors */
+#define COLORSHIFT 0    /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+
+/* Decreasing TIME accelerates the animation and the movie               */
+/* For constant speed of movie, TIME*DPHI should be kept constant        */
+/* However, increasing DPHI too much deterioriates quality of simulation */
+/* For a good quality movie, take for instance TIME = 50, DPHI = 0.0002  */
+
+#define PAUSE 10         /* number of frames after which to pause */
+#define PSLEEP 1         /* sleep time during pause */
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
 
 ```
 
@@ -1050,7 +1220,7 @@ while (!in_bill)
 
 **Program:** `vid_drop_ellipse.c` (Old version of `drop_billiard.c`)
 
-**Initial condition in function `animation()`:** `init_drop_config(0.8, 0.6, 0.0, DPI, testconfigs);`
+**Initial condition in function `animation()`:** `init_drop_config(0.8, 0.6, 0.0, DPI, configs);`
 
 ```
 #define WINWIDTH 	1280  /* window width */
@@ -1092,23 +1262,92 @@ while (!in_bill)
 
 ### 11 April 21 - Drop in an elliptic pond, starting from a focus ###
 
-**Program:** `xxx.c`
+**Program:** `vid_drop_ellipse.c` (Old version of `drop_billiard.c`)
 
-**Initial condition in function `animation()`:** `xxx`
+**Initial condition in function `animation()`:** `init_drop_config(sqrt(LAMBDA*LAMBDA-1.0),0.0, 0.0, DPI, configs);`
 
 ```
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define LAMBDA 1.5	/* aspect ratio of ellipse */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define NPART 2000	/* number of particles */
+#define NPARTMAX 50000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 2000     /* number of frames of movie */
+#define TIME 25         /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.0004     /* integration step */
+#define NCOLORS 10      /* number of colors */
+#define COLORSHIFT 0    /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+
+/* Decreasing TIME accelerates the animation and the movie               */
+/* For constant speed of movie, TIME*DPHI should be kept constant        */
+/* However, increasing DPHI too much deterioriates quality of simulation */
+
+
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
 
 ```
 
 ### 11 April 21 - Drop in an elliptic pond ###
 
-**Program:** `xxx.c`
+**Program:** `vid_drop_ellipse.c` (Old version of `drop_billiard.c`)
 
-**Initial condition in function `animation()`:** `xxx`
+**Initial condition in function `animation()`:** `init_drop_config(0.0, 0.0, 0.0, DPI, configs);`
+
+```
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+#define LAMBDA 1.5	/* aspect ratio of ellipse */
+
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+#define NPART 2000	/* number of particles */
+#define NPARTMAX 50000	/* maximal number of particles after resampling */
+#define LMAX 0.01       /* minimal segment length triggering resampling */ 
+#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
+
+#define NSTEPS 2000     /* number of frames of movie */
+#define TIME 25         /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.0004     /* integration step */
+#define NCOLORS 10      /* number of colors */
+#define COLORSHIFT 0    /* hue of initial color */ 
+#define NSEG 100        /* number of segments of boundary */
+
+/* Decreasing TIME accelerates the animation and the movie               */
+/* For constant speed of movie, TIME*DPHI should be kept constant        */
+/* However, increasing DPHI too much deterioriates quality of simulation */
+
+
+#define SLEEP1  1        /* initial sleeping time */
+#define SLEEP2  100      /* final sleeping time */
+
+#define PI 	3.141592654
+#define DPI 	6.283185307
+#define PID 	1.570796327
 
 ```
 
-```
 
 ### 9 April 21 - Drop in a circular water bowl (higher resolution) ###
 
