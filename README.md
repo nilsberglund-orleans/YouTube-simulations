@@ -61,7 +61,7 @@ in the shell before running the program
 
 `ffmpeg -i wave.%05d.tif -vcodec libx264 wave.mp4`
 
-## Some references ##
+#### Some references ####
 
 - Discretizing the wave equation: https://hplgit.github.io/fdm-book/doc/pub/wave/pdf/wave-4print.pdf
 - Boundary condition: https://hal.archives-ouvertes.fr/hal-01374183
