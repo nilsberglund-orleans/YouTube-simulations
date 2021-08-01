@@ -60,3 +60,10 @@ in the shell before running the program
 - Generate movie with 
 
 `ffmpeg -i wave.%05d.tif -vcodec libx264 wave.mp4`
+
+## Some references ##
+
+- Discretizing the wave equation: https://hplgit.github.io/fdm-book/doc/pub/wave/pdf/wave-4print.pdf
+- Boundary condition: https://hal.archives-ouvertes.fr/hal-01374183
+- Cloaking device: https://www.sciencedirect.com/science/article/pii/S0165212514001759
+
