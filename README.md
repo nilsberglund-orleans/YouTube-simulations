@@ -64,6 +64,6 @@ in the shell before running the program
 #### Some references ####
 
 - Discretizing the wave equation: https://hplgit.github.io/fdm-book/doc/pub/wave/pdf/wave-4print.pdf
-- Absorbing oundary conditions: https://hal.archives-ouvertes.fr/hal-01374183
+- Absorbing boundary conditions: https://hal.archives-ouvertes.fr/hal-01374183
 - Cloaking device: https://www.sciencedirect.com/science/article/pii/S0165212514001759
 
