@@ -79,7 +79,7 @@ Some parameters in early versions may be off, since not all versions were backed
 
 ### 29 April 21 - The dark side of the pool ###
 
-**Program:** `wave_billaird.c` (parameters reconstructed for 1 August version)
+**Program:** `wave_billiard.c` (parameters reconstructed for 1 August version)
 
 **Initial condition in function `animation()`:** `init_wave(LAMBDA, 0.0, phi, psi, xy_in);`
 
