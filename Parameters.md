@@ -9,7 +9,7 @@ function animation. Some simulations use variants of the published code. The lis
 updated gradually. For older simulations, see files `Parameters_July21.md` etc. 
 
 
-### 7 August 21 -  ###
+### 7 August 21 - Wave protection comparison 4: randomized square grid vs Poisson process ###
 
 **Program:** `wave_comparison.c` (variant of `wave_billiard.c`)
 
