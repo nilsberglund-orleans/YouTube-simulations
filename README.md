@@ -6,7 +6,7 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
 Parameter values used in specific simulations will be gradually added to file `Parameters.md`, `Parameters_June21.md` and so on.
 
-There are two groups of 4 files and 5 files:
+There are two groups of 4 files and 8 files:
 
 ### Simulations of classical particles in billiards.
 
@@ -37,15 +37,20 @@ in the shell before running the program
 
 1. *global_pdes.c*:     global variables and parameters
 2. *sub_wave.c*:        drawing/computation routines common to `wave_billiard`, `heat` and `schrodinger`
-3. *wave_billiard.c*:   simulation of the (linear) wave equation
-4. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
-5. *schrodinger.c*:     simulation of the Schrodinger equation
+3. *sub_wave_comp.c*:   some modified functions needed by `wave_comparison`
+4. *common_wave.c*:     common functions of `wave_billiard` and `wave_comparison`
+5. *wave_billiard.c*:   simulation of the (linear) wave equation
+6. *wave_comparison.c*: comparison of the wave equation in two different domains
+7. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
+8. *schrodinger.c*:     simulation of the Schrodinger equation
 
 - Create subfolders `tif_wave`, `tif_heat`, `tif_schrod`
 - Customize constants at beginning of .c file
 - Compile with 
 
 `gcc -o wave_billiard wave_billiard.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
+
+`gcc -o wave_comparison wave_comparison.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
 
 `gcc -o heat heat.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
 
