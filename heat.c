@@ -107,6 +107,7 @@
 #define NVID 50          /* number of iterations between images displayed on screen */
 // #define NVID 100          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
+#define BOUNDARY_WIDTH 2    /* width of billiard boundary */
 
 #define PAUSE 100       /* number of frames after which to pause */
 #define PSLEEP 1         /* sleep time during pause */
@@ -160,11 +161,9 @@ double intstep1;  /* integration step used in absorbing boundary conditions */
 
 
 
-void init_gaussian(x, y, mean, amplitude, scalex, phi, xy_in)
+void init_gaussian(double x, double y, double mean, double amplitude, double scalex, 
+                   double *phi[NX], short int * xy_in[NX])
 /* initialise field with gaussian at position (x,y) */
-    double x, y, mean, amplitude, scalex, *phi[NX]; 
-    short int * xy_in[NX];
-
 {
     int i, j, in;
     double xy[2], dist2, module, phase, scale2;    
@@ -193,11 +192,8 @@ void init_gaussian(x, y, mean, amplitude, scalex, phi, xy_in)
         }
 }
 
-void init_julia_set(phi, xy_in)
+void init_julia_set(double *phi[NX], short int * xy_in[NX])
 /* change Julia set boundary condition */
-    double *phi[NX]; 
-    short int * xy_in[NX];
-
 {
     int i, j, in;
     double xy[2], dist2, module, phase, scale2;    
@@ -220,9 +216,8 @@ void init_julia_set(phi, xy_in)
 /*********************/
 
 
-void compute_gradient(phi, nablax, nablay)
+void compute_gradient(double *phi[NX], double *nablax[NX], double *nablay[NX])
 /* compute the gradient of the field */
-double *phi[NX], *nablax[NX], *nablay[NX];
 {
     int i, j, iplus, iminus, jplus, jminus; 
     double dx;
@@ -241,12 +236,9 @@ double *phi[NX], *nablax[NX], *nablay[NX];
         }
 }
 
-void draw_field_line(x, y, xy_in, nablax, nablay, delta, nsteps)
-// void draw_field_line(x, y, nablax, nablay, delta, nsteps)
+void draw_field_line(double x, double y, short int *xy_in[NX], double *nablax[NX], 
+                     double *nablay[NX], double delta, int nsteps)
 /* draw a field line of the gradient, starting in (x,y) */
-double x, y, *nablax[NX], *nablay[NX], delta;
-int nsteps;
-short int *xy_in[NX];
 {
     double x1, y1, x2, y2, pos[2], nabx, naby, norm2, norm;
     int i = 0, ij[2], cont = 1;
@@ -303,11 +295,8 @@ short int *xy_in[NX];
     glEnd();
 }
 
-void draw_wave(phi, xy_in, scale, time)
+void draw_wave(double *phi[NX], short int *xy_in[NX], double scale, int time)
 /* draw the field */
-double *phi[NX], scale;
-short int *xy_in[NX];
-int time;
 {
     int i, j, iplus, iminus, jplus, jminus, ij[2], counter = 0;
     static int first = 1;
@@ -413,9 +402,8 @@ int time;
 
 
 
-void evolve_wave_half(phi_in, phi_out, xy_in)
+void evolve_wave_half(double *phi_in[NX], double *phi_out[NX], short int *xy_in[NX])
 /* time step of field evolution */
-    double *phi_in[NX], *phi_out[NX]; short int *xy_in[NX];
 {
     int i, j, iplus, iminus, jplus, jminus;
     double delta1, delta2, x, y;
@@ -493,18 +481,16 @@ void evolve_wave_half(phi_in, phi_out, xy_in)
 //     printf("phi(0,0) = %.3lg, psi(0,0) = %.3lg\n", phi[NX/2][NY/2], psi[NX/2][NY/2]);
 }
 
-void evolve_wave(phi, phi_tmp, xy_in)
+void evolve_wave(double *phi[NX], double *phi_tmp[NX], short int *xy_in[NX])
 /* time step of field evolution */
-    double *phi[NX], *phi_tmp[NX]; short int *xy_in[NX];
 {
     evolve_wave_half(phi, phi_tmp, xy_in);
     evolve_wave_half(phi_tmp, phi, xy_in);
 }
 
 
-void old_evolve_wave(phi, xy_in)
+void old_evolve_wave(double *phi[NX], short int *xy_in[NX])
 /* time step of field evolution */
-    double *phi[NX]; short int *xy_in[NX];
 {
     int i, j, iplus, iminus, jplus, jminus;
     double delta1, delta2, x, y, *newphi[NX];
@@ -595,9 +581,8 @@ void old_evolve_wave(phi, xy_in)
 //     printf("phi(0,0) = %.3lg, psi(0,0) = %.3lg\n", phi[NX/2][NY/2], psi[NX/2][NY/2]);
 }
 
-double compute_variance(phi, xy_in)
+double compute_variance(double *phi[NX], short int * xy_in[NX])
 /* compute the variance (total probability) of the field */
-double *phi[NX]; short int * xy_in[NX];
 {
     int i, j, n = 0;
     double variance = 0.0;
@@ -615,10 +600,8 @@ double *phi[NX]; short int * xy_in[NX];
     return(variance/(double)n);
 }
 
-void renormalise_field(phi, xy_in, variance)
+void renormalise_field(double *phi[NX], short int * xy_in[NX], double variance)
 /* renormalise variance of field */
-double *phi[NX], variance; 
-short int * xy_in[NX];
 {
     int i, j;
     double stdv;
@@ -635,8 +618,7 @@ short int * xy_in[NX];
         }
 }
 
-void print_level(level)
-int level;
+void print_level(int level)
 {
     double pos[2];
     char message[50];
@@ -660,10 +642,7 @@ void print_Julia_parameters()
     write_text(pos[0], pos[1], message);
 }
 
-void set_Julia_parameters(time, phi, xy_in)
-int time;
-double *phi[NX];
-short int *xy_in[NX];
+void set_Julia_parameters(int time, double *phi[NX], short int *xy_in[NX])
 {
     double jangle, cosj, sinj, radius = 0.15;
 
@@ -680,10 +659,7 @@ short int *xy_in[NX];
     printf("Julia set parameters : i = %i, angle = %.5lg, cx = %.5lg, cy = %.5lg \n", time, jangle, julia_x, julia_y);
 }
 
-void set_Julia_parameters_cardioid(time, phi, xy_in)
-int time;
-double *phi[NX];
-short int *xy_in[NX];
+void set_Julia_parameters_cardioid(int time, double *phi[NX], short int *xy_in[NX])
 {
     double jangle, cosj, sinj, yshift;
 

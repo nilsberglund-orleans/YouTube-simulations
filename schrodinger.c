@@ -97,6 +97,7 @@
 #define NSTEPS 200      /* number of frames of movie */
 #define NVID 1200         /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
+#define BOUNDARY_WIDTH 2    /* width of billiard boundary */
 
 #define PAUSE 1000       /* number of frames after which to pause */
 #define PSLEEP 1         /* sleep time during pause */
@@ -140,12 +141,10 @@ double intstep1;  /* integration step used in absorbing boundary conditions */
 
 
 
-void init_coherent_state(x, y, px, py, scalex, phi, psi, xy_in)
+void init_coherent_state(double x, double y, double px, double py, double scalex, double *phi[NX], 
+                         double *psi[NX], short int *xy_in[NX])
 /* initialise field with coherent state of position (x,y) and momentum (px, py) */
 /* phi is real part, psi is imaginary part */
-    double x, y, px, py, scalex, *phi[NX], *psi[NX]; 
-    short int * xy_in[NX];
-
 {
     int i, j;
     double xy[2], dist2, module, phase, scale2;    
@@ -181,9 +180,9 @@ void init_coherent_state(x, y, px, py, scalex, phi, psi, xy_in)
 /* animation part    */
 /*********************/
 
-void schrodinger_color_scheme(phi, psi, scale, time, rgb)
-double phi, psi, scale, rgb[3];
-int time;
+void schrodinger_color_scheme(double phi, double psi, double scale, int time, double rgb[3])
+// double phi, psi, scale, rgb[3];
+// int time;
 {
     double phase, amp, lum;
     
@@ -204,11 +203,8 @@ int time;
 }
 
 
-void draw_wave(phi, psi, xy_in, scale, time)
+void draw_wave(double *phi[NX], double *psi[NX], short int *xy_in[NX], double scale, int time)
 /* draw the field */
-double *phi[NX], *psi[NX], scale;
-short int *xy_in[NX];
-int time;
 {
     int i, j;
     double rgb[3], xy[2], x1, y1, x2, y2, amp, phase;
@@ -234,10 +230,12 @@ int time;
     glEnd ();
 }
 
-void evolve_wave_half(phi_in, psi_in, phi_out, psi_out, xy_in)
-/* time step of field evolution */
-/* phi is real part, psi is imaginary part */
-    double *phi_in[NX], *psi_in[NX], *phi_out[NX], *psi_out[NX]; short int *xy_in[NX];
+void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], double *psi_out[NX], 
+                      short int *xy_in[NX])
+// void evolve_wave_half(phi_in, psi_in, phi_out, psi_out, xy_in)
+// /* time step of field evolution */
+// /* phi is real part, psi is imaginary part */
+//     double *phi_in[NX], *psi_in[NX], *phi_out[NX], *psi_out[NX]; short int *xy_in[NX];
 {
     int i, j, iplus, iminus, jplus, jminus;
     double delta1, delta2, x, y;
@@ -325,19 +323,19 @@ void evolve_wave_half(phi_in, psi_in, phi_out, psi_out, xy_in)
 //     printf("phi(0,0) = %.3lg, psi(0,0) = %.3lg\n", phi[NX/2][NY/2], psi[NX/2][NY/2]);
 }
 
-void evolve_wave(phi, psi, phi_tmp, psi_tmp, xy_in)
+void evolve_wave(double *phi[NX], double *psi[NX], double *phi_tmp[NX], double *psi_tmp[NX], short int *xy_in[NX])
 /* time step of field evolution */
-/* phi is value of field at time t, psi at time t-1 */
-    double *phi[NX], *psi[NX], *phi_tmp[NX], *psi_tmp[NX]; short int *xy_in[NX];
+/* phi is real part, psi is imaginary part */
 {
     evolve_wave_half(phi, psi, phi_tmp, psi_tmp, xy_in);
     evolve_wave_half(phi_tmp, psi_tmp, phi, psi, xy_in);
 }
 
 
-double compute_variance(phi, psi, xy_in)
+double compute_variance(double *phi[NX], double *psi[NX], short int *xy_in[NX])
+// double compute_variance(phi, psi, xy_in)
 /* compute the variance (total probability) of the field */
-double *phi[NX], *psi[NX]; short int * xy_in[NX];
+// double *phi[NX], *psi[NX]; short int * xy_in[NX];
 {
     int i, j, n = 0;
     double variance = 0.0;
@@ -355,10 +353,8 @@ double *phi[NX], *psi[NX]; short int * xy_in[NX];
     return(variance/(double)n);
 }
 
-void renormalise_field(phi, psi, xy_in, variance)
+void renormalise_field(double *phi[NX], double *psi[NX], short int *xy_in[NX], double variance)
 /* renormalise variance of field */
-double *phi[NX], *psi[NX], variance; 
-short int * xy_in[NX];
 {
     int i, j;
     double stdv;

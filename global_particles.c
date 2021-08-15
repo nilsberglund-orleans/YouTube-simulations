@@ -2,6 +2,8 @@ double circlex[NMAXCIRCLES], circley[NMAXCIRCLES], circlerad[NMAXCIRCLES];      
 short int circleactive[NMAXCIRCLES];                                      /* tells which circular scatters are active */
 int ncircles = NMAXCIRCLES;            /* actual number of circles, can be decreased e.g. for random patterns */
 
+double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;    
+/* shooter and target positions for "laser in room of mirrors" simulations, with default values for square domain */
 
 /* some basic math */
 
@@ -28,8 +30,12 @@ int ncircles = NMAXCIRCLES;            /* actual number of circles, can be decre
 
 #define D_CIRCLES 20     /* several circles */
 #define D_CIRCLES_IN_RECT 21     /* several circles inside a rectangle */
+#define D_CIRCLES_IN_GENUSN 22   /* several circles in polygon with identified opposite sides */
 
 #define C_FOUR_CIRCLES 0  /* four circles almost touching each other */
 #define C_SQUARE 1        /* square grid of circles */
 #define C_HEX 2           /* hexagonal/triangular grid of circles */
-#define C_LASER 3         /* laser fight in a room of mirrors */
+#define C_GOLDEN_MEAN 3   /* golden mean grid */
+
+#define C_LASER 11          /* laser fight in a room of mirrors */
+#define C_LASER_GENUSN 12   /* laser fight in a translation surface */

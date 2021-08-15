@@ -42,6 +42,12 @@
 #define C_CLOAK 5           /* invisibility cloak */
 #define C_CLOAK_A 6         /* first optimized invisibility cloak */
 
+#define C_GOLDEN_MEAN 10    /* pattern based on vertical shifts by golden mean */
+#define C_GOLDEN_SPIRAL 11  /* spiral pattern based on golden mean */
+#define C_SQUARE_HEX 12     /* alternating between square and hexagonal/triangular */
+
+#define C_ONE 97            /* one single circle, as for Sinai */
+#define C_TWO 98            /* two concentric circles of different type */
 #define C_NOTHING 99        /* no circle at all, for comparisons */
 
 
@@ -60,10 +66,12 @@
 #define BC_PERIODIC 1    /* periodic boundary conditions */
 #define BC_ABSORBING 2   /* absorbing boundary conditions (beta version) */
 #define BC_VPER_HABS 3   /* vertically periodic and horizontally absorbing boundary conditions */
+#define BC_ABS_REFLECT 4   /* absorbing boundary conditions, except reflecting at y=0, for comparisons */
+// #define BC_OSCILL_ABSORB 5  /* oscillating boundary condition on the left, absorbing on other walls */ 
 
 /* For debugging purposes only */
-#define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
-#define VMAX 10.0       /* max value of wave amplitude */
+// #define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
+// #define VMAX 10.0       /* max value of wave amplitude */
 
 /* Plot types */
 

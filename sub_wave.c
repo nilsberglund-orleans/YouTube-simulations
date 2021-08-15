@@ -67,9 +67,8 @@ void init()		/* initialisation of window */
 
 
 
-void hsl_to_rgb(h, s, l, rgb)       /* color conversion from HSL to RGB */
+void hsl_to_rgb(double h, double s, double l, double rgb[3])       /* color conversion from HSL to RGB */
 /* h = hue, s = saturation, l = luminosity */
-double h, s, l, rgb[3];
 {
     double c = 0.0, m = 0.0, x = 0.0;
 
@@ -109,19 +108,14 @@ double h, s, l, rgb[3];
 
 
 
-double color_amplitude(value, scale, time)
+double color_amplitude(double value, double scale, int time)
 /* transforms the wave amplitude into a double in [-1,1] to feed into color scheme */
-double value, scale;
-int time;
 {
     return(tanh(SLOPE*value/scale)*exp(-((double)time*ATTENUATION)));
 }
 
 
-void color_scheme(scheme, value, scale, time, rgb) /* color scheme */
-double value, scale;
-int scheme, time;
-double rgb[3];
+void color_scheme(int scheme, double value, double scale, int time, double rgb[3]) /* color scheme */
 {
     double hue, y, r, amplitude;
     int intpart;
@@ -182,6 +176,21 @@ void save_frame()
 
 }
 
+void save_frame_counter(int counter)
+/* same as save_frame, but with imposed image number (for option DOUBLE_MOVIE) */
+{
+  char *name="wave.", n2[100];
+  char format[6]=".%05i";
+
+    strcpy(n2, name);
+    sprintf(strstr(n2,"."), format, counter);
+    strcat(n2, ".tif");
+    printf(" saving frame %s \n",n2);
+    writetiff(n2, "Wave equation in a planar domain", 0, 0,
+         WINWIDTH, WINHEIGHT, COMPRESSION_LZW);
+
+}
+
 
 void write_text( double x, double y, char *st)
 {
@@ -203,8 +212,7 @@ void write_text( double x, double y, char *st)
 /* some basic math   */
 /*********************/
 
- double vabs(x)     /* absolute value */
- double x;
+ double vabs(double x)     /* absolute value */
  {
 	double res;
 
@@ -213,9 +221,7 @@ void write_text( double x, double y, char *st)
 	return(res);
  }
 
- double module2(x, y)   /* Euclidean norm */
- double x, y;
-
+ double module2(double x, double y)   /* Euclidean norm */
  {
 	double m;
 
@@ -223,9 +229,7 @@ void write_text( double x, double y, char *st)
 	return(m);
  }
 
- double argument(x, y)
- double x, y;
-
+ double argument(double x, double y)
  {
 	double alph;
 
@@ -257,10 +261,8 @@ void write_text( double x, double y, char *st)
 /* sets of coordinates decreases number of double computations when  */
 /* drawing the field                                                 */
 
-void xy_to_ij(x, y, ij)
+void xy_to_ij(double x, double y, int ij[2])
 /* convert (x,y) position to (i,j) in table representing wave */
-double x, y;
-int ij[2];
 {
     double x1, y1;
 
@@ -272,9 +274,8 @@ int ij[2];
 }
 
 
-void xy_to_pos(x, y, pos)
+void xy_to_pos(double x, double y, double pos[2])
 /* convert (x,y) position to double-valued position in table representing wave */
-double x, y, pos[2];
 {
     double x1, y1;
 
@@ -286,10 +287,8 @@ double x, y, pos[2];
 }
 
 
-void ij_to_xy(i, j, xy)
+void ij_to_xy(int i, int j, double xy[2])
 /* convert (i,j) position in table representing wave to (x,y) */
-int i, j;
-double xy[2];
 {
     double x1, y1;
 
@@ -297,8 +296,26 @@ double xy[2];
     xy[1] = YMIN + ((double)j)*(YMAX-YMIN)/((double)NY);
 }
 
-void draw_rectangle(x1, y1, x2, y2)
-double x1, y1, x2, y2;
+void erase_area(double x, double y, double dx, double dy)
+{
+    double pos[2], rgb[3];
+    
+    hsl_to_rgb(220.0, 0.8, 0.7, rgb);
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_QUADS);
+    xy_to_pos(x - dx, y - dy, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x + dx, y - dy, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x + dx, y + dy, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x - dx, y + dy, pos);
+    glVertex2d(pos[0], pos[1]);
+    glEnd();
+}
+
+void draw_rectangle(double x1, double y1, double x2, double y2)
 {
     double pos[2];
     
@@ -314,9 +331,7 @@ double x1, y1, x2, y2;
     glEnd();    
 }
 
-
-void draw_rotated_rectangle(x1, y1, x2, y2)
-double x1, y1, x2, y2;
+void draw_rotated_rectangle(double x1, double y1, double x2, double y2)
 {
     double pos[2];
     double xa, ya, xb, yb, xc, yc;
@@ -340,12 +355,51 @@ double x1, y1, x2, y2;
     glEnd();    
 }
 
+void draw_circle(double x, double y, double r, int nseg)
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI/(double)nseg;
+    
+    glBegin(GL_LINE_LOOP);
+    for (i=0; i<=nseg; i++)
+    {
+        alpha = (double)i*dalpha;
+        xy_to_pos(x + r*cos(alpha), y + r*sin(alpha), pos);
+        glVertex2d(pos[0], pos[1]);
+    }
+    glEnd();
+}
+
+void draw_colored_circle(double x, double y, double r, int nseg, double rgb[3])
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI/(double)nseg;
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_TRIANGLE_FAN);
+    xy_to_pos(x, y, pos);
+    glVertex2d(pos[0], pos[1]);
+    for (i=0; i<=nseg; i++)
+    {
+        alpha = (double)i*dalpha;
+        xy_to_pos(x + r*cos(alpha), y + r*sin(alpha), pos);
+        glVertex2d(pos[0], pos[1]);
+    }
+    
+    glEnd();
+}
+
+
 void init_circle_config()
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
-    int i, j, n; 
-    double dx, dy, p, phi, r, ra[5], sa[5];
+    int i, j, n, ncirc0; 
+    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma;
     
     switch (CIRCLE_PATTERN) {
         case (C_SQUARE):
@@ -372,11 +426,13 @@ void init_circle_config()
                 for (j = 0; j < NGRIDY+1; j++)
                 {
                     n = (NGRIDY+1)*i + j;
-                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;   /* is +0.5 needed? */
                     circley[n] = YMIN + ((double)j - 0.5)*dy;
                     if ((i+NGRIDX)%2 == 1) circley[n] += 0.5*dy;
                     circlerad[n] = MU;
-                    circleactive[n] = 1;
+                    /* activate only circles that intersect the domain */
+                    if ((circley[n] < YMAX + MU)&&(circley[n] > YMIN - MU)) circleactive[n] = 1;
+                    else circleactive[n] = 0;
                 }
             break;
         }
@@ -388,9 +444,9 @@ void init_circle_config()
                 for (j = 0; j < NGRIDY; j++)
                 {
                     n = NGRIDY*i + j;
-                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5 + 0.5*(double)rand()/RAND_MAX)*dy;
-                    circley[n] = YMIN + ((double)j + 0.5 + 0.5*(double)rand()/RAND_MAX)*dy;
-                    circlerad[n] = MU*(1.0 + 0.35*(double)rand()/RAND_MAX);
+                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circley[n] = YMIN + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circlerad[n] = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
                     circleactive[n] = 1;
                 }
             break;
@@ -461,6 +517,129 @@ void init_circle_config()
                 }
             break;
         }
+        case (C_GOLDEN_MEAN):
+        {
+            ncircles = 300;
+            gamma = (sqrt(5.0) - 1.0)*0.5;    /* golden mean */
+            height = YMAX - YMIN;
+            dx = 2.0*LAMBDA/((double)ncircles);
+            for (n = 0; n < ncircles; n++)
+            {
+                circlex[n] = -LAMBDA + n*dx;
+                circley[n] = y;
+                y += height*gamma; 
+                if (y > YMAX) y -= height;
+                circlerad[n] = MU;
+                circleactive[n] = 1;
+            }
+            
+            /* test for circles that overlap top or bottom boundary */
+            ncirc0 = ncircles;
+            for (n=0; n < ncirc0; n++)
+            {
+                if (circley[n] + circlerad[n] > YMAX)
+                {
+                    circlex[ncircles] = circlex[n];
+                    circley[ncircles] = circley[n] - height;
+                    circlerad[ncircles] = MU;
+                    circleactive[ncircles] = 1;
+                    ncircles ++;
+                }
+                else if (circley[n] - circlerad[n] < YMIN)
+                {
+                    circlex[ncircles] = circlex[n];
+                    circley[ncircles] = circley[n] + height;
+                    circlerad[ncircles] = MU;
+                    circleactive[ncircles] = 1;
+                    ncircles ++;
+                }
+            }
+            break;
+        }
+        case (C_GOLDEN_SPIRAL):
+        {
+            ncircles = 1;
+            circlex[0] = 0.0;
+            circley[0] = 0.0;
+            
+            gamma = (sqrt(5.0) - 1.0)*PI;    /* golden mean times 2Pi */
+            phi = 0.0;
+            r0 = 2.0*MU;
+            r = r0 + MU;
+            
+            for (i=0; i<1000; i++) 
+            {
+                x = r*cos(phi);
+                y = r*sin(phi);
+                
+                phi += gamma;
+                r += MU*r0/r;
+                
+                if ((vabs(x) < LAMBDA)&&(vabs(y) < YMAX + MU))
+                {
+                    circlex[ncircles] = x;
+                    circley[ncircles] = y;
+                    ncircles++;
+                }
+            }
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circlerad[i] = MU;
+                /* inactivate circles outside the domain */
+                if ((circley[i] < YMAX + MU)&&(circley[i] > YMIN - MU)) circleactive[i] = 1;
+//                 printf("i = %i, circlex = %.3lg, circley = %.3lg\n", i, circlex[i], circley[i]);
+            }
+            break;
+        }
+        case (C_SQUARE_HEX):
+        {
+            ncircles = NGRIDX*(NGRIDY+1);
+            dy = (YMAX - YMIN)/((double)NGRIDY);
+            dx = dy*0.5*sqrt(3.0);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY+1; j++)
+                {
+                    n = (NGRIDY+1)*i + j;
+                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;   /* is +0.5 needed? */
+                    circley[n] = YMIN + ((double)j - 0.5)*dy;
+                    if (((i+NGRIDX)%4 == 2)||((i+NGRIDX)%4 == 3)) circley[n] += 0.5*dy;
+                    circlerad[n] = MU;
+                    /* activate only circles that intersect the domain */
+                    if ((circley[n] < YMAX + MU)&&(circley[n] > YMIN - MU)) circleactive[n] = 1;
+                    else circleactive[n] = 0;
+                }
+            break;
+        }
+        case (C_ONE):
+        {
+            circlex[ncircles] = 0.0;
+            circley[ncircles] = 0.0;
+            circlerad[ncircles] = MU;
+            circleactive[ncircles] = 1;
+            ncircles += 1;
+            break;
+        }
+        case (C_TWO):   /* used for comparison with cloak */
+        {
+            circlex[ncircles] = 0.0;
+            circley[ncircles] = 0.0;
+            circlerad[ncircles] = MU;
+            circleactive[ncircles] = 2;
+            ncircles += 1;
+
+            circlex[ncircles] = 0.0;
+            circley[ncircles] = 0.0;
+            circlerad[ncircles] = 2.0*MU;
+            circleactive[ncircles] = 1;
+            ncircles += 1;
+            break;
+        }
+        case (C_NOTHING):
+        {
+            ncircles += 0;
+            break;
+        }
         default: 
         {
             printf("Function init_circle_config not defined for this pattern \n");
@@ -477,19 +656,19 @@ double x, y;
     int i, j, k, k1, k2, condition;
 
     switch (B_DOMAIN) {
-        case D_RECTANGLE:
+        case (D_RECTANGLE):
         {
             if ((vabs(x) <LAMBDA)&&(vabs(y) < 1.0)) return(1);
             else return(0);
             break;
         }
-        case D_ELLIPSE:
+        case (D_ELLIPSE):
         {
             if (x*x/(LAMBDA*LAMBDA) + y*y < 1.0) return(1);
             else return(0);
             break;
         }
-        case D_STADIUM:
+        case (D_STADIUM):
         {
             if ((x > -0.5*LAMBDA)&&(x < 0.5*LAMBDA)&&(y > -1.0)&&(y < 1.0)) return(1);
             else if (module2(x+0.5*LAMBDA, y) < 1.0) return(1);
@@ -497,13 +676,13 @@ double x, y;
             else return(0);
             break;
         }
-        case D_SINAI:
+        case (D_SINAI):
         {
             if (x*x + y*y > LAMBDA*LAMBDA) return(1);
             else return(0);
             break;
         }
-        case D_DIAMOND:
+        case (D_DIAMOND):
         {
             l2 = LAMBDA*LAMBDA;
             r2 = l2 + (LAMBDA-1.0)*(LAMBDA-1.0);
@@ -514,26 +693,26 @@ double x, y;
             else return(0);
             break;
         }
-        case D_TRIANGLE:
+        case (D_TRIANGLE):
         {
             if ((x>-LAMBDA)&&(y>-1.0)&&(LAMBDA*y+x<0.0)) return(1);
             else return(0);
             break;
         }
-        case D_FLAT:
+        case (D_FLAT):
         {
             if (y > -LAMBDA) return(1);
             else return(0);
             break;
         }
-        case D_ANNULUS:
+        case (D_ANNULUS):
         {
             l2 = LAMBDA*LAMBDA;
             r2 = x*x + y*y;
             if ((r2 > l2)&&(r2 < 1.0)) return(1);
             else return(0);
         }
-        case D_POLYGON:
+        case (D_POLYGON):
         {
             condition = 1;
             omega = DPI/((double)NPOLY);
@@ -546,13 +725,13 @@ double x, y;
 //             for (k=0; k<NPOLY; k++)  condition = condition*(-x*sin((k+0.5)*omega) + y*cos((k+0.5)*omega) < c);
             return(condition);
         }   
-        case D_YOUNG:
+        case (D_YOUNG):
         {
             if ((x < -MU)||(x > MU)) return(1);
             else if ((vabs(y-LAMBDA) < MU)||(vabs(y+LAMBDA) < MU)) return (1);
             else return(0);
         }
-        case D_GRATING:
+        case (D_GRATING):
         {
             k1 = -(int)((-YMIN)/LAMBDA);
             k2 = (int)(YMAX/LAMBDA);
@@ -565,11 +744,11 @@ double x, y;
 //             printf("x = %.3lg, y = %.3lg, k1 = %i, k2 = %i, condition = %i\n", x, y, k1, k2, condition);
             return(condition);
         }
-        case D_EHRENFEST:
+        case (D_EHRENFEST):
         {
             return(((x-1.0)*(x-1.0) + y*y < LAMBDA*LAMBDA)||((x+1.0)*(x+1.0) + y*y < LAMBDA*LAMBDA)||((vabs(x) < 1.0)&&(vabs(y) < MU)));
         }
-        case D_DISK_GRID:
+        case (D_DISK_GRID):
         {
             dy = (YMAX - YMIN)/((double)NGRIDY);
             for (i = -NGRIDX/2; i < NGRIDX/2; i++)
@@ -581,7 +760,7 @@ double x, y;
                 }
             return(1);
         }
-        case D_DISK_HEX:
+        case (D_DISK_HEX):
         {
             dy = (YMAX - YMIN)/((double)NGRIDY);
             dx = dy*0.5*sqrt(3.0);
@@ -595,7 +774,7 @@ double x, y;
                 }
             return(1);
         }
-        case D_CIRCLES:
+        case (D_CIRCLES):
         {
             for (i = 0; i < ncircles; i++)
                 if (circleactive[i]) 
@@ -607,7 +786,7 @@ double x, y;
                 }
             return(1);
         }
-        case D_MENGER:       
+        case (D_MENGER):       
         {
             x1 = 0.5*(x+1.0);
             y1 = 0.5*(y+1.0);
@@ -619,7 +798,7 @@ double x, y;
             }
             return(1);
         }
-        case D_JULIA_INT:  
+        case (D_JULIA_INT):  
         {
             u = x/JULIA_SCALE;
             v = y/JULIA_SCALE;
@@ -634,7 +813,7 @@ double x, y;
             if (u*u + v*v < MANDELLIMIT) return(1);
             else return(0);
         }
-        case D_MENGER_ROTATED:       
+        case (D_MENGER_ROTATED):       
         {
             x2 = 1.0*(x + y);
             y2 = 1.0*(x - y);
@@ -651,7 +830,7 @@ double x, y;
             }
             return(1);
         }
-        case D_ANNULUS_HEATED:      /* returns 2 if in inner circle */ 
+        case (D_ANNULUS_HEATED):      /* returns 2 if in inner circle */ 
         {
             l2 = LAMBDA*LAMBDA;
             r2 = x*x + y*y;
@@ -660,7 +839,7 @@ double x, y;
             else if (r2mu <= l2) return(2);
             else return (0);
         }
-        case D_MENGER_HEATED: 
+        case (D_MENGER_HEATED): 
         {
             if ((vabs(x) >= 1.0)||(vabs(y) >= 1.0)) return(0);
             else
@@ -676,7 +855,7 @@ double x, y;
                 return(1);
             }
         }
-        case D_MENGER_H_OPEN:       /* returns 2 if in inner circle */ 
+        case (D_MENGER_H_OPEN):       /* returns 2 if in inner circle */ 
         {
             x1 = 0.5*(x+1.0);
             y1 = 0.5*(y+1.0);
@@ -688,7 +867,7 @@ double x, y;
             }
             return(1);
         }
-        case D_MANDELBROT:  
+        case (D_MANDELBROT):  
         {
             u = 0.0;
             v = 0.0;
@@ -707,7 +886,7 @@ double x, y;
             else if ((x-0.5)*(x-0.5)/3.0 + y*y/1.0 > 1.2) return(2);
             else return(1);
         }
-        case D_MANDELBROT_CIRCLE:  
+        case (D_MANDELBROT_CIRCLE):  
         {
             u = 0.0;
             v = 0.0;
@@ -723,7 +902,7 @@ double x, y;
             else if ((x-LAMBDA)*(x-LAMBDA) + (y-0.5)*(y-0.5) < MU*MU) return(2);
             else return(1);
         }
-        case D_JULIA:  
+        case (D_JULIA):  
         {
             u = x/JULIA_SCALE;
             v = y/JULIA_SCALE;
@@ -750,9 +929,8 @@ double x, y;
     }
 }
 
-int ij_in_billiard(i, j)
+int ij_in_billiard(int i, int j)
 /* returns 1 if (i,j) represents a point in the billiard */
-int i, j;
 {
     double xy[2];
 
@@ -811,31 +989,13 @@ void draw_billiard()      /* draws the billiard boundary */
 
                 glLineWidth(2);
                 glEnable(GL_LINE_SMOOTH);
-                glBegin(GL_LINE_LOOP);
-                for (i=0; i<=NSEG; i++)
-                {
-                    phi = (double)i*DPI/(double)NSEG;
-                    x = x0 + r*cos(phi);
-                    y = r*sin(phi);
-                    xy_to_pos(x, y, pos);
-                    glVertex2d(pos[0], pos[1]);
-                }
-                glEnd();
-
-                glBegin(GL_LINE_LOOP);
-                for (i=0; i<=NSEG; i++)
-                {
-                    phi = (double)i*DPI/(double)NSEG;
-                    x = -x0 + r*cos(phi);
-                    y = r*sin(phi);
-                    xy_to_pos(x, y, pos);
-                    glVertex2d(pos[0], pos[1]);
-                }
-                glEnd();
+                
+                draw_circle(x0, 0.0, r, NSEG);
+                draw_circle(-x0, 0.0, r, NSEG);
             }
             break;
         }
-        case D_STADIUM:
+        case (D_STADIUM):
         {
             glBegin(GL_LINE_LOOP);
             for (i=0; i<=NSEG; i++)
@@ -857,21 +1017,12 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd();
             break;
         }
-        case D_SINAI:
+        case (D_SINAI):
         {
-            glBegin(GL_LINE_LOOP);
-            for (i=0; i<=NSEG; i++)
-            {
-                phi = (double)i*DPI/(double)NSEG;
-                x = LAMBDA*cos(phi);
-                y = LAMBDA*sin(phi);
-                xy_to_pos(x, y, pos);
-                glVertex2d(pos[0], pos[1]);
-            }
-            glEnd();
+            draw_circle(0.0, 0.0, LAMBDA, NSEG);
             break;
         }
-        case D_DIAMOND:
+        case (D_DIAMOND):
         {
             alpha = atan(1.0 - 1.0/LAMBDA);
             dphi = (PID - 2.0*alpha)/(double)NSEG;
@@ -936,26 +1087,8 @@ void draw_billiard()      /* draws the billiard boundary */
         }
         case (D_ANNULUS):
         {
-            glBegin(GL_LINE_LOOP);
-            for (i=0; i<=NSEG; i++)
-            {
-                phi = (double)i*DPI/(double)NSEG;
-                x = LAMBDA*cos(phi);
-                y = LAMBDA*sin(phi);
-                xy_to_pos(x, y, pos);
-                glVertex2d(pos[0], pos[1]);
-            }
-            glEnd ();
-            glBegin(GL_LINE_LOOP);
-            for (i=0; i<=NSEG; i++)
-            {
-                phi = (double)i*DPI/(double)NSEG;
-                x = cos(phi);
-                y = sin(phi);
-                xy_to_pos(x, y, pos);
-                glVertex2d(pos[0], pos[1]);
-            }
-            glEnd ();      
+            draw_circle(0.0, 0.0, LAMBDA, NSEG);
+            draw_circle(0.0, 0.0, 1.0, NSEG);
             break;
         }
         case (D_POLYGON):
@@ -1008,27 +1141,18 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd();
             break;
         }
-        case D_GRATING:
+        case (D_GRATING):
         {
             k1 = -(int)(-YMIN/LAMBDA);
             k2 = (int)(YMAX/LAMBDA);
             for (i=k1; i<= k2; i++)
             {
                 z = (double)i*LAMBDA;
-                glBegin(GL_LINE_LOOP);
-                for (j=0; j<=NSEG; j++)
-                {
-                    phi = (double)j*DPI/(double)NSEG;
-                    x = MU*cos(phi);
-                    y = z + MU*sin(phi);
-                    xy_to_pos(x, y, pos);
-                    glVertex2d(pos[0], pos[1]);
-                }
-                glEnd ();
+                draw_circle(0.0, z, MU, NSEG);
             }
             break;
         }
-        case D_EHRENFEST:
+        case (D_EHRENFEST):
         {
             alpha = asin(MU/LAMBDA);
             x0 = 1.0 - sqrt(LAMBDA*LAMBDA - MU*MU);
@@ -1053,7 +1177,7 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd ();
             break;
         }
-        case D_DISK_GRID:
+        case (D_DISK_GRID):
         {
             glLineWidth(2);
             for (i = -NGRIDX/2; i < NGRIDX/2; i++)
@@ -1063,20 +1187,11 @@ void draw_billiard()      /* draws the billiard boundary */
                     dx = dy*0.5*sqrt(3.0);
                     x1 = ((double)i + 0.5)*dy;
                     y1 = YMIN + ((double)j + 0.5)*dy;
-                    glBegin(GL_LINE_LOOP);
-                    for (k=0; k<=NSEG; k++)
-                    {
-                        phi = (double)k*DPI/(double)NSEG;
-                        x = x1 + MU*cos(phi);
-                        y = y1 + MU*sin(phi);
-                        xy_to_pos(x, y, pos);
-                        glVertex2d(pos[0], pos[1]);
-                    }
-                    glEnd ();
+                    draw_circle(x1, y1, MU, NSEG);
                 }
             break;
         }
-        case D_DISK_HEX:
+        case (D_DISK_HEX):
         {
             glLineWidth(2);
             for (i = -NGRIDX/2; i < NGRIDX/2; i++)
@@ -1086,16 +1201,7 @@ void draw_billiard()      /* draws the billiard boundary */
                     x1 = ((double)i + 0.5)*dy;
                     y1 = YMIN + ((double)j + 0.5)*dy;
                     if ((i+NGRIDX)%2 == 1) y1 += 0.5*dy;
-                    glBegin(GL_LINE_LOOP);
-                    for (k=0; k<=NSEG; k++)
-                    {
-                        phi = (double)k*DPI/(double)NSEG;
-                        x = x1 + MU*cos(phi);
-                        y = y1 + MU*sin(phi);
-                        xy_to_pos(x, y, pos);
-                        glVertex2d(pos[0], pos[1]);
-                    }
-                    glEnd ();
+                    draw_circle(x1, y1, MU, NSEG);
                 }
             break;
         }
@@ -1103,19 +1209,7 @@ void draw_billiard()      /* draws the billiard boundary */
         {
             glLineWidth(BOUNDARY_WIDTH);
             for (i = 0; i < ncircles; i++) 
-                if (circleactive[i]) 
-                {
-                    glBegin(GL_LINE_LOOP);
-                    for (k=0; k<=NSEG; k++)
-                    {
-                        phi = (double)k*DPI/(double)NSEG;
-                        x = circlex[i] + circlerad[i]*cos(phi);
-                        y = circley[i] + circlerad[i]*sin(phi);
-                        xy_to_pos(x, y, pos);
-                        glVertex2d(pos[0], pos[1]);
-                    }
-                    glEnd ();
-                }
+                if (circleactive[i]) draw_circle(circlex[i], circley[i], circlerad[i], NSEG);
             break;
         }
         case (D_MENGER):
@@ -1221,26 +1315,8 @@ void draw_billiard()      /* draws the billiard boundary */
         }        
         case (D_ANNULUS_HEATED):
         {
-            glBegin(GL_LINE_LOOP);
-            for (i=0; i<=NSEG; i++)
-            {
-                phi = (double)i*DPI/(double)NSEG;
-                x = MU + LAMBDA*cos(phi);
-                y = LAMBDA*sin(phi);
-                xy_to_pos(x, y, pos);
-                glVertex2d(pos[0], pos[1]);
-            }
-            glEnd ();
-            glBegin(GL_LINE_LOOP);
-            for (i=0; i<=NSEG; i++)
-            {
-                phi = (double)i*DPI/(double)NSEG;
-                x = cos(phi);
-                y = sin(phi);
-                xy_to_pos(x, y, pos);
-                glVertex2d(pos[0], pos[1]);
-            }
-            glEnd ();      
+            draw_circle(MU, 0.0, LAMBDA, NSEG);
+            draw_circle(0.0, 0.0, 1.0, NSEG);
             break;
         }
         case (D_MENGER_HEATED):

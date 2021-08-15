@@ -50,6 +50,8 @@
 
 #define CIRCLE_PATTERN 0    /* pattern of circles */
 
+#define ABSORBING_CIRCLES 0 /* set to 1 for circular scatterers to be absorbing */
+
 #define NMAXCIRCLES 1000        /* total number of circles (must be at least NCX*NCY for square grid) */
 // #define NCX 10            /* number of circles in x direction */
 // #define NCY 15            /* number of circles in y direction */
@@ -126,10 +128,8 @@
 /* animation part    */
 /*********************/
 
-void init_boundary_config(smin, smax, anglemin, anglemax, configs)
+void init_boundary_config(double smin, double smax, double anglemin, double anglemax, double *configs[NPARTMAX])
 /* initialize configuration: drop on the boundary, beta version */
-double smin, smax, anglemin, anglemax;
-double *configs[NPARTMAX];
 {
     int i;
     double ds, da, s, angle, alpha, pos[2], conf[2];
@@ -151,9 +151,8 @@ double *configs[NPARTMAX];
     }
 }
 
-void init_drop_config(x0, y0, angle1, angle2, configs)   /* initialize configuration: drop at (x0,y0) */
-double x0, y0, angle1, angle2;
-double *configs[NPARTMAX];
+void init_drop_config(double x0, double y0, double angle1, double angle2, double *configs[NPARTMAX])   
+/* initialize configuration: drop at (x0,y0) */
 {
     int i;
     double dalpha, alpha, pos[2];
@@ -172,9 +171,8 @@ double *configs[NPARTMAX];
 }
  
 
-int resample(color, configs)     /* add particles where the front is stretched too thin */
-int color[NPARTMAX];
-double *configs[NPARTMAX];
+int resample(int color[NPARTMAX], double *configs[NPARTMAX])     
+/* add particles where the front is stretched too thin */
 {
     int len, i, j, k, iplus, newnparticles=nparticles, *newcolor;
     double dx, dy, pos[2], s1, s2, s, x, y, x1, y1, theta, alpha, beta, length2; 
@@ -261,10 +259,9 @@ double *configs[NPARTMAX];
     else return(1);
 }
 
-void draw_config(color, configs)
-/* draw the wave front by ordering colors */
-int color[NPARTMAX];
-double *configs[NPARTMAX];
+
+void draw_config(int color[NPARTMAX], double *configs[NPARTMAX])
+/* draw the particles */
 {
     int i;
     double x1, y1, x2, y2, cosphi, sinphi, rgb[3], dist, dmax;
@@ -315,10 +312,8 @@ double *configs[NPARTMAX];
 }
 
 
-void draw_ordered_config(color, configs)
+void draw_ordered_config(int color[NPARTMAX], double *configs[NPARTMAX])
 /* draw the wave front, one color after the other */
-int color[NPARTMAX];
-double *configs[NPARTMAX];
 {
     int i, col;
     double x1, y1, x2, y2, cosphi, sinphi, rgb[3], dist, dmax;
@@ -376,10 +371,8 @@ double *configs[NPARTMAX];
 }
 
 
-void graph_movie(time, color, configs)
+void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX])
 /* compute next movie frame */
-int time, color[NPARTMAX];
-double *configs[NPARTMAX];
 {
     int i, j;
 
@@ -407,10 +400,8 @@ double *configs[NPARTMAX];
     }
 }
 
-void graph_no_movie(time, color, configs)
+void graph_no_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX])
 /* plot next image without making a movie */
-int time, color[NPARTMAX];
-double *configs[NPARTMAX];
 {
     int i, j;
 

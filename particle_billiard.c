@@ -42,32 +42,19 @@
 
 #define SCALING_FACTOR 1.0       /* scaling factor of drawing, needed for flower billiards, otherwise set to 1.0 */
 
-// #define XMIN -1.8
-// #define XMAX 1.8	/* x interval */
-// #define YMIN -0.91
-// #define YMAX 1.115	/* y interval for 9/16 aspect ratio */
-
 /* Choice of the billiard table, see global_particles.c */
 
-#define B_DOMAIN 14      /* choice of domain shape */
+#define B_DOMAIN 20      /* choice of domain shape */
 
-#define CIRCLE_PATTERN 0    /* pattern of circles */
+#define CIRCLE_PATTERN 2    /* pattern of circles */
+
+#define ABSORBING_CIRCLES 0 /* set to 1 for circular scatterers to be absorbing */
 
 #define NMAXCIRCLES 1000        /* total number of circles (must be at least NCX*NCY for square grid) */
-// #define NCX 10            /* number of circles in x direction */
-// #define NCY 15            /* number of circles in y direction */
 #define NCX 15            /* number of circles in x direction */
 #define NCY 20            /* number of circles in y direction */
 
 #define LAMBDA 0.75	/* parameter controlling shape of billiard */
-// #define LAMBDA -3.346065215	/* sin(60°)/sin(15°) for Reuleaux-type triangle with 90° angles */
-// #define LAMBDA 3.0	/* parameter controlling shape of billiard */
-// #define LAMBDA 0.6	/* parameter controlling shape of billiard */
-// #define LAMBDA 0.4175295	/* sin(20°)/sin(55°) for 9-star shape with 30° angles */
-// #define LAMBDA -1.949855824	/* 7-sided Reuleaux triangle */
-// #define LAMBDA 3.75738973	/* sin(36°)/sin(9°) for 5-star shape with 90° angles */
-// #define LAMBDA -1.73205080756888	/* -sqrt(3) for Reuleaux triangle */
-// #define LAMBDA 1.73205080756888	/* sqrt(3) for triangle tiling plane */
 #define MU 0.035          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 8             /* number of sides of polygon */
@@ -81,16 +68,15 @@
 
 /* Simulation parameters */
 
-#define NPART 5000       /* number of particles */
+#define NPART 30000       /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
+#define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
 
 #define NSTEPS 3000     /* number of frames of movie */
 #define TIME 1000       /* time between movie frames, for fluidity of real-time simulation */ 
-// #define DPHI 0.000002    /* integration step */
-// #define DPHI 0.00002    /* integration step */
 #define DPHI 0.000005    /* integration step */
 #define NVID 150         /* number of iterations between images displayed on screen */
 
@@ -102,9 +88,9 @@
 
 /* Colors and other graphical parameters */
 
-#define NCOLORS 16      /* number of colors */
+#define NCOLORS 32      /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
-#define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
+#define RAINBOW_COLOR 0  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
 #define LENGTH 0.02      /* length of velocity vectors */
@@ -132,11 +118,9 @@
 /* animation part    */
 /*********************/
 
-void init_boundary_config(smin, smax, anglemin, anglemax, configs)
+void init_boundary_config(double smin, double smax, double anglemin, double anglemax, double *configs[NPARTMAX])
 /* initialize configuration: drop on the boundary, beta version */
 /* WORKS FOR ELLIPSE, HAS TO BE ADAPTED TO GENERAL BILLIARD */
-double smin, smax, anglemin, anglemax;
-double *configs[NPARTMAX];
 {
     int i;
     double ds, da, s, angle, theta, alpha, pos[2];
@@ -158,9 +142,8 @@ double *configs[NPARTMAX];
     }
 }
 
-void init_drop_config(x0, y0, angle1, angle2, configs)   /* initialize configuration: drop at (x0,y0) */
-double x0, y0, angle1, angle2;
-double *configs[NPARTMAX];
+void init_drop_config(double x0, double y0, double angle1, double angle2, double *configs[NPARTMAX])   
+/* initialize configuration: drop at (x0,y0) */
 {
     int i;
     double dalpha, alpha;
@@ -181,10 +164,8 @@ double *configs[NPARTMAX];
     }
 }
  
-void init_sym_drop_config(x0, y0, angle1, angle2, configs)   
+void init_sym_drop_config(double x0, double y0, double angle1, double angle2, double *configs[NPARTMAX])   
 /* initialize configuration with two symmetric partial drops */
-double x0, y0, angle1, angle2;
-double *configs[NPARTMAX];
 {
     int i;
     double dalpha, alpha, meanangle;
@@ -210,9 +191,8 @@ double *configs[NPARTMAX];
 
 }
  
-void init_line_config(x0, y0, x1, y1, angle, configs)   /* initialize configuration: line (x0,y0)-(x1,y1) in direction alpha */
-double x0, y0, x1, y1, angle;
-double *configs[NPARTMAX];
+void init_line_config(double x0, double y0, double x1, double y1, double angle, double *configs[NPARTMAX])   
+/* initialize configuration: line (x0,y0)-(x1,y1) in direction alpha */
 {
     int i;
     double dx, dy;
@@ -231,16 +211,14 @@ double *configs[NPARTMAX];
 }
 
 
-void draw_config(color, configs, active)
+void draw_config(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTMAX])
 /* draw the particles */
-int color[NPARTMAX], active[NPARTMAX];
-double *configs[NPARTMAX];
 {
     int i;
     double x1, y1, x2, y2, cosphi, sinphi, rgb[3];
 
     glutSwapBuffers(); 
-    blank();
+    if (!SHOWTRAILS) blank();
     if (PAINT_INT) paint_billiard_interior();
       
     glLineWidth(PARTICLE_WIDTH);
@@ -335,10 +313,8 @@ double *configs[NPARTMAX];
 }
 
 
-void graph_movie(time, color, configs, active)
+void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTMAX])
 /* compute next movie frame */
-int time, color[NPARTMAX], active[NPARTMAX];
-double *configs[NPARTMAX];
 {
     int i, j, c;
 
@@ -370,77 +346,6 @@ double *configs[NPARTMAX];
 //     draw_config(color, configs);
 }
 
-
-void init_circle_config()
-{
-    int i, j, n; 
-    double dx, dy;
-    
-    switch (CIRCLE_PATTERN) {
-        case (C_FOUR_CIRCLES):
-        {
-            ncircles = 4;
-            
-            circlex[0] = 1.0;
-            circley[0] = 0.0;
-            circlerad[0] = 0.8;
-            
-            circlex[1] = -1.0;
-            circley[1] = 0.0;
-            circlerad[1] = 0.8;
-            
-            circlex[2] = 0.0;
-            circley[2] = 0.8;
-            circlerad[2] = 0.4;
-            
-            circlex[3] = 0.0;
-            circley[3] = -0.8;
-            circlerad[3] = 0.4;
-            
-            for (i=0; i<4; i++) circleactive[i] = 1;
-
-            break;
-        }
-        case (C_SQUARE):
-        {
-            ncircles = NCX*NCY;
-            dy = (YMAX - YMIN)/((double)NCY);
-            for (i = 0; i < NCX; i++)
-                for (j = 0; j < NCY; j++)
-                {
-                    n = NCY*i + j;
-                    circlex[n] = ((double)(i-NCX/2) + 0.5)*dy;
-                    circley[n] = YMIN + ((double)j + 0.5)*dy;
-                    circlerad[n] = MU;
-                    circleactive[n] = 1;
-                }
-            break;
-        }
-        case (C_HEX):
-        {
-            ncircles = NCX*(NCY+1);
-            dy = (YMAX - YMIN)/((double)NCY);
-            dx = dy*0.5*sqrt(3.0);
-            for (i = 0; i < NCX; i++)
-                for (j = 0; j < NCY+1; j++)
-                {
-                    n = (NCY+1)*i + j;
-                    circlex[n] = ((double)(i-NCX/2) + 0.5)*dy;
-                    circley[n] = YMIN + ((double)j - 0.5)*dy;
-                    if ((i+NCX)%2 == 1) circley[n] += 0.5*dy;
-                    circlerad[n] = MU;
-                    circleactive[n] = 1;
-                }
-            break;
-        }
-        default: 
-        {
-            printf("Function init_circle_config not defined for this pattern \n");
-        }
-    }
-}
-
-
 void animation()
 {
     double time, dt, alpha, r;
@@ -456,24 +361,27 @@ void animation()
         configs[i] = (double *)malloc(8*sizeof(double));
     
     /* init circle configuration if the domain is D_CIRCLES */
-    if (B_DOMAIN == D_CIRCLES) init_circle_config();
+    if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)||(B_DOMAIN == D_CIRCLES_IN_GENUSN)) init_circle_config();
     
       
     /* initialize system by putting particles in a given point with a range of velocities */
     r = cos(PI/(double)NPOLY)/cos(DPI/(double)NPOLY);
 
-//     init_drop_config(0.0, 0.0, 0.0, PI, configs);    
+//     init_line_config(-1.25, -0.5, -1.25, 0.5, 0.0, configs);   
+//     init_drop_config(-0.75, 0.0, -0.1, 0.1, configs);    
 //     init_drop_config(0.5, 0.5, -1.0, 1.0, configs);    
 //     init_sym_drop_config(-1.0, 0.5, -PID, PID, configs);
 //     init_drop_config(-0.999, 0.0, -alpha, alpha, configs);
 
 //  other possible initial conditions :
-//     init_line_config(-1.25, -0.5, -1.25, 0.5, 0.0, configs);
-    init_line_config(0.0, -1.0, -1.0, 1.0, 0.25*PID, configs);
+    init_line_config(-1.25, -0.5, -1.25, 0.5, 0.0, configs);
+//     init_line_config(0.0, -0.5, 0.0, 0.5, 0.0, configs);
+//     init_line_config(-1.25, -0.5, -1.25, 0.5, 0.0*PID, configs);
+//     init_line_config(-1.0, -0.3, -1.0, 0.3, 0.0, configs);
 //     init_line_config(-0.7, -0.45, -0.7, 0.45, 0.0, configs);
 //     init_line_config(-1.5, 0.1, -0.1, 1.0, -0.5*PID, configs);
   
-    blank();  
+    if (!SHOWTRAILS) blank();
     glColor3f(0.0, 0.0, 0.0);
     if (DRAW_BILLIARD) draw_billiard();
   
@@ -556,9 +464,13 @@ void display(void)
     glPushMatrix();
 
     blank();
-    glutSwapBuffers();
-    blank();
-    glutSwapBuffers();
+    
+    if (!SHOWTRAILS)
+    {
+        glutSwapBuffers();
+        blank();
+        glutSwapBuffers();
+    }
 
     animation();        
 
@@ -571,7 +483,9 @@ void display(void)
 int main(int argc, char** argv)
 {
     glutInit(&argc, argv);
-    glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+    if (SHOWTRAILS) glutInitDisplayMode(GLUT_RGB | GLUT_SINGLE | GLUT_DEPTH);
+    else glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
+//     glutInitDisplayMode(GLUT_RGB | GLUT_DOUBLE | GLUT_DEPTH);
     glutInitWindowSize(WINWIDTH,WINHEIGHT);
     glutCreateWindow("Billiard animation");
        
