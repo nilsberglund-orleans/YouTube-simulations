@@ -122,7 +122,7 @@ void color_scheme(int scheme, double value, double scale, int time, double rgb[3
 
     /* saturation = r, luminosity = y */
     switch (scheme) {
-        case C_LUM:
+        case (C_LUM):
         {
             hue = COLORHUE + (double)time*COLORDRIFT/(double)NSTEPS;
             if (hue < 0.0) hue += 360.0;
@@ -135,7 +135,7 @@ void color_scheme(int scheme, double value, double scale, int time, double rgb[3
             hsl_to_rgb(hue, r, y, rgb);
             break;
         }
-        case C_HUE:
+        case (C_HUE):
         {
             r = 0.9;
             amplitude = color_amplitude(value, scale, time);
@@ -315,6 +315,33 @@ void erase_area(double x, double y, double dx, double dy)
     glEnd();
 }
 
+
+void erase_area_rgb(double x, double y, double dx, double dy, double rgb[3])
+{
+    double pos[2];
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_QUADS);
+    xy_to_pos(x - dx, y - dy, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x + dx, y - dy, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x + dx, y + dy, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x - dx, y + dy, pos);
+    glVertex2d(pos[0], pos[1]);
+    glEnd();
+}
+
+
+void erase_area_hsl(double x, double y, double dx, double dy, double h, double s, double l)
+{
+    double pos[2], rgb[3];
+    
+    hsl_to_rgb(h, s, l, rgb);
+    erase_area_rgb(x, y, dx, dy, rgb);
+}
+
 void draw_rectangle(double x1, double y1, double x2, double y2)
 {
     double pos[2];
@@ -398,8 +425,9 @@ void init_circle_config()
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
-    int i, j, n, ncirc0; 
-    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma;
+    int i, j, k, n, ncirc0, n_p_active, ncandidates=5000, naccepted; 
+    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, dpoisson = 3.25*MU;
+    short int active_poisson[NMAXCIRCLES], far;
     
     switch (CIRCLE_PATTERN) {
         case (C_SQUARE):
@@ -517,6 +545,65 @@ void init_circle_config()
                 }
             break;
         }
+        case (C_POISSON_DISC):
+        {
+            printf("Generating Poisson disc sample\n");
+            /* generate first circle */
+            circlex[0] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+            circley[0] = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
+            active_poisson[0] = 1;
+            n_p_active = 1;
+            ncircles = 1;
+            
+            while ((n_p_active > 0)&&(ncircles < NMAXCIRCLES))
+            {
+                /* randomly select an active circle */
+                i = rand()%(ncircles);
+                while (!active_poisson[i]) i = rand()%(ncircles);                 
+//                 printf("Starting from circle %i at (%.3f,%.3f)\n", i, circlex[i], circley[i]);
+                /* generate new candidates */
+                naccepted = 0;
+                for (j=0; j<ncandidates; j++)
+                {
+                    r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
+                    phi = DPI*(double)rand()/RAND_MAX;
+                    x = circlex[i] + r*cos(phi);
+                    y = circley[i] + r*sin(phi);
+//                        printf("Testing new circle at (%.3f,%.3f)\t", x, y);
+                    far = 1;
+                    for (k=0; k<ncircles; k++) if ((k!=i))
+                    {
+                        /* new circle is far away from circle k */
+                        far = far*((x - circlex[k])*(x - circlex[k]) + (y - circley[k])*(y - circley[k]) >=     dpoisson*dpoisson);
+                        /* new circle is in domain */
+                        far = far*(vabs(x) < LAMBDA)*(y < YMAX)*(y > YMIN);
+                    }
+                    if (far)    /* accept new circle */
+                    {
+                        printf("New circle at (%.3f,%.3f) accepted\n", x, y);
+                        circlex[ncircles] = x;
+                        circley[ncircles] = y;
+                        circlerad[ncircles] = MU;
+                        circleactive[ncircles] = 1;
+                        active_poisson[ncircles] = 1;
+                        ncircles++;
+                        n_p_active++;
+                        naccepted++;
+                    }
+//                        else printf("Rejected\n");
+                }
+                if (naccepted == 0)    /* inactivate circle i */ 
+                {
+//                     printf("No candidates work, inactivate circle %i\n", i);
+                    active_poisson[i] = 0;
+                    n_p_active--;
+                }
+                printf("%i active circles\n", n_p_active);
+            }
+            
+            printf("Generated %i circles\n", ncircles);
+            break;
+        }
         case (C_GOLDEN_MEAN):
         {
             ncircles = 300;
@@ -590,7 +677,7 @@ void init_circle_config()
                 if ((circley[i] < YMAX + MU)&&(circley[i] > YMIN - MU)) circleactive[i] = 1;
 //                 printf("i = %i, circlex = %.3lg, circley = %.3lg\n", i, circlex[i], circley[i]);
             }
-            break;
+        break;
         }
         case (C_SQUARE_HEX):
         {
@@ -648,11 +735,11 @@ void init_circle_config()
 }
 
 
-int xy_in_billiard(x, y)
+int xy_in_billiard(double x, double y)
 /* returns 1 if (x,y) represents a point in the billiard */
-double x, y;
+// double x, y;
 {
-    double l2, r2, r2mu, omega, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy;
+    double l2, r2, r2mu, omega, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width;
     int i, j, k, k1, k2, condition;
 
     switch (B_DOMAIN) {
@@ -773,6 +860,21 @@ double x, y;
                     if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < MU*MU) return(0); 
                 }
             return(1);
+        }
+        case (D_PARABOLA):
+        {
+            return(x > 0.25*y*y/LAMBDA - LAMBDA);
+        }
+        case (D_TWO_PARABOLAS):
+        {
+            x1 = 0.25*y*y/MU - MU - LAMBDA;
+            x2 = -x1;
+            width = 0.25*MU;
+            if (width > 0.2) width = 0.2;
+            if (vabs(y) > 1.5*MU) return(1);
+            else if ((x < x1 - width)||(x > x2 + width)) return(1);
+            else if ((x > x1)&&(x < x2)) return(1);
+            else return(0);
         }
         case (D_CIRCLES):
         {
@@ -944,7 +1046,7 @@ int ij_in_billiard(int i, int j)
 
 void draw_billiard()      /* draws the billiard boundary */
 {
-    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l;
+    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width;
     int i, j, k, k1, k2, mr2;
 
     if (BLACK) glColor3f(1.0, 1.0, 1.0);
@@ -1203,6 +1305,75 @@ void draw_billiard()      /* draws the billiard boundary */
                     if ((i+NGRIDX)%2 == 1) y1 += 0.5*dy;
                     draw_circle(x1, y1, MU, NSEG);
                 }
+            break;
+        }
+        case (D_PARABOLA):
+        {
+            dy = (YMAX - YMIN)/(double)NSEG;
+            glBegin(GL_LINE_STRIP);
+            
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = YMIN + dy*(double)i;
+                x = 0.25*y*y/LAMBDA - LAMBDA;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            
+            if (FOCI)
+            {
+                glColor3f(0.3, 0.3, 0.3);
+                draw_circle(0.0, 0.0, r, NSEG);
+            }
+            break;
+        }
+        case (D_TWO_PARABOLAS):
+        {
+            dy = 3.0*MU/(double)NSEG;
+            width = 0.25*MU;
+            if (width > 0.2) width = 0.2;
+            glBegin(GL_LINE_LOOP);
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = -1.5*MU + dy*(double)i;
+                x = 0.25*y*y/MU - MU - LAMBDA;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = 1.5*MU - dy*(double)i;
+                x = 0.25*y*y/MU - (MU + width) - LAMBDA;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            
+            glBegin(GL_LINE_LOOP);
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = -1.5*MU + dy*(double)i;
+                x = LAMBDA + MU - 0.25*y*y/MU;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = 1.5*MU - dy*(double)i;
+                x = LAMBDA + (MU + width) - 0.25*y*y/MU;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            
+            if (FOCI)
+            {
+                glColor3f(0.3, 0.3, 0.3);
+                draw_circle(-LAMBDA, 0.0, r, NSEG);
+                draw_circle(LAMBDA, 0.0, r, NSEG);
+            }
+
             break;
         }
         case (D_CIRCLES):

@@ -7,9 +7,10 @@ void init_circle_config_half(int pattern, int top)
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
-    int i, j, n, ncirc0; 
-    double dx, dy, p, phi, r, ra[5], sa[5], height, y = 0.0, gamma, ymean, ytop, ybottom;
-    
+    int i, j, k, n, ncirc0, n_p_active, ncandidates=5000, naccepted, nnew; 
+    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, ymean, ytop, ybottom, dpoisson = 3.05*MU;
+    short int active_poisson[NMAXCIRCLES], far;
+   
     ymean = 0.5*(YMIN + YMAX);
     switch (pattern) {
         case (C_SQUARE):
@@ -164,6 +165,80 @@ void init_circle_config_half(int pattern, int top)
             ncircles += 1;
             break;
         }
+        case (C_POISSON_DISC):
+        {
+            printf("Generating Poisson disc sample\n");
+            /* generate first circle */
+            n = ncircles;
+            circlex[n] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+            if (top) y = ymean + (YMAX-ymean)*(double)rand()/RAND_MAX;
+            else y = ymean + (YMIN-ymean)*(double)rand()/RAND_MAX;
+            circley[n] = y;
+            circlerad[n] = MU;
+            circleactive[n] = 1;
+            circletop[n] = top;
+            active_poisson[n] = 1;
+            n_p_active = 1;
+            ncirc0 = 1;
+            
+            while ((n_p_active > 0)&&(ncircles + ncirc0 < NMAXCIRCLES))
+            {
+                /* randomly select an active circle */
+                i = rand()%(ncirc0);
+                n = ncircles + i;
+                while (!active_poisson[ncircles + i]) i = rand()%(ncirc0);                 
+//                 printf("Starting from circle %i at (%.3f,%.3f)\n", i, circlex[i], circley[i]);
+                /* generate new candidates */
+                naccepted = 0;
+                for (j=0; j<ncandidates; j++)
+                {
+                    r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
+                    phi = DPI*(double)rand()/RAND_MAX;
+                    x = circlex[n] + r*cos(phi);
+                    y = circley[n] + r*sin(phi);
+//                        printf("Testing new circle at (%.3f,%.3f)\t", x, y);
+                    far = 1;
+                    for (k=ncircles; k<ncircles + ncirc0; k++) if ((k!=n))
+                    {
+                        /* new circle is far away from circle k */
+                        far = far*((x - circlex[k])*(x - circlex[k]) + (y - circley[k])*(y - circley[k]) >= dpoisson*dpoisson);
+                        /* new circle is in domain */
+                        if (top) far = far*(vabs(x) < LAMBDA)*(y < YMAX)*(y > 0.0);
+                        else far = far*(vabs(x) < LAMBDA)*(y > YMIN)*(y < 0.0);
+                    }
+                    if (far)    /* accept new circle */
+                    {
+                        printf("New circle at (%.3f,%.3f) accepted\n", x, y);
+                        nnew = ncircles + ncirc0;
+                        circlex[nnew] = x;
+                        circley[nnew] = y;
+                        circlerad[nnew] = MU;
+                        circleactive[nnew] = 1;
+                        active_poisson[nnew] = 1;
+                        circleactive[nnew] = 1;
+                        circletop[nnew] = top;
+                        ncirc0++;
+                        n_p_active++;
+                        naccepted++;
+                    }
+//                     else printf("Rejected\n");
+                }
+                if (naccepted == 0)    /* inactivate circle i */ 
+                {
+//                     printf("No candidates work, inactivate circle %i\n", ncircles + i);
+                    active_poisson[ncircles + i] = 0;
+                    n_p_active--;
+                }
+                printf("%i active circles\n", n_p_active);
+//                 sleep(1);
+            }
+            
+            printf("Already existing: %i circles\n", ncircles);
+            ncircles += ncirc0;
+            printf("Generated %i circles\n", ncirc0);
+            printf("Total: %i circles\n", ncircles);
+            break;
+        }
         case (C_GOLDEN_MEAN):
         {
             gamma = (sqrt(5.0) - 1.0)*0.5;    /* golden mean */
@@ -224,6 +299,43 @@ void init_circle_config_half(int pattern, int top)
             
             break;
         }
+        case (C_GOLDEN_SPIRAL):
+        {
+            circlex[ncircles] = 0.0;
+            circley[ncircles] = 0.0;
+            circlerad[ncircles] = MU;
+            circleactive[ncircles] = 1;
+            circletop[ncircles] = top; 
+            
+            gamma = (sqrt(5.0) - 1.0)*PI;    /* golden mean times 2Pi */
+            phi = 0.0;
+            r0 = 2.0*MU;
+            r = r0 + MU;
+            
+            for (i=0; i<1000; i++) 
+            {
+                x = r*cos(phi);
+                y = r*sin(phi);
+                
+                phi += gamma;
+                r += MU*r0/r;
+                
+                if ((vabs(x) < LAMBDA)&&(vabs(y) < YMAX + MU))
+                {
+                    circlex[ncircles] = x;
+                    circley[ncircles] = y;
+                    circlerad[ncircles] = MU;
+                    if (((top)&&(circley[ncircles] < YMAX + MU)&&(circley[ncircles] > ymean - MU))
+                        ||((!top)&&(circley[ncircles] < ymean + MU)&&(circley[ncircles] > YMIN - MU)))
+                    {
+                        circleactive[ncircles] = 1;
+                        circletop[ncircles] = top; 
+                        ncircles++;
+                    }
+                }
+            }
+        break;
+        }
         case (C_ONE):
         {
             circlex[ncircles] = 0.0;
@@ -276,6 +388,13 @@ void init_circle_config_comp()
     init_circle_config_half(CIRCLE_PATTERN_B, 0);
 }
 
+void init_circle_config_energy()
+/* initialise the arrays circlex, circley, circlerad and circleactive */
+/* for billiard shape D_CIRCLES */
+{
+    ncircles = 0;
+    init_circle_config_half(CIRCLE_PATTERN, 0);
+}
 
 int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
 /* returns 1 if (x,y) represents a point in the billiard */
@@ -551,9 +670,12 @@ void compute_energy_tblr(double *phi[NX], double *psi[NX], short int *xy_in[NX],
 /* compute total energy in top/bottom left/right boxes */ 
 {
     int i, j, ij[2];
-    double energy = 0.0, pos, xleft = XMAX, xright = XMIN;
+    double energy = 0.0, rescale, pos, xleft = XMAX, xright = XMIN, emax = 1.2;
+    double energy_ij[NX][NY];
     static short int first = 1;
     static int ileft, iright, jmid = NY/2; 
+    static double sqremax;
+    
     
     if (first) /* compute box limits */
     {
@@ -572,48 +694,74 @@ void compute_energy_tblr(double *phi[NX], double *psi[NX], short int *xy_in[NX],
         printf("xleft = %.3lg, xright = %.3lg", xleft, xright);
     }
     
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+            energy_ij[i][j] = compute_energy(phi, psi, xy_in, i, j);
+    
+    /* prevent local energy from growing too large */
+    if (FLOOR)
+    {
+        for (i=10; i<NX; i++)
+            for (j=0; j<NY; j++)
+                if ((xy_in[i][j])&&(energy_ij[i][j] > emax))
+                {
+                    rescale = sqrt(emax/energy_ij[i][j]);
+                    if (j%100 == 0) printf("Rescaling at (%i,%i) by %.5lg\n", i, j, rescale);
+                    phi[i][j] = phi[i][j]*rescale;
+                    psi[i][j] = psi[i][j]*rescale;
+                }
+                else if (energy_ij[i][j] > 0.1*emax)
+                {
+                    rescale = sqrt(0.1*emax/energy_ij[i][j]);
+                    if (j%10 == 0) printf("Rescaling at (%i,%i) by %.5lg\n", i, j, rescale);
+                    phi[i][j] = phi[i][j]*rescale;
+                    psi[i][j] = psi[i][j]*rescale;
+                }
+    }
+    
     /* top left box */
     for (i=0; i<ileft; i++)
         for (j=jmid; j<NY; j++)
-            energy += compute_energy(phi, psi, xy_in, i, j);
+            energy += energy_ij[i][j];
     energies[0] = energy;
     
     /* top middle box */
     energy = 0.0;
     for (i=ileft; i<iright; i++)
         for (j=jmid; j<NY; j++)
-            energy += compute_energy(phi, psi, xy_in, i, j);
+            energy += energy_ij[i][j];
     energies[1] = energy;
     
     /* top right box */
     energy = 0.0;
     for (i=iright; i<NX; i++)
         for (j=jmid; j<NY; j++)
-            energy += compute_energy(phi, psi, xy_in, i, j);
+            energy += energy_ij[i][j];
     energies[2] = energy;
     
     /* bottom left box */
     energy = 0.0;
     for (i=0; i<ileft; i++)
         for (j=0; j<jmid; j++)
-            energy += compute_energy(phi, psi, xy_in, i, j);
+            energy += energy_ij[i][j];
     energies[3] = energy;
     
     /* bottom middle box */
     energy = 0.0;
     for (i=ileft; i<iright; i++)
         for (j=0; j<jmid; j++)
-            energy += compute_energy(phi, psi, xy_in, i, j);
+            energy += energy_ij[i][j];
     energies[4] = energy;
     
     /* bottom right box */
     energy = 0.0;
     for (i=iright; i<NX; i++)
         for (j=0; j<jmid; j++)
-            energy += compute_energy(phi, psi, xy_in, i, j);
+            energy += energy_ij[i][j];
     energies[5] = energy;
     
-    printf("Energies: %.5lg, %.5lg, %.5lg\n %.5lg, %.5lg, %.5lg\n", energies[0], energies[1], energies[2], energies[3], energies[4], energies[5]);
+//     printf("Energies: %.5lg, %.5lg, %.5lg\n %.5lg, %.5lg, %.5lg\n", energies[0], energies[1], energies[2], energies[3], energies[4], energies[5]);
+    
 }
 
 void print_energies(double energies[6], double top_energy, double bottom_energy)
@@ -622,8 +770,8 @@ void print_energies(double energies[6], double top_energy, double bottom_energy)
     double ytop, ybot, pos[2], centerx = -0.075;
     
     ytop = YMAX - 0.1;
-    ybot = -0.1;
-//     ybot = YMIN + 0.05;
+//     ybot = -0.1;
+    ybot = YMIN + 0.05;
     
     erase_area(XMIN + 0.175, ytop + 0.025, 0.1, 0.05);
 

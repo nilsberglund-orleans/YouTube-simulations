@@ -42,8 +42,8 @@
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 #include <omp.h>
 
-#define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define MOVIE 1         /* set to 1 to generate movie */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 
 /* General geometrical parameters */
 
@@ -52,11 +52,6 @@
 
 #define NX 1280          /* number of grid points on x axis */
 #define NY 720          /* number of grid points on y axis */
-// #define NX 640          /* number of grid points on x axis */
-// #define NY 360          /* number of grid points on y axis */
-
-/* setting NX to WINWIDTH and NY to WINHEIGHT increases resolution */
-/* but will multiply run time by 4                                 */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
@@ -67,15 +62,15 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 20      /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 19      /* choice of domain shape, see list in global_pdes.c */
 
-#define CIRCLE_PATTERN 11   /* pattern of circles, see list in global_pdes.c */
+#define CIRCLE_PATTERN 8   /* pattern of circles, see list in global_pdes.c */
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 
-#define LAMBDA 0.85	    /* parameter controlling the dimensions of domain */
-#define MU 0.03             /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.0	    /* parameter controlling the dimensions of domain */
+#define MU 1.25             /* parameter controlling the dimensions of domain */
 #define NPOLY 3             /* number of sides of polygon */
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 4            /* depth of computation of Menger gasket */
@@ -83,7 +78,7 @@
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0    /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-#define NGRIDX 15           /* number of grid point for grid of disks */
+#define NGRIDX 16           /* number of grid point for grid of disks */
 #define NGRIDY 20           /* number of grid point for grid of disks */
 
 /* You can add more billiard tables by adapting the functions */
@@ -102,7 +97,7 @@
 #define GAMMA 0.0          /* damping factor in wave equation */
 #define GAMMAB 1.0e-6           /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
-#define GAMMA_TOPBOT 1.0e-6     /* damping factor on boundary */
+#define GAMMA_TOPBOT 1.0e-7     /* damping factor on boundary */
 #define KAPPA 0.0           /* "elasticity" term enforcing oscillations */
 #define KAPPA_SIDES 5.0e-4  /* "elasticity" term on absorbing boundary */
 #define KAPPA_TOPBOT 0.0    /* "elasticity" term on absorbing boundary */
@@ -113,26 +108,28 @@
 
 /* Boundary conditions, see list in global_pdes.c  */
 
-#define B_COND 3
+#define B_COND 2
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 3000      /* number of frames of movie */
-#define NVID 20          /* number of iterations between images displayed on screen */
+#define NSTEPS 5000      /* number of frames of movie */
+#define NVID 25          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
-#define INITIAL_TIME 250    /* time after which to start saving frames */
+#define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
 
-#define PAUSE 1000         /* number of frames after which to pause */
+#define PAUSE 1000       /* number of frames after which to pause */
 #define PSLEEP 1         /* sleep time during pause */
 #define SLEEP1  1        /* initial sleeping time */
-#define SLEEP2  1   /* final sleeping time */
+#define SLEEP2  1        /* final sleeping time */
+#define MID_FRAMES 20    /* number of still frames between parts of two-part movie */
+#define END_FRAMES 100   /* number of still frames at end of movie */
 
 /* Plot type, see list in global_pdes.c  */
 
-#define PLOT 0
+#define PLOT 1
 
-#define PLOT_B 1        /* plot type for second movie */
+#define PLOT_B 0        /* plot type for second movie */
 
 /* Color schemes */
 
@@ -141,9 +138,9 @@
 #define COLOR_SCHEME 1   /* choice of color scheme, see list in global_pdes.c  */
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
-#define SLOPE 1.5        /* sensitivity of color on wave amplitude */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-#define E_SCALE 2000.0     /* scaling factor for energy representation */
+#define E_SCALE 500.0     /* scaling factor for energy representation */
 // #define E_SCALE 2500.0     /* scaling factor for energy representation */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
@@ -184,7 +181,7 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
 //     c = COURANT;
 //     cc = courant2;
 
-    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta,x,y)
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta,x,y,c,cc,gamma)
     for (i=0; i<NX; i++){
         for (j=0; j<NY; j++){
             if (xy_in[i][j])
@@ -332,7 +329,8 @@ void animation()
     /* initialize wave with a drop at one point, zero elsewhere */
 //     init_wave_flat(phi, psi, xy_in);
     
-    init_planar_wave(XMIN + 0.015, 0.0, phi, psi, xy_in);
+    init_wave(-LAMBDA, 0.0, phi, psi, xy_in);
+//     init_planar_wave(XMIN + 0.015, 0.0, phi, psi, xy_in);
 //     init_planar_wave(XMIN + 0.02, 0.0, phi, psi, xy_in);
 //     init_planar_wave(XMIN + 0.8, 0.0, phi, psi, xy_in);
 //     init_wave(-1.5, 0.0, phi, psi, xy_in);
@@ -412,13 +410,13 @@ void animation()
             draw_billiard();
             glutSwapBuffers();
         }
-        for (i=0; i<20; i++) save_frame();
+        for (i=0; i<MID_FRAMES; i++) save_frame();
         if (DOUBLE_MOVIE) 
         {
             draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
             draw_billiard();
             glutSwapBuffers();
-            for (i=0; i<20; i++) save_frame_counter(NSTEPS + 21 + counter + i);
+            for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
         }
             
         s = system("mv wave*.tif tif_wave/");

@@ -29,6 +29,8 @@
 #define D_MENGER 15     /* Menger-Sierpinski carpet */ 
 #define D_JULIA_INT 16  /* interior of Julia set */ 
 #define D_MENGER_ROTATED 17  /* rotated Menger-Sierpinski carpet */
+#define D_PARABOLA 18   /* parabolic domain */
+#define D_TWO_PARABOLAS 19   /* two facing parabolic antennas */
 
 #define D_CIRCLES 20    /* several circles */
 
@@ -41,6 +43,8 @@
 #define C_RAND_POISSON 4    /* random Poisson point process */
 #define C_CLOAK 5           /* invisibility cloak */
 #define C_CLOAK_A 6         /* first optimized invisibility cloak */
+
+#define C_POISSON_DISC 8    /* Poisson disc sampling */
 
 #define C_GOLDEN_MEAN 10    /* pattern based on vertical shifts by golden mean */
 #define C_GOLDEN_SPIRAL 11  /* spiral pattern based on golden mean */
