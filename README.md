@@ -71,4 +71,5 @@ in the shell before running the program
 - Discretizing the wave equation: https://hplgit.github.io/fdm-book/doc/pub/wave/pdf/wave-4print.pdf
 - Absorbing boundary conditions: https://hal.archives-ouvertes.fr/hal-01374183
 - Cloaking device: https://www.sciencedirect.com/science/article/pii/S0165212514001759
+- Poisson disc sampling: https://bl.ocks.org/mbostock/dbb02448b0f93e4c82c3
 
