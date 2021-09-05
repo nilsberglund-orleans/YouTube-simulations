@@ -346,7 +346,7 @@ updated gradually.
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 
-#define LAMBDA 1.5	    /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.0	    /* parameter controlling the dimensions of domain */
 #define MU 1.25             /* parameter controlling the dimensions of domain */
 #define NPOLY 3             /* number of sides of polygon */
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
