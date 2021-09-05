@@ -9,7 +9,7 @@ function animation. Some simulations use variants of the published code. The lis
 updated gradually. 
 
 
-### 5 September 21 -  ###
+### 5 September 21 - A Sinai pinball with finite horizon ###
 
 **Program:** `particle_pinball.c` 
 
