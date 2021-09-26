@@ -41,8 +41,9 @@ in the shell before running the program
 4. *common_wave.c*:     common functions of `wave_billiard` and `wave_comparison`
 5. *wave_billiard.c*:   simulation of the (linear) wave equation
 6. *wave_comparison.c*: comparison of the wave equation in two different domains
-7. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
-8. *schrodinger.c*:     simulation of the Schrodinger equation
+7. *mangrove.c*:        a version of wave_billiard with additional features to animate mangroves
+8. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
+9. *schrodinger.c*:     simulation of the Schrodinger equation
 
 - Create subfolders `tif_wave`, `tif_heat`, `tif_schrod`
 - Customize constants at beginning of .c file
