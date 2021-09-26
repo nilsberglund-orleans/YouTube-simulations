@@ -30,23 +30,22 @@
 
 #define MOVIE 0         /* set to 1 to generate movie */
 
+// #define WINWIDTH 	720   /* window width */
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
+// #define XMIN -1.125
+// #define XMAX 1.125	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
-// #define XMIN -1.8
-// #define XMAX 1.8	/* x interval */
-// #define YMIN -0.91
-// #define YMAX 1.115	/* y interval for 9/16 aspect ratio */
 
 #define SCALING_FACTOR 1.0       /* scaling factor of drawing, needed for flower billiards, otherwise set to 1.0 */
 
 /* Choice of the billiard table, see global_particles.c  */
 
-#define B_DOMAIN 13      /* choice of domain shape */
+#define B_DOMAIN 15      /* choice of domain shape */
 
 #define CIRCLE_PATTERN 0    /* pattern of circles */
 
@@ -57,30 +56,32 @@
 // #define NCY 15            /* number of circles in y direction */
 #define NCX 15            /* number of circles in x direction */
 #define NCY 20            /* number of circles in y direction */
+#define NPOISSON 500        /* number of points for Poisson C_RAND_POISSON arrangement */
+#define NGOLDENSPIRAL 2000  /* max number of points for C_GOLDEN_SPIRAL arrandement */
 
-// #define LAMBDA 1.0	/* parameter controlling shape of billiard */
-#define LAMBDA 1.124950941	/* sin(36°)/sin(31.5°) for 5-star shape with 45° angles */
+#define LAMBDA 0.0	/* parameter controlling shape of billiard */
+// #define LAMBDA 1.124950941	/* sin(36°)/sin(31.5°) for 5-star shape with 45° angles */
 // #define LAMBDA 1.445124904	/* sin(36°)/sin(24°) for 5-star shape with 60° angles */
 // #define LAMBDA 3.75738973	/* sin(36°)/sin(9°) for 5-star shape with 90° angles */
 // #define LAMBDA -1.73205080756888	/* -sqrt(3) for Reuleaux triangle */
 // #define LAMBDA 1.73205080756888	/* sqrt(3) for triangle tiling plane */
-#define MU 0.1          /* second parameter controlling shape of billiard */
+#define MU 0.9        /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
-#define NPOLY 5             /* number of sides of polygon */
-#define APOLY -1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define NPOLY 4             /* number of sides of polygon */
+#define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
 #define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
 #define PERIODIC_BC 0       /* set to 1 to enforce periodic boundary conditions when drawing particles */
 
 #define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
 
-#define NPART 50000	/* number of particles */
+#define NPART 10000	/* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 
-#define NSTEPS 5500         /* number of frames of movie */
-#define TIME 40             /* time between movie frames, for fluidity of real-time simulation */ 
+#define NSTEPS 4200         /* number of frames of movie */
+#define TIME 100             /* time between movie frames, for fluidity of real-time simulation */ 
 #define DPHI 0.0001         /* integration step */
-#define NVID 20             /* number of iterations between images displayed on screen */
+#define NVID 50             /* number of iterations between images displayed on screen */
 
 /* Decreasing TIME accelerates the animation and the movie               */
 /* For constant speed of movie, TIME*DPHI should be kept constant        */
@@ -98,9 +99,9 @@
 
 /* color and other graphical parameters */
 
-#define NCOLORS 16          /* number of colors */
-#define COLORSHIFT 200      /* hue of initial color */ 
-#define RAINBOW_COLOR 1     /* set to 1 to use different colors for all particles */
+#define NCOLORS 12          /* number of colors */
+#define COLORSHIFT 0        /* hue of initial color */ 
+#define RAINBOW_COLOR 0     /* set to 1 to use different colors for all particles */
 #define NSEG 100            /* number of segments of boundary */
 #define BILLIARD_WIDTH 4    /* width of billiard */
 #define FRONT_WIDTH 3       /* width of wave front */
@@ -109,12 +110,14 @@
 #define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 
 #define OUTER_COLOR 300.0   /* color outside billiard */
 #define PAINT_INT 1         /* set to 1 to paint interior in other color (for polygon) */
+#define PAINT_EXT 0         /* set to 1 to paint exterior of billiard */
 
 
 #define PAUSE 1000          /* number of frames after which to pause */
-#define PSLEEP 1         /* sleep time during pause */
-#define SLEEP1  1        /* initial sleeping time */
-#define SLEEP2  100      /* final sleeping time */
+#define PSLEEP 1            /* sleep time during pause */
+#define SLEEP1  1           /* initial sleeping time */
+#define SLEEP2  100         /* final sleeping time */
+#define END_FRAMES 0        /* number of frames at end of movie */
 
 #define PI 	3.141592654
 #define DPI 	6.283185307
@@ -442,7 +445,9 @@ void animation()
     for (i=0; i<NPARTMAX; i++)
         configs[i] = (double *)malloc(8*sizeof(double));
   
-    init_drop_config(-1.0 + 0.3*sqrt(2.0), -1.0 + 0.5*sqrt(2.0), 0.0, DPI, configs);
+//     init_drop_config(0.1, 0.1, 0.0, DPI, configs);
+    init_drop_config(0.0, 0.0, 0.0, DPI, configs);
+//     init_drop_config(-1.0 + 0.3*sqrt(2.0), -1.0 + 0.5*sqrt(2.0), 0.0, DPI, configs);
 //     init_drop_config(-0.5, -0.5, 0.0, DPI, configs);
 //     init_boundary_config(1.5, 1.5, 0.0, PI, configs);
 
@@ -495,7 +500,7 @@ void animation()
  
     if (MOVIE) 
     {
-        for (i=0; i<20; i++) save_frame();
+        for (i=0; i<END_FRAMES; i++) save_frame();
         s = system("mv part*.tif tif_drop/");
     }
     

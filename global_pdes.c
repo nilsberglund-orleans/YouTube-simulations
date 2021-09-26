@@ -34,6 +34,11 @@
 
 #define D_CIRCLES 20    /* several circles */
 
+#define D_FOUR_PARABOLAS 31     /* four parabolas with axes in NSEW directions */
+#define D_POLY_PARABOLAS 32     /* polygon with parabolic sides */
+#define D_PENROSE 33            /* Penrose illumination problem */
+#define D_HYPERBOLA 34          /* one branch of hyperbola */
+
 #define NMAXCIRCLES 1000        /* total number of circles (must be at least NCX*NCY for square grid) */
 
 #define C_SQUARE 0          /* square grid of circles */
@@ -83,6 +88,7 @@
 #define P_AMPLITUDE 0    /* plot amplitude of wave */
 #define P_ENERGY 1       /* plot energy of wave */
 #define P_MIXED 2        /* plot amplitude in upper half, energy in lower half */
+#define P_MEAN_ENERGY 3  /* energy averaged over time */
 
 /* For Schrodinger equation */
 #define P_MODULE 10        /* plot module of wave function squared */

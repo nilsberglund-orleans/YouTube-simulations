@@ -44,23 +44,29 @@
 
 /* Choice of the billiard table, see global_particles.c */
 
-#define B_DOMAIN 20      /* choice of domain shape */
+#define B_DOMAIN 16     /* choice of domain shape */
 
 #define CIRCLE_PATTERN 2    /* pattern of circles */
 
 #define ABSORBING_CIRCLES 0 /* set to 1 for circular scatterers to be absorbing */
 
 #define NMAXCIRCLES 1000        /* total number of circles (must be at least NCX*NCY for square grid) */
-#define NCX 15            /* number of circles in x direction */
+// #define NCX 10            /* number of circles in x direction */
+// #define NCY 10            /* number of circles in y direction */
+#define NCX 30            /* number of circles in x direction */
 #define NCY 20            /* number of circles in y direction */
+#define NPOISSON 500        /* number of points for Poisson C_RAND_POISSON arrangement */
+#define NGOLDENSPIRAL 2000  /* max number of points for C_GOLDEN_SPIRAL arrandement */
 
-#define LAMBDA 0.75	/* parameter controlling shape of billiard */
-#define MU 0.035          /* second parameter controlling shape of billiard */
+// #define LAMBDA 1.4	/* parameter controlling shape of domain */
+// #define MU 0.2          /* second parameter controlling shape of billiard */
+#define LAMBDA 1.5	/* parameter controlling shape of domain */
+#define MU 0.3          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
-#define NPOLY 8             /* number of sides of polygon */
-#define APOLY 0.25           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define NPOLY 4             /* number of sides of polygon */
+#define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
-#define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
+#define DRAW_CONSTRUCTION_LINES 0   /* set to 1 to draw additional construction lines for billiard */
 #define PERIODIC_BC 0       /* set to 1 to enforce periodic boundary conditions when drawing particles */
 
 #define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
@@ -68,16 +74,16 @@
 
 /* Simulation parameters */
 
-#define NPART 30000       /* number of particles */
+#define NPART 10000      /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
 #define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
 
-#define NSTEPS 3000     /* number of frames of movie */
-#define TIME 1000       /* time between movie frames, for fluidity of real-time simulation */ 
-#define DPHI 0.000005    /* integration step */
+#define NSTEPS 3500      /* number of frames of movie */
+#define TIME 1200         /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.00001     /* integration step */
 #define NVID 150         /* number of iterations between images displayed on screen */
 
 /* Decreasing TIME accelerates the animation and the movie                               */
@@ -88,12 +94,12 @@
 
 /* Colors and other graphical parameters */
 
-#define NCOLORS 32      /* number of colors */
+#define NCOLORS 16       /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
 #define RAINBOW_COLOR 0  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
-#define LENGTH 0.02      /* length of velocity vectors */
+#define LENGTH 0.01      /* length of velocity vectors */
 #define BILLIARD_WIDTH 2    /* width of billiard */
 #define PARTICLE_WIDTH 2    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
@@ -102,7 +108,7 @@
 #define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 
 #define OUTER_COLOR 270.0   /* color outside billiard */
 #define PAINT_INT 0         /* set to 1 to paint interior in other color (for polygon/Reuleaux) */
-
+#define PAINT_EXT 1         /* set to 1 to paint exterior */
 
 #define PAUSE 1000       /* number of frames after which to pause */
 #define PSLEEP 1         /* sleep time during pause */
@@ -326,7 +332,7 @@ void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX], int a
             {    
 //                 printf("reflecting particle %i\n", i);
                 c = vbilliard(configs[i]);
-//                 if (c>=0) color[i]++;
+                if (c>=0) color[i]++;
                 if (!RAINBOW_COLOR)
                 {
                     color[i]++;
@@ -368,14 +374,17 @@ void animation()
     r = cos(PI/(double)NPOLY)/cos(DPI/(double)NPOLY);
 
 //     init_line_config(-1.25, -0.5, -1.25, 0.5, 0.0, configs);   
-//     init_drop_config(-0.75, 0.0, -0.1, 0.1, configs);    
+//     init_drop_config(0.5, 0.7, 0.0, DPI, configs);    
+//     init_drop_config(-1.3, -0.1, 0.0, DPI, configs);    
+    init_drop_config(1.4, 0.1, 0.0, DPI, configs);    
 //     init_drop_config(0.5, 0.5, -1.0, 1.0, configs);    
 //     init_sym_drop_config(-1.0, 0.5, -PID, PID, configs);
 //     init_drop_config(-0.999, 0.0, -alpha, alpha, configs);
 
 //  other possible initial conditions :
-    init_line_config(-1.25, -0.5, -1.25, 0.5, 0.0, configs);
-//     init_line_config(0.0, -0.5, 0.0, 0.5, 0.0, configs);
+//     init_line_config(-1.3, -0.3, -1.2, -0.3, PID, configs);
+//     init_line_config(0.0, 0.0, 0.5, 0.0, PID, configs);
+//     init_line_config(0.0, 0.0, 0.0, -0.5, PI, configs);
 //     init_line_config(-1.25, -0.5, -1.25, 0.5, 0.0*PID, configs);
 //     init_line_config(-1.0, -0.3, -1.0, 0.3, 0.0, configs);
 //     init_line_config(-0.7, -0.45, -0.7, 0.45, 0.0, configs);

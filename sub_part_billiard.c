@@ -1,5 +1,5 @@
 #define DUMMY_ABSORBING -1000.0  /* dummy value of config[0] for absorbing circles */
-#define BOUNDARY_SHIFT 100.0    /* shift of boundary parametrisation for circles in domain */
+#define BOUNDARY_SHIFT 100000.0    /* shift of boundary parametrisation for circles in domain */
 
 long int global_time = 0;    /* counter to keep track of global time of simulation */
 int nparticles=NPART; 
@@ -186,6 +186,20 @@ void rgb_color_scheme(int i, double rgb[3]) /* color scheme */
     /* saturation = r, luminosity = 0.5 */ 
 }
 
+void rgb_color_scheme_lum(int i, double lum, double rgb[3]) /* color scheme */
+{
+    double hue, y, r;
+  
+    hue = (double)(COLORSHIFT + i*360/NCOLORS);
+    r = 0.9;
+  
+    while (hue < 0.0) hue += 360.0;
+    while (hue >= 360.0) hue -= 360.0;
+  
+    hsl_to_rgb(hue, r, lum, rgb);
+    /* saturation = r */ 
+}
+
 void blank()
 {
     double rgb[3];
@@ -257,6 +271,17 @@ void erase_area(double x, double y, double dx, double dy, double rgb[3])
     glEnd();
 }
 
+void erase_rectangle(double x1, double y1, double x2, double y2, double rgb[3])
+{
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_QUADS);
+    glVertex2d(x1, y1);
+    glVertex2d(x2, y1);
+    glVertex2d(x2, y2);
+    glVertex2d(x1, y2);
+    glEnd();
+}
+
 void erase_rectangle_outside(double h, double s, double l)
 {
     double rgb[3], dx;
@@ -264,10 +289,23 @@ void erase_rectangle_outside(double h, double s, double l)
     
     dx = 0.5*(XMAX - LAMBDA);
     hsl_to_rgb(h, s, l, rgb);
-    erase_area(0.0, 1.1, 2.0, 0.1, rgb);
-    erase_area(0.0, -1.1, 2.0, 0.1, rgb);
-    erase_area(LAMBDA + dx, 0.0, dx, 2.0, rgb);
-    erase_area(-LAMBDA - dx, 0.0, dx, 2.0, rgb);
+    erase_rectangle(XMIN, YMIN, XMAX, -1.0, rgb);
+    erase_rectangle(XMIN, 1.0, XMAX, YMAX, rgb);
+    erase_rectangle(XMIN, YMIN, -LAMBDA, YMAX, rgb);
+    erase_rectangle(LAMBDA, YMIN, XMAX, YMAX, rgb);
+//     erase_area(0.0, 1.1, 2.0, 0.1, rgb);
+//     erase_area(0.0, -1.1, 2.0, 0.1, rgb);
+//     erase_area(LAMBDA + dx, 0.0, dx, 2.0, rgb);
+//     erase_area(-LAMBDA - dx, 0.0, dx, 2.0, rgb);
+    
+    glColor3f(1.0, 1.0, 1.0);
+    glLineWidth(BILLIARD_WIDTH);
+    glBegin(GL_LINE_LOOP);    
+    glVertex2d(LAMBDA, -1.0);
+    glVertex2d(LAMBDA, 1.0);
+    glVertex2d(-LAMBDA, 1.0);
+    glVertex2d(-LAMBDA, -1.0);
+    glEnd();
 }
 
 void draw_circle(double x, double y, double r, int nseg)
@@ -487,8 +525,8 @@ void init_billiard_color()
 void draw_billiard()      /* draws the billiard boundary */
 {
     double x0, x, y, phi, r = 0.01, alpha, dphi, omega, x1, y1, x2, beta2, angle, s, x2plus, x2minus;
-    double omega2, co, so, axis1, axis2, phimax, rgb[3];
-    int i, j, k, c;
+    double omega2, co, so, axis1, axis2, phimax, rgb[3], rgb1[3], a, b, ymax, dy, width, cc;
+    int i, j, k, c, color;
     
     init_billiard_color();
     glLineWidth(BILLIARD_WIDTH);
@@ -892,11 +930,211 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd ();
             break;
         }
+        case (D_PARABOLAS):
+        {
+            omega = PI/((double)NPOLY);
+            a = 0.25/MU;
+            b = 1.0/tan(omega);
+            cc = LAMBDA + MU;
+            ymax = (-b + sqrt(b*b + 4.0*a*cc))/(2.0*a);
+            dy = 2.0*ymax/(double)NSEG; 
+
+//             init_billiard_color();
+            glBegin(GL_LINE_LOOP);
+            glColor3f(1.0, 1.0, 1.0);
+            for (k=0; k<NPOLY; k++)  
+            {
+//                 alpha = APOLY*PID + (2.0*(double)k+1.0)*omega;
+                alpha = APOLY*PID + (2.0*(double)k)*omega;
+                for (i = 0; i < NSEG+1; i++) 
+                {
+                    y1 = -ymax + dy*(double)i;
+                    x1 = MU + LAMBDA - 0.25*y1*y1/MU;
+                    x = x1*cos(alpha) - y1*sin(alpha);
+                    y = x1*sin(alpha) + y1*cos(alpha);
+                    glVertex2d(x, y);
+                }
+            }
+            glEnd ();
+            
+            if (FOCI)
+            {
+                glColor3f(0.3, 0.3, 0.3);
+                for (k=0; k<NPOLY; k++) 
+                {
+                    alpha = APOLY*PID + (k+0.5)*omega;
+                    draw_circle(LAMBDA*cos(alpha), LAMBDA*sin(alpha), r, NSEG);
+                }
+            }
+            break;
+        }
+        case (D_PENROSE):
+        {
+            cc = sqrt(LAMBDA*LAMBDA - (1.0 - MU)*(1.0 - MU));
+            width = 0.1*MU;
+            x1 = vabs(x);
+            y1 = vabs(y);
+            dphi = PI/(double)NSEG;
+            
+            if (PAINT_EXT)  /* paint billiard exterior in another color */
+            {
+                rgb[0] = 0.1;   rgb[1] = 0.1;   rgb[2] = 0.1;
+                erase_rectangle(LAMBDA, YMIN, XMAX, YMAX, rgb);
+                erase_rectangle(-LAMBDA, YMIN, XMIN, YMAX, rgb);
+                erase_rectangle(XMIN, 1.0, XMAX, YMAX, rgb);
+                erase_rectangle(XMIN, -1.0, XMAX, YMIN, rgb);
+                erase_rectangle(cc, -width, LAMBDA, width, rgb);
+                erase_rectangle(-cc, -width, -LAMBDA, width, rgb);
+                
+                glColor3f(0.1, 0.1, 0.1);
+                glBegin(GL_TRIANGLE_FAN);
+                glVertex2d(cc, 0.0);
+                for (i=0; i<=NSEG; i++)
+                {
+                    phi = (double)i*dphi;
+                    x = cc - 0.5*MU*sin(phi);
+                    y = MU*cos(phi);
+                    glVertex2d(x, y);
+                }
+                glEnd();
+                
+                glBegin(GL_TRIANGLE_FAN);
+                glVertex2d(-cc, 0.0);
+                for (i=0; i<=NSEG; i++)
+                {
+                    phi = (double)i*dphi;
+                    x = -cc + 0.5*MU*sin(phi);
+                    y = MU*cos(phi);
+                    glVertex2d(x, y);
+                }
+                glEnd();
+                
+                glBegin(GL_TRIANGLE_FAN);
+                glVertex2d(XMAX, YMAX);
+                for (i=0; i<=NSEG/2; i++)
+                {
+                    phi = (double)i*dphi;
+                    x = LAMBDA*cos(phi);
+                    y = MU + (1.0-MU)*sin(phi);
+                    glVertex2d(x, y);
+                }
+                glEnd();
+                
+                glBegin(GL_TRIANGLE_FAN);
+                glVertex2d(XMIN, YMAX);
+                for (i=0; i<=NSEG/2; i++)
+                {
+                    phi = (double)i*dphi;
+                    x = -LAMBDA*cos(phi);
+                    y = MU + (1.0-MU)*sin(phi);
+                    glVertex2d(x, y);
+                }
+                glEnd();
+                
+                glBegin(GL_TRIANGLE_FAN);
+                glVertex2d(XMAX, YMIN);
+                for (i=0; i<=NSEG/2; i++)
+                {
+                    phi = (double)i*dphi;
+                    x = LAMBDA*cos(phi);
+                    y = -MU - (1.0-MU)*sin(phi);
+                    glVertex2d(x, y);
+                }
+                glEnd();
+                
+                glBegin(GL_TRIANGLE_FAN);
+                glVertex2d(XMIN, YMIN);
+                for (i=0; i<=NSEG/2; i++)
+                {
+                    phi = (double)i*dphi;
+                    x = -LAMBDA*cos(phi);
+                    y = -MU - (1.0-MU)*sin(phi);
+                    glVertex2d(x, y);
+                }
+                glEnd();
+            }
+            
+            init_billiard_color();
+            
+            glBegin(GL_LINE_LOOP);
+            /* upper half ellipse */
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*dphi;
+                x = LAMBDA*cos(phi);
+                y = MU + (1.0-MU)*sin(phi);
+                glVertex2d(x, y);
+            }
+            
+            /* straight parts */
+            glVertex2d(-LAMBDA, width);
+            glVertex2d(-cc, width);
+            glVertex2d(-cc, MU);
+            
+            /* left half ellipse */
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*dphi;
+                x = -cc + 0.5*MU*sin(phi);
+                y = MU*cos(phi);
+                glVertex2d(x, y);
+            }
+            
+            /* straight parts */
+            glVertex2d(-cc, -width);
+            glVertex2d(-LAMBDA, -width);
+            glVertex2d(-LAMBDA, -MU);
+            
+            /* lower half ellipse */
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*dphi;
+                x = -LAMBDA*cos(phi);
+                y = -MU - (1.0-MU)*sin(phi);
+                glVertex2d(x, y);
+            }
+            
+            /* straight parts */
+            glVertex2d(LAMBDA, -width);
+            glVertex2d(cc, -width);
+            glVertex2d(cc, -MU);
+            
+            /* right half ellipse */
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*dphi;
+                x = cc - 0.5*MU*sin(phi);
+                y = -MU*cos(phi);
+                glVertex2d(x, y);
+            }
+            
+            /* straight parts */
+            glVertex2d(cc, width);
+            glVertex2d(LAMBDA, width);
+            glVertex2d(LAMBDA, MU);
+            
+            glEnd ();
+
+            break;
+        }
         case (D_CIRCLES):
         {
             rgb[0] = 0.0; rgb[1] = 0.0; rgb[2] = 0.0;
             for (k=0; k<ncircles; k++) if (circleactive[k])
-                draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
+            {
+//                 printf("k = %i, color = %i\n", k, circlecolor[k]);
+                if (circlecolor[k] == 0) draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
+                else
+                {
+                    if (newcircle[k] >= 1)
+                    {
+                        rgb_color_scheme_lum(circlecolor[k], 0.85, rgb1);
+                        newcircle[k]--;
+                    }
+                    else rgb_color_scheme(circlecolor[k], rgb1);
+                    draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb1);
+                }
+            }
             init_billiard_color();
             for (k=0; k<ncircles; k++) if (circleactive[k])
                  draw_circle(circlex[k], circley[k], circlerad[k], NSEG);
@@ -906,7 +1144,20 @@ void draw_billiard()      /* draws the billiard boundary */
         {
             rgb[0] = 0.0; rgb[1] = 0.0; rgb[2] = 0.0;
             for (k=0; k<ncircles; k++) if (circleactive[k])
-                draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
+            {
+//                 printf("k = %i, color = %i\n", k, circlecolor[k]);
+                if (circlecolor[k] == 0) draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
+                else
+                {
+                    if (newcircle[k] >= 1)
+                    {
+                        rgb_color_scheme_lum(circlecolor[k], 0.85, rgb1);
+                        newcircle[k]--;
+                    }
+                    else rgb_color_scheme(circlecolor[k], rgb1);
+                    draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb1);
+                }
+            }
             init_billiard_color();
             for (k=0; k<ncircles; k++) if (circleactive[k] >= 1)
             {
@@ -2223,6 +2474,100 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
 	return(c);
  }
 
+//   int old_vflower_xy(config, alpha, pos)
+//  /* determine initial configuration for start at point pos = (x,y) */
+//  double config[8], alpha, pos[2];
+// 
+//  {
+// 	double s, theta, omega, omega2, s1, rangle, x, y, x1[2*NPOLY], y1[2*NPOLY], xi, yi, t;
+//         double ca, sa, aa, bb, cc, margin = 1.0e-14, tmin, tval[2*NPOLY], tempconf[2*NPOLY][2];
+//         double co, so, co2, so2, ct, st, phimax, phi, axis1, axis2;
+// 	int k, c, intb=1, intc, i, nt = 0, cval[2*NPOLY], ntmin, sign;
+// 
+//         compute_flower_parameters(&omega, &co, &so, &axis1, &axis2, &phimax);
+//         
+//         for (k=0; k<NPOLY; k++)
+//         {
+//             /* rotate position so that kth side is vertical */
+// //             rangle = (double)(2*k)*omega + APOLY*PID;
+//             rangle = (double)k*omega + APOLY*PID;
+//             theta = alpha - rangle;
+//             
+//             ca = cos(rangle);
+//             sa = sin(rangle);
+//             
+//             ct = cos(theta);
+//             st = sin(theta);
+//                                 
+//             x = pos[0]*ca + pos[1]*sa;
+//             y = -pos[0]*sa + pos[1]*ca;
+//                 
+//             /* find intersection with elliptical arc */
+//             aa = ct*ct/(axis1*axis1) + st*st/(axis2*axis2);
+//             bb = (x-co)*ct/(axis1*axis1) + y*st/(axis2*axis2);
+//             cc = (x-co)*(x-co)/(axis1*axis1) + y*y/(axis2*axis2) - 1.0;
+//                 
+// //             if (bb*bb - aa*cc > margin) 
+//             if (bb*bb - aa*cc >= 0.0) 
+//             {
+//                 t = (-bb + sqrt(bb*bb - aa*cc))/aa;
+//                     
+//                 xi = x + t*cos(theta);
+//                 yi = y + t*sin(theta);
+//                 
+//                 if (yi >= 0.0) phi = argument((xi - co)/axis1, yi/axis2);
+//                 else phi = -argument((xi - co)/axis1, -yi/axis2);
+//                 
+// //                 phi = argument((xi - co)/axis1, yi/axis2);
+// //                 if (phi > PI) phi += -DPI;
+//                     
+//                 if ((t > margin)&&((vabs(phi) <= phimax)||(vabs(phi-DPI) <= phimax))) 
+// //                 if (((vabs(phi) <= phimax)||(vabs(phi-DPI) <= phimax))) 
+// //                 if ((t > margin)) 
+//                 {
+//                     cval[nt] = k;
+// //                     cval[nt] = 2*k;
+//                     tval[nt] = t;
+//                         
+//                     /* rotate back */
+//                     x1[nt] = xi*ca - yi*sa;
+//                     y1[nt] = xi*sa + yi*ca;
+//                     
+//                     tempconf[nt][0] = (double)(2*k + 1)*phimax + phi;
+//                     tempconf[nt][1] = argument(-axis1*sin(phi), axis2*cos(phi)) - theta;      
+//                     nt++;
+//                 }
+//             }
+//         }
+//         
+//         /* find earliest intersection */
+//         tmin = tval[0];
+//         ntmin = 0;
+//         for (i=1; i<nt; i++) 
+//             if (tval[i] < tmin) 
+//             {
+//                 tmin = tval[i];
+//                 ntmin = i;
+//             }
+//             
+//         config[0] = tempconf[ntmin][0];
+//         config[1] = tempconf[ntmin][1];
+//         c = cval[ntmin];
+//  
+//        if (nt == 0) printf("nt = %i\t ntmin = %i \tcmin = %i\n", nt, ntmin, c);
+//         
+// 
+//         if (config[1] < 0.0) config[1] += DPI;
+// 
+//         config[2] = 0.0;	/* running time */ 
+// 	config[3] = module2(x1[ntmin]-pos[0], y1[ntmin]-pos[1]);     /* distance to collision */
+// 	config[4] = pos[0];    /* start position */
+// 	config[5] = pos[1];
+// 	config[6] = x1[ntmin];        /* position of collision */
+// 	config[7] = y1[ntmin];
+// 	
+// 	return(c);
+//  }
  
  int vflower(double config[8])
  /* determine initial configuration when starting from boundary */
@@ -2849,6 +3194,706 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
 	return(c);
  }
  
+/****************************************************************************************/
+/* Polygonal billiard with parabolic sides */
+/****************************************************************************************/
+
+ int pos_parabolas(double conf[2], double pos[2], double *alpha)
+ /* determine position on boundary of polygon */
+ /* conf[0] is y + ymax on first side */
+ {
+	double s, theta, omega2, aa, bb, cc, ymax, angle, x2, x, y;
+        int c;
+
+	s = conf[0]; 
+        theta = conf[1];
+        
+        omega2 = PI/((double)NPOLY);
+        aa = 0.25/MU;
+        bb = 1.0/tan(omega2);
+        cc = LAMBDA + MU;
+        ymax = ( - bb + sqrt(bb*bb + 4.0*aa*cc))/(2.0*aa);
+        
+        c = (int)(s/(2.0*ymax));         /* side of shape */
+        
+        y = s - (2.0*(double)c + 1.0)*ymax;
+        x = LAMBDA + MU - 0.25*y*y/MU;
+        
+//         printf("y = %.3lg\n", y);
+        
+        angle = 2.0*((double)c)*omega2 + PID*APOLY;
+        
+        pos[0] = x*cos(angle) - y*sin(angle);
+        pos[1] = x*sin(angle) + y*cos(angle);
+        
+        *alpha = PID + theta + atan(0.5*y/MU) + angle;
+        
+//         *alpha = PID + theta + atan(0.5*y/MU) + 2.0*(double)c*omega2 + APOLY*PID;
+        
+//         printf("alpha = %.5lg\t", *alpha);
+        
+        return(c);
+ }
+ 
+ int vparabolas_xy(double config[8], double alpha, double pos[2])
+ /* determine initial configuration for start at point pos = (x,y) */
+ {
+	double s, theta, omega2, beta, s1, rangle, x, y, x1, y1, xi, yi, t, x2;
+        double ca, sa, a, b, margin = 1.0e-14, tmin, aa, bb, cc, ymax;
+	int k, c, intb=1, intc, i, nt = 0, ntmin;
+
+        /* dimensions/angles of polygon */
+        omega2 = PI/((double)NPOLY);
+        aa = 0.25/MU;
+        bb = 1.0/tan(omega2);
+        cc = LAMBDA + MU;
+        ymax = ( - bb + sqrt(bb*bb + 4.0*aa*cc))/(2.0*aa);
+//         printf("ymax = %.3lg\n", ymax);
+        
+//         print_config(config);
+
+        for (k=0; k<NPOLY; k++) if (intb)
+        {
+            /* rotate position so that kth side is vertical */
+            rangle = 2.0*((double)k)*omega2 + APOLY*PID;
+            theta = alpha - rangle;
+            
+//             printf("theta = %.3lg\n", theta);
+            
+            ca = cos(rangle);
+            sa = sin(rangle);
+                                
+            x = pos[0]*ca + pos[1]*sa;
+            y = -pos[0]*sa + pos[1]*ca;
+                
+            aa = sin(theta)*sin(theta);
+            bb = y*sin(theta) + 2.0*MU*cos(theta);
+            cc = y*y + 4.0*MU*x - 4.0*MU*(LAMBDA+MU);
+            
+//             printf("y = %.3lg\n", y);
+            
+//             if (cos(theta) == 1.0)
+            if (cos(theta) >= 1.0 - margin)
+            {
+                
+//                 t = -cc/(2.0*bb);
+                xi = LAMBDA + MU - 0.25*y*y/MU;
+                yi = y;
+                
+//                 if ((t > margin)&&(vabs(yi) <= ymax)) 
+                if (vabs(yi) <= ymax)
+                {
+                    intb = 0;
+                    
+                    /* rotate back */
+                    x1 = xi*ca - yi*sa;
+                    y1 = xi*sa + yi*ca;
+                
+                    config[0] = yi + (1.0 + 2.0*(double)k)*ymax;
+                    config[1] = PID - theta + atan(0.5*yi/MU); 
+                }
+                
+//                 printf("s = %.3lg\n", config[0]);
+            }
+            else if (bb*bb - aa*cc > margin)
+            {
+                t = (-bb + sqrt(bb*bb - aa*cc))/aa;
+                
+                xi = x + t*cos(theta);
+                yi = y + t*sin(theta);
+                    
+                if ((t > margin)&&(vabs(yi) <= ymax)) 
+//                 if (vabs(yi) <= ymax)
+                {
+                    intb = 0;
+                    
+//                     printf("t = %.3lg\n", t);
+                        
+                    /* rotate back */
+                    x1 = xi*ca - yi*sa;
+                    y1 = xi*sa + yi*ca;
+                    
+                    config[0] = yi + (1.0 + 2.0*(double)k)*ymax;
+                    config[1] = PID - theta + atan(0.5*yi/MU); 
+                }
+            }
+//             if (!intb) printf("Intersection found with side %i\n", k);
+        }
+        
+//         if (intb) printf("No intersection found!\n");
+
+        if (config[1] < 0.0) config[1] += DPI;
+
+        config[2] = 0.0;	/* running time */ 
+	config[3] = module2(x1-pos[0], y1-pos[1]);     /* distance to collision */
+	config[4] = pos[0];    /* start position */
+	config[5] = pos[1];
+	config[6] = x1;        /* position of collision */
+	config[7] = y1;
+	
+//         print_config(config);
+        
+	return(k);
+ }
+
+ int vparabolas(double config[8])
+ /* determine initial configuration when starting from boundary */
+ {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_parabolas(config, pos, &alpha);
+        
+        vparabolas_xy(config, alpha, pos);
+	
+	return(c);
+ }
+
+/****************************************************************************************/
+/* Penrose solution to illumination problem */
+/****************************************************************************************/
+
+ int pos_penrose(double conf[2], double pos[2], double *alpha)
+ /* determine position on boundary of domain */
+ /* conf[0] parametrization of boundary by arclength or angle */
+ {
+	double s, s1, theta, cc, l1, l2, width, x, y, phi; 
+        int c, i;
+        static int first = 1;
+        static double sval[17];
+
+	s = conf[0]; 
+        theta = conf[1];
+        
+        cc = sqrt(LAMBDA*LAMBDA - (1.0-MU)*(1.0-MU));
+        width = 0.1*MU;
+        l1 = MU - width;
+        l2 = LAMBDA - cc;
+        
+        /* s values of different boundary parts */
+        if (first)
+        {
+            sval[0] = 0.0;  sval[1] = PI;   sval[2] = sval[1] + l1;
+            sval[3] = sval[2] + l2;     sval[4] = sval[3] + l1;
+            sval[5] = sval[4] + PI;     sval[6] = sval[5] + l1;
+            sval[7] = sval[6] + l2;     sval[8] = sval[7] + l1;
+            for (i=1; i<=8; i++) sval[8+i] = sval[8] + sval[i];
+//             for (i=0; i<16; i++) printf("sval[%i] = %.3lg\n", i, sval[i]);
+            first = 0;
+        }
+        
+        if (s < sval[1])     /* upper ellipse */
+        {
+            pos[0] = LAMBDA*cos(s);
+            pos[1] = MU + (1.0-MU)*sin(s);
+            phi = argument(-LAMBDA*sin(s),(1.0-MU)*cos(s));
+            *alpha = phi + theta; 
+            return(0);
+        }
+        else if (s < sval[2])       /* upper left straight parts */
+        {
+            pos[0] = -LAMBDA;
+            pos[1] = MU - s + PI;
+            *alpha = theta - PID;
+            return(1);
+        }
+        else if (s < sval[3])
+        {
+            pos[0] = -LAMBDA + s - sval[2];
+            pos[1] = width;
+            *alpha = theta;
+            return(2);
+        }
+        else if (s < sval[4])
+        {
+            pos[0] = -cc;
+            pos[1] = width + s -sval[3];
+            *alpha = theta + PID;
+            return(3);
+        }
+        else if (s < sval[5])     /* left ellipse/mushroom head */
+        {
+            s1 = s - sval[4];
+            pos[0] = -cc + 0.5*MU*sin(s1);
+            pos[1] = MU*cos(s1);
+            phi = argument(0.5*MU*cos(s1), -MU*sin(s1));
+            *alpha = phi + theta;
+            return(4);
+        }
+        else if (s < sval[6])     /* lower left straight parts */
+        {
+            s1 = s - sval[5];
+            pos[0] = -cc;
+            pos[1] = -MU + s1;
+            *alpha = theta + PID;
+            return(5);
+        }
+        else if (s < sval[7])
+        {
+            s1 = s - sval[6];
+            pos[0] = -cc - s1;
+            pos[1] = -width;
+            *alpha = theta + PI;
+            return(6);
+        }
+        else if (s < sval[8])
+        {
+            s1 = s - sval[7];
+            pos[0] = -LAMBDA;
+            pos[1] = -width - s1;
+            *alpha = theta - PID;
+            return(7);
+        }
+        
+        else if (s < sval[9])     /* lower ellipse */
+        {
+            s1 = s -  sval[8];
+            pos[0] = -LAMBDA*cos(s1);
+            pos[1] = -MU - (1.0-MU)*sin(s1);
+            phi = argument(LAMBDA*sin(s1),-(1.0-MU)*cos(s1));
+            *alpha = phi + theta; 
+            return(8);
+        }
+        else if (s < sval[10])       /* lower right straight parts */
+        {
+            s1 = s - sval[9];
+            pos[0] = LAMBDA;
+            pos[1] = -MU + s1;
+            *alpha = theta + PID;
+            return(9);
+        }
+        else if (s < sval[11])
+        {
+            s1 = s - sval[10];
+            pos[0] = LAMBDA - s1;
+            pos[1] = -width;
+            *alpha = theta + PI;
+            return(10);
+        }
+        else if (s < sval[12])
+        {
+            s1 = s - sval[11];
+            pos[0] = cc;
+            pos[1] = -width -s1;
+            *alpha = theta - PID;
+            return(11);
+        }
+        else if (s < sval[13])     /* right ellipse/mushroom head */
+        {
+            s1 = s - sval[12];
+            pos[0] = cc - 0.5*MU*sin(s1);
+            pos[1] = -MU*cos(s1);
+            phi = argument(-0.5*MU*cos(s1), MU*sin(s1));
+            *alpha = phi + theta;
+            return(12);
+        }
+        else if (s < sval[14])     /* upper right straight parts */
+        {
+            s1 = s - sval[13];
+            pos[0] = cc;
+            pos[1] = MU - s1;
+            *alpha = theta - PID;
+            return(13);
+        }
+        else if (s < sval[15])
+        {
+            s1 = s - sval[14];
+            pos[0] = cc + s1;
+            pos[1] = width;
+            *alpha = theta;
+            return(14);
+        }
+        else 
+        {
+            s1 = s - sval[15];
+            pos[0] = LAMBDA;
+            pos[1] = width + s1;
+            *alpha = theta + PID;
+            return(15);
+        }
+ }
+ 
+ int vpenrose_xy(double config[8], double alpha, double pos[2])
+ /* determine initial configuration for start at point pos = (x,y) */
+ {
+	double s, theta, cc, width, l1, l2, s1, rangle, x, y, x1[30], y1[30], xi, yi, t, x2;
+        double ca, sa, a, b, d, margin = 1.0e-14, tmin, tval[30], tempconf[30][2], lam2, mu2; 
+	int k, c, intb=1, intc, i, nt = 0, cval[30], ntmin;
+        static int first = 1;
+        static double sval[17];
+
+        /* dimensions of domain */
+        cc = sqrt(LAMBDA*LAMBDA - (1.0-MU)*(1.0-MU));
+        width = 0.1*MU;
+        l1 = MU - width;
+        l2 = LAMBDA - cc;
+        lam2 = LAMBDA*LAMBDA;
+        mu2 = (1.0-MU)*(1.0-MU);
+        
+        /* s values of different boundary parts */
+        /* USE STATIC DOUBLES ? */
+        if (first)
+        {
+            sval[0] = 0.0;  sval[1] = PI;   sval[2] = sval[1] + l1;
+            sval[3] = sval[2] + l2;     sval[4] = sval[3] + l1;
+            sval[5] = sval[4] + PI;     sval[6] = sval[5] + l1;
+            sval[7] = sval[6] + l2;     sval[8] = sval[7] + l1;
+            for (i=1; i<=8; i++) sval[8+i] = sval[8] + sval[i];
+//             for (i=0; i<16; i++) printf("sval[%i] = %.3lg\n", i, sval[i]);
+            first = 0;
+        }
+        
+        ca = cos(alpha);
+        sa = sin(alpha);
+        
+        /* intersection with upper ellipse */
+        a = mu2*ca*ca + lam2*sa*sa;
+        b = mu2*pos[0]*ca + lam2*(pos[1]-MU)*sa;
+        d = mu2*pos[0]*pos[0] + lam2*(pos[1]-MU)*(pos[1]-MU) - lam2*mu2;
+        
+        if (b*b > a*d)
+        {
+            t = (-b + sqrt(b*b - a*d))/a;
+            x = pos[0] + t*ca;
+            y = pos[1] + t*sa;
+            
+//             printf("x = %.3lg, y = %.3lg\n", x, y);
+            
+            if ((t > margin)&&(y >= MU))
+            {
+                cval[nt] = 0;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = argument(x/LAMBDA, (y-MU)/(1.0-MU));
+                tempconf[nt][1] = argument(-LAMBDA*(y-MU)/(1.0-MU), (1.0-MU)*x/LAMBDA) - alpha;      
+//                 tempconf[nt][1] = argument(-LAMBDA*(y-MU)/(1.0-MU), x/MU) - alpha;      
+                nt++;
+            }
+        }
+        
+        /* intersection with lower ellipse */
+        b = mu2*pos[0]*ca + lam2*(pos[1]+MU)*sa;
+        d = mu2*pos[0]*pos[0] + lam2*(pos[1]+MU)*(pos[1]+MU) - lam2*mu2;
+        
+        if (b*b > a*d)
+        {
+            t = (-b + sqrt(b*b - a*d))/a;
+            x = pos[0] + t*ca;
+            y = pos[1] + t*sa;
+            
+            if ((t > margin)&&(y <= -MU))
+            {
+                cval[nt] = 8;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[8] + argument(-x/LAMBDA, -(y+MU)/(1.0-MU));
+                tempconf[nt][1] = argument(-LAMBDA*(y+MU)/(1.0-MU), (1.0-MU)*x/LAMBDA) - alpha;      
+                nt++;
+            }
+        }
+        
+        /* intersection with right ellipse */
+        a = 4.0*ca*ca + sa*sa;
+        b = 4.0*(pos[0] - cc)*ca + pos[1]*sa;
+        d = 4.0*(pos[0] - cc)*(pos[0] - cc) + pos[1]*pos[1] - MU*MU;
+        
+        if (b*b > a*d)
+        {
+            t = (-b + sqrt(b*b - a*d))/a;
+            x = pos[0] + t*ca;
+            y = pos[1] + t*sa;
+            
+            if ((t > margin)&&(x <= cc))
+            {
+                cval[nt] = 12;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[12] + argument(-y/MU, 2.0*(cc-x)/MU);
+                tempconf[nt][1] = argument(0.5*y, 2.0*(cc-x)) - alpha;      
+                nt++;
+            }
+            
+            t = (-b - sqrt(b*b - a*d))/a;
+            x = pos[0] + t*ca;
+            y = pos[1] + t*sa;
+            
+            if ((t > margin)&&(x <= cc))
+            {
+                cval[nt] = 12;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[12] + argument(-y/MU, 2.0*(cc-x)/MU);
+                tempconf[nt][1] = argument(0.5*y, 2.0*(cc-x)) - alpha;      
+                nt++;
+            }
+            
+        }
+        
+        /* intersection with left ellipse */
+        b = 4.0*(pos[0] + cc)*ca + pos[1]*sa;
+        d = 4.0*(pos[0] + cc)*(pos[0] + cc) + pos[1]*pos[1] - MU*MU;
+        
+        if (b*b > a*d)
+        {
+            t = (-b + sqrt(b*b - a*d))/a;
+            x = pos[0] + t*ca;
+            y = pos[1] + t*sa;
+            
+            if ((t > margin)&&(x >= -cc))
+            {
+                cval[nt] = 4;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[4] + argument(y/MU, 2.0*(cc+x)/MU);
+                tempconf[nt][1] = argument(0.5*y, -2.0*(cc+x)) - alpha;      
+                nt++;
+            }
+            
+            t = (-b - sqrt(b*b - a*d))/a;
+            x = pos[0] + t*ca;
+            y = pos[1] + t*sa;
+            
+            if ((t > margin)&&(x >= -cc))
+            {
+                cval[nt] = 4;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[4] + argument(y/MU, 2.0*(cc+x)/MU);
+                tempconf[nt][1] = argument(0.5*y, -2.0*(cc+x)) - alpha;      
+                nt++;
+            }
+            
+        }
+        
+        /* rightmost vertical segments */
+        if (ca > 0.0)
+        {
+            t = (LAMBDA - pos[0])/ca;
+            x = LAMBDA;
+            y = pos[1] + t*sa;
+            
+            if ((y >= width)&&(y < MU))
+            {
+                cval[nt] = 15;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[15] + y - width;
+                tempconf[nt][1] = PID - alpha;      
+                nt++;
+            }
+            
+            else if ((y <= -width)&&(y > -MU))
+            {
+                cval[nt] = 9;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[9] + y + MU;
+                tempconf[nt][1] = PID - alpha;      
+                nt++;
+            }
+        }
+        
+        /* leftmost vertical segments */
+        if (ca < 0.0)
+        {
+            t = -(LAMBDA + pos[0])/ca;
+            x = -LAMBDA;
+            y = pos[1] + t*sa;
+            
+            if ((y >= width)&&(y < MU))
+            {
+                cval[nt] = 1;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[1] + MU - y;
+                tempconf[nt][1] = 3.0*PID - alpha;      
+                nt++;
+            }
+            
+            else if ((y <= -width)&&(y > -MU))
+            {
+                cval[nt] = 7;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[7] - width - y;
+                tempconf[nt][1] = 3.0*PID - alpha;      
+                nt++;
+            }
+        }
+
+        /* vertical segments of right mushroom head */
+        if (ca < 0.0)
+        {
+            t = (cc - pos[0])/ca;
+            x = cc;
+            y = pos[1] + t*sa;
+            
+            if ((t > 0.0)&&(y >= width)&&(y < MU))
+            {
+                cval[nt] = 13;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[13] - y + MU;
+                tempconf[nt][1] = 3.0*PID - alpha;      
+                nt++;
+            }
+            
+            else if ((t > 0.0)&&(y <= -width)&&(y > -MU))
+            {
+                cval[nt] = 11;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[11] - y - width;
+                tempconf[nt][1] = 3.0*PID - alpha;      
+                nt++;
+            }
+        }
+        
+        /* vertical segments of left mushroom head */
+        if (ca > 0.0)
+        {
+            t = (-cc - pos[0])/ca;
+            x = -cc;
+            y = pos[1] + t*sa;
+            
+            if ((t > 0.0)&&(y >= width)&&(y < MU))
+            {
+                cval[nt] = 3;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[3] + y - width;
+                tempconf[nt][1] = PID - alpha;      
+                nt++;
+            }
+            
+            else if ((t > 0.0)&&(y <= -width)&&(y > -MU))
+            {
+                cval[nt] = 5;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[5] + y + MU;
+                tempconf[nt][1] = PID - alpha;      
+                nt++;
+            }
+        }
+        
+        /* upper horizontal segments */
+        if (sa < 0.0)
+        {
+            t = (width - pos[1])/sa;
+            x = pos[0] + t*ca;
+            y = width;
+            
+            if ((t > 0.0)&&(x >= cc)&&(x < LAMBDA))
+            {
+                cval[nt] = 14;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[14] + x - cc;
+                tempconf[nt][1] = - alpha;      
+                nt++;
+            }
+            
+            else if ((t > 0.0)&&(x <= -cc)&&(x > -LAMBDA))
+            {
+                cval[nt] = 2;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[2] + x + LAMBDA;
+                tempconf[nt][1] = - alpha;      
+                nt++;
+            }
+        }
+
+        /* lower horizontal segments - TO BE CORRECTED */
+        if (sa > 0.0)
+        {
+            t = (-width - pos[1])/sa;
+            x = pos[0] + t*ca;
+            y = -width;
+            
+            if ((t > 0.0)&&(x >= cc)&&(x < LAMBDA))
+            {
+                cval[nt] = 10;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[10] - x + LAMBDA;
+                tempconf[nt][1] = PI - alpha;      
+                nt++;
+            }
+            
+            else if ((t > 0.0)&&(x <= -cc)&&(x > -LAMBDA))
+            {
+                cval[nt] = 6;
+                tval[nt] = t;
+                x1[nt] = x;
+                y1[nt] = y;
+                tempconf[nt][0] = sval[6] - x - cc;
+                tempconf[nt][1] = PI - alpha;      
+                nt++;
+            }
+        }
+        /* find earliest intersection */
+        tmin = tval[0];
+        ntmin = 0;
+        for (i=1; i<nt; i++) 
+            if (tval[i] < tmin) 
+            {
+                tmin = tval[i];
+                ntmin = i;
+            }
+            
+        config[0] = tempconf[ntmin][0];
+        config[1] = tempconf[ntmin][1];
+        c = cval[ntmin];
+ 
+//         printf("nt = %i\t ntmin = %i \tcmin = %i\n", nt, ntmin, c);
+        
+
+        if (config[1] < 0.0) config[1] += DPI;
+
+        config[2] = 0.0;	/* running time */ 
+	config[3] = module2(x1[ntmin]-pos[0], y1[ntmin]-pos[1]);     /* distance to collision */
+	config[4] = pos[0];    /* start position */
+	config[5] = pos[1];
+	config[6] = x1[ntmin];        /* position of collision */
+	config[7] = y1[ntmin];
+        
+//         print_config(config);
+	
+	return(c);
+ }
+
+ int vpenrose(double config[8])
+ /* determine initial configuration when starting from boundary */
+ {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_penrose(config, pos, &alpha);
+        
+        vpenrose_xy(config, alpha, pos);
+	
+	return(c);
+ }
+
 
 /****************************************************************************************/
 /* billiard with circular scatterers */
@@ -2886,7 +3931,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         c0 = cos(alpha);
         s0 = sin(alpha);
         
-        for (i=0; i<ncircles; i++)
+        for (i=0; i<ncircles; i++) if (circleactive[i])
         {
             b = (pos[0]-circlex[i])*c0 + (pos[1]-circley[i])*s0;
             c = (pos[0]-circlex[i])*(pos[0]-circlex[i]) + (pos[1]-circley[i])*(pos[1]-circley[i]) - circlerad[i]*circlerad[i];
@@ -3007,7 +4052,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
 //             conf[0] -= 4.0*(LAMBDA + 1.0);
             conf[0] -= BOUNDARY_SHIFT;
             
-            return(-c);
+            return(-c-1);
         }
  }
  
@@ -3024,7 +4069,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         c0 = cos(alpha);
         s0 = sin(alpha);
         
-        for (i=0; i<ncircles; i++)
+        for (i=0; i<ncircles; i++) if (circleactive[i])
         {
             b = (pos[0]-circlex[i])*c0 + (pos[1]-circley[i])*s0;
             c = (pos[0]-circlex[i])*(pos[0]-circlex[i]) + (pos[1]-circley[i])*(pos[1]-circley[i]) - circlerad[i]*circlerad[i];
@@ -3086,11 +4131,14 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         }
         else    /* there is no intersection with the circles - compute intersection with boundary */
         {
+            
             side = vrectangle_xy(config, alpha, pos);
             config[0] -= BOUNDARY_SHIFT;
 //             config[0] -= 4.0*(LAMBDA+1.0);
             
-            return(side);
+//             printf("Hit side %i\n", side);
+//             print_config(config);
+            return(side - 5);
         }
  }
 
@@ -3165,7 +4213,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         length = 2.0*sin(0.5*omega);
         cw = cos(omega*0.5);
                     
-        for (i=0; i<ncircles; i++)
+        for (i=0; i<ncircles; i++) if (circleactive[i])
         {
             b = (pos[0]-circlex[i])*c0 + (pos[1]-circley[i])*s0;
             c = (pos[0]-circlex[i])*(pos[0]-circlex[i]) + (pos[1]-circley[i])*(pos[1]-circley[i]) - circlerad[i]*circlerad[i];
@@ -3324,6 +4372,16 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             return(pos_genusn(conf, pos, alpha));
             break;
         }
+        case (D_PARABOLAS):
+        {
+            return(pos_parabolas(conf, pos, alpha));
+            break;
+        }
+        case (D_PENROSE):
+        {
+            return(pos_penrose(conf, pos, alpha));
+            break;
+        }
         case (D_CIRCLES):
         {
             return(pos_circles(conf, pos, alpha));
@@ -3415,6 +4473,16 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         case (D_GENUSN):
         {
             return(vgenusn_xy(config, alpha, pos));
+            break;
+        }
+        case (D_PARABOLAS):
+        {
+            return(vparabolas_xy(config, alpha, pos));
+            break;
+        }
+        case (D_PENROSE):
+        {
+            return(vpenrose_xy(config, alpha, pos));
             break;
         }
         case (D_CIRCLES):
@@ -3539,6 +4607,20 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             return(vgenusn(config));
             break;
         }
+        case (D_PARABOLAS):
+        {
+            c = pos_parabolas(config, pos, &alpha);
+        
+            return(vparabolas(config));
+            break;
+        }
+        case (D_PENROSE):
+        {
+            c = pos_penrose(config, pos, &alpha);
+        
+            return(vpenrose(config));
+            break;
+        }
         case (D_CIRCLES):
         {
             c = pos_circles(config, pos, &alpha);
@@ -3570,7 +4652,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
  int xy_in_billiard(double x, double y)
  /* returns 1 if (x,y) represents a point in the billiard */
  {
-    double l2, r1, r2, omega, omega2, c, angle, x1, y1, x2, co, so, x2plus, x2minus;
+    double l2, r1, r2, omega, omega2, c, angle, x1, y1, x2, co, so, x2plus, x2minus, width;
     int condition, k;
  
     switch (B_DOMAIN) {
@@ -3699,6 +4781,35 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             return(in_polygon(x, y, 1.0, NPOLY, APOLY));
             break;
         }
+        case D_PARABOLAS:
+        {
+            condition = 1;
+            omega = DPI/((double)NPOLY);
+            for (k=0; k<NPOLY; k++)  
+            {
+                angle = APOLY*PID + (double)k*omega;
+                x1 = x*cos(angle) + y*sin(angle);
+                y1 = -x*sin(angle) + y*cos(angle);
+                condition = condition*(x1 < LAMBDA + MU - 0.25*y1*y1/MU);
+            }
+            return(condition);
+        }
+        case D_PENROSE:
+        {
+            c = sqrt(LAMBDA*LAMBDA - (1.0 - MU)*(1.0 - MU));
+            width = 0.1*MU;
+            x1 = vabs(x);
+            y1 = vabs(y);
+            /* sides */
+            if (vabs(x) >= LAMBDA) return(0);
+            /* upper and lower ellipse */
+            else if ((vabs(y) >= MU)&&(x*x/(LAMBDA*LAMBDA) + (y1-MU)*(y1-MU)/((1.0-MU)*(1.0-MU)) >= 1.0)) return(0);
+            /* small ellipses */
+            else if ((vabs(x) <= c)&&(4.0*(x1-c)*(x1-c)/(MU*MU) + y*y/(MU*MU) <= 1.0)) return(0);
+            /* straight parts */
+            else if ((vabs(x) >= c)&&(vabs(y) <= width)) return(0);
+            else return(1);
+        }
         case D_CIRCLES:      
         {
             condition = 1;
@@ -3742,9 +4853,10 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
  
  void init_circle_config()
 {
-    int i, j, n; 
-    double dx, dy, xx[4], yy[4], y, gamma, height;
-    
+    int i, j, k, n, ncirc0, n_p_active, ncandidates=5000, naccepted; 
+    double dx, dy, xx[4], yy[4], x, y, gamma, height, phi, r0, r, dpoisson = 3.25*MU;
+    short int active_poisson[NMAXCIRCLES], far;
+
     switch (CIRCLE_PATTERN) {
         case (C_FOUR_CIRCLES):
         {
@@ -3802,6 +4914,23 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 }
             break;
         }
+        case (C_TRI):
+        {
+            ncircles = NCX*(NCY+1);
+            dy = (YMAX - YMIN)/((double)NCY);
+            dx = dy*0.5*sqrt(3.0);
+            for (i = 0; i < NCX; i++)
+                for (j = 0; j < NCY+1; j++)
+                {
+                    n = (NCY+1)*i + j;
+                    circlex[n] = ((double)(i-NCX/2) + 0.5)*dx;
+                    circley[n] = YMIN + ((double)j - 0.5)*dy;
+                    if ((i+NCX)%2 == 1) circley[n] += 0.5*dy;
+                    circlerad[n] = MU;
+                    circleactive[n] = 1;
+                }
+            break;
+        }
         case (C_GOLDEN_MEAN):
         {
             ncircles = 200;
@@ -3820,6 +4949,128 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             
             break;
         }
+        case (C_GOLDEN_SPIRAL):
+        {
+            ncircles = 1;
+            circlex[0] = 0.0;
+            circley[0] = 0.0;
+            
+            gamma = (sqrt(5.0) - 1.0)*PI;    /* golden mean times 2Pi */
+            phi = 0.0;
+            r0 = 2.0*MU;
+            r = r0 + MU;
+            
+            for (i=0; i<NGOLDENSPIRAL; i++) 
+            {
+                x = r*cos(phi);
+                y = r*sin(phi);
+                
+                phi += gamma;
+                r += MU*r0/r;
+                
+                if ((vabs(x) < LAMBDA)&&(vabs(y) < YMAX + MU))
+                {
+                    circlex[ncircles] = x;
+                    circley[ncircles] = y;
+                    ncircles++;
+                }
+            }
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circlerad[i] = MU;
+                /* inactivate circles outside the domain */
+                if ((circley[i] < YMAX + MU)&&(circley[i] > YMIN - MU)) circleactive[i] = 1;
+            }
+        break;
+        }
+        case (C_RAND_DISPLACED):
+        {
+            ncircles = NCX*NCY;
+            dy = (YMAX - YMIN)/((double)NCY);
+            for (i = 0; i < NCX; i++)
+                for (j = 0; j < NCY; j++)
+                {
+                    n = NCY*i + j;
+                    circlex[n] = ((double)(i-NCX/2) + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circley[n] = YMIN + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circlerad[n] = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
+                    circleactive[n] = 1;
+                }
+            break;
+        }
+        case (C_RAND_POISSON):
+        {
+            ncircles = NPOISSON;
+            for (n = 0; n < NPOISSON; n++)
+            {
+                circlex[n] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+                circley[n] = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
+                circlerad[n] = MU;
+                circleactive[n] = 1;
+            }
+            break;
+        }
+        case (C_POISSON_DISC):
+        {
+            printf("Generating Poisson disc sample\n");
+            /* generate first circle */
+            circlex[0] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+            circley[0] = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
+            active_poisson[0] = 1;
+            n_p_active = 1;
+            ncircles = 1;
+            
+            while ((n_p_active > 0)&&(ncircles < NMAXCIRCLES))
+            {
+                /* randomly select an active circle */
+                i = rand()%(ncircles);
+                while (!active_poisson[i]) i = rand()%(ncircles);                 
+//                 printf("Starting from circle %i at (%.3f,%.3f)\n", i, circlex[i], circley[i]);
+                /* generate new candidates */
+                naccepted = 0;
+                for (j=0; j<ncandidates; j++)
+                {
+                    r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
+                    phi = DPI*(double)rand()/RAND_MAX;
+                    x = circlex[i] + r*cos(phi);
+                    y = circley[i] + r*sin(phi);
+//                        printf("Testing new circle at (%.3f,%.3f)\t", x, y);
+                    far = 1;
+                    for (k=0; k<ncircles; k++) if ((k!=i))
+                    {
+                        /* new circle is far away from circle k */
+                        far = far*((x - circlex[k])*(x - circlex[k]) + (y - circley[k])*(y - circley[k]) >=     dpoisson*dpoisson);
+                        /* new circle is in domain */
+                        far = far*(vabs(x) < LAMBDA)*(y < YMAX)*(y > YMIN);
+                    }
+                    if (far)    /* accept new circle */
+                    {
+                        printf("New circle at (%.3f,%.3f) accepted\n", x, y);
+                        circlex[ncircles] = x;
+                        circley[ncircles] = y;
+                        circlerad[ncircles] = MU;
+                        circleactive[ncircles] = 1;
+                        active_poisson[ncircles] = 1;
+                        ncircles++;
+                        n_p_active++;
+                        naccepted++;
+                    }
+//                        else printf("Rejected\n");
+                }
+                if (naccepted == 0)    /* inactivate circle i */ 
+                {
+//                     printf("No candidates work, inactivate circle %i\n", i);
+                    active_poisson[i] = 0;
+                    n_p_active--;
+                }
+                printf("%i active circles\n", n_p_active);
+            }
+            
+            printf("Generated %i circles\n", ncircles);
+            break;
+        }
+
 //         case (C_LASER):
 //         {
 //             ncircles = 17;

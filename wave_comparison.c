@@ -42,7 +42,7 @@
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 #include <omp.h>
 
-#define MOVIE 1         /* set to 1 to generate movie */
+#define MOVIE 0         /* set to 1 to generate movie */
 
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
@@ -130,6 +130,12 @@
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1   /* final sleeping time */
 #define END_FRAMES 100   /* number of still frames at end of movie */
+
+/* Parameters of initial condition */
+
+#define INITIAL_AMP 0.2          /* amplitude of initial condition */
+#define INITIAL_VARIANCE 0.002   /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.1 /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 

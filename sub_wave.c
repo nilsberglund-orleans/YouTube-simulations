@@ -150,6 +150,41 @@ void color_scheme(int scheme, double value, double scale, int time, double rgb[3
 }
 
 
+void color_scheme_lum(int scheme, double value, double scale, int time, double lum, double rgb[3]) /* color scheme */
+{
+    double hue, y, r, amplitude;
+    int intpart;
+
+    /* saturation = r, luminosity = y */
+    switch (scheme) {
+        case (C_LUM):
+        {
+            hue = COLORHUE + (double)time*COLORDRIFT/(double)NSTEPS;
+            if (hue < 0.0) hue += 360.0;
+            if (hue >= 360.0) hue -= 360.0;
+            r = 0.9;
+            amplitude = color_amplitude(value, scale, time);
+            y = LUMMEAN + amplitude*LUMAMP;
+            intpart = (int)y;
+            y -= (double)intpart;
+            hsl_to_rgb(hue, r, y, rgb);
+            break;
+        }
+        case (C_HUE):
+        {
+            r = 0.9;
+            amplitude = color_amplitude(value, scale, time);
+            y = lum;
+            hue = HUEMEAN + amplitude*HUEAMP;
+            if (hue < 0.0) hue += 360.0;
+            if (hue >= 360.0) hue -= 360.0;
+            hsl_to_rgb(hue, r, y, rgb);
+            break;
+        }
+    }
+}
+
+
 void blank()
 {
     if (BLACK) glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -190,6 +225,20 @@ void save_frame_counter(int counter)
          WINWIDTH, WINHEIGHT, COMPRESSION_LZW);
 
 }
+
+void write_text_fixedwidth( double x, double y, char *st)
+{
+    int l, i;
+
+    l=strlen( st ); // see how many characters are in text string.
+    glRasterPos2d( x, y); // location to start printing text
+    for( i=0; i < l; i++) // loop until i is greater then l
+    {
+//         glutBitmapCharacter(GLUT_BITMAP_TIMES_ROMAN_24, st[i]); // Print a character on the screen
+//    glutBitmapCharacter(GLUT_BITMAP_8_BY_13, st[i]); // Print a character on the screen
+   glutBitmapCharacter(GLUT_BITMAP_9_BY_15, st[i]); // Print a character on the screen
+    }
+} 
 
 
 void write_text( double x, double y, char *st)
@@ -739,7 +788,7 @@ int xy_in_billiard(double x, double y)
 /* returns 1 if (x,y) represents a point in the billiard */
 // double x, y;
 {
-    double l2, r2, r2mu, omega, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width;
+    double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width;
     int i, j, k, k1, k2, condition;
 
     switch (B_DOMAIN) {
@@ -874,6 +923,48 @@ int xy_in_billiard(double x, double y)
             if (vabs(y) > 1.5*MU) return(1);
             else if ((x < x1 - width)||(x > x2 + width)) return(1);
             else if ((x > x1)&&(x < x2)) return(1);
+            else return(0);
+        }
+        case (D_FOUR_PARABOLAS):
+        {
+            x1 = MU + LAMBDA - 0.25*y*y/MU;
+            y1 = MU + LAMBDA - 0.25*x*x/MU;
+            return((vabs(x) < x1)&&(vabs(y) < y1));
+        }
+        case (D_POLY_PARABOLAS):
+        {
+            condition = 1;
+            omega = DPI/((double)NPOLY);
+            for (k=0; k<NPOLY; k++)  
+            {
+                angle = APOLY*PID + (k+0.5)*omega;
+                x1 = x*cos(angle) + y*sin(angle);
+                y1 = -x*sin(angle) + y*cos(angle);
+                condition = condition*(x1 < LAMBDA + MU - 0.25*y1*y1/MU);
+            }
+            return(condition);
+        }
+        case (D_PENROSE):
+        {
+            c = sqrt(LAMBDA*LAMBDA - (1.0 - MU)*(1.0 - MU));
+            width = 0.1*MU;
+            x1 = vabs(x);
+            y1 = vabs(y);
+            /* sides */
+            if (vabs(x) >= LAMBDA) return(0);
+            /* upper and lower ellipse */
+            else if ((vabs(y) >= MU)&&(x*x/(LAMBDA*LAMBDA) + (y1-MU)*(y1-MU)/((1.0-MU)*(1.0-MU)) >= 1.0)) return(0);
+            /* small ellipses */
+            else if ((vabs(x) <= c)&&(4.0*(x1-c)*(x1-c)/(MU*MU) + y*y/(MU*MU) <= 1.0)) return(0);
+            /* straight parts */
+            else if ((vabs(x) >= c)&&(vabs(y) <= width)) return(0);
+            else return(1);
+        }
+        case (D_HYPERBOLA):
+        {
+            b = MU*sqrt(1.0 + x*x/(LAMBDA*LAMBDA - MU*MU)); 
+            if (y > 1.02*b) return(1);
+            else if (y < 0.98*b) return (1);
             else return(0);
         }
         case (D_CIRCLES):
@@ -1046,7 +1137,7 @@ int ij_in_billiard(int i, int j)
 
 void draw_billiard()      /* draws the billiard boundary */
 {
-    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width;
+    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax;
     int i, j, k, k1, k2, mr2;
 
     if (BLACK) glColor3f(1.0, 1.0, 1.0);
@@ -1374,6 +1465,205 @@ void draw_billiard()      /* draws the billiard boundary */
                 draw_circle(LAMBDA, 0.0, r, NSEG);
             }
 
+            break;
+        }
+        case (D_FOUR_PARABOLAS):
+        {
+            x1 = 2.0*(sqrt(MU*(2.0*MU + LAMBDA)) - MU);
+            
+            dy = 2.0*x1/(double)NSEG; 
+            glBegin(GL_LINE_LOOP);
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = -x1 + dy*(double)i;
+                x = MU + LAMBDA - 0.25*y*y/MU;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                x = x1 - dy*(double)i;
+                y = MU + LAMBDA - 0.25*x*x/MU;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = x1 - dy*(double)i;
+                x = -MU - LAMBDA + 0.25*y*y/MU;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                x = -x1 + dy*(double)i;
+                y = -MU - LAMBDA + 0.25*x*x/MU;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            
+            if (FOCI)
+            {
+                glColor3f(0.3, 0.3, 0.3);
+                draw_circle(-LAMBDA, 0.0, r, NSEG);
+                draw_circle(LAMBDA, 0.0, r, NSEG);
+                draw_circle(0.0, -LAMBDA, r, NSEG);
+                draw_circle(0.0, LAMBDA, r, NSEG);
+            }
+            
+            break;
+        }
+        case (D_POLY_PARABOLAS):
+        {
+            omega = PI/((double)NPOLY);
+            a = 0.25/MU;
+            b = 1.0/tan(omega);
+            c = LAMBDA + MU;
+            ymax = (-b + sqrt(b*b + 4.0*a*c))/(2.0*a);
+            dy = 2.0*ymax/(double)NSEG; 
+            
+//             printf("a = %.3lg, b = %.3lg, ymax = %.3lg\n", a, b,ymax);
+            glBegin(GL_LINE_LOOP);
+            for (k=0; k<NPOLY; k++)  
+            {
+                alpha = APOLY*PID + (2.0*(double)k+1.0)*omega;
+                for (i = 0; i < NSEG+1; i++) 
+                {
+                    y1 = -ymax + dy*(double)i;
+                    x1 = MU + LAMBDA - 0.25*y1*y1/MU;
+                    x = x1*cos(alpha) - y1*sin(alpha);
+                    y = x1*sin(alpha) + y1*cos(alpha);
+                    xy_to_pos(x, y, pos);
+                    glVertex2d(pos[0], pos[1]);
+                }
+            }
+            glEnd ();
+            
+            if (FOCI)
+            {
+                glColor3f(0.3, 0.3, 0.3);
+                for (k=0; k<NPOLY; k++) 
+                {
+                    alpha = APOLY*PID + (k+0.5)*omega;
+                    draw_circle(LAMBDA*cos(alpha), LAMBDA*sin(alpha), r, NSEG);
+                }
+            }
+            
+            break;
+        }
+        case (D_PENROSE):
+        {
+            c = sqrt(LAMBDA*LAMBDA - (1.0 - MU)*(1.0 - MU));
+            width = 0.1*MU;
+            x1 = vabs(x);
+            y1 = vabs(y);
+            dphi = PI/(double)NSEG;
+            
+            glBegin(GL_LINE_LOOP);
+            /* upper half ellipse */
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*dphi;
+                x = LAMBDA*cos(phi);
+                y = MU + (1.0-MU)*sin(phi);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            
+            /* straight parts */
+            xy_to_pos(-LAMBDA, width, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(-c, width, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(-c, MU, pos);
+            glVertex2d(pos[0], pos[1]);
+            
+            /* left half ellipse */
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*dphi;
+                x = -c + 0.5*MU*sin(phi);
+                y = MU*cos(phi);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            
+            /* straight parts */
+            xy_to_pos(-c, -width, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(-LAMBDA, -width, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(-LAMBDA, -MU, pos);
+            glVertex2d(pos[0], pos[1]);
+            
+            /* lower half ellipse */
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*dphi;
+                x = -LAMBDA*cos(phi);
+                y = -MU - (1.0-MU)*sin(phi);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            
+            /* straight parts */
+            xy_to_pos(LAMBDA, -width, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(c, -width, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(c, -MU, pos);
+            glVertex2d(pos[0], pos[1]);
+            
+            /* right half ellipse */
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*dphi;
+                x = c - 0.5*MU*sin(phi);
+                y = -MU*cos(phi);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            
+            /* straight parts */
+            xy_to_pos(c, width, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(LAMBDA, width, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(LAMBDA, MU, pos);
+            glVertex2d(pos[0], pos[1]);
+            
+            glEnd ();
+            break; 
+        }
+        case (D_HYPERBOLA):
+        {
+            dx = (XMAX - XMIN)/(double)NSEG;
+            glBegin(GL_LINE_STRIP);
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                x = XMIN + dx*(double)i;
+                y = MU*1.02*sqrt(1.0 + x*x/(LAMBDA*LAMBDA - MU*MU));
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            glBegin(GL_LINE_STRIP);
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                x = XMIN + dx*(double)i;
+                y = MU*0.98*sqrt(1.0 + x*x/(LAMBDA*LAMBDA - MU*MU));
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            
+            if (FOCI)
+            {
+                glColor3f(0.3, 0.3, 0.3);
+                draw_circle(0.0, LAMBDA, r, NSEG);
+                draw_circle(0.0, -LAMBDA, r, NSEG);
+            }
             break;
         }
         case (D_CIRCLES):

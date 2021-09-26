@@ -42,37 +42,43 @@
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 #include <omp.h>
 
-#define MOVIE 1         /* set to 1 to generate movie */
+#define MOVIE 0         /* set to 1 to generate movie */
 #define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 
 /* General geometrical parameters */
 
 #define WINWIDTH 	1280  /* window width */
+// #define WINWIDTH 	720  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
 #define NX 1280          /* number of grid points on x axis */
+// #define NX 720          /* number of grid points on x axis */
 #define NY 720          /* number of grid points on y axis */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+// #define XMIN -1.6
+// #define XMAX 1.6	/* x interval */
+// #define YMIN -1.6
+// #define YMAX 1.6	/* y interval for 9/16 aspect ratio */
 
 #define JULIA_SCALE 1.0 /* scaling for Julia sets */
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 19      /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 34      /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 8   /* pattern of circles, see list in global_pdes.c */
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 
-#define LAMBDA 0.0	    /* parameter controlling the dimensions of domain */
-#define MU 1.25             /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.6	    /* parameter controlling the dimensions of domain */
+#define MU 0.3              /* parameter controlling the dimensions of domain */
 #define NPOLY 3             /* number of sides of polygon */
-#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 4            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
@@ -112,8 +118,8 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 5000      /* number of frames of movie */
-#define NVID 25          /* number of iterations between images displayed on screen */
+#define NSTEPS 4050      /* number of frames of movie */
+#define NVID 32          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
@@ -124,6 +130,12 @@
 #define SLEEP2  1        /* final sleeping time */
 #define MID_FRAMES 20    /* number of still frames between parts of two-part movie */
 #define END_FRAMES 100   /* number of still frames at end of movie */
+
+/* Parameters of initial condition */
+
+#define INITIAL_AMP 0.2          /* amplitude of initial condition */
+#define INITIAL_VARIANCE 0.002   /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.1 /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 
@@ -138,9 +150,10 @@
 #define COLOR_SCHEME 1   /* choice of color scheme, see list in global_pdes.c  */
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
-#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define SLOPE 0.08        /* sensitivity of color on wave amplitude */
+// #define SLOPE 0.05        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-#define E_SCALE 500.0     /* scaling factor for energy representation */
+#define E_SCALE 200.0     /* scaling factor for energy representation */
 // #define E_SCALE 2500.0     /* scaling factor for energy representation */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
@@ -148,7 +161,7 @@
 #define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
 #define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
 #define HUEMEAN 220.0    /* mean value of hue for color scheme C_HUE */
-#define HUEAMP -220.0      /* amplitude of variation of hue for color scheme C_HUE */
+#define HUEAMP -230.0      /* amplitude of variation of hue for color scheme C_HUE */
 
 /* For debugging purposes only */
 #define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
@@ -327,9 +340,14 @@ void animation()
     courantb2 = COURANTB*COURANTB;
 
     /* initialize wave with a drop at one point, zero elsewhere */
+    init_circular_wave(0.0, -LAMBDA, phi, psi, xy_in);
+    
+    
 //     init_wave_flat(phi, psi, xy_in);
     
-    init_wave(-LAMBDA, 0.0, phi, psi, xy_in);
+//     init_wave_plus(LAMBDA - 0.3*MU, 0.5*MU, phi, psi, xy_in);
+//     init_wave(LAMBDA - 0.3*MU, 0.5*MU, phi, psi, xy_in);
+//     init_wave(0.0, 0.0, phi, psi, xy_in);
 //     init_planar_wave(XMIN + 0.015, 0.0, phi, psi, xy_in);
 //     init_planar_wave(XMIN + 0.02, 0.0, phi, psi, xy_in);
 //     init_planar_wave(XMIN + 0.8, 0.0, phi, psi, xy_in);
@@ -372,7 +390,14 @@ void animation()
         }
         
         draw_billiard();
-
+        
+        /* add oscillating waves */
+//         if (i%160 == 159)
+        if (i%150 == 149)
+        {
+                add_circular_wave(1.0, 0.0, LAMBDA, phi, psi, xy_in);
+                add_circular_wave(1.0, 0.0, -LAMBDA, phi, psi, xy_in);
+        }
 
 	glutSwapBuffers();
 
@@ -416,9 +441,10 @@ void animation()
             draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
             draw_billiard();
             glutSwapBuffers();
-            for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
+//             for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
         }
-            
+        for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
+        
         s = system("mv wave*.tif tif_wave/");
     }
     for (i=0; i<NX; i++)
