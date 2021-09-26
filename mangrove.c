@@ -174,31 +174,11 @@
 #define INERTIA 1           /* set to 1 for taking inertia into account */
 #define DT_MANGROVE 0.1     /* time step for mangrove displacement */
 #define KSPRING 0.25        /* spring constant of mangroves */
-// #define KSPRING 0.75        /* spring constant of mangroves */
-// #define KSPRING 0.15        /* spring constant of mangroves */
 #define KWAVE 2.0           /* constant in force due to wave gradient */
 #define DXMAX 0.02          /* max displacement of mangrove in one time step */
 #define L_DETACH 0.2        /* spring length beyond which mangroves detach */ 
 #define DAMP_MANGROVE 0.2   /* damping coefficient of mangroves */
 #define MANGROVE_MASS 1.5   /* mass of mangrove of radius MU */
-// #define MANGROVE_MASS 2.0   /* mass of mangrove of radius MU */
-// #define KSPRING 0.5         /* spring constant of mangroves */
-// #define KWAVE 2.0           /* constant in force due to wave gradient */
-// #define DXMAX 0.02          /* max displacement of mangrove in one time step */
-// #define L_DETACH 0.4        /* spring length beyond which mangroves detach */ 
-// #define DAMP_MANGROVE 0.3   /* damping coefficient of mangroves */
-//
-// #define KSPRING 1.0         /* spring constant of mangroves */
-// #define KWAVE 2.0           /* constant in force due to wave gradient */
-// #define DXMAX 0.02          /* max displacement of mangrove in one time step */
-// #define L_DETACH 0.4        /* spring length beyond which mangroves detach */ 
-// #define DAMP_MANGROVE 0.3   /* damping coefficient of mangroves */
-//
-// #define KSPRING 2.0         /* spring constant of mangroves */
-// #define KWAVE 5.0          /* constant in force due to wave gradient */
-// #define DXMAX 0.02          /* max displacement of mangrove in one time step */
-// #define L_DETACH 0.2        /* spring length beyond which mangroves detach */ 
-// #define DAMP_MANGROVE 0.2   /* damping coefficient of mangroves */
 
 /* For debugging purposes only */
 #define FLOOR 1         /* set to 1 to limit wave amplitude to VMAX */
