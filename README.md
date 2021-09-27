@@ -6,7 +6,7 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
 Parameter values used in specific simulations will be gradually added to file `Parameters.md`, `Parameters_June21.md` and so on.
 
-There are two groups of 4 files and 10 files:
+There are two groups of 5 files and 10 files:
 
 ### Simulations of classical particles in billiards.
 
@@ -14,6 +14,7 @@ There are two groups of 4 files and 10 files:
 2. *sub_part_billiard.c*:   drawing/computation routines common to `particle_billiard` and `drop_billiard`
 3. *particle_billiard.c*:   simulation of a collection of non-interacting particles in a billiard
 4. *drop_billiard.c*:       simulation of an expanding front of particles
+5. *particle_pinball.c*:    variant of `particle_billiard` with some extra statistics plots 
 
 - Create subfolders `tif_part`, `tif_drop`
 - Customize constants at beginning of .c file
