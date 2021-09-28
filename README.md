@@ -42,8 +42,8 @@ in the shell before running the program
 4. *common_wave.c*:     common functions of `wave_billiard` and `wave_comparison`
 5. *wave_billiard.c*:   simulation of the (linear) wave equation
 6. *wave_comparison.c*: comparison of the wave equation in two different domains
-7. *wave_energy.c*:     a version of wave_billiard plotting the energy profile of the wave
-8. *mangrove.c*:        a version of wave_billiard with additional features to animate mangroves
+7. *wave_energy.c*:     a version of `wave_billiard` plotting the energy profile of the wave
+8. *mangrove.c*:        a version of `wave_billiard` with additional features to animate mangroves
 9. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
 10. *schrodinger.c*:    simulation of the Schrodinger equation
 
