@@ -163,7 +163,7 @@ updated gradually.
 
 ```
 
-### 29 September 21 -  ###
+### 29 September 21 - 3 light sources in a Penrose unilluminable room ###
 
 **Program:** `particle_billiard.c` 
 
