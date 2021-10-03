@@ -132,6 +132,8 @@
 
 /* Color schemes, see list in global_pdes.c  */
 
+#define COLOR_PALETTE 0     /* Color palette, see list in global_pdes.c  */
+
 #define BLACK 1          /* black background */
 
 #define COLOR_SCHEME 1   /* choice of color scheme */
@@ -150,6 +152,8 @@
 // #define HUEMEAN 270.0    /* mean value of hue for color scheme C_HUE */
 // #define HUEAMP -130.0      /* amplitude of variation of hue for color scheme C_HUE */
 
+
+#include "hsluv.c"
 
 #include "global_pdes.c"
 #include "sub_wave.c"

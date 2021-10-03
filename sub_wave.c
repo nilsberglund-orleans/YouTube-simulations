@@ -67,7 +67,7 @@ void init()		/* initialisation of window */
 
 
 
-void hsl_to_rgb(double h, double s, double l, double rgb[3])       /* color conversion from HSL to RGB */
+void hsl_to_rgb_jet(double h, double s, double l, double rgb[3])       /* color conversion from HSL to RGB */
 /* h = hue, s = saturation, l = luminosity */
 {
     double c = 0.0, m = 0.0, x = 0.0;
@@ -106,7 +106,34 @@ void hsl_to_rgb(double h, double s, double l, double rgb[3])       /* color conv
     }
 }
 
-
+void hsl_to_rgb(double h, double s, double l, double rgb[3])        /* color conversion from HSL to RGB */
+{
+    double r, g, b;
+     
+    switch (COLOR_PALETTE) {
+        case (COL_JET): 
+        {
+            hsl_to_rgb_jet(h, s, l, rgb);
+            break;
+        }
+        case (COL_HSLUV): 
+        {
+            hsluv2rgb(h, 100.0*s, l, &r, &g, &b);
+            rgb[0] = r*100.0;
+            rgb[1] = g*100.0;
+            rgb[2] = b*100.0;
+            break;
+        }
+    }
+//     if (HSLUV_COLORS)
+//     {
+//         hsluv2rgb(h, 100.0*s, l, &r, &g, &b);
+//         rgb[0] = r*100.0;
+//         rgb[1] = g*100.0;
+//         rgb[2] = b*100.0;
+//     }
+//     else hsl_to_rgb_jet(h, s, l, rgb);
+}
 
 double color_amplitude(double value, double scale, int time)
 /* transforms the wave amplitude into a double in [-1,1] to feed into color scheme */
@@ -967,6 +994,60 @@ int xy_in_billiard(double x, double y)
             else if (y < 0.98*b) return (1);
             else return(0);
         }
+        case (D_TOKARSKY):
+        {
+            x1 = 4.0 + x/(XMAX - XMIN)*8.4;
+            y1 = 2.0 + y/(XMAX - XMIN)*8.4;
+            if ((x1 <= 0.0)||(x1 >= 8.0)) return(0);
+            else if (x1 < 1.0)
+            {
+                if (y1 <= 2.0) return(0);
+                else if (y1 >= x1 + 2.0) return(0);
+                else return(1);
+            }
+            else if (x1 < 2.0)
+            {
+                if (y1 <= 1.0) return(0);
+                else if (y1 >= 4.0) return(0);
+                else return(1);
+            }
+            else if (x1 < 3.0)
+            {
+                if (y1 <= x1 - 2.0) return(0);
+                else if (y1 >= 3.0) return(0);
+                else return(1);
+            }
+            else if (x1 < 4.0)
+            {
+                if (y1 <= 1.0) return(0);
+                else if (y1 >= 2.0) return(0);
+                else return(1);
+            }
+            else if (x1 < 5.0)
+            {
+                if (y1 <= x1 - 4.0) return(0);
+                else if (y1 >= 2.0) return(0);
+                else return(1);
+            }
+            else if (x1 < 6.0)
+            {
+                if (y1 <= 1.0) return(0);
+                else if (y1 >= 3.0) return(0);
+                else return(1);
+            }
+            else if (x1 < 7.0)
+            {
+                if (y1 <= x1 - 6.0) return(0);
+                else if (y1 >= 10.0 - x1) return(0);
+                else return(1);
+            }
+            else
+            {
+                if (y1 <= 2.0) return(0);
+                else if (y1 >= 3.0) return(0);
+                else return(1);
+            }
+        }
         case (D_CIRCLES):
         {
             for (i = 0; i < ncircles; i++)
@@ -1132,8 +1213,17 @@ int ij_in_billiard(int i, int j)
     return(xy_in_billiard(xy[0], xy[1]));
 }
 
-
-
+void toka_lineto(double x1, double y1)
+/* draws boundary segments of Tokarsky billiard */
+{
+    double ratio, x, y, pos[2];
+    
+    ratio = (XMAX - XMIN)/8.4;
+    x = ratio*(x1 - 4.0);
+    y = ratio*(y1 - 2.0);
+    xy_to_pos(x, y, pos);
+    glVertex2d(pos[0], pos[1]);
+}
 
 void draw_billiard()      /* draws the billiard boundary */
 {
@@ -1663,6 +1753,45 @@ void draw_billiard()      /* draws the billiard boundary */
                 glColor3f(0.3, 0.3, 0.3);
                 draw_circle(0.0, LAMBDA, r, NSEG);
                 draw_circle(0.0, -LAMBDA, r, NSEG);
+            }
+            break;
+        }
+        case (D_TOKARSKY):
+        {
+            glBegin(GL_LINE_LOOP);
+            toka_lineto(0.0, 2.0);
+            toka_lineto(1.0, 3.0);
+            toka_lineto(1.0, 4.0);
+            toka_lineto(2.0, 4.0);
+            toka_lineto(2.0, 3.0);
+            toka_lineto(3.0, 3.0);
+            toka_lineto(3.0, 2.0);
+            toka_lineto(5.0, 2.0);
+            toka_lineto(5.0, 3.0);
+            toka_lineto(6.0, 3.0);
+            toka_lineto(6.0, 4.0);
+            toka_lineto(7.0, 3.0);
+            toka_lineto(8.0, 3.0);
+            toka_lineto(8.0, 2.0);
+            toka_lineto(7.0, 2.0);
+            toka_lineto(7.0, 1.0);
+            toka_lineto(6.0, 0.0);
+            toka_lineto(6.0, 1.0);
+            toka_lineto(5.0, 1.0);
+            toka_lineto(4.0, 0.0);
+            toka_lineto(4.0, 1.0);
+            toka_lineto(3.0, 1.0);
+            toka_lineto(2.0, 0.0);
+            toka_lineto(2.0, 1.0);
+            toka_lineto(1.0, 1.0);
+            toka_lineto(1.0, 2.0);
+            glEnd();
+            if (FOCI)
+            {
+                x = (XMAX - XMIN)/4.2;
+                glColor3f(0.3, 0.3, 0.3);
+                draw_circle(x, 0.0, r, NSEG);
+                draw_circle(-x, 0.0, r, NSEG);
             }
             break;
         }
