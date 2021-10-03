@@ -6,7 +6,8 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
 Parameter values used in specific simulations will be gradually added to file `Parameters.md`, `Parameters_June21.md` and so on.
 
-There are two groups of 5 files and 10 files:
+There are two groups of 5 files and 10 files. 
+In addition `hsluv.c`and `hsluv.h` from https://github.com/adammaj1/hsluv-color-gradient for the color scheme have been included. 
 
 ### Simulations of classical particles in billiards.
 
