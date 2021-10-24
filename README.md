@@ -6,8 +6,12 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
 Parameter values used in specific simulations will be gradually added to file `Parameters.md`, `Parameters_June21.md` and so on.
 
-There are two groups of 5 files and 10 files. 
-In addition `hsluv.c`and `hsluv.h` from https://github.com/adammaj1/hsluv-color-gradient for the color scheme have been included. 
+There are two groups of 5 files and 11 files. 
+In addition the following files handling color schemes have been included:
+
+1. `hsluv.c`and `hsluv.h` from https://github.com/adammaj1/hsluv-color-gradient 
+2. `turbo_colormap.c` from https://gist.github.com/mikhailov-work/6a308c20e494d9e0ccc29036b28faa7a
+3. `colormaps.c` containing look-up tables from https://github.com/yuki-koyama/tinycolormap
 
 ### Simulations of classical particles in billiards.
 
@@ -41,12 +45,13 @@ in the shell before running the program
 2. *sub_wave.c*:        drawing/computation routines common to `wave_billiard`, `heat` and `schrodinger`
 3. *sub_wave_comp.c*:   some modified functions needed by `wave_comparison`
 4. *common_wave.c*:     common functions of `wave_billiard` and `wave_comparison`
-5. *wave_billiard.c*:   simulation of the (linear) wave equation
-6. *wave_comparison.c*: comparison of the wave equation in two different domains
-7. *wave_energy.c*:     a version of `wave_billiard` plotting the energy profile of the wave
-8. *mangrove.c*:        a version of `wave_billiard` with additional features to animate mangroves
-9. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
-10. *schrodinger.c*:    simulation of the Schrodinger equation
+5. *colors_waves.c*:    colormaps used by wave simulations
+6. *wave_billiard.c*:   simulation of the (linear) wave equation
+7. *wave_comparison.c*: comparison of the wave equation in two different domains
+8. *wave_energy.c*:     a version of `wave_billiard` plotting the energy profile of the wave
+9. *mangrove.c*:        a version of `wave_billiard` with additional features to animate mangroves
+10. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
+11. *schrodinger.c*:    simulation of the Schrodinger equation
 
 - Create subfolders `tif_wave`, `tif_heat`, `tif_schrod`
 - Customize constants at beginning of .c file
