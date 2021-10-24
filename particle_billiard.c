@@ -32,13 +32,18 @@
 
 #define MOVIE 0         /* set to 1 to generate movie */
 
-#define WINWIDTH 	1280  /* window width */
+// #define WINWIDTH 	1280  /* window width */
+#define WINWIDTH 	720   /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
-#define YMIN -1.125
-#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+#define XMIN -1.4
+#define XMAX 1.4	/* x interval */
+#define YMIN -1.4
+#define YMAX 1.4	/* y interval for 9/16 aspect ratio */
+// #define XMIN -2.0
+// #define XMAX 2.0	/* x interval */
+// #define YMIN -1.125
+// #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
 #define SCALING_FACTOR 1.0       /* scaling factor of drawing, needed for flower billiards, otherwise set to 1.0 */
 
@@ -60,7 +65,7 @@
 
 // #define LAMBDA 1.4	/* parameter controlling shape of domain */
 // #define MU 0.2          /* second parameter controlling shape of billiard */
-#define LAMBDA 1.5	/* parameter controlling shape of domain */
+#define LAMBDA 1.3	/* parameter controlling shape of domain */
 #define MU 0.3          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 4             /* number of sides of polygon */
@@ -74,15 +79,16 @@
 
 /* Simulation parameters */
 
-#define NPART 10000      /* number of particles */
+#define NPART 100      /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
-#define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
+#define SHOWTRAILS 1    /* set to 1 to keep trails of the particles */
+#define TEST_ACTIVE 1   /* set to 1 to test whether particle is in billiard */
 
-#define NSTEPS 3500      /* number of frames of movie */
-#define TIME 1200         /* time between movie frames, for fluidity of real-time simulation */ 
+#define NSTEPS 1300      /* number of frames of movie */
+#define TIME 2500         /* time between movie frames, for fluidity of real-time simulation */ 
 #define DPHI 0.00001     /* integration step */
 #define NVID 150         /* number of iterations between images displayed on screen */
 
@@ -94,12 +100,14 @@
 
 /* Colors and other graphical parameters */
 
-#define NCOLORS 16       /* number of colors */
+#define COLOR_PALETTE 0     /* Color palette, see list in global_pdes.c  */
+
+#define NCOLORS 64       /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
-#define RAINBOW_COLOR 0  /* set to 1 to use different colors for all particles */
+#define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
-#define LENGTH 0.01      /* length of velocity vectors */
+#define LENGTH 0.03       /* length of velocity vectors */
 #define BILLIARD_WIDTH 2    /* width of billiard */
 #define PARTICLE_WIDTH 2    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
@@ -170,6 +178,31 @@ void init_drop_config(double x0, double y0, double angle1, double angle2, double
     }
 }
  
+void init_partial_drop_config(double x0, double y0, double angle1, double angle2, int particle1, int particle2, 
+                              int col, double *configs[NPARTMAX], int color[NPARTMAX], int newcolor[NPARTMAX])   
+/* initialize configuration: drop at (x0,y0) for a range of particles */
+{
+    int i;
+    double dalpha, alpha;
+    double conf[2], pos[2];
+  
+    while (angle2 < angle1) angle2 += DPI;
+    if (particle2 - particle1 > 1) dalpha = (angle2 - angle1)/((double)(particle2 - particle1-1));
+    else dalpha = 0.0;
+    for (i=particle1; i<particle2; i++) 
+    {
+        alpha = angle1 + dalpha*((double)i);  
+        
+//         printf("alpha=%.5lg\n", alpha);
+      
+        pos[0] = x0;
+        pos[1] = y0;
+        vbilliard_xy(configs[i], alpha, pos);
+        color[i] = col;
+        newcolor[i] = col;
+    }
+}
+ 
 void init_sym_drop_config(double x0, double y0, double angle1, double angle2, double *configs[NPARTMAX])   
 /* initialize configuration with two symmetric partial drops */
 {
@@ -214,6 +247,71 @@ void init_line_config(double x0, double y0, double x1, double y1, double angle, 
         pos[1] = y0 + ((double)i)*dy;
         vbilliard_xy(configs[i], angle, pos);
     }
+}
+
+
+void draw_config_showtrails(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTMAX])
+/* draw the particles */
+{
+    int i;
+    double x0, y0, x1, y1, x2, y2, cosphi, sinphi, rgb[3], len;
+
+    glutSwapBuffers(); 
+    if (PAINT_INT) paint_billiard_interior();
+      
+    glLineWidth(PARTICLE_WIDTH);
+    
+    glEnable(GL_LINE_SMOOTH);
+
+    for (i=0; i<nparticles; i++)
+    {
+//         if (configs[i][2]<0.0) 
+//         {    
+//             vbilliard(configs[i]);
+//             if (!RAINBOW_COLOR)
+//             {
+//                 color[i]++;
+//                 if (color[i] >= NCOLORS) color[i] -= NCOLORS;
+//             }
+//         }
+            
+        configs[i][2] += DPHI; 
+        
+        cosphi = (configs[i][6] - configs[i][4])/configs[i][3];
+        sinphi = (configs[i][7] - configs[i][5])/configs[i][3];
+        len = configs[i][2] + LENGTH;
+        if (len > configs[i][3]) len = configs[i][3];
+        
+        x0 = configs[i][4];
+        y0 = configs[i][5]; 
+        x1 = configs[i][4] + configs[i][2]*cosphi;
+        y1 = configs[i][5] + configs[i][2]*sinphi;
+        x2 = configs[i][4] + len*cosphi;
+        y2 = configs[i][5] + len*sinphi;
+        
+        /* test whether particle does not escape billiard */
+        if ((TEST_ACTIVE)&&(active[i])) active[i] = xy_in_billiard(x1, y1);
+        
+        if (active[i])  
+        {
+            rgb_color_scheme(color[i], rgb);
+            glColor3f(rgb[0], rgb[1], rgb[2]);
+        
+            glBegin(GL_LINE_STRIP);
+            glVertex2d(SCALING_FACTOR*x0, SCALING_FACTOR*y0);
+            glVertex2d(SCALING_FACTOR*x2, SCALING_FACTOR*y2);
+            glEnd ();
+        }
+
+//         if (configs[i][2] > configs[i][3] - DPHI)
+//         {
+//             glBegin(GL_LINE_STRIP);
+//             glVertex2d(SCALING_FACTOR*x0, SCALING_FACTOR*y0);
+//             glVertex2d(SCALING_FACTOR*configs[i][6], SCALING_FACTOR*configs[i][7]);
+//             glEnd ();
+//         }
+    }
+    if (DRAW_BILLIARD) draw_billiard();    
 }
 
 
@@ -332,7 +430,8 @@ void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX], int a
             {    
 //                 printf("reflecting particle %i\n", i);
                 c = vbilliard(configs[i]);
-                if (c>=0) color[i]++;
+//                 if (c>=0) color[i]++;
+                if ((!RAINBOW_COLOR)&&(c>=0)) color[i]++;
                 if (!RAINBOW_COLOR)
                 {
                     color[i]++;
@@ -354,7 +453,7 @@ void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX], int a
 
 void animation()
 {
-    double time, dt, alpha, r;
+    double time, dt, alpha, r, rgb[3];
     double *configs[NPARTMAX];
     int i, j, resamp = 1, s, i1, i2;
     int *color, *newcolor, *active;
@@ -430,15 +529,27 @@ void animation()
         }
 
         sleep(SLEEP1);
+    
+    
+    /* initialize drops in different colors */
+    init_partial_drop_config(0.0, 0.0, 0.0, DPI, 0, 2*NPART/5, 0, configs, color, newcolor);
+    init_partial_drop_config(0.0, 0.8, 0.0, DPI, 2*NPART/5, 4*NPART/5, 10, configs, color, newcolor);
+    init_partial_drop_config(1.2, 0.1, 0.0, DPI, 4*NPART/5, NPART, 36, configs, color, newcolor);
   
     for (i=0; i<=NSTEPS; i++)
     {
         graph_movie(TIME, newcolor, configs, active);
         
-        draw_config(newcolor, configs, active);
+        if (SHOWTRAILS) draw_config_showtrails(newcolor, configs, active);
+        else draw_config(newcolor, configs, active);
+//         draw_config(newcolor, configs, active);
         if (DRAW_BILLIARD) draw_billiard();
         for (j=0; j<NPARTMAX; j++) color[j] = newcolor[j];
-
+        
+        /* draw initial points */
+        draw_initial_condition_circle(0.0, 0.0, 0.02, 0);
+        draw_initial_condition_circle(0.0, 0.8, 0.02, 10);
+        draw_initial_condition_circle(1.2, 0.1, 0.02, 36);
         
 	if (MOVIE) 
         {

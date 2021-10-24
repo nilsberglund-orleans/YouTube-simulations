@@ -39,10 +39,12 @@
 
 /* General geometrical parameters */
 
-#define WINWIDTH 	1280  /* window width */
+// #define WINWIDTH 	1280  /* window width */
+#define WINWIDTH 	720  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define NX 1280          /* number of grid points on x axis */
+// #define NX 1280          /* number of grid points on x axis */
+#define NX 720          /* number of grid points on x axis */
 #define NY 720          /* number of grid points on y axis */
 // #define NX 640          /* number of grid points on x axis */
 // #define NY 360          /* number of grid points on y axis */
@@ -52,22 +54,24 @@
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
-#define YMIN -1.125
-#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+#define YMIN -2.0
+#define YMAX 2.0	/* y interval for 9/16 aspect ratio */
+// #define YMIN -1.125
+// #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
 #define JULIA_SCALE 1.0 /* scaling for Julia sets */
 
 /* Choice of the billiard table, see list in global_pdes.c  */
 
-#define B_DOMAIN 9      /* choice of domain shape */
+#define B_DOMAIN 19      /* choice of domain shape */
 
 #define CIRCLE_PATTERN 0    /* pattern of circles, see list in global_pdes.c */
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 
-#define LAMBDA 0.3	    /* parameter controlling the dimensions of domain */
-#define MU 0.05	            /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.0	    /* parameter controlling the dimensions of domain */
+#define MU 1.75	            /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 3            /* depth of computation of Menger gasket */
@@ -78,13 +82,25 @@
 #define NGRIDX 15            /* number of grid point for grid of disks */
 #define NGRIDY 20           /* number of grid point for grid of disks */
 
+#define X_SHOOTER -0.2
+#define Y_SHOOTER -0.6
+#define X_TARGET 0.4
+#define Y_TARGET 0.7        /* shooter and target positions in laser fight */
+
+#define ISO_XSHIFT_LEFT -1.65  
+#define ISO_XSHIFT_RIGHT 0.4
+#define ISO_YSHIFT_LEFT -0.05
+#define ISO_YSHIFT_RIGHT -0.05 
+#define ISO_SCALE 0.85           /* coordinates for isospectral billiards */
+
 /* You can add more billiard tables by adapting the functions */
 /* xy_in_billiard and draw_billiard in sub_wave.c */
 
 /* Physical patameters of wave equation */
 
 // #define DT 0.00000005
-#define DT 0.000000005
+#define DT 0.00000001
+// #define DT 0.000000005
 // #define DT 0.000000005
 #define HBAR 1.0
 
@@ -94,8 +110,9 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 200      /* number of frames of movie */
-#define NVID 1200         /* number of iterations between images displayed on screen */
+#define NSTEPS 1400      /* number of frames of movie */
+#define NVID 2000         /* number of iterations between images displayed on screen */
+// #define NVID 1200         /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
 
@@ -111,7 +128,7 @@
 
 /* Plot type, see list in global_pdes.c  */
 
-#define PLOT 10
+#define PLOT 11
 
 
 /* Color schemes, see list in global_pdes.c  */
@@ -132,8 +149,6 @@
 #define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
 #define HUEMEAN 150.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -150.0      /* amplitude of variation of hue for color scheme C_HUE */
-
-#include "hsluv.c"
 
 #include "global_pdes.c"
 #include "sub_wave.c"
@@ -401,7 +416,7 @@ void animation()
     printf("Integration step %.3lg\n", intstep);
 
     /* initialize wave wave function */
-    init_coherent_state(-1.2, 0.0, 20.0, 0.0, 0.25, phi, psi, xy_in);
+    init_coherent_state(0.5, 0.0, 40.0, 0.0, 0.25, phi, psi, xy_in);
 //     init_coherent_state(0.0, 0.0, 0.0, 5.0, 0.03, phi, psi, xy_in);
 //     init_coherent_state(-0.5, 0.0, 1.0, 1.0, 0.05, phi, psi, xy_in);
     

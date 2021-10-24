@@ -1,5 +1,8 @@
 /* Global variables and parameters for wave_billiard, heat and schrodinger */
 
+// #include "hsluv.c"
+
+
 /* Basic math */
 
 #define PI 	3.141592654
@@ -33,13 +36,17 @@
 #define D_TWO_PARABOLAS 19   /* two facing parabolic antennas */
 
 #define D_CIRCLES 20    /* several circles */
+#define D_CIRCLES_IN_RECT 201   /* several circles in a rectangle */
 
 #define D_FOUR_PARABOLAS 31     /* four parabolas with axes in NSEW directions */
 #define D_POLY_PARABOLAS 32     /* polygon with parabolic sides */
-#define D_PENROSE 33            /* Penrose illumination problem */
+#define D_PENROSE 33            /* Penrose unilluminable room */
 #define D_HYPERBOLA 34          /* one branch of hyperbola */
+#define D_TOKARSKY 35           /* Tokarsky unilluminable room */
 
-#define NMAXCIRCLES 1000        /* total number of circles (must be at least NCX*NCY for square grid) */
+#define D_ISOSPECTRAL 37        /* isospectral billiards */
+
+#define NMAXCIRCLES 600        /* total number of circles (must be at least NCX*NCY for square grid) */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -48,7 +55,7 @@
 #define C_RAND_POISSON 4    /* random Poisson point process */
 #define C_CLOAK 5           /* invisibility cloak */
 #define C_CLOAK_A 6         /* first optimized invisibility cloak */
-
+#define C_LASER 7           /* laser fight in a room of mirrors */
 #define C_POISSON_DISC 8    /* Poisson disc sampling */
 
 #define C_GOLDEN_MEAN 10    /* pattern based on vertical shifts by golden mean */
@@ -102,6 +109,18 @@
 #define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
 #define C_HUE 1          /* color scheme modifies hue */
 #define C_PHASE 2        /* color scheme shows phase */
+#define C_ONEDIM 3       /* use preset 1d color scheme (for Turbo, Viridis, Magma, Inferno, Plasma) */
+
+/* Color palettes */
+
+#define COL_JET 0       /* JET color palette */
+#define COL_HSLUV 1     /* HSLUV color palette (perceptually uniform) */
+
+#define COL_TURBO 10     /* TURBO color palette (by Anton Mikhailov) */
+#define COL_VIRIDIS 11   /* Viridis color palette */
+#define COL_MAGMA 12     /* Magma color palette */
+#define COL_INFERNO 13   /* Inferno color palette */
+#define COL_PLASMA 14    /* Plasma color palette */
 
 
 double circlex[NMAXCIRCLES], circley[NMAXCIRCLES], circlerad[NMAXCIRCLES];      /* position and radius of circular scatterers */

@@ -50,23 +50,23 @@
 #define NX 1280          /* number of grid points on x axis */
 #define NY 720          /* number of grid points on y axis */
 
-#define XMIN -1.777777778
-#define XMAX 1.777777778	/* x interval */
-#define YMIN -1.0
-#define YMAX 1.0	/* y interval for 9/16 aspect ratio */
-// #define XMIN -2.0
-// #define XMAX 2.0	/* x interval */
-// #define YMIN -1.125
-// #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+// #define XMIN -1.777777778
+// #define XMAX 1.777777778	/* x interval */
+// #define YMIN -1.0
+// #define YMAX 1.0	/* y interval for 9/16 aspect ratio */
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
 #define JULIA_SCALE 1.0 /* scaling for Julia sets */
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 15      /* choice of domain shape, see list in global_pdes.c */
-#define B_DOMAIN_B 15    /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 20      /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN_B 20    /* choice of domain shape, see list in global_pdes.c */
 
-#define CIRCLE_PATTERN 2       /* pattern of circles, see list in global_pdes.c */
+#define CIRCLE_PATTERN 1       /* pattern of circles, see list in global_pdes.c */
 #define CIRCLE_PATTERN_B 11     /* pattern of circles, see list in global_pdes.c */
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
@@ -85,6 +85,17 @@
 #define NGRIDX 15            /* number of grid point for grid of disks */
 #define NGRIDY 20           /* number of grid point for grid of disks */
 
+#define X_SHOOTER -0.2
+#define Y_SHOOTER -0.6
+#define X_TARGET 0.4
+#define Y_TARGET 0.7        /* shooter and target positions in laser fight */
+
+#define ISO_XSHIFT_LEFT -1.65  
+#define ISO_XSHIFT_RIGHT 0.4
+#define ISO_YSHIFT_LEFT -0.05
+#define ISO_YSHIFT_RIGHT -0.05 
+#define ISO_SCALE 0.85           /* coordinates for isospectral billiards */
+
 /* You can add more billiard tables by adapting the functions */
 /* xy_in_billiard and draw_billiard below */
 
@@ -98,14 +109,8 @@
 #define AMPLITUDE 0.025      /* amplitude of periodic excitation */ 
 #define COURANT 0.02       /* Courant number */
 #define COURANTB 0.004    /* Courant number in medium B */
-// #define COURANTB 0.005    /* Courant number in medium B */
-// #define COURANTB 0.008    /* Courant number in medium B */
 #define GAMMA 0.0      /* damping factor in wave equation */
-// #define GAMMA 1.0e-8      /* damping factor in wave equation */
 #define GAMMAB 1.0e-8           /* damping factor in wave equation */
-// #define GAMMAB 1.0e-6           /* damping factor in wave equation */
-// #define GAMMAB 2.0e-4           /* damping factor in wave equation */
-// #define GAMMAB 2.5e-4           /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
 #define GAMMA_TOPBOT 1.0e-6      /* damping factor on boundary */
 #define KAPPA 0.0       /* "elasticity" term enforcing oscillations */
@@ -122,7 +127,7 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 4500      /* number of frames of movie */
+#define NSTEPS 3750      /* number of frames of movie */
 #define NVID 25          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
 #define INITIAL_TIME 200    /* time after which to start saving frames */
@@ -169,8 +174,6 @@
 #define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
 #define VMAX 5.0       /* max value of wave amplitude */
 
-
-#include "hsluv.c"
 
 #include "global_pdes.c"        /* constants and global variables */
 #include "sub_wave.c"           /* common functions for wave_billiard, heat and schrodinger */

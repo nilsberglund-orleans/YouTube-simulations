@@ -48,37 +48,31 @@
 /* General geometrical parameters */
 
 #define WINWIDTH 	1280  /* window width */
-// #define WINWIDTH 	720  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
 #define NX 1280          /* number of grid points on x axis */
-// #define NX 720          /* number of grid points on x axis */
 #define NY 720          /* number of grid points on y axis */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
-// #define XMIN -1.6
-// #define XMAX 1.6	/* x interval */
-// #define YMIN -1.6
-// #define YMAX 1.6	/* y interval for 9/16 aspect ratio */
 
 #define JULIA_SCALE 1.0 /* scaling for Julia sets */
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 34      /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 32      /* choice of domain shape, see list in global_pdes.c */
 
-#define CIRCLE_PATTERN 8   /* pattern of circles, see list in global_pdes.c */
+#define CIRCLE_PATTERN 7   /* pattern of circles, see list in global_pdes.c */
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 
-#define LAMBDA 0.6	    /* parameter controlling the dimensions of domain */
-#define MU 0.3              /* parameter controlling the dimensions of domain */
-#define NPOLY 3             /* number of sides of polygon */
-#define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define LAMBDA 0.0	    /* parameter controlling the dimensions of domain */
+#define MU 1.0              /* parameter controlling the dimensions of domain */
+#define NPOLY 7             /* number of sides of polygon */
+#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 4            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
@@ -86,6 +80,17 @@
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
 #define NGRIDX 16           /* number of grid point for grid of disks */
 #define NGRIDY 20           /* number of grid point for grid of disks */
+
+#define X_SHOOTER -0.2
+#define Y_SHOOTER -0.6
+#define X_TARGET 0.4
+#define Y_TARGET 0.7        /* shooter and target positions in laser fight */
+
+#define ISO_XSHIFT_LEFT -1.65  
+#define ISO_XSHIFT_RIGHT 0.4
+#define ISO_YSHIFT_LEFT -0.05
+#define ISO_YSHIFT_RIGHT -0.05 
+#define ISO_SCALE 0.85           /* coordinates for isospectral billiards */
 
 /* You can add more billiard tables by adapting the functions */
 /* xy_in_billiard and draw_billiard below */
@@ -99,9 +104,9 @@
 #define OMEGA 0.002        /* frequency of periodic excitation */
 #define AMPLITUDE 1.0      /* amplitude of periodic excitation */ 
 #define COURANT 0.02       /* Courant number */
-#define COURANTB 0.01      /* Courant number in medium B */
+#define COURANTB 0.02      /* Courant number in medium B */
 #define GAMMA 0.0          /* damping factor in wave equation */
-#define GAMMAB 1.0e-6           /* damping factor in wave equation */
+#define GAMMAB 5.0e-3           /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
 #define GAMMA_TOPBOT 1.0e-7     /* damping factor on boundary */
 #define KAPPA 0.0           /* "elasticity" term enforcing oscillations */
@@ -118,8 +123,8 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 4050      /* number of frames of movie */
-#define NVID 32          /* number of iterations between images displayed on screen */
+#define NSTEPS 5000      /* number of frames of movie */
+#define NVID 50          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
@@ -133,48 +138,49 @@
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 0.2          /* amplitude of initial condition */
-#define INITIAL_VARIANCE 0.002   /* variance of initial condition */
-#define INITIAL_WAVELENGTH  0.1 /* wavelength of initial condition */
+#define INITIAL_AMP 0.75         /* amplitude of initial condition */
+#define INITIAL_VARIANCE 0.0005  /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.02 /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 
 #define PLOT 1
 
-#define PLOT_B 0        /* plot type for second movie */
+#define PLOT_B 3        /* plot type for second movie */
 
 /* Color schemes */
 
-#define COLOR_PALETTE 0     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 13     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
-#define COLOR_SCHEME 1   /* choice of color scheme, see list in global_pdes.c  */
+#define COLOR_SCHEME 3   /* choice of color scheme, see list in global_pdes.c  */
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
-#define SLOPE 0.08        /* sensitivity of color on wave amplitude */
-// #define SLOPE 0.05        /* sensitivity of color on wave amplitude */
+#define SLOPE 0.15        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-#define E_SCALE 200.0     /* scaling factor for energy representation */
-// #define E_SCALE 2500.0     /* scaling factor for energy representation */
+#define E_SCALE 100.0     /* scaling factor for energy representation */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
 #define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
 #define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
-#define HUEMEAN 220.0    /* mean value of hue for color scheme C_HUE */
-#define HUEAMP -230.0      /* amplitude of variation of hue for color scheme C_HUE */
+#define HUEMEAN 180.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
+
+#define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
 
 /* For debugging purposes only */
 #define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
 #define VMAX 10.0       /* max value of wave amplitude */
 
-#include "hsluv.c"
-
 #include "global_pdes.c"        /* constants and global variables */
 #include "sub_wave.c"           /* common functions for wave_billiard, heat and schrodinger */
 #include "wave_common.c"        /* common functions for wave_billiard, wave_comparison, etc */
 
+FILE *time_series_left, *time_series_right;
 
 double courant2, courantb2;  /* Courant parameters squared */
 
@@ -200,11 +206,18 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
     #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta,x,y,c,cc,gamma)
     for (i=0; i<NX; i++){
         for (j=0; j<NY; j++){
-            if (xy_in[i][j])
+//             if (xy_in[i][j])
+//             {
+//                 c = COURANT;
+//                 cc = courant2;
+//                 gamma = GAMMA;
+//             }
+            if (xy_in[i][j] != 0)
             {
                 c = COURANT;
                 cc = courant2;
-                gamma = GAMMA;
+                if (xy_in[i][j] == 1) gamma = GAMMA;
+                else gamma = GAMMAB;
             }
             else if (TWOSPEEDS)
             {
@@ -213,7 +226,7 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                 gamma = GAMMAB;
             }
 
-            if ((TWOSPEEDS)||(xy_in[i][j])){
+            if ((TWOSPEEDS)||(xy_in[i][j] != 0)){
                 /* discretized Laplacian for various boundary conditions */
                 if ((B_COND == BC_DIRICHLET)||(B_COND == BC_ABSORBING))
                 {
@@ -320,11 +333,18 @@ void evolve_wave(double *phi[NX], double *psi[NX], double *phi_tmp[NX], double *
 
 void animation()
 {
-    double time, scale;
-    double *phi[NX], *psi[NX], *phi_tmp[NX], *psi_tmp[NX];
+    double time, scale, ratio, startleft[2], startright[2]; 
+    double *phi[NX], *psi[NX], *phi_tmp[NX], *psi_tmp[NX], *total_energy[NX];
     short int *xy_in[NX];
-    int i, j, s;
+    int i, j, s, sample_left[2], sample_right[2];
     static int counter = 0;
+    long int wave_value;
+    
+    if (SAVE_TIME_SERIES)
+    {
+        time_series_left = fopen("wave_left.dat", "w");
+        time_series_right = fopen("wave_right.dat", "w");
+    }
 
     /* Since NX and NY are big, it seemed wiser to use some memory allocation here */
     for (i=0; i<NX; i++)
@@ -333,24 +353,46 @@ void animation()
         psi[i] = (double *)malloc(NY*sizeof(double));
         phi_tmp[i] = (double *)malloc(NY*sizeof(double));
         psi_tmp[i] = (double *)malloc(NY*sizeof(double));
+        total_energy[i] = (double *)malloc(NY*sizeof(double));
         xy_in[i] = (short int *)malloc(NY*sizeof(short int));
     }
     
     /* initialise positions and radii of circles */
-    if (B_DOMAIN == D_CIRCLES) init_circle_config();
+    if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)) init_circle_config();
 
     courant2 = COURANT*COURANT;
     courantb2 = COURANTB*COURANTB;
 
     /* initialize wave with a drop at one point, zero elsewhere */
-    init_circular_wave(0.0, -LAMBDA, phi, psi, xy_in);
+//     init_circular_wave(0.0, -LAMBDA, phi, psi, xy_in);
     
+    /* initialize total energy table */
+    if ((PLOT == P_MEAN_ENERGY)||(PLOT_B == P_MEAN_ENERGY))
+        for (i=0; i<NX; i++)
+            for (j=0; j<NY; j++) 
+                total_energy[i][j] = 0.0;
+    
+    ratio = (XMAX - XMIN)/8.4;  /* for Tokarsky billiard */
+    
+    isospectral_initial_point(0.25, 0.0, startleft, startright);    /* for isospectral billiards */
+    xy_to_ij(startleft[0], startleft[1], sample_left);
+    xy_to_ij(startright[0], startright[1], sample_right);
+//     printf("xleft = (%.3f, %.3f) xright = (%.3f, %.3f)\n", xin_left, yin_left, xin_right, yin_right);
     
 //     init_wave_flat(phi, psi, xy_in);
     
 //     init_wave_plus(LAMBDA - 0.3*MU, 0.5*MU, phi, psi, xy_in);
 //     init_wave(LAMBDA - 0.3*MU, 0.5*MU, phi, psi, xy_in);
-//     init_wave(0.0, 0.0, phi, psi, xy_in);
+//     init_circular_wave(X_SHOOTER, Y_SHOOTER, phi, psi, xy_in);
+    init_circular_wave(-LAMBDA, 0.0, phi, psi, xy_in);
+//     init_circular_wave(0.5, 0.5, phi, psi, xy_in);
+//     add_circular_wave(-1.0, 0.0, LAMBDA, phi, psi, xy_in);
+//     add_circular_wave(1.0, -LAMBDA, 0.0, phi, psi, xy_in);
+//     add_circular_wave(-1.0, 0.0, -LAMBDA, phi, psi, xy_in);
+    
+//     init_circular_wave_xplusminus(startleft[0], startleft[1], startright[0], startright[1], phi, psi, xy_in);
+//     init_circular_wave_xplusminus(-0.9, 0.0, 0.81, 0.0, phi, psi, xy_in);
+//     init_circular_wave(-2.0*ratio, 0.0, phi, psi, xy_in);
 //     init_planar_wave(XMIN + 0.015, 0.0, phi, psi, xy_in);
 //     init_planar_wave(XMIN + 0.02, 0.0, phi, psi, xy_in);
 //     init_planar_wave(XMIN + 0.8, 0.0, phi, psi, xy_in);
@@ -364,8 +406,11 @@ void animation()
 
     blank();
     glColor3f(0.0, 0.0, 0.0);
-    draw_wave(phi, psi, xy_in, 1.0, 0, PLOT);
+//     draw_wave(phi, psi, xy_in, 1.0, 0, PLOT);
+    draw_wave_e(phi, psi, total_energy, xy_in, 1.0, 0, PLOT);
     draw_billiard();
+    
+    if (DRAW_COLOR_SCHEME) draw_color_scheme(1.7, YMIN + 0.1, 1.9, YMAX - 0.1, PLOT, -12.0, 12.0);
 
     glutSwapBuffers();
 
@@ -385,21 +430,31 @@ void animation()
         }
         else scale = 1.0;
 
-        draw_wave(phi, psi, xy_in, scale, i, PLOT);
+//         draw_wave(phi, psi, xy_in, scale, i, PLOT);
+        draw_wave_e(phi, psi, total_energy, xy_in, scale, i, PLOT);
         for (j=0; j<NVID; j++) 
         {
             evolve_wave(phi, psi, phi_tmp, psi_tmp, xy_in);
+            if (SAVE_TIME_SERIES)
+            {
+                wave_value = (long int)(phi[sample_left[0]][sample_left[1]]*1.0e16);
+                fprintf(time_series_left, "%019ld\n", wave_value);
+                wave_value = (long int)(phi[sample_right[0]][sample_right[1]]*1.0e16);
+                fprintf(time_series_right, "%019ld\n", wave_value);
+                if ((j == 0)&&(i%10 == 0)) printf("Frame %i of %i\n", i, NSTEPS);
+//                 fprintf(time_series_right, "%.15f\n", phi[sample_right[0]][sample_right[1]]);
+            }
 //             if (i % 10 == 9) oscillate_linear_wave(0.2*scale, 0.15*(double)(i*NVID + j), -1.5, YMIN, -1.5, YMAX, phi, psi);
         }
         
         draw_billiard();
         
+        if (DRAW_COLOR_SCHEME) draw_color_scheme(1.7, YMIN + 0.1, 1.9, YMAX - 0.1, PLOT, -12.0, 12.0);
+        
         /* add oscillating waves */
-//         if (i%160 == 159)
-        if (i%150 == 149)
+        if (i%345 == 344)
         {
-                add_circular_wave(1.0, 0.0, LAMBDA, phi, psi, xy_in);
-                add_circular_wave(1.0, 0.0, -LAMBDA, phi, psi, xy_in);
+                add_circular_wave(1.0, -LAMBDA, 0.0, phi, psi, xy_in);
         }
 
 	glutSwapBuffers();
@@ -411,7 +466,9 @@ void animation()
             
             if ((i >= INITIAL_TIME)&&(DOUBLE_MOVIE))
             {
-                draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
+//                 draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
+                draw_wave_e(phi, psi, total_energy, xy_in, scale, i, PLOT_B);
+                if (DRAW_COLOR_SCHEME) draw_color_scheme(1.7, YMIN + 0.1, 1.9, YMAX - 0.1, PLOT_B, -12.0, 12.0);
                 draw_billiard();
                 glutSwapBuffers();
                 save_frame_counter(NSTEPS + 21 + counter);
@@ -434,14 +491,16 @@ void animation()
     {
         if (DOUBLE_MOVIE) 
         {
-            draw_wave(phi, psi, xy_in, scale, i, PLOT);
+//             draw_wave(phi, psi, xy_in, scale, i, PLOT);
+            draw_wave_e(phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT);
             draw_billiard();
             glutSwapBuffers();
         }
         for (i=0; i<MID_FRAMES; i++) save_frame();
         if (DOUBLE_MOVIE) 
         {
-            draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
+//             draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
+            draw_wave_e(phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT_B);
             draw_billiard();
             glutSwapBuffers();
 //             for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
@@ -456,8 +515,16 @@ void animation()
         free(psi[i]);
         free(phi_tmp[i]);
         free(psi_tmp[i]);
+        free(total_energy[i]);
         free(xy_in[i]);
     }
+    
+    if (SAVE_TIME_SERIES)
+    {
+        fclose(time_series_left);
+        fclose(time_series_right);
+    }
+
 
 }
 

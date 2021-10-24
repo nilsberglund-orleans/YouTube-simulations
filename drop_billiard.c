@@ -30,14 +30,14 @@
 
 #define MOVIE 0         /* set to 1 to generate movie */
 
-// #define WINWIDTH 	720   /* window width */
-#define WINWIDTH 	1280  /* window width */
+#define WINWIDTH 	720   /* window width */
+// #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
-// #define XMIN -1.125
-// #define XMAX 1.125	/* x interval */
+// #define XMIN -2.0
+// #define XMAX 2.0	/* x interval */
+#define XMIN -1.125
+#define XMAX 1.125	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
@@ -65,9 +65,9 @@
 // #define LAMBDA 3.75738973	/* sin(36°)/sin(9°) for 5-star shape with 90° angles */
 // #define LAMBDA -1.73205080756888	/* -sqrt(3) for Reuleaux triangle */
 // #define LAMBDA 1.73205080756888	/* sqrt(3) for triangle tiling plane */
-#define MU 0.9        /* second parameter controlling shape of billiard */
+#define MU 1.0       /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
-#define NPOLY 4             /* number of sides of polygon */
+#define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
 #define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
@@ -78,10 +78,10 @@
 #define NPART 10000	/* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 
-#define NSTEPS 4200         /* number of frames of movie */
-#define TIME 100             /* time between movie frames, for fluidity of real-time simulation */ 
+#define NSTEPS 5000         /* number of frames of movie */
+#define TIME 150             /* time between movie frames, for fluidity of real-time simulation */ 
 #define DPHI 0.0001         /* integration step */
-#define NVID 50             /* number of iterations between images displayed on screen */
+#define NVID 75             /* number of iterations between images displayed on screen */
 
 /* Decreasing TIME accelerates the animation and the movie               */
 /* For constant speed of movie, TIME*DPHI should be kept constant        */
@@ -99,12 +99,14 @@
 
 /* color and other graphical parameters */
 
-#define NCOLORS 12          /* number of colors */
-#define COLORSHIFT 0        /* hue of initial color */ 
+#define COLOR_PALETTE 1     /* Color palette, see list in global_pdes.c  */
+
+#define NCOLORS 6           /* number of colors */
+#define COLORSHIFT 3        /* hue of initial color */ 
 #define RAINBOW_COLOR 0     /* set to 1 to use different colors for all particles */
 #define NSEG 100            /* number of segments of boundary */
 #define BILLIARD_WIDTH 4    /* width of billiard */
-#define FRONT_WIDTH 3       /* width of wave front */
+#define FRONT_WIDTH 4       /* width of wave front */
 
 #define BLACK 1             /* set to 1 for black background */
 #define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 

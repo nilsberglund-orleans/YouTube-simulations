@@ -1,5 +1,8 @@
+#include "colormaps.c"
+
 #define DUMMY_ABSORBING -1000.0  /* dummy value of config[0] for absorbing circles */
 #define BOUNDARY_SHIFT 100000.0    /* shift of boundary parametrisation for circles in domain */
+#define DUMMY_SIDE_ABS -10000      /* dummy value of returned side for absorbing circles */
 
 long int global_time = 0;    /* counter to keep track of global time of simulation */
 int nparticles=NPART; 
@@ -133,44 +136,6 @@ void init()		/* initialisation of window */
 }
 
 
-void hsl_to_rgb(double h, double s, double l, double rgb[3])       /* color conversion from HSL to RGB */
-/* h = hue, s = saturation, l = luminosity */
-{
-    double c = 0.0, m = 0.0, x = 0.0;
-    
-    c = (1.0 - fabs(2.0 * l - 1.0)) * s;
-    m = 1.0 * (l - 0.5 * c);
-    x = c * (1.0 - fabs(fmod(h / 60.0, 2) - 1.0));
-        
-    if (h >= 0.0 && h < 60.0)
-    {
-        rgb[0] = c+m; rgb[1] = x+m; rgb[2] = m;
-    }
-    else if (h < 120.0)
-    {
-        rgb[0] = x+m; rgb[1] = c+m; rgb[2] = m;
-    }
-    else if (h < 180.0)
-    {
-        rgb[0] = m; rgb[1] = c+m; rgb[2] = x+m;
-    }
-    else if (h < 240.0)
-    {
-        rgb[0] = m; rgb[1] = x+m; rgb[2] = c+m;
-    }
-    else if (h < 300.0)
-    {
-        rgb[0] = x+m; rgb[1] = m; rgb[2] = c+m;
-    }
-    else if (h < 360.0)
-    {
-        rgb[0] = c+m; rgb[1] = m; rgb[2] = x+m;
-    }
-    else
-    {
-        rgb[0] = m; rgb[1] = m; rgb[2] = m;
-    }
-} 
 
 void rgb_color_scheme(int i, double rgb[3]) /* color scheme */
 {
@@ -185,6 +150,7 @@ void rgb_color_scheme(int i, double rgb[3]) /* color scheme */
     hsl_to_rgb(hue, r, 0.5, rgb);
     /* saturation = r, luminosity = 0.5 */ 
 }
+
 
 void rgb_color_scheme_lum(int i, double lum, double rgb[3]) /* color scheme */
 {
@@ -349,6 +315,18 @@ void draw_colored_circle(double x, double y, double r, int nseg, double rgb[3])
 }
 
 
+void draw_initial_condition_circle(double x, double y, double r, int color)
+/* draws a colored circle to mark initial condition */
+{
+    double rgb[3];
+    
+    rgb_color_scheme(color, rgb);
+    draw_colored_circle(x, y, r, NSEG, rgb);
+    rgb[0] = 0.0; rgb[1] = 0.0; rgb[2] = 0.0;
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glLineWidth(4);
+    draw_circle(x, y, r, NSEG);
+}
 
 int in_circle(double x, double y, double r)
 /* test whether (x,y) is in circle of radius r */
@@ -1163,10 +1141,13 @@ void draw_billiard()      /* draws the billiard boundary */
             {
                 if (circleactive[k] == 2) 
                 {
-                    hsl_to_rgb(150.0, 0.9, 0.4, rgb);
-                    glColor3f(rgb[0], rgb[1], rgb[2]);
+//                     hsl_to_rgb(150.0, 0.9, 0.4, rgb);
+//                     glColor3f(rgb[0], rgb[1], rgb[2]);
+                    glColor3f(0.0, 1.0, 0.0);
+                    rgb[0] = 0.0;   rgb[1] = 0.9;   rgb[2] = 0.0;
+                    draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
                 }
-                draw_circle(circlex[k], circley[k], circlerad[k], NSEG);                
+                else draw_circle(circlex[k], circley[k], circlerad[k], NSEG);                
                 init_billiard_color();
             }
             
@@ -1226,6 +1207,55 @@ void draw_billiard()      /* draws the billiard boundary */
             }
             glEnd ();
             break;
+        }
+        case (D_CIRCLES_IN_TORUS):
+        {
+            rgb[0] = 0.0; rgb[1] = 0.0; rgb[2] = 0.0;
+            for (k=0; k<ncircles; k++) if (circleactive[k])
+            {
+//                 printf("k = %i, color = %i\n", k, circlecolor[k]);
+                if (circlecolor[k] == 0) draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
+                else
+                {
+                    if (newcircle[k] >= 1)
+                    {
+                        rgb_color_scheme_lum(circlecolor[k], 0.85, rgb1);
+                        newcircle[k]--;
+                    }
+                    else rgb_color_scheme(circlecolor[k], rgb1);
+                    draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb1);
+                }
+            }
+            init_billiard_color();
+            for (k=0; k<ncircles; k++) if (circleactive[k] >= 1)
+            {
+                if (circleactive[k] == 2) 
+                {
+                    hsl_to_rgb(150.0, 0.9, 0.4, rgb);
+                    glColor3f(rgb[0], rgb[1], rgb[2]);
+                }
+                draw_circle(circlex[k], circley[k], circlerad[k], NSEG);                
+                init_billiard_color();
+            }
+            
+            /* draw shooter position for laser pattern */
+            if (CIRCLE_PATTERN == C_LASER)
+            {
+                hsl_to_rgb(0.0, 0.9, 0.5, rgb);
+                glColor3f(rgb[0], rgb[1], rgb[2]);
+                
+                draw_circle(x_shooter, y_shooter, circlerad[ncircles-1], NSEG);
+            }
+            
+            init_billiard_color();
+
+            glBegin(GL_LINE_LOOP);    
+            glVertex2d(LAMBDA, -1.0);
+            glVertex2d(LAMBDA, 1.0);
+            glVertex2d(-LAMBDA, 1.0);
+            glVertex2d(-LAMBDA, -1.0);
+            glEnd();
+            break; 
         }
         default: 
         {
@@ -3924,7 +3954,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
  int vcircles_xy(double config[8], double alpha, double pos[2])
  /* determine initial configuration for start at point pos = (x,y) */
  {
-	double c0, s0, b, c, t, theta, delta, margin = 1.0e-12, tmin, rlarge = 1.0e10;
+	double c0, s0, b, c, t, theta, delta, margin = 1.0e-12, tmin, rlarge = 1000.0;
         double tval[ncircles], xint[ncircles], yint[ncircles], phiint[ncircles];
 	int i, nt = 0, nscat[ncircles], ntmin;
 
@@ -3991,8 +4021,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         }
         else    /* there is no intersection - set dummy values */
         {
-            config[0] = 0.0;
-            config[1] = 0.0;
+            config[0] = DUMMY_ABSORBING;
+            config[1] = PI;
             config[2] = 0.0;
             config[3] = rlarge;
             config[4] = pos[0];    /* start position */
@@ -4012,7 +4042,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
 
         c = pos_circles(config, pos, &alpha);
         
-        vcircles_xy(config, alpha, pos);
+        c = vcircles_xy(config, alpha, pos);
 	
 	return(c);
  }
@@ -4125,9 +4155,11 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             {
                 config[0] = DUMMY_ABSORBING;
                 config[1] = PI;
+//                 return(DUMMY_SIDE_ABS);
             }
             
-            return(nscat[ntmin]);
+            if (ABSORBING_CIRCLES) return(DUMMY_SIDE_ABS);
+            else return(nscat[ntmin]);
         }
         else    /* there is no intersection with the circles - compute intersection with boundary */
         {
@@ -4150,13 +4182,14 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
 
         c = pos_circles_in_rect(config, pos, &alpha);
         
-        vcircles_in_rect_xy(config, alpha, pos);
+//         vcircles_in_rect_xy(config, alpha, pos);
+        c = vcircles_in_rect_xy(config, alpha, pos);
 	
 	return(c);
  }
  
 
- /****************************************************************************************/
+/****************************************************************************************/
 /* billiard with circular scatterers in a genus n surface (polygon with identifies opposite sides) */
 /****************************************************************************************/
 
@@ -4298,6 +4331,151 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
  }
  
 
+/****************************************************************************************/
+/* billiard with circular scatterers in a torus (rectangle with periodic boundary conditions) */
+/****************************************************************************************/
+
+ int pos_circles_in_torus(double conf[2], double pos[2], double *alpha)
+ /* determine position on boundary of circle */
+ /* position varies between 0 and ncircles*2Pi for circles and between -BOUNDARY_SHIFT and 0 for boundary*/
+ /* returns number of hit circle */
+ {
+	double angle;
+        int ncirc, c;
+        
+        if (conf[0] >= 0)
+        {
+            ncirc = (int)(conf[0]/DPI);
+            if (ncirc >= ncircles) ncirc = ncircles - 1;
+        
+            angle = conf[0] - (double)ncirc*DPI;
+
+            pos[0] = circlex[ncirc] + circlerad[ncirc]*cos(angle);
+            pos[1] = circley[ncirc] + circlerad[ncirc]*sin(angle);
+        
+            *alpha = angle + PID + conf[1]; 
+        
+            return(ncirc);
+        }
+        else /* particle starts on boundary */
+        {
+//             conf[0] += 4.0*(LAMBDA + 1.0);
+            conf[0] += BOUNDARY_SHIFT;
+            c = pos_rectangle(conf, pos, alpha);
+            
+//             conf[0] -= 4.0*(LAMBDA + 1.0);
+            conf[0] -= BOUNDARY_SHIFT;
+            
+            return(-c-1);
+        }
+ }
+ 
+ 
+ int vcircles_in_torus_xy(double config[8], double alpha, double pos[2])
+ /* determine initial configuration for start at point pos = (x,y) */
+//  double config[8], alpha, pos[2];
+
+ {
+	double c0, s0, b, c, t, theta, delta, margin = 1.0e-12, tmin, rlarge = 1.0e10;
+        double tval[ncircles], xint[ncircles], yint[ncircles], phiint[ncircles];
+	int i, nt = 0, nscat[ncircles], ntmin, side;
+
+        c0 = cos(alpha);
+        s0 = sin(alpha);
+        
+        for (i=0; i<ncircles; i++) if (circleactive[i])
+        {
+            b = (pos[0]-circlex[i])*c0 + (pos[1]-circley[i])*s0;
+            c = (pos[0]-circlex[i])*(pos[0]-circlex[i]) + (pos[1]-circley[i])*(pos[1]-circley[i]) - circlerad[i]*circlerad[i];
+        
+            delta = b*b - c;
+            if (delta > margin)     /* there is an intersection with circle i */
+            {
+                t = -b - sqrt(delta);            
+                if (t > margin) 
+                {
+                    nscat[nt] = i;
+                
+                    tval[nt] = t;
+                    xint[nt] = pos[0] + t*c0;
+                    yint[nt] = pos[1] + t*s0;
+                    phiint[nt] = argument(xint[nt] - circlex[i], yint[nt] - circley[i]);
+
+                    /* test wether intersection is in rectangle */
+                    if ((vabs(xint[nt]) < LAMBDA)&&(vabs(yint[nt]) < 1.0)) nt++;
+                }
+            }
+        }
+        
+        if (nt > 0)     /* there is at least one intersection */
+        {
+            /* find earliest intersection */
+            tmin = tval[0];
+            ntmin = 0;
+            for (i=1; i<nt; i++) 
+            if (tval[i] < tmin) 
+            {
+                tmin = tval[i];
+                ntmin = i;
+            }
+            while (phiint[ntmin] < 0.0) phiint[ntmin] += DPI;
+            while (phiint[ntmin] >= DPI) phiint[ntmin] -= DPI;
+            
+            config[0] = (double)nscat[ntmin]*DPI + phiint[ntmin];
+            config[1] = PID - alpha + phiint[ntmin];        /* CHECK */
+            if (config[1] < 0.0) config[1] += DPI;
+            if (config[1] >= PI) config[1] -= DPI;
+            
+            config[2] = 0.0;	/* running time */ 
+            config[3] = module2(xint[ntmin]-pos[0], yint[ntmin]-pos[1]);     /* distance to collision */
+            config[4] = pos[0];    /* start position */
+            config[5] = pos[1];
+            config[6] = xint[ntmin];        /* position of collision */
+            config[7] = yint[ntmin];
+            
+            
+            /* set dummy coordinates if circles are absorbing */
+            if (ABSORBING_CIRCLES)
+            {
+                config[0] = DUMMY_ABSORBING;
+                config[1] = PI;
+            }
+            
+            return(nscat[ntmin]);
+        }
+        else    /* there is no intersection with the circles - compute intersection with boundary */
+        {
+            
+            side = vrectangle_xy(config, alpha, pos);
+            
+            if (config[0] < 2.0*LAMBDA) config[0] = 4.0*LAMBDA + 2.0 - config[0];
+            else if (config[0] < 2.0*LAMBDA + 2.0) config[0] = 6.0*LAMBDA + 4.0 - config[0];
+            else if (config[0] < 4.0*LAMBDA + 2.0) config[0] = 4.0*LAMBDA + 2.0 - config[0];
+            else config[0] = 6.0*LAMBDA + 4.0 - config[0];
+
+            config[0] -= BOUNDARY_SHIFT;
+            config[1] = PI - config[1]; 
+//             config[0] -= 4.0*(LAMBDA+1.0);
+            
+//             printf("Hit side %i\n", side);
+//             print_config(config);
+            return(side - 5);
+        }
+ }
+
+ int vcircles_in_torus(double config[8])
+ /* determine initial configuration when starting from boundary */
+  {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_circles_in_torus(config, pos, &alpha);
+        
+        vcircles_in_torus_xy(config, alpha, pos);
+	
+	return(c);
+ }
+ 
  
 /****************************************************************************************/
 /* general billiard */
@@ -4395,6 +4573,11 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         case (D_CIRCLES_IN_GENUSN):
         {
             return(pos_circles_in_genusn(conf, pos, alpha));
+            break;
+        }
+        case (D_CIRCLES_IN_TORUS):
+        {
+            return(pos_circles_in_torus(conf, pos, alpha));
             break;
         }
         default: 
@@ -4498,6 +4681,11 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         case (D_CIRCLES_IN_GENUSN):
         {
             return(vcircles_in_genusn_xy(config, alpha, pos));
+            break;
+        }
+        case (D_CIRCLES_IN_TORUS):
+        {
+            return(vcircles_in_torus_xy(config, alpha, pos));
             break;
         }
         default: 
@@ -4640,6 +4828,13 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             c = pos_circles_in_genusn(config, pos, &alpha);
         
             return(vcircles_in_genusn(config));
+            break;
+        }
+        case (D_CIRCLES_IN_TORUS):
+        {
+            c = pos_circles_in_torus(config, pos, &alpha);
+        
+            return(vcircles_in_torus(config));
             break;
         }
         default: 
@@ -4843,6 +5038,18 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             }
             break;
         }
+        case D_CIRCLES_IN_TORUS:        /* same as D_CIRCLES_IN_RECT */      
+        {
+            if ((vabs(x) >= LAMBDA)||(vabs(y) >= 1.0)) return(0);
+            else 
+            {
+                condition = 1;
+                for (k=0; k<ncircles; k++)  
+                    if (circleactive[k]) condition = condition*out_circle(x-circlex[k], y-circley[k], circlerad[k]);
+                return(condition);
+            }
+            break;
+        }
         default: 
         {
             printf("Function ij_in_billiard not defined for this billiard \n");
@@ -4919,6 +5126,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             ncircles = NCX*(NCY+1);
             dy = (YMAX - YMIN)/((double)NCY);
             dx = dy*0.5*sqrt(3.0);
+//             dx = (XMAX - XMIN)/((double)NCX);
+//             dy = dx/(0.5*sqrt(3.0));
             for (i = 0; i < NCX; i++)
                 for (j = 0; j < NCY+1; j++)
                 {
@@ -5071,46 +5280,61 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             break;
         }
 
-//         case (C_LASER):
-//         {
-//             ncircles = 17;
-//             
-//             xx[0] = 0.5*(X_SHOOTER + X_TARGET);
-//             xx[1] = LAMBDA - 0.5*(X_TARGET - X_SHOOTER);
+        case (C_LASER):
+        {
+            ncircles = 17;
+            
+            xx[0] = 0.5*(x_shooter + x_target);
+            xx[1] = LAMBDA - 0.5*(x_target - x_shooter);
+            if (xx[1] > LAMBDA) xx[1] = 2.0*LAMBDA - xx[1];  
+            xx[2] = -xx[0];
+            xx[3] = -xx[1];
+            
+            yy[0] = 0.5*(y_shooter + y_target);
+            yy[1] = 1.0 - 0.5*(y_target - y_shooter);
+            if (yy[1] > 1.0) yy[1] = 2.0 - yy[1];  
+            yy[2] = -yy[0];
+            yy[3] = -yy[1];
+
+//             xx[0] = 0.5*(x_shooter + x_target);
+//             xx[1] = LAMBDA - 0.5*(x_target - x_shooter);
 //             xx[2] = -xx[0];
 //             xx[3] = -xx[1];
 //             
-//             yy[0] = 0.5*(Y_SHOOTER + Y_TARGET);
-//             yy[1] = 1.0 - 0.5*(Y_TARGET - Y_SHOOTER);
+//             yy[0] = 0.5*(y_shooter + y_target);
+//             yy[1] = 1.0 - 0.5*(y_target - y_shooter);
 //             yy[2] = -yy[0];
 //             yy[3] = -yy[1];
-// 
-//             for (i = 0; i < 4; i++)
-//                 for (j = 0; j < 4; j++)
-//                 {
-//                     circlex[4*i + j] = xx[i];
-//                     circley[4*i + j] = yy[j];
-//                     
-//                 }
-//                 
-//             circlex[ncircles - 1] = X_TARGET;
-//             circley[ncircles - 1] = Y_TARGET;
-//             
-//             for (i=0; i<ncircles - 1; i++)
-//             {
-//                 circlerad[i] = MU;
-//                 circleactive[i] = 1;
-//             }
-//             
-//             circlerad[ncircles - 1] = 0.5*MU;
-//             circleactive[ncircles - 1] = 2;
-//             
-//             break;
-//         }
+
+            for (i = 0; i < 4; i++)
+                for (j = 0; j < 4; j++)
+                {
+                    circlex[4*i + j] = xx[i];
+                    circley[4*i + j] = yy[j];
+                    
+                }
+                
+            circlex[ncircles - 1] = x_target;
+            circley[ncircles - 1] = y_target;
+            
+            for (i=0; i<ncircles - 1; i++)
+            {
+                circlerad[i] = MU;
+                circleactive[i] = 1;
+            }
+            
+            circlerad[ncircles - 1] = 0.5*MU;
+            circleactive[ncircles - 1] = 2;
+            
+            break;
+        }
         default: 
         {
             printf("Function init_circle_config not defined for this pattern \n");
         }
     }
 }
+
+
+
 

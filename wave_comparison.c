@@ -81,6 +81,17 @@
 #define NGRIDX 20            /* number of grid point for grid of disks */
 #define NGRIDY 20           /* number of grid point for grid of disks */
 
+#define X_SHOOTER -0.2
+#define Y_SHOOTER -0.6
+#define X_TARGET 0.4
+#define Y_TARGET 0.7        /* shooter and target positions in laser fight */
+
+#define ISO_XSHIFT_LEFT -1.65  
+#define ISO_XSHIFT_RIGHT 0.4
+#define ISO_YSHIFT_LEFT -0.05
+#define ISO_YSHIFT_RIGHT -0.05 
+#define ISO_SCALE 0.85           /* coordinates for isospectral billiards */
+
 /* You can add more billiard tables by adapting the functions */
 /* xy_in_billiard and draw_billiard below */
 
@@ -133,9 +144,11 @@
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 0.2          /* amplitude of initial condition */
-#define INITIAL_VARIANCE 0.002   /* variance of initial condition */
-#define INITIAL_WAVELENGTH  0.1 /* wavelength of initial condition */
+#define INITIAL_AMP 0.75         /* amplitude of initial condition */
+// #define INITIAL_VARIANCE 0.0003  /* variance of initial condition */
+// #define INITIAL_WAVELENGTH  0.015 /* wavelength of initial condition */
+#define INITIAL_VARIANCE 0.0003  /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.02  /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 
@@ -143,7 +156,7 @@
 
 /* Color schemes */
 
-#define COLOR_PALETTE 0    /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 0     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
@@ -165,8 +178,6 @@
 #define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
 #define VMAX 5.0       /* max value of wave amplitude */
 
-
-#include "hsluv.c"
 
 #include "global_pdes.c"        /* constants and global variables */
 #include "sub_wave.c"           /* common functions for wave_billiard, heat and schrodinger */

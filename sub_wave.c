@@ -2,6 +2,9 @@
 /* Graphics routines */
 /*********************/
 
+#include "colors_waves.c"
+
+
 int writetiff(char *filename, char *description, int x, int y, int width, int height, int compression)
 {
   TIFF *file;
@@ -67,149 +70,8 @@ void init()		/* initialisation of window */
 
 
 
-void hsl_to_rgb_jet(double h, double s, double l, double rgb[3])       /* color conversion from HSL to RGB */
-/* h = hue, s = saturation, l = luminosity */
-{
-    double c = 0.0, m = 0.0, x = 0.0;
-
-    c = (1.0 - fabs(2.0 * l - 1.0)) * s;
-    m = 1.0 * (l - 0.5 * c);
-    x = c * (1.0 - fabs(fmod(h / 60.0, 2) - 1.0));
-
-    if (h >= 0.0 && h < 60.0)
-    {
-        rgb[0] = c+m; rgb[1] = x+m; rgb[2] = m;
-    }
-    else if (h < 120.0)
-    {
-        rgb[0] = x+m; rgb[1] = c+m; rgb[2] = m;
-    }
-    else if (h < 180.0)
-    {
-        rgb[0] = m; rgb[1] = c+m; rgb[2] = x+m;
-    }
-    else if (h < 240.0)
-    {
-        rgb[0] = m; rgb[1] = x+m; rgb[2] = c+m;
-    }
-    else if (h < 300.0)
-    {
-        rgb[0] = x+m; rgb[1] = m; rgb[2] = c+m;
-    }
-    else if (h < 360.0)
-    {
-        rgb[0] = c+m; rgb[1] = m; rgb[2] = x+m;
-    }
-    else
-    {
-        rgb[0] = m; rgb[1] = m; rgb[2] = m;
-    }
-}
-
-void hsl_to_rgb(double h, double s, double l, double rgb[3])        /* color conversion from HSL to RGB */
-{
-    double r, g, b;
-     
-    switch (COLOR_PALETTE) {
-        case (COL_JET): 
-        {
-            hsl_to_rgb_jet(h, s, l, rgb);
-            break;
-        }
-        case (COL_HSLUV): 
-        {
-            hsluv2rgb(h, 100.0*s, l, &r, &g, &b);
-            rgb[0] = r*100.0;
-            rgb[1] = g*100.0;
-            rgb[2] = b*100.0;
-            break;
-        }
-    }
-//     if (HSLUV_COLORS)
-//     {
-//         hsluv2rgb(h, 100.0*s, l, &r, &g, &b);
-//         rgb[0] = r*100.0;
-//         rgb[1] = g*100.0;
-//         rgb[2] = b*100.0;
-//     }
-//     else hsl_to_rgb_jet(h, s, l, rgb);
-}
-
-double color_amplitude(double value, double scale, int time)
-/* transforms the wave amplitude into a double in [-1,1] to feed into color scheme */
-{
-    return(tanh(SLOPE*value/scale)*exp(-((double)time*ATTENUATION)));
-}
 
 
-void color_scheme(int scheme, double value, double scale, int time, double rgb[3]) /* color scheme */
-{
-    double hue, y, r, amplitude;
-    int intpart;
-
-    /* saturation = r, luminosity = y */
-    switch (scheme) {
-        case (C_LUM):
-        {
-            hue = COLORHUE + (double)time*COLORDRIFT/(double)NSTEPS;
-            if (hue < 0.0) hue += 360.0;
-            if (hue >= 360.0) hue -= 360.0;
-            r = 0.9;
-            amplitude = color_amplitude(value, scale, time);
-            y = LUMMEAN + amplitude*LUMAMP;
-            intpart = (int)y;
-            y -= (double)intpart;
-            hsl_to_rgb(hue, r, y, rgb);
-            break;
-        }
-        case (C_HUE):
-        {
-            r = 0.9;
-            amplitude = color_amplitude(value, scale, time);
-            y = 0.5;
-            hue = HUEMEAN + amplitude*HUEAMP;
-            if (hue < 0.0) hue += 360.0;
-            if (hue >= 360.0) hue -= 360.0;
-            hsl_to_rgb(hue, r, y, rgb);
-            break;
-        }
-    }
-}
-
-
-void color_scheme_lum(int scheme, double value, double scale, int time, double lum, double rgb[3]) /* color scheme */
-{
-    double hue, y, r, amplitude;
-    int intpart;
-
-    /* saturation = r, luminosity = y */
-    switch (scheme) {
-        case (C_LUM):
-        {
-            hue = COLORHUE + (double)time*COLORDRIFT/(double)NSTEPS;
-            if (hue < 0.0) hue += 360.0;
-            if (hue >= 360.0) hue -= 360.0;
-            r = 0.9;
-            amplitude = color_amplitude(value, scale, time);
-            y = LUMMEAN + amplitude*LUMAMP;
-            intpart = (int)y;
-            y -= (double)intpart;
-            hsl_to_rgb(hue, r, y, rgb);
-            break;
-        }
-        case (C_HUE):
-        {
-            r = 0.9;
-            amplitude = color_amplitude(value, scale, time);
-            y = lum;
-            hue = HUEMEAN + amplitude*HUEAMP;
-            if (hue < 0.0) hue += 360.0;
-            if (hue >= 360.0) hue -= 360.0;
-            hsl_to_rgb(hue, r, y, rgb);
-            break;
-        }
-    }
-}
 
 
 void blank()
@@ -502,7 +364,7 @@ void init_circle_config()
 /* for billiard shape D_CIRCLES */
 {
     int i, j, k, n, ncirc0, n_p_active, ncandidates=5000, naccepted; 
-    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, dpoisson = 3.25*MU;
+    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, dpoisson = 3.25*MU, xx[4], yy[4];
     short int active_poisson[NMAXCIRCLES], far;
     
     switch (CIRCLE_PATTERN) {
@@ -621,6 +483,42 @@ void init_circle_config()
                 }
             break;
         }
+        case (C_LASER):
+        {
+            ncircles = 17;
+            
+            xx[0] = 0.5*(X_SHOOTER + X_TARGET);
+            xx[1] = LAMBDA - 0.5*(X_TARGET - X_SHOOTER);
+            xx[2] = -xx[0];
+            xx[3] = -xx[1];
+            
+            yy[0] = 0.5*(Y_SHOOTER + Y_TARGET);
+            yy[1] = 1.0 - 0.5*(Y_TARGET - Y_SHOOTER);
+            yy[2] = -yy[0];
+            yy[3] = -yy[1];
+
+            for (i = 0; i < 4; i++)
+                for (j = 0; j < 4; j++)
+                {
+                    circlex[4*i + j] = xx[i];
+                    circley[4*i + j] = yy[j];
+                    
+                }
+                
+            circlex[ncircles - 1] = X_TARGET;
+            circley[ncircles - 1] = Y_TARGET;
+            
+            for (i=0; i<ncircles - 1; i++)
+            {
+                circlerad[i] = MU;
+                circleactive[i] = 1;
+            }
+            
+            circlerad[ncircles - 1] = 0.5*MU;
+            circleactive[ncircles - 1] = 2;
+            
+            break;
+        }        
         case (C_POISSON_DISC):
         {
             printf("Generating Poisson disc sample\n");
@@ -628,6 +526,7 @@ void init_circle_config()
             circlex[0] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
             circley[0] = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
             active_poisson[0] = 1;
+//             circleactive[0] = 1;
             n_p_active = 1;
             ncircles = 1;
             
@@ -811,12 +710,104 @@ void init_circle_config()
 }
 
 
+int axial_symmetry(double z1[2], double z2[2], double z[2], double zprime[2])
+/* compute reflection of point z wrt axis through z1 and z2 */
+{
+    double u[2], r, zdotu, zparallel[2], zperp[2];
+    
+    /* compute unit vector parallel to z1-z2 */
+    u[0] = z2[0] - z1[0];
+    u[1] = z2[1] - z1[1];
+    r = module2(u[0], u[1]);
+    if (r == 0) return(0);      /* z1 and z2 are the same */
+    
+    u[0] = u[0]/r;
+    u[1] = u[1]/r;
+//     printf("u = (%.2f, %.2f)\n", u[0], u[1]);
+    
+    /* projection of z1z on z1z2 */
+    zdotu = (z[0] - z1[0])*u[0] + (z[1] - z1[1])*u[1];
+    zparallel[0] = zdotu*u[0];
+    zparallel[1] = zdotu*u[1];
+//     printf("zparallel = (%.2f, %.2f)\n", zparallel[0], zparallel[1]);
+    
+    /* normal vector to z1z2 */
+    zperp[0] = z[0] - z1[0] - zparallel[0];
+    zperp[1] = z[1] - z1[1] - zparallel[1];
+//     printf("zperp = (%.2f, %.2f)\n", zperp[0], zperp[1]);
+    
+    /* reflected point */
+    zprime[0] = z[0] - 2.0*zperp[0];
+    zprime[1] = z[1] - 2.0*zperp[1];
+    
+    return(1);
+}
+
+
+void compute_isospectral_coordinates(int type, double xshift, double yshift, double scaling, double vertex[9][2])
+/* compute positions of vertices of isospectral billiards */
+/* central triangle has coordinates (0,0), (1,0) and (LAMBDA,MU) fed into affine transformation */
+/* defined by (xshift - 0.5), (yshift - 0.25) and scaling*/
+{
+    vertex[0][0] = (xshift - 0.5)*scaling;
+    vertex[0][1] = (yshift - 0.25)*scaling;
+    
+    vertex[1][0] = (0.5 + xshift)*scaling;
+    vertex[1][1] = (yshift - 0.25)*scaling;
+    
+    vertex[2][0] = (LAMBDA + xshift - 0.5)*scaling;
+    vertex[2][1] = (MU + yshift - 0.25)*scaling; 
+    
+    axial_symmetry(vertex[0], vertex[2], vertex[1], vertex[3]);
+    axial_symmetry(vertex[0], vertex[1], vertex[2], vertex[4]);
+    axial_symmetry(vertex[1], vertex[2], vertex[0], vertex[5]);
+
+    if (type == 0)
+    {
+        axial_symmetry(vertex[0], vertex[3], vertex[2], vertex[6]);
+        axial_symmetry(vertex[1], vertex[4], vertex[0], vertex[7]);
+        axial_symmetry(vertex[2], vertex[5], vertex[1], vertex[8]);
+    }
+    else
+    {
+        axial_symmetry(vertex[2], vertex[3], vertex[0], vertex[6]);
+        axial_symmetry(vertex[0], vertex[4], vertex[1], vertex[7]);
+        axial_symmetry(vertex[1], vertex[5], vertex[2], vertex[8]);
+    }
+}
+
+void isospectral_initial_point(double x, double y, double left[2], double right[2])
+/* compute initial coordinates in isospectral billiards */
+{
+    left[0] = (x + ISO_XSHIFT_LEFT)*ISO_SCALE;
+    left[1] = (y + ISO_YSHIFT_LEFT)*ISO_SCALE;
+    right[0] = (x + ISO_XSHIFT_RIGHT)*ISO_SCALE;
+    right[1] = (y + ISO_YSHIFT_RIGHT)*ISO_SCALE;    
+}
+
+int xy_in_triangle(double x, double y, double z1[2], double z2[2], double z3[2])
+/* returns 1 iff (x,y) is inside the triangle with vertices z1, z2, z3 */
+{
+    double v1, v2, v3;
+
+    /* compute wedge products */
+    v1 = (z2[0] - z1[0])*(y - z1[1]) - (z2[1] - z1[1])*(x - z1[0]);
+    v2 = (z3[0] - z2[0])*(y - z2[1]) - (z3[1] - z2[1])*(x - z2[0]);
+    v3 = (z1[0] - z3[0])*(y - z3[1]) - (z1[1] - z3[1])*(x - z3[0]);
+    
+    if ((v1 >= 0.0)&&(v2 >= 0.0)&&(v3 >= 0.0)) return(1);
+    else return(0);
+}
+
+
 int xy_in_billiard(double x, double y)
 /* returns 1 if (x,y) represents a point in the billiard */
 // double x, y;
 {
     double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width;
     int i, j, k, k1, k2, condition;
+    static double vertex[9][2], wertex[9][2];
+    static int first = 1;
 
     switch (B_DOMAIN) {
         case (D_RECTANGLE):
@@ -1048,6 +1039,33 @@ int xy_in_billiard(double x, double y)
                 else return(1);
             }
         }
+        case (D_ISOSPECTRAL):
+        {
+            if (first)
+            {
+                compute_isospectral_coordinates(0, ISO_XSHIFT_LEFT, ISO_YSHIFT_LEFT, ISO_SCALE, vertex);
+                compute_isospectral_coordinates(1, ISO_XSHIFT_RIGHT, ISO_YSHIFT_RIGHT, ISO_SCALE, wertex);
+                first = 0;
+            }
+            /* 1st triangle */
+            condition = xy_in_triangle(x, y, vertex[0], vertex[1], vertex[2]);
+            condition += xy_in_triangle(x, y, vertex[0], vertex[4], vertex[1]);
+            condition += xy_in_triangle(x, y, vertex[1], vertex[5], vertex[2]);
+            condition += xy_in_triangle(x, y, vertex[0], vertex[2], vertex[3]);
+            condition += xy_in_triangle(x, y, vertex[1], vertex[4], vertex[7]);
+            condition += xy_in_triangle(x, y, vertex[2], vertex[5], vertex[8]);
+            condition += xy_in_triangle(x, y, vertex[0], vertex[3], vertex[6]);
+
+            /* 2nd triangle */
+            condition += xy_in_triangle(x, y, wertex[0], wertex[1], wertex[2]);
+            condition += xy_in_triangle(x, y, wertex[0], wertex[4], wertex[1]);
+            condition += xy_in_triangle(x, y, wertex[1], wertex[5], wertex[2]);
+            condition += xy_in_triangle(x, y, wertex[0], wertex[2], wertex[3]);
+            condition += xy_in_triangle(x, y, wertex[0], wertex[7], wertex[4]);
+            condition += xy_in_triangle(x, y, wertex[1], wertex[8], wertex[5]);
+            condition += xy_in_triangle(x, y, wertex[2], wertex[6], wertex[3]);
+            return(condition >= 1);
+        }
         case (D_CIRCLES):
         {
             for (i = 0; i < ncircles; i++)
@@ -1059,6 +1077,19 @@ int xy_in_billiard(double x, double y)
                     if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2) return(0); 
                 }
             return(1);
+        }
+        case (D_CIRCLES_IN_RECT):   /* returns 2 inside circles, 0 outside rectangle */
+        {
+            for (i = 0; i < ncircles; i++)
+                if (circleactive[i]) 
+                {
+                    x1 = circlex[i];
+                    y1 = circley[i];
+                    r2 = circlerad[i]*circlerad[i];
+                    if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2) return(2); 
+                }
+            if ((vabs(x) >= LAMBDA)||(vabs(y) >= 1.0)) return(0);
+            else return(1);
         }
         case (D_MENGER):       
         {
@@ -1225,10 +1256,22 @@ void toka_lineto(double x1, double y1)
     glVertex2d(pos[0], pos[1]);
 }
 
+void iso_lineto(double z[2])
+/* draws boundary segments of isospectral billiard */
+{
+    double pos[2];
+    
+    xy_to_pos(z[0], z[1], pos);
+    glVertex2d(pos[0], pos[1]);
+}
+
+
 void draw_billiard()      /* draws the billiard boundary */
 {
     double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax;
+    static double vertex[9][2], wertex[9][2];
     int i, j, k, k1, k2, mr2;
+    static int first = 1;
 
     if (BLACK) glColor3f(1.0, 1.0, 1.0);
     else glColor3f(0.0, 0.0, 0.0);
@@ -1635,7 +1678,7 @@ void draw_billiard()      /* draws the billiard boundary */
                 glColor3f(0.3, 0.3, 0.3);
                 for (k=0; k<NPOLY; k++) 
                 {
-                    alpha = APOLY*PID + (k+0.5)*omega;
+                    alpha = APOLY*PID + (2.0*(double)k+1.0)*omega;
                     draw_circle(LAMBDA*cos(alpha), LAMBDA*sin(alpha), r, NSEG);
                 }
             }
@@ -1795,11 +1838,88 @@ void draw_billiard()      /* draws the billiard boundary */
             }
             break;
         }
+        case (D_ISOSPECTRAL):
+        {
+            if (first) 
+            {
+                compute_isospectral_coordinates(0, ISO_XSHIFT_LEFT, ISO_YSHIFT_LEFT, ISO_SCALE, vertex);
+                compute_isospectral_coordinates(1, ISO_XSHIFT_RIGHT, ISO_YSHIFT_RIGHT, ISO_SCALE, wertex);
+//                 compute_isospectral_coordinates(0, -1.0, 0.05, 0.9, vertex);
+//                 compute_isospectral_coordinates(1, 0.9, 0.05, 0.9, wertex);
+//             for (i=0; i<9; i++) printf("(x%i, y%i) = (%.2f, %.2f)\n", i, i, vertex[i][0], vertex[i][1]);
+                first = 0;
+            }
+            /* 1st triangle */
+            glBegin(GL_LINE_LOOP);
+            iso_lineto(vertex[0]);
+            iso_lineto(vertex[4]);
+            iso_lineto(vertex[7]);
+            iso_lineto(vertex[1]);
+            iso_lineto(vertex[5]);
+            iso_lineto(vertex[8]);
+            iso_lineto(vertex[2]);
+            iso_lineto(vertex[3]);
+            iso_lineto(vertex[6]);
+            glEnd();
+            
+            /* inner lines */
+            glBegin(GL_LINE_LOOP);
+            iso_lineto(vertex[0]);
+            iso_lineto(vertex[1]);
+            iso_lineto(vertex[2]);
+            iso_lineto(vertex[0]);
+            iso_lineto(vertex[3]);
+            iso_lineto(vertex[2]);
+            iso_lineto(vertex[5]);
+            iso_lineto(vertex[1]);
+            iso_lineto(vertex[4]);
+            glEnd();
+            
+            /* 2nd triangle */
+            glBegin(GL_LINE_LOOP);
+            iso_lineto(wertex[0]);
+            iso_lineto(wertex[7]);
+            iso_lineto(wertex[4]);
+            iso_lineto(wertex[1]);
+            iso_lineto(wertex[8]);
+            iso_lineto(wertex[5]);
+            iso_lineto(wertex[2]);
+            iso_lineto(wertex[6]);
+            iso_lineto(wertex[3]);
+            glEnd();
+            
+            /* inner lines */
+            glBegin(GL_LINE_LOOP);
+            iso_lineto(wertex[0]);
+            iso_lineto(wertex[1]);
+            iso_lineto(wertex[2]);
+            iso_lineto(wertex[0]);
+            iso_lineto(wertex[4]);
+            iso_lineto(wertex[1]);
+            iso_lineto(wertex[5]);
+            iso_lineto(wertex[2]);
+            iso_lineto(wertex[3]);
+            glEnd();
+            break;
+        }
         case (D_CIRCLES):
         {
             glLineWidth(BOUNDARY_WIDTH);
             for (i = 0; i < ncircles; i++) 
                 if (circleactive[i]) draw_circle(circlex[i], circley[i], circlerad[i], NSEG);
+            break;
+        }
+        case (D_CIRCLES_IN_RECT):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            for (i = 0; i < ncircles; i++) 
+                if (circleactive[i]) draw_circle(circlex[i], circley[i], circlerad[i], NSEG);
+            draw_rectangle(-LAMBDA, -1.0, LAMBDA, 1.0);
+            if ((FOCI)&&(CIRCLE_PATTERN == C_LASER))
+            {
+                glColor3f(0.3, 0.3, 0.3);
+                draw_circle(X_SHOOTER, Y_SHOOTER, r, NSEG);
+            }
             break;
         }
         case (D_MENGER):

@@ -80,6 +80,17 @@
 #define NGRIDX 15            /* number of grid point for grid of disks */
 #define NGRIDY 20           /* number of grid point for grid of disks */
 
+#define X_SHOOTER -0.2
+#define Y_SHOOTER -0.6
+#define X_TARGET 0.4
+#define Y_TARGET 0.7        /* shooter and target positions in laser fight */
+
+#define ISO_XSHIFT_LEFT -1.65  
+#define ISO_XSHIFT_RIGHT 0.4
+#define ISO_YSHIFT_LEFT -0.05
+#define ISO_YSHIFT_RIGHT -0.05 
+#define ISO_SCALE 0.85           /* coordinates for isospectral billiards */
+
 /* You can add more billiard tables by adapting the functions */
 /* xy_in_billiard and draw_billiard in sub_wave.c */
 
@@ -153,10 +164,9 @@
 // #define HUEAMP -130.0      /* amplitude of variation of hue for color scheme C_HUE */
 
 
-#include "hsluv.c"
-
 #include "global_pdes.c"
 #include "sub_wave.c"
+
 
 double courant2;  /* Courant parameter squared */
 double dx2;       /* spatial step size squared */

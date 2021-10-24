@@ -94,6 +94,28 @@ void init_wave_plus(double x, double y, double *phi[NX], double *psi[NX], short 
         }
 }
 
+void init_circular_wave_xplusminus(double xleft, double yleft, double xright, double yright, 
+                                   double *phi[NX], double *psi[NX], short int * xy_in[NX])
+/* initialise field with two drops, x > 0 and x < 0 do not communicate - phi is wave height, psi is phi at time t-1 */
+{
+    int i, j;
+    double xy[2], dist2;
+
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            if (xy[0] < 0.0) dist2 = (xy[0]-xleft)*(xy[0]-xleft) + (xy[1]-yleft)*(xy[1]-yleft);
+            else dist2 = (xy[0]-xright)*(xy[0]-xright) + (xy[1]-yright)*(xy[1]-yright);
+	    xy_in[i][j] = xy_in_billiard(xy[0],xy[1]);
+            
+	    if ((xy_in[i][j])||(TWOSPEEDS)) 
+                phi[i][j] = INITIAL_AMP*exp(-dist2/INITIAL_VARIANCE)*cos(-sqrt(dist2)/INITIAL_WAVELENGTH);
+            else phi[i][j] = 0.0;
+            psi[i][j] = 0.0;
+        }
+}
+
 void init_planar_wave(double x, double y, double *phi[NX], double *psi[NX], short int * xy_in[NX])
 /* initialise field with drop at (x,y) - phi is wave height, psi is phi at time t-1 */
 /* beta version, works for vertical planar wave only so far */
@@ -339,7 +361,10 @@ void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], sho
                     }
                     case (P_ENERGY):
                     {
-                        color_scheme(COLOR_SCHEME, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        /* adjust energy to color palette */
+                        if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, energy, scale, time, rgb);
+                        else color_scheme(COLOR_SCHEME, energy, scale, time, rgb);
                         break;
                     }
                     case (P_MIXED):
@@ -352,7 +377,9 @@ void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], sho
                     {
                         energy = compute_energy(phi, psi, xy_in, i, j);
                         total_energy[i][j] += energy;
-                        color_scheme(COLOR_SCHEME, total_energy[i][j]/(double)(time+1), scale, time, rgb);
+                        if (COLOR_PALETTE >= COL_TURBO) 
+                            color_scheme_asym(COLOR_SCHEME, total_energy[i][j]/(double)(time+1), scale, time, rgb);
+                        else color_scheme(COLOR_SCHEME, total_energy[i][j]/(double)(time+1), scale, time, rgb);
                         break;
                     }
                 }
@@ -368,6 +395,59 @@ void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], sho
     glEnd ();
 }
 
+
+void draw_color_scheme(double x1, double y1, double x2, double y2, int plot, double min, double max)
+{
+    int j, ij_botleft[2], ij_topright[2], imin, imax, jmin, jmax;
+    double y, dy, dy_e, rgb[3], value;
+    
+    xy_to_ij(x1, y1, ij_botleft);
+    xy_to_ij(x2, y2, ij_topright);
+    
+    imin = ij_botleft[0];
+    imax = ij_topright[0];
+    jmin = ij_botleft[1];
+    jmax = ij_topright[1];    
+    
+    glBegin(GL_QUADS);
+    dy = (max - min)/((double)(jmax - jmin));
+    dy_e = max/((double)(jmax - jmin));
+    
+    for (j = jmin; j < jmax; j++)
+    {
+        switch (plot) {
+            case (P_AMPLITUDE):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin);
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, value, 1.0, 1, rgb);
+                else color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_MEAN_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin);
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, value, 1.0, 1, rgb);
+                else color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+                break;
+            }
+        }
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+        glVertex2i(imin, j);
+        glVertex2i(imax, j);
+        glVertex2i(imax, j+1);
+        glVertex2i(imin, j+1);
+    }
+    glEnd ();
+    
+    glColor3f(1.0, 1.0, 1.0);
+    draw_rectangle(x1, y1, x2, y2);
+}
 
 
 

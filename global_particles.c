@@ -36,6 +36,7 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define D_CIRCLES 20     /* several circles */
 #define D_CIRCLES_IN_RECT 21     /* several circles inside a rectangle */
 #define D_CIRCLES_IN_GENUSN 22   /* several circles in polygon with identified opposite sides */
+#define D_CIRCLES_IN_TORUS 23    /* several circles in a rectangle with periodic boundary conditions */
 
 #define C_FOUR_CIRCLES 0  /* four circles almost touching each other */
 #define C_SQUARE 1        /* square grid of circles */
@@ -50,3 +51,16 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 
 #define C_LASER 11          /* laser fight in a room of mirrors */
 #define C_LASER_GENUSN 12   /* laser fight in a translation surface */
+
+/* Color palettes */
+
+#define COL_JET 0       /* JET color palette */
+#define COL_HSLUV 1     /* HSLUV color palette (perceptually uniform) */
+
+#define COL_TURBO 10     /* TURBO color palette (by Anton Mikhailov) */
+#define COL_VIRIDIS 11   /* Viridis color palette */
+#define COL_MAGMA 12     /* Magma color palette */
+#define COL_INFERNO 13   /* Inferno color palette */
+#define COL_PLASMA 14    /* Plasma color palette */
+
+
