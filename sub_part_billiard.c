@@ -916,10 +916,64 @@ void draw_billiard()      /* draws the billiard boundary */
             cc = LAMBDA + MU;
             ymax = (-b + sqrt(b*b + 4.0*a*cc))/(2.0*a);
             dy = 2.0*ymax/(double)NSEG; 
+            
+            if (PAINT_EXT)  /* paint billiard exterior in another color */
+            {
+                glColor3f(0.1, 0.1, 0.1);
+                for (k=0; k<NPOLY; k++)  
+                {
+                    alpha = APOLY*PID + (2.0*(double)k)*omega;
+                    glBegin(GL_TRIANGLE_FAN);
+                    x1 = 10.0*(MU + LAMBDA);
+                    x = x1*cos(alpha);
+                    y = x1*sin(alpha);
+                    glVertex2d(x, y);
+                    for (i = 0; i < NSEG+1; i++) 
+                    {
+                        y1 = -ymax + dy*(double)i;
+                        x1 = MU + LAMBDA - 0.25*y1*y1/MU;
+                        x = x1*cos(alpha) - y1*sin(alpha);
+                        y = x1*sin(alpha) + y1*cos(alpha);
+                        glVertex2d(x, y);
+                    }
+                    glEnd();
+                    
+                    glBegin(GL_TRIANGLE_FAN);
+                    
+                    x1 = 10.0*(MU + LAMBDA);
+                    x = x1*cos(alpha);
+                    y = x1*sin(alpha);
+                    glVertex2d(x, y);
+                    
+                    y1 = ymax;
+                    x1 = MU + LAMBDA - 0.25*y1*y1/MU;
+                    x = x1*cos(alpha) - y1*sin(alpha);
+                    y = x1*sin(alpha) + y1*cos(alpha);
+                    glVertex2d(x, y);
+                    
+                    x1 = 10.0*(MU + LAMBDA);
+                    x = x1*cos(alpha + 2.0*omega);
+                    y = x1*sin(alpha + 2.0*omega);
+                    glVertex2d(x, y);
+                    
+                    glEnd();
+                }
+                
+                
+//                 glVertex2d(cc, 0.0);
+//                 for (i=0; i<=NSEG; i++)
+//                 {
+//                     phi = (double)i*dphi;
+//                     x = cc - 0.5*MU*sin(phi);
+//                     y = MU*cos(phi);
+//                     glVertex2d(x, y);
+//                 }
+                
+            }
 
-//             init_billiard_color();
+            init_billiard_color();
             glBegin(GL_LINE_LOOP);
-            glColor3f(1.0, 1.0, 1.0);
+//             glColor3f(1.0, 1.0, 1.0);
             for (k=0; k<NPOLY; k++)  
             {
 //                 alpha = APOLY*PID + (2.0*(double)k+1.0)*omega;
@@ -940,7 +994,7 @@ void draw_billiard()      /* draws the billiard boundary */
                 glColor3f(0.3, 0.3, 0.3);
                 for (k=0; k<NPOLY; k++) 
                 {
-                    alpha = APOLY*PID + (k+0.5)*omega;
+                    alpha = APOLY*PID + (2.0*(double)k)*omega;
                     draw_circle(LAMBDA*cos(alpha), LAMBDA*sin(alpha), r, NSEG);
                 }
             }
@@ -1098,56 +1152,77 @@ void draw_billiard()      /* draws the billiard boundary */
         case (D_CIRCLES):
         {
             rgb[0] = 0.0; rgb[1] = 0.0; rgb[2] = 0.0;
-            for (k=0; k<ncircles; k++) if (circleactive[k])
+            for (k=0; k<ncircles; k++) if (circles[k].active)
             {
-//                 printf("k = %i, color = %i\n", k, circlecolor[k]);
-                if (circlecolor[k] == 0) draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
+                if (circles[k].color == 0) draw_colored_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG, rgb);
                 else
                 {
-                    if (newcircle[k] >= 1)
+                    if (circles[k].new >= 1)
                     {
-                        rgb_color_scheme_lum(circlecolor[k], 0.85, rgb1);
-                        newcircle[k]--;
+                        rgb_color_scheme_lum(circles[k].color, 0.85, rgb1);
+                        circles[k].new--;
                     }
-                    else rgb_color_scheme(circlecolor[k], rgb1);
-                    draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb1);
+                    else rgb_color_scheme(circles[k].color, rgb1);
+                    draw_colored_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG, rgb1);
                 }
             }
             init_billiard_color();
-            for (k=0; k<ncircles; k++) if (circleactive[k])
-                 draw_circle(circlex[k], circley[k], circlerad[k], NSEG);
+            for (k=0; k<ncircles; k++) if (circles[k].active)
+                 draw_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG);
             break; 
         }
+//         {
+//             rgb[0] = 0.0; rgb[1] = 0.0; rgb[2] = 0.0;
+//             for (k=0; k<ncircles; k++) if (circleactive[k])
+//             {
+//                 printf("k = %i, color = %i\n", k, circlecolor[k]);
+//                 if (circlecolor[k] == 0) draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
+//                 else
+//                 {
+//                     if (newcircle[k] >= 1)
+//                     {
+//                         rgb_color_scheme_lum(circlecolor[k], 0.85, rgb1);
+//                         newcircle[k]--;
+//                     }
+//                     else rgb_color_scheme(circlecolor[k], rgb1);
+//                     draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb1);
+//                 }
+//             }
+//             init_billiard_color();
+//             for (k=0; k<ncircles; k++) if (circleactive[k])
+//                  draw_circle(circlex[k], circley[k], circlerad[k], NSEG);
+//             break; 
+//         }
         case (D_CIRCLES_IN_RECT):
         {
             rgb[0] = 0.0; rgb[1] = 0.0; rgb[2] = 0.0;
-            for (k=0; k<ncircles; k++) if (circleactive[k])
+            for (k=0; k<ncircles; k++) if (circles[k].active)
             {
 //                 printf("k = %i, color = %i\n", k, circlecolor[k]);
-                if (circlecolor[k] == 0) draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
+                if (circles[k].color == 0) draw_colored_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG, rgb);
                 else
                 {
-                    if (newcircle[k] >= 1)
+                    if (circles[k].new >= 1)
                     {
-                        rgb_color_scheme_lum(circlecolor[k], 0.85, rgb1);
-                        newcircle[k]--;
+                        rgb_color_scheme_lum(circles[k].color, 0.85, rgb1);
+                        circles[k].new--;
                     }
-                    else rgb_color_scheme(circlecolor[k], rgb1);
-                    draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb1);
+                    else rgb_color_scheme(circles[k].color, rgb1);
+                    draw_colored_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG, rgb1);
                 }
             }
             init_billiard_color();
-            for (k=0; k<ncircles; k++) if (circleactive[k] >= 1)
+            for (k=0; k<ncircles; k++) if (circles[k].active >= 1)
             {
-                if (circleactive[k] == 2) 
+                if (circles[k].active == 2) 
                 {
 //                     hsl_to_rgb(150.0, 0.9, 0.4, rgb);
 //                     glColor3f(rgb[0], rgb[1], rgb[2]);
                     glColor3f(0.0, 1.0, 0.0);
                     rgb[0] = 0.0;   rgb[1] = 0.9;   rgb[2] = 0.0;
-                    draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
+                    draw_colored_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG, rgb);
                 }
-                else draw_circle(circlex[k], circley[k], circlerad[k], NSEG);                
+                else draw_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG);                
                 init_billiard_color();
             }
             
@@ -1157,7 +1232,7 @@ void draw_billiard()      /* draws the billiard boundary */
                 hsl_to_rgb(0.0, 0.9, 0.5, rgb);
                 glColor3f(rgb[0], rgb[1], rgb[2]);
                 
-                draw_circle(x_shooter, y_shooter, circlerad[ncircles-1], NSEG);
+                draw_circle(x_shooter, y_shooter, circles[ncircles-1].radius, NSEG);
             }
             
             init_billiard_color();
@@ -1172,16 +1247,16 @@ void draw_billiard()      /* draws the billiard boundary */
         }
         case (D_CIRCLES_IN_GENUSN):    
         {
-//             for (k=0; k<ncircles; k++) if (circleactive[k] >= 1)
+//             for (k=0; k<ncircles; k++) if (circles[k].active >= 1)
             for (k=0; k<ncircles; k++) 
-                if ((circleactive[k] >= 1)&&(in_polygon(circlex[k], circley[k], 1.0, NPOLY, APOLY)))
+                if ((circles[k].active >= 1)&&(in_polygon(circles[k].xc, circles[k].yc, 1.0, NPOLY, APOLY)))
                 {
-                    if (circleactive[k] == 2) 
+                    if (circles[k].active == 2) 
                     {
                         hsl_to_rgb(150.0, 0.9, 0.4, rgb);
                             glColor3f(rgb[0], rgb[1], rgb[2]);
                     }
-                    draw_circle(circlex[k], circley[k], circlerad[k], NSEG);
+                    draw_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG);
                     init_billiard_color();
                 }
             
@@ -1191,7 +1266,7 @@ void draw_billiard()      /* draws the billiard boundary */
                 hsl_to_rgb(0.0, 0.9, 0.5, rgb);
                 glColor3f(rgb[0], rgb[1], rgb[2]);
                 
-                draw_circle(x_shooter, y_shooter, circlerad[ncircles-1], NSEG);
+                draw_circle(x_shooter, y_shooter, circles[ncircles-1].radius, NSEG);
             }
             
             /* draw polygon */
@@ -1211,30 +1286,30 @@ void draw_billiard()      /* draws the billiard boundary */
         case (D_CIRCLES_IN_TORUS):
         {
             rgb[0] = 0.0; rgb[1] = 0.0; rgb[2] = 0.0;
-            for (k=0; k<ncircles; k++) if (circleactive[k])
+            for (k=0; k<ncircles; k++) if (circles[k].active)
             {
 //                 printf("k = %i, color = %i\n", k, circlecolor[k]);
-                if (circlecolor[k] == 0) draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
+                if (circles[k].color == 0) draw_colored_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG, rgb);
                 else
                 {
-                    if (newcircle[k] >= 1)
+                    if (circles[k].new >= 1)
                     {
-                        rgb_color_scheme_lum(circlecolor[k], 0.85, rgb1);
-                        newcircle[k]--;
+                        rgb_color_scheme_lum(circles[k].color, 0.85, rgb1);
+                        circles[k].new--;
                     }
-                    else rgb_color_scheme(circlecolor[k], rgb1);
-                    draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb1);
+                    else rgb_color_scheme(circles[k].color, rgb1);
+                    draw_colored_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG, rgb1);
                 }
             }
             init_billiard_color();
-            for (k=0; k<ncircles; k++) if (circleactive[k] >= 1)
+            for (k=0; k<ncircles; k++) if (circles[k].active >= 1)
             {
-                if (circleactive[k] == 2) 
+                if (circles[k].active == 2) 
                 {
                     hsl_to_rgb(150.0, 0.9, 0.4, rgb);
                     glColor3f(rgb[0], rgb[1], rgb[2]);
                 }
-                draw_circle(circlex[k], circley[k], circlerad[k], NSEG);                
+                draw_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG);                
                 init_billiard_color();
             }
             
@@ -1244,7 +1319,7 @@ void draw_billiard()      /* draws the billiard boundary */
                 hsl_to_rgb(0.0, 0.9, 0.5, rgb);
                 glColor3f(rgb[0], rgb[1], rgb[2]);
                 
-                draw_circle(x_shooter, y_shooter, circlerad[ncircles-1], NSEG);
+                draw_circle(x_shooter, y_shooter, circles[ncircles-1].radius, NSEG);
             }
             
             init_billiard_color();
@@ -1257,6 +1332,30 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd();
             break; 
         }
+        case (D_POLYLINE):
+        {
+            for (k=0; k<nsides; k++)
+            {
+                glBegin(GL_LINE_STRIP);    
+                glVertex2d(polyline[k].x1, polyline[k].y1);
+                glVertex2d(polyline[k].x2, polyline[k].y2);
+                glEnd();
+            }
+            if ((FOCI)&&(POLYLINE_PATTERN == P_TOKARSKY))
+            {
+                glLineWidth(2);
+                rgb[0] = 1.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+                draw_colored_circle(-0.95, 0.0, r, NSEG, rgb);
+                rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
+                draw_colored_circle(0.95, 0.0, r, NSEG, rgb);
+            }
+            if (ABSORBING_CIRCLES)
+            {
+                rgb[0] = 0.7;   rgb[1] = 0.7;   rgb[2] = 0.7;
+                for (k=0; k<ncircles; k++) draw_colored_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG, rgb);
+            }
+            break; 
+        }        
         default: 
         {
             printf("Function draw_billiard not defined for this billiard \n");
@@ -3942,8 +4041,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         
         angle = conf[0] - (double)ncirc*DPI;
 
-        pos[0] = circlex[ncirc] + circlerad[ncirc]*cos(angle);
-        pos[1] = circley[ncirc] + circlerad[ncirc]*sin(angle);
+        pos[0] = circles[ncirc].xc + circles[ncirc].radius*cos(angle);
+        pos[1] = circles[ncirc].yc + circles[ncirc].radius*sin(angle);
         
         *alpha = angle + PID + conf[1]; 
         
@@ -3961,10 +4060,10 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         c0 = cos(alpha);
         s0 = sin(alpha);
         
-        for (i=0; i<ncircles; i++) if (circleactive[i])
+        for (i=0; i<ncircles; i++) if (circles[i].active)
         {
-            b = (pos[0]-circlex[i])*c0 + (pos[1]-circley[i])*s0;
-            c = (pos[0]-circlex[i])*(pos[0]-circlex[i]) + (pos[1]-circley[i])*(pos[1]-circley[i]) - circlerad[i]*circlerad[i];
+            b = (pos[0]-circles[i].xc)*c0 + (pos[1]-circles[i].yc)*s0;
+            c = (pos[0]-circles[i].xc)*(pos[0]-circles[i].xc) + (pos[1]-circles[i].yc)*(pos[1]-circles[i].yc) -            circles[i].radius*circles[i].radius;
         
             delta = b*b - c;
             if (delta > margin)     /* there is an intersection with circle i */
@@ -3977,7 +4076,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                     tval[nt] = t;
                     xint[nt] = pos[0] + t*c0;
                     yint[nt] = pos[1] + t*s0;
-                    phiint[nt] = argument(xint[nt] - circlex[i], yint[nt] - circley[i]);
+                    phiint[nt] = argument(xint[nt] - circles[i].xc, yint[nt] - circles[i].yc);
 
                     nt++;
                 }
@@ -4066,8 +4165,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         
             angle = conf[0] - (double)ncirc*DPI;
 
-            pos[0] = circlex[ncirc] + circlerad[ncirc]*cos(angle);
-            pos[1] = circley[ncirc] + circlerad[ncirc]*sin(angle);
+            pos[0] = circles[ncirc].xc + circles[ncirc].radius*cos(angle);
+            pos[1] = circles[ncirc].yc + circles[ncirc].radius*sin(angle);
         
             *alpha = angle + PID + conf[1]; 
         
@@ -4099,10 +4198,10 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         c0 = cos(alpha);
         s0 = sin(alpha);
         
-        for (i=0; i<ncircles; i++) if (circleactive[i])
+        for (i=0; i<ncircles; i++) if (circles[i].active)
         {
-            b = (pos[0]-circlex[i])*c0 + (pos[1]-circley[i])*s0;
-            c = (pos[0]-circlex[i])*(pos[0]-circlex[i]) + (pos[1]-circley[i])*(pos[1]-circley[i]) - circlerad[i]*circlerad[i];
+            b = (pos[0]-circles[i].xc)*c0 + (pos[1]-circles[i].yc)*s0;
+            c = (pos[0]-circles[i].xc)*(pos[0]-circles[i].xc) + (pos[1]-circles[i].yc)*(pos[1]-circles[i].yc) - circles[i].radius*circles[i].radius;
         
             delta = b*b - c;
             if (delta > margin)     /* there is an intersection with circle i */
@@ -4115,7 +4214,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                     tval[nt] = t;
                     xint[nt] = pos[0] + t*c0;
                     yint[nt] = pos[1] + t*s0;
-                    phiint[nt] = argument(xint[nt] - circlex[i], yint[nt] - circley[i]);
+                    phiint[nt] = argument(xint[nt] - circles[i].xc, yint[nt] - circles[i].yc);
 
                     /* test wether intersection is in rectangle */
                     if ((vabs(xint[nt]) < LAMBDA)&&(vabs(yint[nt]) < 1.0)) nt++;
@@ -4209,8 +4308,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         
             angle = conf[0] - (double)ncirc*DPI;
 
-            pos[0] = circlex[ncirc] + circlerad[ncirc]*cos(angle);
-            pos[1] = circley[ncirc] + circlerad[ncirc]*sin(angle);
+            pos[0] = circles[ncirc].xc + circles[ncirc].radius*cos(angle);
+            pos[1] = circles[ncirc].yc + circles[ncirc].radius*sin(angle);
         
             *alpha = angle + PID + conf[1]; 
         
@@ -4246,10 +4345,10 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         length = 2.0*sin(0.5*omega);
         cw = cos(omega*0.5);
                     
-        for (i=0; i<ncircles; i++) if (circleactive[i])
+        for (i=0; i<ncircles; i++) if (circles[i].active)
         {
-            b = (pos[0]-circlex[i])*c0 + (pos[1]-circley[i])*s0;
-            c = (pos[0]-circlex[i])*(pos[0]-circlex[i]) + (pos[1]-circley[i])*(pos[1]-circley[i]) - circlerad[i]*circlerad[i];
+            b = (pos[0]-circles[i].xc)*c0 + (pos[1]-circles[i].yc)*s0;
+            c = (pos[0]-circles[i].xc)*(pos[0]-circles[i].xc) + (pos[1]-circles[i].yc)*(pos[1]-circles[i].yc) - circles[i].radius*circles[i].radius;
         
             delta = b*b - c;
             if (delta > margin)     /* there is an intersection with circle i */
@@ -4262,7 +4361,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                     tval[nt] = t;
                     xint[nt] = pos[0] + t*c0;
                     yint[nt] = pos[1] + t*s0;
-                    phiint[nt] = argument(xint[nt] - circlex[i], yint[nt] - circley[i]);
+                    phiint[nt] = argument(xint[nt] - circles[i].xc, yint[nt] - circles[i].yc);
 
                     /* test wether intersection is in polygon */
                     if (in_polygon(xint[nt], yint[nt], 1.0, NPOLY, APOLY)) nt++;
@@ -4350,8 +4449,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         
             angle = conf[0] - (double)ncirc*DPI;
 
-            pos[0] = circlex[ncirc] + circlerad[ncirc]*cos(angle);
-            pos[1] = circley[ncirc] + circlerad[ncirc]*sin(angle);
+            pos[0] = circles[ncirc].xc + circles[ncirc].radius*cos(angle);
+            pos[1] = circles[ncirc].yc + circles[ncirc].radius*sin(angle);
         
             *alpha = angle + PID + conf[1]; 
         
@@ -4383,10 +4482,10 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         c0 = cos(alpha);
         s0 = sin(alpha);
         
-        for (i=0; i<ncircles; i++) if (circleactive[i])
+        for (i=0; i<ncircles; i++) if (circles[i].active)
         {
-            b = (pos[0]-circlex[i])*c0 + (pos[1]-circley[i])*s0;
-            c = (pos[0]-circlex[i])*(pos[0]-circlex[i]) + (pos[1]-circley[i])*(pos[1]-circley[i]) - circlerad[i]*circlerad[i];
+            b = (pos[0]-circles[i].xc)*c0 + (pos[1]-circles[i].yc)*s0;
+            c = (pos[0]-circles[i].xc)*(pos[0]-circles[i].xc) + (pos[1]-circles[i].yc)*(pos[1]-circles[i].yc) - circles[i].radius*circles[i].radius;
         
             delta = b*b - c;
             if (delta > margin)     /* there is an intersection with circle i */
@@ -4399,7 +4498,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                     tval[nt] = t;
                     xint[nt] = pos[0] + t*c0;
                     yint[nt] = pos[1] + t*s0;
-                    phiint[nt] = argument(xint[nt] - circlex[i], yint[nt] - circley[i]);
+                    phiint[nt] = argument(xint[nt] - circles[i].xc, yint[nt] - circles[i].yc);
 
                     /* test wether intersection is in rectangle */
                     if ((vabs(xint[nt]) < LAMBDA)&&(vabs(yint[nt]) < 1.0)) nt++;
@@ -4476,6 +4575,180 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
 	return(c);
  }
  
+ 
+/****************************************************************************************/
+/* billiard in poylgonal line */
+/****************************************************************************************/
+
+ int pos_polyline(double conf[2], double pos[2], double *alpha)
+ /* determine position on boundary of domain */
+ /* position varies between 0 and nsides */
+ /* returns number of hit setment */
+ {
+	double len, rlarge = 1000.0;
+        int nside;
+        
+        nside = (int)conf[0];
+        if (nside >= nsides) nside = nsides - 1;
+        
+        if (nside >= 0)      /* position is on a side of the polygonal line */
+        {
+            len = conf[0] - (double)nside;
+
+            pos[0] = polyline[nside].x1 + len*(polyline[nside].x2 - polyline[nside].x1);
+            pos[1] = polyline[nside].y1 + len*(polyline[nside].y2 - polyline[nside].y1);
+        
+            *alpha = polyline[nside].angle + conf[1]; 
+            return(nside);
+        }
+        else    /* position is on an absorbing circle */
+        {
+            pos[0] = rlarge;
+            pos[1] = 0.0;
+            
+            *alpha = 0.0;
+            return(-1);    
+        }
+ }
+ 
+ 
+ int vpolyline_xy(double config[8], double alpha, double pos[2])
+ /* determine initial configuration for start at point pos = (x,y) */
+ {
+	double c0, s0, a, b, c, t, dx, delta, s, xi, yi, margin = 1.0e-12, tmin, rlarge = 1000.0;
+        double tval[nsides + ncircles], xint[nsides + ncircles], yint[nsides + ncircles], sint[nsides + ncircles];
+	int i, nt = 0, nsegment[nsides + ncircles], ntmin;
+
+        c0 = cos(alpha);
+        s0 = sin(alpha);
+        
+        for (i=0; i<nsides; i++) 
+        {
+//             printf("testing side %i\n", i);
+            
+            a = polyline[i].y2 - polyline[i].y1;
+            b = - polyline[i].x2 + polyline[i].x1;
+            c = -a*polyline[i].x1 - b*polyline[i].y1;
+            
+//             printf("a = %.2f, b = %.2f, c = %.2f\n", a, b, c);
+            
+            delta = a*c0 + b*s0;
+            if (vabs(delta) > margin)     /* there is an intersection with the line containing segment i */
+            {
+                t = -(a*pos[0] + b*pos[1] + c)/delta; 
+                if (t > margin) 
+                {
+                    xi = pos[0] + t*c0;
+                    yi = pos[1] + t*s0;
+                    dx = polyline[i].x2 - polyline[i].x1;
+                    
+                    if (vabs(dx) > margin) s = (xi - polyline[i].x1)/dx; 
+                    else s = (yi - polyline[i].y1)/(polyline[i].y2 - polyline[i].y1); 
+//                     printf("s = %.2f\n", s);
+                    
+                    if ((s >= 0.0)&&(s <= 1.0))     
+                    /* the intersection is on the segment */
+                    {
+                        nsegment[nt] = i;
+                        tval[nt] = t;
+                        sint[nt] = s;
+                        xint[nt] = pos[0] + t*c0;
+                        yint[nt] = pos[1] + t*s0;
+//                         printf("s = %.2f, x = %.2f, y = %.2f\n", s, xint[nt], yint[nt]);
+                        nt++;                        
+                    }
+                }
+            }
+        }
+        
+        if (ABSORBING_CIRCLES) for (i=0; i<ncircles; i++) 
+        {
+            b = (pos[0]-circles[i].xc)*c0 + (pos[1]-circles[i].yc)*s0;
+            c = (pos[0]-circles[i].xc)*(pos[0]-circles[i].xc) + (pos[1]-circles[i].yc)*(pos[1]-circles[i].yc) - circles[i].radius*circles[i].radius;
+        
+            delta = b*b - c;
+            if (delta > margin)     /* there is an intersection with circle i */
+            {
+                t = -b - sqrt(delta);            
+                if (t > margin) 
+                {
+                    nsegment[nt] = -1-i;
+                
+                    tval[nt] = t;
+                    xint[nt] = pos[0] + t*c0;
+                    yint[nt] = pos[1] + t*s0;
+                    sint[nt] = argument(xint[nt] - circles[i].xc, yint[nt] - circles[i].yc);
+
+                    nt++;
+                }
+            }
+        }
+        
+        if (nt > 0)     /* there is at least one intersection */
+        {
+            /* find earliest intersection */
+            tmin = tval[0];
+            ntmin = 0;
+            for (i=1; i<nt; i++) 
+            if (tval[i] < tmin) 
+            {
+                tmin = tval[i];
+                ntmin = i;
+            }
+            
+//             printf("ntmin = %i\n", ntmin); 
+            if (nsegment[ntmin] >= 0) 
+            {
+                config[0] = (double)nsegment[ntmin] + sint[ntmin];
+                config[1] = polyline[nsegment[ntmin]].angle - alpha;        
+                if (config[1] < 0.0) config[1] += DPI;
+                if (config[1] >= PI) config[1] -= DPI;
+            }
+            /* set dummy coordinates if circles are absorbing */
+            else if ((ABSORBING_CIRCLES)&&(nsegment[ntmin] < 0))
+            {
+                config[0] = DUMMY_ABSORBING;
+                config[1] = PI;
+            }
+            config[2] = 0.0;	/* running time */ 
+            config[3] = module2(xint[ntmin]-pos[0], yint[ntmin]-pos[1]);     /* distance to collision */
+            config[4] = pos[0];    /* start position */
+            config[5] = pos[1];
+            config[6] = xint[ntmin];        /* position of collision */
+            config[7] = yint[ntmin];
+            
+            
+//             print_config(config);
+            
+            return(nsegment[ntmin]);
+        }
+        else    /* there is no intersection - set dummy values */
+        {
+            config[0] = DUMMY_ABSORBING;
+            config[1] = PI;
+            config[2] = 0.0;
+            config[3] = rlarge;
+            config[4] = pos[0];    /* start position */
+            config[5] = pos[1];
+            config[6] = rlarge*cos(alpha);
+            config[7] = rlarge*sin(alpha);
+            
+            return(-1);
+        }
+ }
+
+ int vpolyline(double config[8])
+ /* determine initial configuration when starting from boundary */
+  {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_polyline(config, pos, &alpha);
+        
+        c = vpolyline_xy(config, alpha, pos);
+	
+	return(c);
+ }
  
 /****************************************************************************************/
 /* general billiard */
@@ -4578,6 +4851,11 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         case (D_CIRCLES_IN_TORUS):
         {
             return(pos_circles_in_torus(conf, pos, alpha));
+            break;
+        }
+        case (D_POLYLINE):
+        {
+            return(pos_polyline(conf, pos, alpha));
             break;
         }
         default: 
@@ -4686,6 +4964,11 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         case (D_CIRCLES_IN_TORUS):
         {
             return(vcircles_in_torus_xy(config, alpha, pos));
+            break;
+        }
+        case (D_POLYLINE):
+        {
+            return(vpolyline_xy(config, alpha, pos));
             break;
         }
         default: 
@@ -4835,6 +5118,13 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             c = pos_circles_in_torus(config, pos, &alpha);
         
             return(vcircles_in_torus(config));
+            break;
+        }
+        case (D_POLYLINE):
+        {
+            c = pos_polyline(config, pos, &alpha);
+        
+            return(vpolyline(config));
             break;
         }
         default: 
@@ -5009,7 +5299,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         {
             condition = 1;
             for (k=0; k<ncircles; k++)  
-                if (circleactive[k]) condition = condition*out_circle(x-circlex[k], y-circley[k], circlerad[k]);
+                if (circles[k].active) condition = condition*out_circle(x-circles[k].xc, y-circles[k].yc, circles[k].radius);
+//                 if (circleactive[k]) condition = condition*out_circle(x-circlex[k], y-circles[k].yc, circlerad[k]);
             return(condition);
             break;
         }
@@ -5020,7 +5311,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             {
                 condition = 1;
                 for (k=0; k<ncircles; k++)  
-                    if (circleactive[k]) condition = condition*out_circle(x-circlex[k], y-circley[k], circlerad[k]);
+                    if (circles[k].active) condition = condition*out_circle(x-circles[k].xc, y-circles[k].yc, circles[k].radius);
                 return(condition);
             }
             break;
@@ -5033,7 +5324,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             {
                 condition = 1;
                 for (k=0; k<ncircles; k++)  
-                    condition = condition*circleactive[k]*out_circle(x-circlex[k], y-circley[k], circlerad[k]);
+                    condition = condition*circles[k].active*out_circle(x-circles[k].xc, y-circles[k].yc, circles[k].radius);
                 return(condition);
             }
             break;
@@ -5045,9 +5336,15 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             {
                 condition = 1;
                 for (k=0; k<ncircles; k++)  
-                    if (circleactive[k]) condition = condition*out_circle(x-circlex[k], y-circley[k], circlerad[k]);
+                    if (circles[k].active) condition = condition*out_circle(x-circles[k].xc, y-circles[k].yc, circles[k].radius);
                 return(condition);
             }
+            break;
+        }
+        case D_POLYLINE:
+        {
+            /* not easy to implement for non-convex polygons */
+            return(1);
             break;
         }
         default: 
@@ -5058,7 +5355,9 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
     }
  }
  
- void init_circle_config()
+
+
+void init_circles(t_circle circles[NMAXCIRCLES])
 {
     int i, j, k, n, ncirc0, n_p_active, ncandidates=5000, naccepted; 
     double dx, dy, xx[4], yy[4], x, y, gamma, height, phi, r0, r, dpoisson = 3.25*MU;
@@ -5069,23 +5368,23 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         {
             ncircles = 4;
             
-            circlex[0] = 1.0;
-            circley[0] = 0.0;
-            circlerad[0] = 0.8;
+            circles[0].xc = 1.0;
+            circles[0].yc = 0.0;
+            circles[0].radius = 0.8;
+                        
+            circles[1].xc = -1.0;
+            circles[1].yc = 0.0;
+            circles[1].radius = 0.8;
             
-            circlex[1] = -1.0;
-            circley[1] = 0.0;
-            circlerad[1] = 0.8;
+            circles[2].xc = 0.0;
+            circles[2].yc = 0.8;
+            circles[2].radius = 0.4;
             
-            circlex[2] = 0.0;
-            circley[2] = 0.8;
-            circlerad[2] = 0.4;
+            circles[3].xc = 0.0;
+            circles[3].yc = -0.8;
+            circles[3].radius = 0.4;
             
-            circlex[3] = 0.0;
-            circley[3] = -0.8;
-            circlerad[3] = 0.4;
-            
-            for (i=0; i<4; i++) circleactive[i] = 1;
+            for (i=0; i<4; i++) circles[i].active = 1;
 
             break;
         }
@@ -5097,10 +5396,10 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 for (j = 0; j < NCY; j++)
                 {
                     n = NCY*i + j;
-                    circlex[n] = ((double)(i-NCX/2) + 0.5)*dy;
-                    circley[n] = YMIN + ((double)j + 0.5)*dy;
-                    circlerad[n] = MU;
-                    circleactive[n] = 1;
+                    circles[n].xc = ((double)(i-NCX/2) + 0.5)*dy;
+                    circles[n].yc = YMIN + ((double)j + 0.5)*dy;
+                    circles[n].radius = MU;
+                    circles[n].active = 1;
                 }
             break;
         }
@@ -5113,11 +5412,11 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 for (j = 0; j < NCY+1; j++)
                 {
                     n = (NCY+1)*i + j;
-                    circlex[n] = ((double)(i-NCX/2) + 0.5)*dy;
-                    circley[n] = YMIN + ((double)j - 0.5)*dy;
-                    if ((i+NCX)%2 == 1) circley[n] += 0.5*dy;
-                    circlerad[n] = MU;
-                    circleactive[n] = 1;
+                    circles[n].xc = ((double)(i-NCX/2) + 0.5)*dy;
+                    circles[n].yc = YMIN + ((double)j - 0.5)*dy;
+                    if ((i+NCX)%2 == 1) circles[n].yc += 0.5*dy;
+                    circles[n].radius = MU;
+                    circles[n].active = 1;
                 }
             break;
         }
@@ -5132,11 +5431,11 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 for (j = 0; j < NCY+1; j++)
                 {
                     n = (NCY+1)*i + j;
-                    circlex[n] = ((double)(i-NCX/2) + 0.5)*dx;
-                    circley[n] = YMIN + ((double)j - 0.5)*dy;
-                    if ((i+NCX)%2 == 1) circley[n] += 0.5*dy;
-                    circlerad[n] = MU;
-                    circleactive[n] = 1;
+                    circles[n].xc = ((double)(i-NCX/2) + 0.5)*dx;
+                    circles[n].yc = YMIN + ((double)j - 0.5)*dy;
+                    if ((i+NCX)%2 == 1) circles[n].yc += 0.5*dy;
+                    circles[n].radius = MU;
+                    circles[n].active = 1;
                 }
             break;
         }
@@ -5148,12 +5447,12 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             dx = 2.0*LAMBDA/((double)ncircles);
             for (n = 0; n < ncircles; n++)
             {
-                circlex[n] = -LAMBDA + n*dx;
-                circley[n] = y;
+                circles[n].xc = -LAMBDA + n*dx;
+                circles[n].yc = y;
                 y += height*gamma; 
                 if (y > YMAX) y -= height;
-                circlerad[n] = MU;
-                circleactive[n] = 1;
+                circles[n].radius = MU;
+                circles[n].active = 1;
             }
             
             break;
@@ -5161,8 +5460,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         case (C_GOLDEN_SPIRAL):
         {
             ncircles = 1;
-            circlex[0] = 0.0;
-            circley[0] = 0.0;
+            circles[0].xc = 0.0;
+            circles[0].yc = 0.0;
             
             gamma = (sqrt(5.0) - 1.0)*PI;    /* golden mean times 2Pi */
             phi = 0.0;
@@ -5179,17 +5478,17 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 
                 if ((vabs(x) < LAMBDA)&&(vabs(y) < YMAX + MU))
                 {
-                    circlex[ncircles] = x;
-                    circley[ncircles] = y;
+                    circles[ncircles].xc = x;
+                    circles[ncircles].yc = y;
                     ncircles++;
                 }
             }
             
             for (i=0; i<ncircles; i++)
             {
-                circlerad[i] = MU;
+                circles[i].radius = MU;
                 /* inactivate circles outside the domain */
-                if ((circley[i] < YMAX + MU)&&(circley[i] > YMIN - MU)) circleactive[i] = 1;
+                if ((circles[i].yc < YMAX + MU)&&(circles[i].yc > YMIN - MU)) circles[i].active = 1;
             }
         break;
         }
@@ -5201,10 +5500,10 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 for (j = 0; j < NCY; j++)
                 {
                     n = NCY*i + j;
-                    circlex[n] = ((double)(i-NCX/2) + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
-                    circley[n] = YMIN + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
-                    circlerad[n] = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
-                    circleactive[n] = 1;
+                    circles[n].xc = ((double)(i-NCX/2) + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circles[n].yc = YMIN + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circles[n].radius = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
+                    circles[n].active = 1;
                 }
             break;
         }
@@ -5213,10 +5512,10 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             ncircles = NPOISSON;
             for (n = 0; n < NPOISSON; n++)
             {
-                circlex[n] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
-                circley[n] = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
-                circlerad[n] = MU;
-                circleactive[n] = 1;
+                circles[n].xc = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+                circles[n].yc = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
+                circles[n].radius = MU;
+                circles[n].active = 1;
             }
             break;
         }
@@ -5224,8 +5523,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         {
             printf("Generating Poisson disc sample\n");
             /* generate first circle */
-            circlex[0] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
-            circley[0] = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
+            circles[0].xc = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+            circles[0].yc = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
             active_poisson[0] = 1;
             n_p_active = 1;
             ncircles = 1;
@@ -5242,24 +5541,24 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 {
                     r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
                     phi = DPI*(double)rand()/RAND_MAX;
-                    x = circlex[i] + r*cos(phi);
-                    y = circley[i] + r*sin(phi);
+                    x = circles[i].xc + r*cos(phi);
+                    y = circles[i].yc + r*sin(phi);
 //                        printf("Testing new circle at (%.3f,%.3f)\t", x, y);
                     far = 1;
                     for (k=0; k<ncircles; k++) if ((k!=i))
                     {
                         /* new circle is far away from circle k */
-                        far = far*((x - circlex[k])*(x - circlex[k]) + (y - circley[k])*(y - circley[k]) >=     dpoisson*dpoisson);
+                        far = far*((x - circles[k].xc)*(x - circles[k].xc) + (y - circles[k].yc)*(y - circles[k].yc) >=     dpoisson*dpoisson);
                         /* new circle is in domain */
                         far = far*(vabs(x) < LAMBDA)*(y < YMAX)*(y > YMIN);
                     }
                     if (far)    /* accept new circle */
                     {
                         printf("New circle at (%.3f,%.3f) accepted\n", x, y);
-                        circlex[ncircles] = x;
-                        circley[ncircles] = y;
-                        circlerad[ncircles] = MU;
-                        circleactive[ncircles] = 1;
+                        circles[ncircles].xc = x;
+                        circles[ncircles].xc = y;
+                        circles[ncircles].radius = MU;
+                        circles[ncircles].active = 1;
                         active_poisson[ncircles] = 1;
                         ncircles++;
                         n_p_active++;
@@ -5296,35 +5595,25 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             yy[2] = -yy[0];
             yy[3] = -yy[1];
 
-//             xx[0] = 0.5*(x_shooter + x_target);
-//             xx[1] = LAMBDA - 0.5*(x_target - x_shooter);
-//             xx[2] = -xx[0];
-//             xx[3] = -xx[1];
-//             
-//             yy[0] = 0.5*(y_shooter + y_target);
-//             yy[1] = 1.0 - 0.5*(y_target - y_shooter);
-//             yy[2] = -yy[0];
-//             yy[3] = -yy[1];
-
             for (i = 0; i < 4; i++)
                 for (j = 0; j < 4; j++)
                 {
-                    circlex[4*i + j] = xx[i];
-                    circley[4*i + j] = yy[j];
+                    circles[4*i + j].xc = xx[i];
+                    circles[4*i + j].yc = yy[j];
                     
                 }
                 
-            circlex[ncircles - 1] = x_target;
-            circley[ncircles - 1] = y_target;
+            circles[ncircles - 1].xc = x_target;
+            circles[ncircles - 1].yc = y_target;
             
             for (i=0; i<ncircles - 1; i++)
             {
-                circlerad[i] = MU;
-                circleactive[i] = 1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
             }
             
-            circlerad[ncircles - 1] = 0.5*MU;
-            circleactive[ncircles - 1] = 2;
+            circles[ncircles - 1].radius = 0.5*MU;
+            circles[ncircles - 1].active = 2;
             
             break;
         }
@@ -5335,6 +5624,312 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
     }
 }
 
+int add_rectangle_to_polyline(double xc, double yc, double width, double height, t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
+/* add a rectangle to polyline pattern */
+{
+    int i;
+    
+    polyline[nsides].x1 = xc - 0.5*width;
+    polyline[nsides].y1 = yc - 0.5*height;
+    polyline[nsides].length = width;
+    polyline[nsides].angle = 0.0;
+            
+    polyline[nsides+1].x1 = xc + 0.5*width;
+    polyline[nsides+1].y1 = yc - 0.5*height;
+    polyline[nsides+1].length = height;
+    polyline[nsides+1].angle = PID;
+            
+    polyline[nsides+2].x1 = xc + 0.5*width;
+    polyline[nsides+2].y1 = yc + 0.5*height;
+    polyline[nsides+2].length = width;
+    polyline[nsides+2].angle = PI;
+            
+    polyline[nsides+3].x1 = xc - 0.5*width;
+    polyline[nsides+3].y1 = yc + 0.5*height;
+    polyline[nsides+3].length = height;
+    polyline[nsides+3].angle = 3.0*PID;
+            
+    if (nsides+4 < NMAXPOLY) for (i=nsides; i<nsides+4; i++) 
+    {
+        polyline[i].color = 0;
+        if (i < nsides+3) polyline[i].x2 = polyline[i+1].x1;
+        else polyline[i].x2 = polyline[nsides].x1;
+        if (i < nsides+3) polyline[i].y2 = polyline[i+1].y1;
+        else polyline[i].y2 = polyline[nsides].y1;        
+    }
+    else printf("Increase NMAXPOLY\n");
+            
+    if (nsides+4 < NMAXCIRCLES) for (i=nsides; i<nsides+4; i++) 
+    {
+        circles[i].xc = polyline[i].x1;
+        circles[i].yc = polyline[i].y1;
+        circles[i].radius = MU;
+        circles[i].active = 1;
+    }
+    else 
+    {
+        printf("Increase NMAXCIRCLES\n");
+        return(0);
+    }
+                
+    nsides += 4;
+    ncircles += 4;
+    return(1);
+}
 
+void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
+{
+    int i, j, k, l, n, z, ii, jj, terni[SDEPTH], ternj[SDEPTH], quater[SDEPTH], cond;
+    short int vkoch[NMAXCIRCLES], turnright; 
+    double ratio, omega, angle, sw, length, dist, x, y;
+    
+    switch (POLYLINE_PATTERN) {
+        case (P_RECTANGLE):
+        {
+            add_rectangle_to_polyline(0.0, 0.0, 2.0*LAMBDA, 2.0, polyline, circles);
+            break;
+        }
+        case (P_TOKARSKY):
+        {
+            nsides = 26;
+            ncircles = 26;
+            
+            polyline[0].x1 = 0.0;   polyline[0].y1 = 2.0;       polyline[0].angle = 0.0;
+            polyline[1].x1 = 1.0;   polyline[1].y1 = 2.0;       polyline[1].angle = -PID;
+            polyline[2].x1 = 1.0;   polyline[2].y1 = 1.0;       polyline[2].angle = 0.0;
+            polyline[3].x1 = 2.0;   polyline[3].y1 = 1.0;       polyline[3].angle = -PID;
+            polyline[4].x1 = 2.0;   polyline[4].y1 = 0.0;       polyline[4].angle = 0.5*PID;
+            polyline[5].x1 = 3.0;   polyline[5].y1 = 1.0;       polyline[5].angle = 0.0;
+            polyline[6].x1 = 4.0;   polyline[6].y1 = 1.0;       polyline[6].angle = -PID;
+            polyline[7].x1 = 4.0;   polyline[7].y1 = 0.0;       polyline[7].angle = 0.5*PID;
+            polyline[8].x1 = 5.0;   polyline[8].y1 = 1.0;       polyline[8].angle = 0.0;
+            polyline[9].x1 = 6.0;   polyline[9].y1 = 1.0;       polyline[9].angle = -PID;
+            polyline[10].x1 = 6.0;   polyline[10].y1 = 0.0;     polyline[10].angle = 0.5*PID;
+            polyline[11].x1 = 7.0;   polyline[11].y1 = 1.0;     polyline[11].angle = PID;
+            polyline[12].x1 = 7.0;   polyline[12].y1 = 2.0;     polyline[12].angle = 0.0;
+            polyline[13].x1 = 8.0;   polyline[13].y1 = 2.0;     polyline[13].angle = PID;
+            polyline[14].x1 = 8.0;   polyline[14].y1 = 3.0;     polyline[14].angle = PI;
+            polyline[15].x1 = 7.0;   polyline[15].y1 = 3.0;     polyline[15].angle = 1.5*PID;
+            polyline[16].x1 = 6.0;   polyline[16].y1 = 4.0;     polyline[16].angle = -PID;
+            polyline[17].x1 = 6.0;   polyline[17].y1 = 3.0;     polyline[17].angle = PI;
+            polyline[18].x1 = 5.0;   polyline[18].y1 = 3.0;     polyline[18].angle = -PID;
+            polyline[19].x1 = 5.0;   polyline[19].y1 = 2.0;     polyline[19].angle = PI;
+            polyline[20].x1 = 3.0;   polyline[20].y1 = 2.0;     polyline[20].angle = PID;
+            polyline[21].x1 = 3.0;   polyline[21].y1 = 3.0;     polyline[21].angle = PI;
+            polyline[22].x1 = 2.0;   polyline[22].y1 = 3.0;     polyline[22].angle = PID;
+            polyline[23].x1 = 2.0;   polyline[23].y1 = 4.0;     polyline[23].angle = PI;
+            polyline[24].x1 = 1.0;   polyline[24].y1 = 4.0;     polyline[24].angle = -PID;
+            polyline[25].x1 = 1.0;   polyline[25].y1 = 3.0;     polyline[25].angle = 2.5*PID;
+            
+            ratio = (XMAX - XMIN)/8.4;
+            for (i=0; i<nsides; i++)
+            {
+                polyline[i].x1 = ratio*(polyline[i].x1 - 4.0);
+                polyline[i].y1 = ratio*(polyline[i].y1 - 2.0);
+            }
+                
+            for (i=0; i<nsides; i++) if (i < nsides-1) 
+            {   
+                polyline[i].x2 = polyline[i+1].x1;
+                polyline[i].y2 = polyline[i+1].y1;
+            }
+            
+            polyline[nsides-1].x2 = polyline[0].x1;
+            polyline[nsides-1].y2 = polyline[0].y1;
+            
+            for (i=0; i<nsides; i++) 
+                polyline[i].length = module2(polyline[i].x2 - polyline[i].x1, polyline[i].y2 - polyline[i].y1);
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].xc = polyline[i].x1;
+                circles[i].yc = polyline[i].y1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
+            }
+                        
+            break;
+        }
+        case (P_POLYRING):
+        {
+            nsides = 2*NPOLY;
+            ncircles = 0;
+            omega = DPI/(double)NPOLY;
+            sw = sin(omega/2.0);
+            
+            for (i=0; i<NPOLY; i++)
+            {
+                angle = APOLY + (double)i*omega;
+                polyline[i].x1 = LAMBDA*cos(angle);
+                polyline[i].y1 = LAMBDA*sin(angle);
+                polyline[i].angle = angle + PID + 0.5*omega;
+                polyline[i].length = 2.0*LAMBDA*sw;
+            }
+            for (i=0; i<NPOLY; i++)
+            {
+                polyline[i].x2 = polyline[(i+1)%NPOLY].x1;
+                polyline[i].y2 = polyline[(i+1)%NPOLY].y1;
+            }
+            
+            for (i=0; i<NPOLY; i++)
+            {
+                angle = APOLY + ((double)i+0.5)*omega;
+                polyline[i+NPOLY].x1 = MU*cos(angle);
+                polyline[i+NPOLY].y1 = MU*sin(angle);
+                polyline[i+NPOLY].angle = angle + PID + 0.5*omega;
+                polyline[i+NPOLY].length = 2.0*MU*sw;
+            }
+            for (i=0; i<NPOLY; i++)
+            {
+                polyline[i+NPOLY].x2 = polyline[(i+1)%NPOLY+NPOLY].x1;
+                polyline[i+NPOLY].y2 = polyline[(i+1)%NPOLY+NPOLY].y1;
+            }
+            
+            for (i=0; i<nsides; i++) polyline[i].color = 0;
+                            
+            break;
+        }
+        case (P_SIERPINSKI):
+        {
+            nsides = 0;
+            ncircles = 0;
+            
+            add_rectangle_to_polyline(0.0, 0.0, 2.0*LAMBDA, 2.0, polyline, circles);
+            
+            length = 2.0/3.0;
+            dist = 2.0;
+            n = 1;
+            
+            for (k=0; k<SDEPTH; k++)
+            {
+                for (i=0; i<n; i++)
+                    for (j=0; j<n; j++)
+                    {
+                        /* compute ternary expansion of i */
+                        ii = i;
+                        for (l=0; l<k; l++)
+                        {
+                            terni[l] = ii%3;
+                            ii = ii - (ii%3);
+                            ii = ii/3;
+                        }
+                        
+                        /* compute ternary expansion of j */
+                        jj = j;
+                        for (l=0; l<k; l++)
+                        {
+                            ternj[l] = jj%3;
+                            jj = jj - (jj%3);
+                            jj = jj/3;
+                        }
+                        
+                        /* check whether ternary expansions do not have 1 at same position */
+                        cond = 1;
+                        for (l=0; l<k; l++) 
+                            if ((terni[l] == 1)&&(ternj[l] == 1)) cond = 0;
+                            
+                        if (cond)
+                        {
+                            x = -1.0 + dist*((double)i + 0.5);
+                            y = -1.0 + dist*((double)j + 0.5);
+                            add_rectangle_to_polyline(x, y, length, length, polyline, circles);
+                        }
+                    }
+                length = length/3.0;
+                dist = dist/3.0;
+                n = n*3;
+            }
+                         
+            printf("nsides = %i\n", nsides);
+            
+            break;
+        }
+        case (P_VONKOCH):
+        {
+            nsides = 3;
+            for (k=0; k<SDEPTH; k++) nsides *= 4;
+            printf("nsides = %i\n", nsides);
+            ncircles = nsides;
+            
+            if (nsides > NMAXPOLY)
+            {
+                printf("NMAXPOLY has to be increased to at least %i\n", nsides);
+                nsides = NMAXPOLY;
+            }
+
+            for (i=0; i<nsides/3; i++)
+            {
+                /* compute quaternary expansion of i */
+                ii = i;
+                for (l=0; l<SDEPTH; l++)
+                {
+                    quater[l] = ii%4;
+                    ii = ii - (ii%4);
+                    ii = ii/4;
+                }
+                
+                /* find first nonzero digit */
+                z = 0;
+                while ((quater[z] == 0)&&(z<SDEPTH)) z++;
+                
+                /* compute left/right turns */
+                if (i==0) vkoch[0] = 0;
+                else if (z != SDEPTH)
+                {   
+                    if (quater[z] == 2) vkoch[i] = 0;
+                    else vkoch[i] = 1;
+                }
+//                 printf("%i", vkoch[i]);
+            }
+            printf("\n");
+            
+            /* compute vertices */
+            angle = 2.0*PI/3.0;
+            x = cos(PI/6.0);
+            y = -sin(PI/6.0);
+            length = 2.0*sin(PI/3.0);
+            
+            for (k=0; k<SDEPTH; k++) length = length/3.0;
+            printf("Length = %.2f\n", length);
+            
+            for (i=0; i<nsides; i++)
+            {
+                polyline[i].x1 = x;
+                polyline[i].y1 = y; 
+                polyline[i].angle = angle;
+                
+                x += length*cos(angle);
+                y += length*sin(angle);
+                polyline[i].length = length;
+                                
+                turnright = vkoch[i%(nsides/3)+1];
+                if (turnright) angle -= PI/3.0;
+                else angle += 2.0*PI/3.0;
+                
+                while (angle > DPI) angle -= DPI;
+                while (angle < 0.0) angle += DPI;                
+            }
+            
+            for (i=0; i<nsides; i++)
+            {
+                polyline[i].color = 0;
+                if (i < nsides-1) polyline[i].x2 = polyline[i+1].x1;
+                else polyline[i].x2 = polyline[0].x1;
+                if (i < nsides-1) polyline[i].y2 = polyline[i+1].y1;
+                else polyline[i].y2 = polyline[0].y1;  
+            }
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].xc = polyline[i].x1;
+                circles[i].yc = polyline[i].y1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
+            }
+            
+            break;
+        }
+    }
+}
 
 

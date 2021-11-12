@@ -1,9 +1,25 @@
-double circlex[NMAXCIRCLES], circley[NMAXCIRCLES], circlerad[NMAXCIRCLES];      /* position and radius of circular scatters */
-short int circleactive[NMAXCIRCLES];     /* tells which circular scatters are active */
-short int newcircle[NMAXCIRCLES];        /* takes value 1 when circle has just been hit */ 
-int circlecolor[NMAXCIRCLES];          /* color of circular scatterer */
+// double circlex[NMAXCIRCLES], circley[NMAXCIRCLES], circlerad[NMAXCIRCLES];      /* position and radius of circular scatters */
+// short int circleactive[NMAXCIRCLES];     /* tells which circular scatters are active */
+// short int newcircle[NMAXCIRCLES];        /* takes value 1 when circle has just been hit */ 
+// int circlecolor[NMAXCIRCLES];          /* color of circular scatterer */
 int ncircles = NMAXCIRCLES;            /* actual number of circles, can be decreased e.g. for random patterns */
+int nsides = NMAXPOLY;                 /* actual number of sides of polygonal line */
 
+typedef struct
+{
+    double xc, yc, radius;                  /* center and radius of circle */
+    short int active, new, double_circle;   /* circle is active, has just been hit, has a partner (for torus) */
+    int color, partner;                     /* circle color, number of partner */
+} t_circle;
+
+typedef struct
+{
+    double x1, x2, y1, y2, length, angle;
+    int color;
+} t_segment;
+
+t_circle circles[NMAXCIRCLES];
+t_segment polyline[NMAXPOLY];
 
 double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;    
 /* shooter and target positions for "laser in room of mirrors" simulations, with default values for square domain */
@@ -48,9 +64,16 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define C_RAND_POISSON 6    /* random Poisson point process */
 #define C_POISSON_DISC 7    /* Poisson disc sampling */
 
-
 #define C_LASER 11          /* laser fight in a room of mirrors */
 #define C_LASER_GENUSN 12   /* laser fight in a translation surface */
+
+#define D_POLYLINE 30     /* general polygon */
+
+#define P_RECTANGLE 0     /* rectangle (for test purposes) */
+#define P_TOKARSKY 1      /* Tokarsky unilluminable room */
+#define P_POLYRING 2      /* polygonal ring */
+#define P_SIERPINSKI 3    /* polygonal ring */
+#define P_VONKOCH 4       /* von Koch curve */
 
 /* Color palettes */
 
@@ -62,5 +85,7 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define COL_MAGMA 12     /* Magma color palette */
 #define COL_INFERNO 13   /* Inferno color palette */
 #define COL_PLASMA 14    /* Plasma color palette */
+#define COL_CIVIDIS 15   /* Cividis color palette */
+#define COL_PARULA 16    /* Parula color palette */
 
 

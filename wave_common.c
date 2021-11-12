@@ -60,6 +60,7 @@ void init_circular_wave(double x, double y, double *phi[NX], double *psi[NX], sh
     int i, j;
     double xy[2], dist2;
 
+    printf("Initializing wave\n"); 
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
@@ -124,21 +125,26 @@ void init_planar_wave(double x, double y, double *phi[NX], double *psi[NX], shor
     double xy[2], dist2;
 
     for (i=0; i<NX; i++)
+    {
+//         if (i%100 == 0) printf("Initializing column %i\n", i);
         for (j=0; j<NY; j++)
         {
             ij_to_xy(i, j, xy);
             dist2 = (xy[0]-x)*(xy[0]-x);
 	    xy_in[i][j] = xy_in_billiard(xy[0],xy[1]);
             
+            if ((xy_in[i][j])||(TWOSPEEDS)) 
+                phi[i][j] = INITIAL_AMP*exp(-dist2/INITIAL_VARIANCE)*cos(-sqrt(dist2)/INITIAL_WAVELENGTH);
 // 	    if ((xy_in[i][j])||(TWOSPEEDS)) phi[i][j] = 0.01*exp(-dist2/0.0005)*cos(-sqrt(dist2)/0.01);
 // 	    if ((xy_in[i][j])||(TWOSPEEDS)) phi[i][j] = 0.01*exp(-dist2/0.0005)*cos(-sqrt(dist2)/0.02);
 // 	    if ((xy_in[i][j])||(TWOSPEEDS)) phi[i][j] = 0.01*exp(-dist2/0.005)*cos(-sqrt(dist2)/0.02);
 // 	    if ((xy_in[i][j])||(TWOSPEEDS)) phi[i][j] = 0.01*exp(-dist2/0.01)*cos(-sqrt(dist2)/0.02);
-	    if ((xy_in[i][j])||(TWOSPEEDS)) phi[i][j] = 0.01*exp(-dist2/0.0005)*cos(-sqrt(dist2)/0.01);
+// 	    if ((xy_in[i][j])||(TWOSPEEDS)) phi[i][j] = 0.01*exp(-dist2/0.0005)*cos(-sqrt(dist2)/0.01);
 //             if ((xy_in[i][j])||(TWOSPEEDS)) phi[i][j] = 0.01*exp(-dist2/0.05)*cos(-sqrt(dist2)/0.025);
             else phi[i][j] = 0.0;
             psi[i][j] = 0.0;
         }
+    }
 }
 
 
@@ -395,59 +401,6 @@ void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], sho
     glEnd ();
 }
 
-
-void draw_color_scheme(double x1, double y1, double x2, double y2, int plot, double min, double max)
-{
-    int j, ij_botleft[2], ij_topright[2], imin, imax, jmin, jmax;
-    double y, dy, dy_e, rgb[3], value;
-    
-    xy_to_ij(x1, y1, ij_botleft);
-    xy_to_ij(x2, y2, ij_topright);
-    
-    imin = ij_botleft[0];
-    imax = ij_topright[0];
-    jmin = ij_botleft[1];
-    jmax = ij_topright[1];    
-    
-    glBegin(GL_QUADS);
-    dy = (max - min)/((double)(jmax - jmin));
-    dy_e = max/((double)(jmax - jmin));
-    
-    for (j = jmin; j < jmax; j++)
-    {
-        switch (plot) {
-            case (P_AMPLITUDE):
-            {
-                value = min + 1.0*dy*(double)(j - jmin);
-                color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
-                break;
-            }
-            case (P_ENERGY):
-            {
-                value = dy_e*(double)(j - jmin);
-                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, value, 1.0, 1, rgb);
-                else color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
-                break;
-            }
-            case (P_MEAN_ENERGY):
-            {
-                value = dy_e*(double)(j - jmin);
-                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, value, 1.0, 1, rgb);
-                else color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
-                break;
-            }
-        }
-        glColor3f(rgb[0], rgb[1], rgb[2]);
-        glVertex2i(imin, j);
-        glVertex2i(imax, j);
-        glVertex2i(imax, j+1);
-        glVertex2i(imin, j+1);
-    }
-    glEnd ();
-    
-    glColor3f(1.0, 1.0, 1.0);
-    draw_rectangle(x1, y1, x2, y2);
-}
 
 
 

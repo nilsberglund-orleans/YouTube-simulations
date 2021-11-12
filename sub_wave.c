@@ -187,7 +187,45 @@ void write_text( double x, double y, char *st)
  }
  
  
+// int in_polygon(double x, double y, double r, int npoly, double apoly)
+// /* test whether (x,y) is in regular polygon of npoly sides inscribed in circle of radious r, turned by apoly Pi/2 */
+// {
+//     int condition = 1, k;
+//     double omega, cw, angle; 
+//     
+//     omega = DPI/((double)npoly);
+//     cw = cos(omega*0.5);
+//     for (k=0; k<npoly; k++)  
+//     {
+//         angle = apoly*PID + ((double)k+0.5)*omega;
+//         condition = condition*(x*cos(angle) + y*sin(angle) < r*cw);
+//     }
+//     return(condition);
+// }
 
+
+
+int in_tpolygon(double x, double y, t_polygon polygon)
+/* test whether (x,y) is in polygon */
+{
+    int condition = 1, k;
+    double omega, cw, angle, x1, y1; 
+    
+    x1 = (x-polygon.xc)/polygon.radius;
+    y1 = (y-polygon.yc)/polygon.radius;
+    
+    /* first test whether point is in circumcircle */
+    if (x1*x1 + y1*y1 >= 1.0) return(0);
+    
+    omega = DPI/((double)polygon.nsides);
+    cw = cos(omega*0.5);
+    for (k=0; k<polygon.nsides; k++)  
+    {
+        angle = polygon.angle*PID + ((double)k+0.5)*omega;
+        condition = condition*(x1*cos(angle) + y1*sin(angle) < cw);
+    }
+    return(condition);
+}
 
  /*********************/
 /* drawing routines  */
@@ -358,8 +396,25 @@ void draw_colored_circle(double x, double y, double r, int nseg, double rgb[3])
     glEnd();
 }
 
+void draw_tpolygon(t_polygon polygon)
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI/(double)polygon.nsides;
+    
+    glBegin(GL_LINE_LOOP);
+    for (i=0; i<=polygon.nsides; i++)
+    {
+        alpha = PID*polygon.angle + (double)i*dalpha;
+        xy_to_pos(polygon.xc + polygon.radius*cos(alpha), polygon.yc + polygon.radius*sin(alpha), pos);
+        glVertex2d(pos[0], pos[1]);
+    }
+    glEnd();
+}
 
-void init_circle_config()
+
+void init_circle_config(t_circle circles[NMAXCIRCLES])
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
@@ -376,10 +431,10 @@ void init_circle_config()
                 for (j = 0; j < NGRIDY; j++)
                 {
                     n = NGRIDY*i + j;
-                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;
-                    circley[n] = YMIN + ((double)j + 0.5)*dy;
-                    circlerad[n] = MU;
-                    circleactive[n] = 1;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    circles[n].yc = YMIN + ((double)j + 0.5)*dy;
+                    circles[n].radius = MU;
+                    circles[n].active = 1;
                 }
             break;
         }
@@ -392,13 +447,13 @@ void init_circle_config()
                 for (j = 0; j < NGRIDY+1; j++)
                 {
                     n = (NGRIDY+1)*i + j;
-                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;   /* is +0.5 needed? */
-                    circley[n] = YMIN + ((double)j - 0.5)*dy;
-                    if ((i+NGRIDX)%2 == 1) circley[n] += 0.5*dy;
-                    circlerad[n] = MU;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;   /* is +0.5 needed? */
+                    circles[n].yc = YMIN + ((double)j - 0.5)*dy;
+                    if ((i+NGRIDX)%2 == 1) circles[n].yc += 0.5*dy;
+                    circles[n].radius = MU;
                     /* activate only circles that intersect the domain */
-                    if ((circley[n] < YMAX + MU)&&(circley[n] > YMIN - MU)) circleactive[n] = 1;
-                    else circleactive[n] = 0;
+                    if ((circles[n].yc < YMAX + MU)&&(circles[n].yc > YMIN - MU)) circles[n].active = 1;
+                    else circles[n].active = 0;
                 }
             break;
         }
@@ -410,10 +465,10 @@ void init_circle_config()
                 for (j = 0; j < NGRIDY; j++)
                 {
                     n = NGRIDY*i + j;
-                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
-                    circley[n] = YMIN + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
-                    circlerad[n] = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
-                    circleactive[n] = 1;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circles[n].yc = YMIN + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circles[n].radius = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
+                    circles[n].active = 1;
                 }
             break;
         }
@@ -425,12 +480,12 @@ void init_circle_config()
                 for (j = 0; j < NGRIDY; j++)
                 {
                     n = NGRIDY*i + j;
-                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;
-                    circley[n] = YMIN + ((double)j + 0.5)*dy;
-                    circlerad[n] = MU;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    circles[n].yc = YMIN + ((double)j + 0.5)*dy;
+                    circles[n].radius = MU;
                     p = (double)rand()/RAND_MAX;
-                    if (p < P_PERCOL) circleactive[n] = 1;
-                    else circleactive[n] = 0;
+                    if (p < P_PERCOL) circles[n].active = 1;
+                    else circles[n].active = 0;
                 }
             break;
         }
@@ -439,10 +494,10 @@ void init_circle_config()
             ncircles = NPOISSON;
             for (n = 0; n < NPOISSON; n++)
             {
-                circlex[n] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
-                circley[n] = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
-                circlerad[n] = MU;
-                circleactive[n] = 1;
+                circles[n].xc = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+                circles[n].yc = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
+                circles[n].radius = MU;
+                circles[n].active = 1;
             }
             break;
         }
@@ -455,10 +510,10 @@ void init_circle_config()
                     n = 5*i + j;
                     phi = (double)i*DPI/40.0;
                     r = LAMBDA*0.5*(1.0 + (double)j/5.0);
-                    circlex[n] = r*cos(phi);
-                    circley[n] = r*sin(phi);
-                    circlerad[n] = MU;
-                    circleactive[n] = 1;
+                    circles[n].xc = r*cos(phi);
+                    circles[n].yc = r*sin(phi);
+                    circles[n].radius = MU;
+                    circles[n].active = 1;
                 }
             break;
         }
@@ -476,10 +531,10 @@ void init_circle_config()
                     n = 5*i + j;
                     phi = (double)i*DPI/40.0;
                     r = LAMBDA*sa[j];
-                    circlex[n] = r*cos(phi);
-                    circley[n] = r*sin(phi);
-                    circlerad[n] = LAMBDA*ra[j];
-                    circleactive[n] = 1;
+                    circles[n].xc = r*cos(phi);
+                    circles[n].yc = r*sin(phi);
+                    circles[n].radius = LAMBDA*ra[j];
+                    circles[n].active = 1;
                 }
             break;
         }
@@ -500,22 +555,22 @@ void init_circle_config()
             for (i = 0; i < 4; i++)
                 for (j = 0; j < 4; j++)
                 {
-                    circlex[4*i + j] = xx[i];
-                    circley[4*i + j] = yy[j];
+                    circles[4*i + j].xc = xx[i];
+                    circles[4*i + j].yc = yy[j];
                     
                 }
                 
-            circlex[ncircles - 1] = X_TARGET;
-            circley[ncircles - 1] = Y_TARGET;
+            circles[ncircles - 1].xc = X_TARGET;
+            circles[ncircles - 1].yc = Y_TARGET;
             
             for (i=0; i<ncircles - 1; i++)
             {
-                circlerad[i] = MU;
-                circleactive[i] = 1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
             }
             
-            circlerad[ncircles - 1] = 0.5*MU;
-            circleactive[ncircles - 1] = 2;
+            circles[ncircles - 1].radius = 0.5*MU;
+            circles[ncircles - 1].active = 2;
             
             break;
         }        
@@ -523,10 +578,10 @@ void init_circle_config()
         {
             printf("Generating Poisson disc sample\n");
             /* generate first circle */
-            circlex[0] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
-            circley[0] = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
+            circles[0].xc = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+            circles[0].yc = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
             active_poisson[0] = 1;
-//             circleactive[0] = 1;
+//             circles[0].active = 1;
             n_p_active = 1;
             ncircles = 1;
             
@@ -535,31 +590,31 @@ void init_circle_config()
                 /* randomly select an active circle */
                 i = rand()%(ncircles);
                 while (!active_poisson[i]) i = rand()%(ncircles);                 
-//                 printf("Starting from circle %i at (%.3f,%.3f)\n", i, circlex[i], circley[i]);
+//                 printf("Starting from circle %i at (%.3f,%.3f)\n", i, circles[i].xc, circles[i].yc);
                 /* generate new candidates */
                 naccepted = 0;
                 for (j=0; j<ncandidates; j++)
                 {
                     r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
                     phi = DPI*(double)rand()/RAND_MAX;
-                    x = circlex[i] + r*cos(phi);
-                    y = circley[i] + r*sin(phi);
+                    x = circles[i].xc + r*cos(phi);
+                    y = circles[i].yc + r*sin(phi);
 //                        printf("Testing new circle at (%.3f,%.3f)\t", x, y);
                     far = 1;
                     for (k=0; k<ncircles; k++) if ((k!=i))
                     {
                         /* new circle is far away from circle k */
-                        far = far*((x - circlex[k])*(x - circlex[k]) + (y - circley[k])*(y - circley[k]) >=     dpoisson*dpoisson);
+                        far = far*((x - circles[k].xc)*(x - circles[k].xc) + (y - circles[k].yc)*(y - circles[k].yc) >=     dpoisson*dpoisson);
                         /* new circle is in domain */
                         far = far*(vabs(x) < LAMBDA)*(y < YMAX)*(y > YMIN);
                     }
                     if (far)    /* accept new circle */
                     {
                         printf("New circle at (%.3f,%.3f) accepted\n", x, y);
-                        circlex[ncircles] = x;
-                        circley[ncircles] = y;
-                        circlerad[ncircles] = MU;
-                        circleactive[ncircles] = 1;
+                        circles[ncircles].xc = x;
+                        circles[ncircles].yc = y;
+                        circles[ncircles].radius = MU;
+                        circles[ncircles].active = 1;
                         active_poisson[ncircles] = 1;
                         ncircles++;
                         n_p_active++;
@@ -587,32 +642,32 @@ void init_circle_config()
             dx = 2.0*LAMBDA/((double)ncircles);
             for (n = 0; n < ncircles; n++)
             {
-                circlex[n] = -LAMBDA + n*dx;
-                circley[n] = y;
+                circles[n].xc = -LAMBDA + n*dx;
+                circles[n].yc = y;
                 y += height*gamma; 
                 if (y > YMAX) y -= height;
-                circlerad[n] = MU;
-                circleactive[n] = 1;
+                circles[n].radius = MU;
+                circles[n].active = 1;
             }
             
             /* test for circles that overlap top or bottom boundary */
             ncirc0 = ncircles;
             for (n=0; n < ncirc0; n++)
             {
-                if (circley[n] + circlerad[n] > YMAX)
+                if (circles[n].yc + circles[n].radius > YMAX)
                 {
-                    circlex[ncircles] = circlex[n];
-                    circley[ncircles] = circley[n] - height;
-                    circlerad[ncircles] = MU;
-                    circleactive[ncircles] = 1;
+                    circles[ncircles].xc = circles[n].xc;
+                    circles[ncircles].yc = circles[n].yc - height;
+                    circles[ncircles].radius = MU;
+                    circles[ncircles].active = 1;
                     ncircles ++;
                 }
-                else if (circley[n] - circlerad[n] < YMIN)
+                else if (circles[n].yc - circles[n].radius < YMIN)
                 {
-                    circlex[ncircles] = circlex[n];
-                    circley[ncircles] = circley[n] + height;
-                    circlerad[ncircles] = MU;
-                    circleactive[ncircles] = 1;
+                    circles[ncircles].xc = circles[n].xc;
+                    circles[ncircles].yc = circles[n].yc + height;
+                    circles[ncircles].radius = MU;
+                    circles[ncircles].active = 1;
                     ncircles ++;
                 }
             }
@@ -621,8 +676,8 @@ void init_circle_config()
         case (C_GOLDEN_SPIRAL):
         {
             ncircles = 1;
-            circlex[0] = 0.0;
-            circley[0] = 0.0;
+            circles[0].xc = 0.0;
+            circles[0].yc = 0.0;
             
             gamma = (sqrt(5.0) - 1.0)*PI;    /* golden mean times 2Pi */
             phi = 0.0;
@@ -639,18 +694,18 @@ void init_circle_config()
                 
                 if ((vabs(x) < LAMBDA)&&(vabs(y) < YMAX + MU))
                 {
-                    circlex[ncircles] = x;
-                    circley[ncircles] = y;
+                    circles[ncircles].xc = x;
+                    circles[ncircles].yc = y;
                     ncircles++;
                 }
             }
             
             for (i=0; i<ncircles; i++)
             {
-                circlerad[i] = MU;
+                circles[i].radius = MU;
                 /* inactivate circles outside the domain */
-                if ((circley[i] < YMAX + MU)&&(circley[i] > YMIN - MU)) circleactive[i] = 1;
-//                 printf("i = %i, circlex = %.3lg, circley = %.3lg\n", i, circlex[i], circley[i]);
+                if ((circles[i].yc < YMAX + MU)&&(circles[i].yc > YMIN - MU)) circles[i].active = 1;
+//                 printf("i = %i, circlex = %.3lg, circley = %.3lg\n", i, circles[i].xc, circles[i].yc);
             }
         break;
         }
@@ -663,37 +718,37 @@ void init_circle_config()
                 for (j = 0; j < NGRIDY+1; j++)
                 {
                     n = (NGRIDY+1)*i + j;
-                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;   /* is +0.5 needed? */
-                    circley[n] = YMIN + ((double)j - 0.5)*dy;
-                    if (((i+NGRIDX)%4 == 2)||((i+NGRIDX)%4 == 3)) circley[n] += 0.5*dy;
-                    circlerad[n] = MU;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;   /* is +0.5 needed? */
+                    circles[n].yc = YMIN + ((double)j - 0.5)*dy;
+                    if (((i+NGRIDX)%4 == 2)||((i+NGRIDX)%4 == 3)) circles[n].yc += 0.5*dy;
+                    circles[n].radius = MU;
                     /* activate only circles that intersect the domain */
-                    if ((circley[n] < YMAX + MU)&&(circley[n] > YMIN - MU)) circleactive[n] = 1;
-                    else circleactive[n] = 0;
+                    if ((circles[n].yc < YMAX + MU)&&(circles[n].yc > YMIN - MU)) circles[n].active = 1;
+                    else circles[n].active = 0;
                 }
             break;
         }
         case (C_ONE):
         {
-            circlex[ncircles] = 0.0;
-            circley[ncircles] = 0.0;
-            circlerad[ncircles] = MU;
-            circleactive[ncircles] = 1;
+            circles[ncircles].xc = 0.0;
+            circles[ncircles].yc = 0.0;
+            circles[ncircles].radius = MU;
+            circles[ncircles].active = 1;
             ncircles += 1;
             break;
         }
         case (C_TWO):   /* used for comparison with cloak */
         {
-            circlex[ncircles] = 0.0;
-            circley[ncircles] = 0.0;
-            circlerad[ncircles] = MU;
-            circleactive[ncircles] = 2;
+            circles[ncircles].xc = 0.0;
+            circles[ncircles].yc = 0.0;
+            circles[ncircles].radius = MU;
+            circles[ncircles].active = 2;
             ncircles += 1;
 
-            circlex[ncircles] = 0.0;
-            circley[ncircles] = 0.0;
-            circlerad[ncircles] = 2.0*MU;
-            circleactive[ncircles] = 1;
+            circles[ncircles].xc = 0.0;
+            circles[ncircles].yc = 0.0;
+            circles[ncircles].radius = 2.0*MU;
+            circles[ncircles].active = 1;
             ncircles += 1;
             break;
         }
@@ -709,7 +764,30 @@ void init_circle_config()
     }
 }
 
+void init_polygon_config(t_polygon polygons[NMAXCIRCLES])
+/* initialise the polygon configuration, for billiard shape D_CIRCLES */
+/* uses init_circle_config, this is where C++ would be more elegant */
+{
+    int i;
+    t_circle circle[NMAXCIRCLES];
+    
+    init_circle_config(circle);
+    for (i=0; i<NMAXCIRCLES; i++)
+    {
+        polygons[i].xc = circle[i].xc;
+        polygons[i].yc = circle[i].yc;
+        polygons[i].radius = circle[i].radius;
+        polygons[i].active = circle[i].active;
+        polygons[i].nsides = NPOLY;
+        
+        if (RANDOM_POLY_ANGLE) polygons[i].angle = DPI*(double)rand()/RAND_MAX;
+        else polygons[i].angle = APOLY;
+/*        
+        if (i < ncircles) printf("(x,y) = (%.2f, %.2f), r = %.2f, angle = %.2f, sides = %i\n", polygons[i].xc, polygons[i].yc, polygons[i].radius, polygons[i].angle, polygons[i].nsides);*/
+    }
 
+}
+    
 int axial_symmetry(double z1[2], double z2[2], double z[2], double zprime[2])
 /* compute reflection of point z wrt axis through z1 and z2 */
 {
@@ -743,36 +821,296 @@ int axial_symmetry(double z1[2], double z2[2], double z[2], double zprime[2])
     return(1);
 }
 
+int axial_symmetry_tvertex(t_vertex z1, t_vertex z2, t_vertex z, t_vertex *zprime)
+/* compute reflection of point z wrt axis through z1 and z2 */
+{
+    double r, zdotu;
+    t_vertex u, zparallel, zperp;
+    
+    /* compute unit vector parallel to z1-z2 */
+    u.x = z2.x - z1.x;
+    u.y = z2.y - z1.y;
+    r = module2(u.x, u.y);
+    if (r == 0) return(0);      /* z1 and z2 are the same */
+    
+    u.x = u.x/r;
+    u.y = u.y/r;
+    
+    /* projection of z1z on z1z2 */
+    zdotu = (z.x - z1.x)*u.x + (z.y - z1.y)*u.y;
+    zparallel.x = zdotu*u.x;
+    zparallel.y = zdotu*u.y;
+    
+    /* normal vector to z1z2 */
+    zperp.x = z.x - z1.x - zparallel.x;
+    zperp.y = z.y - z1.y - zparallel.y;
+    
+    /* reflected point */
+    zprime->x = z.x - 2.0*zperp.x;
+    zprime->y = z.y - 2.0*zperp.y;
+    
+    return(1);
+}
 
-void compute_isospectral_coordinates(int type, double xshift, double yshift, double scaling, double vertex[9][2])
+int compute_tokarsky_coordinates(double xshift, double yshift, double scaling, 
+                                     t_vertex polyline[NMAXPOLY])
+/* compute positions of vertices of tokarsky room */
+{
+    int i;
+    double pos[2];
+    
+    polyline[0].x = 0.0;    polyline[0].y = 2.0;
+    polyline[1].x = 1.0;    polyline[1].y = 3.0;
+    polyline[2].x = 1.0;    polyline[2].y = 4.0;
+    polyline[3].x = 2.0;    polyline[3].y = 4.0;
+    polyline[4].x = 2.0;    polyline[4].y = 3.0;
+    polyline[5].x = 3.0;    polyline[5].y = 3.0;
+    polyline[6].x = 3.0;    polyline[6].y = 2.0;
+    polyline[7].x = 5.0;    polyline[7].y = 2.0;
+    polyline[8].x = 5.0;    polyline[8].y = 3.0;
+    polyline[9].x = 6.0;    polyline[9].y = 3.0;
+
+    polyline[10].x = 6.0;    polyline[10].y = 4.0;
+    polyline[11].x = 7.0;    polyline[11].y = 3.0;
+    polyline[12].x = 8.0;    polyline[12].y = 3.0;
+    polyline[13].x = 8.0;    polyline[13].y = 2.0;
+    polyline[14].x = 7.0;    polyline[14].y = 2.0;
+    polyline[15].x = 7.0;    polyline[15].y = 1.0;
+    polyline[16].x = 6.0;    polyline[16].y = 0.0;
+    polyline[17].x = 6.0;    polyline[17].y = 1.0;
+    polyline[18].x = 5.0;    polyline[18].y = 1.0;
+    polyline[19].x = 4.0;    polyline[19].y = 0.0;
+
+    polyline[20].x = 4.0;    polyline[20].y = 1.0;
+    polyline[21].x = 3.0;    polyline[21].y = 1.0;
+    polyline[22].x = 2.0;    polyline[22].y = 0.0;
+    polyline[23].x = 2.0;    polyline[23].y = 1.0;
+    polyline[24].x = 1.0;    polyline[24].y = 1.0;
+    polyline[25].x = 1.0;    polyline[25].y = 2.0;
+            
+    for (i=0; i<26; i++)
+    {
+        polyline[i].x = (polyline[i].x + xshift)*scaling;
+        polyline[i].y = (polyline[i].y + yshift)*scaling;
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+    return(26);        
+}
+
+void compute_isospectral_coordinates(int type, int ishift, double xshift, double yshift, double scaling, 
+                                     t_vertex polyline[NMAXPOLY])
 /* compute positions of vertices of isospectral billiards */
 /* central triangle has coordinates (0,0), (1,0) and (LAMBDA,MU) fed into affine transformation */
 /* defined by (xshift - 0.5), (yshift - 0.25) and scaling*/
 {
-    vertex[0][0] = (xshift - 0.5)*scaling;
-    vertex[0][1] = (yshift - 0.25)*scaling;
+    int i;
+    double pos[2];
     
-    vertex[1][0] = (0.5 + xshift)*scaling;
-    vertex[1][1] = (yshift - 0.25)*scaling;
+    polyline[ishift].x = (xshift - 0.5)*scaling;
+    polyline[ishift].y = (yshift - 0.25)*scaling;
     
-    vertex[2][0] = (LAMBDA + xshift - 0.5)*scaling;
-    vertex[2][1] = (MU + yshift - 0.25)*scaling; 
+    polyline[ishift+1].x = (0.5+xshift)*scaling;
+    polyline[ishift+1].y = (yshift - 0.25)*scaling;
     
-    axial_symmetry(vertex[0], vertex[2], vertex[1], vertex[3]);
-    axial_symmetry(vertex[0], vertex[1], vertex[2], vertex[4]);
-    axial_symmetry(vertex[1], vertex[2], vertex[0], vertex[5]);
+    polyline[ishift+2].x = (LAMBDA+xshift - 0.5)*scaling;
+    polyline[ishift+2].y = (MU+yshift - 0.25)*scaling; 
+    
+    axial_symmetry_tvertex(polyline[ishift], polyline[ishift+2], polyline[ishift+1], &polyline[ishift+3]);
+    axial_symmetry_tvertex(polyline[ishift], polyline[ishift+1], polyline[ishift+2], &polyline[ishift+4]);
+    axial_symmetry_tvertex(polyline[ishift+1], polyline[ishift+2], polyline[ishift], &polyline[ishift+5]);
 
     if (type == 0)
     {
-        axial_symmetry(vertex[0], vertex[3], vertex[2], vertex[6]);
-        axial_symmetry(vertex[1], vertex[4], vertex[0], vertex[7]);
-        axial_symmetry(vertex[2], vertex[5], vertex[1], vertex[8]);
+        axial_symmetry_tvertex(polyline[ishift], polyline[ishift+3], polyline[ishift+2], &polyline[ishift+6]);
+        axial_symmetry_tvertex(polyline[ishift+1], polyline[ishift+4], polyline[ishift], &polyline[ishift+7]);
+        axial_symmetry_tvertex(polyline[ishift+2], polyline[ishift+5], polyline[ishift+1], &polyline[ishift+8]);
     }
     else
     {
-        axial_symmetry(vertex[2], vertex[3], vertex[0], vertex[6]);
-        axial_symmetry(vertex[0], vertex[4], vertex[1], vertex[7]);
-        axial_symmetry(vertex[1], vertex[5], vertex[2], vertex[8]);
+        axial_symmetry_tvertex(polyline[ishift+2], polyline[ishift+3], polyline[ishift], &polyline[ishift+6]);
+        axial_symmetry_tvertex(polyline[ishift], polyline[ishift+4], polyline[ishift+1], &polyline[ishift+7]);
+        axial_symmetry_tvertex(polyline[ishift+1], polyline[ishift+5], polyline[ishift+2], &polyline[ishift+8]);
+    }
+    
+    for (i=ishift; i<ishift+9; i++)
+    {
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+}
+
+
+void compute_homophonic_coordinates(int type, int ishift, double xshift, double yshift, double scaling, 
+                                    t_vertex polyline[NMAXPOLY])
+/* compute positions of vertices of homophonic billiards */
+{
+    int i;
+    double pos[2];
+    
+    polyline[ishift].x = (0.5 + xshift)*scaling;
+    polyline[ishift].y = (yshift - 0.25)*scaling;
+    
+    polyline[ishift+1].x = (0.25 + xshift)*scaling;
+    polyline[ishift+1].y = (0.25*sqrt(3.0) + yshift - 0.25)*scaling; 
+    
+    polyline[ishift+2].x = (xshift - 0.5)*scaling;
+    polyline[ishift+2].y = (yshift - 0.25)*scaling;
+    
+    axial_symmetry_tvertex(polyline[ishift+1],  polyline[ishift+2],  polyline[ishift],    &polyline[ishift+3]);
+    axial_symmetry_tvertex(polyline[ishift],    polyline[ishift+1],  polyline[ishift+2],  &polyline[ishift+21]);
+    axial_symmetry_tvertex(polyline[ishift],    polyline[ishift+21], polyline[ishift+1],  &polyline[ishift+10]);
+    axial_symmetry_tvertex(polyline[ishift+10], polyline[ishift+21], polyline[ishift+0],  &polyline[ishift+11]);
+    axial_symmetry_tvertex(polyline[ishift+11], polyline[ishift+21], polyline[ishift+10], &polyline[ishift+13]);
+    axial_symmetry_tvertex(polyline[ishift+11], polyline[ishift+13], polyline[ishift+21], &polyline[ishift+12]);
+    axial_symmetry_tvertex(polyline[ishift+13], polyline[ishift+21], polyline[ishift+11], &polyline[ishift+14]);
+    axial_symmetry_tvertex(polyline[ishift+14], polyline[ishift+21], polyline[ishift+13], &polyline[ishift+20]);
+    axial_symmetry_tvertex(polyline[ishift+14], polyline[ishift+20], polyline[ishift+21], &polyline[ishift+15]);
+    axial_symmetry_tvertex(polyline[ishift+20], polyline[ishift+15], polyline[ishift+14], &polyline[ishift+19]);
+    
+    if (type == 0)
+    {
+        axial_symmetry_tvertex(polyline[ishift],   polyline[ishift+2], polyline[ishift+1], &polyline[ishift+8]);
+        axial_symmetry_tvertex(polyline[ishift+2], polyline[ishift+8], polyline[ishift+0], &polyline[ishift+7]);
+        axial_symmetry_tvertex(polyline[ishift+2], polyline[ishift+7], polyline[ishift+8], &polyline[ishift+5]);
+        axial_symmetry_tvertex(polyline[ishift+2], polyline[ishift+5], polyline[ishift+7], &polyline[ishift+4]);
+        axial_symmetry_tvertex(polyline[ishift+5], polyline[ishift+7], polyline[ishift+2], &polyline[ishift+6]);
+        axial_symmetry_tvertex(polyline[ishift],   polyline[ishift+8], polyline[ishift+2], &polyline[ishift+9]);
+        
+        axial_symmetry_tvertex(polyline[ishift+15], polyline[ishift+19], polyline[ishift+20], &polyline[ishift+16]);
+        axial_symmetry_tvertex(polyline[ishift+16], polyline[ishift+19], polyline[ishift+15], &polyline[ishift+18]);
+        axial_symmetry_tvertex(polyline[ishift+16], polyline[ishift+18], polyline[ishift+19], &polyline[ishift+17]);        
+    }
+    else
+    {
+        axial_symmetry_tvertex(polyline[ishift+2], polyline[ishift+3], polyline[ishift+1], &polyline[ishift+5]);
+        axial_symmetry_tvertex(polyline[ishift+3], polyline[ishift+5], polyline[ishift+2], &polyline[ishift+4]);
+        axial_symmetry_tvertex(polyline[ishift+2], polyline[ishift+5], polyline[ishift+3], &polyline[ishift+6]);
+        axial_symmetry_tvertex(polyline[ishift+2], polyline[ishift+6], polyline[ishift+5], &polyline[ishift+8]);
+        axial_symmetry_tvertex(polyline[ishift+6], polyline[ishift+8], polyline[ishift+2], &polyline[ishift+7]);
+        axial_symmetry_tvertex(polyline[ishift+2], polyline[ishift+8], polyline[ishift+6], &polyline[ishift+9]);
+        
+        axial_symmetry_tvertex(polyline[ishift+10], polyline[ishift+11], polyline[ishift+21], &polyline[ishift+16]);
+        axial_symmetry_tvertex(polyline[ishift+11], polyline[ishift+12], polyline[ishift+13], &polyline[ishift+18]);        
+        axial_symmetry_tvertex(polyline[ishift+16], polyline[ishift+18], polyline[ishift+11], &polyline[ishift+17]);
+    }  
+    
+    for (i=ishift; i<44; i++)
+    {
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+}
+
+
+int compute_vonkoch_coordinates(int depth, t_vertex polyline[NMAXPOLY])
+/* compute positions of vertices of von Koch snowflake fractal */
+{
+    int nsides = 3, i, j, k, l, n, z, ii, jj, quater[MDEPTH], cond;
+    short int vkoch[NMAXPOLY], turnright; 
+    double angle, length, x, y, pos[2];
+    
+    for (k=0; k<depth; k++) nsides *= 4;
+    ncircles = nsides;
+    
+    if (nsides > NMAXPOLY)
+    {
+        printf("NMAXPOLY needs to be increased to %i\n", nsides);
+        nsides = NMAXPOLY;
+    }
+
+    for (i=0; i<nsides/3; i++)
+    {
+        /* compute quaternary expansion of i */
+        ii = i;
+        for (l=0; l<depth; l++)
+        {
+            quater[l] = ii%4;
+            ii = ii - (ii%4);
+            ii = ii/4;
+        }
+                
+        /* find first nonzero digit */
+        z = 0;
+        while ((quater[z] == 0)&&(z<depth)) z++;
+            
+        /* compute left/right turns */
+        if (i==0) vkoch[0] = 0;
+        else if (z != depth)
+        {   
+            if (quater[z] == 2) vkoch[i] = 0;
+            else vkoch[i] = 1;
+        }
+    }
+            
+    /* compute vertices */
+    angle = 2.0*PI/3.0;
+    x = cos(PI/6.0);
+    y = -sin(PI/6.0);
+    length = 2.0*sin(PI/3.0);
+            
+    for (k=0; k<depth; k++) length = length/3.0;
+    printf("Length = %.2f\n", length);
+            
+    for (i=0; i<nsides; i++)
+    {
+        polyline[i].x = x*MU;
+        polyline[i].y = y*MU;
+            
+        x += length*cos(angle);
+        y += length*sin(angle);
+                
+        turnright = vkoch[i%(nsides/3)+1];
+        if (turnright) angle -= PI/3.0;
+        else angle += 2.0*PI/3.0;
+            
+        while (angle > DPI) angle -= DPI;
+        while (angle < 0.0) angle += DPI;    
+        
+        xy_to_pos(x*MU, y*MU, pos);
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+    
+    return(nsides);
+}
+
+
+int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
+/* initialise variable polyline, for certain polygonal domain shapes */
+{
+    switch (B_DOMAIN) {
+        case (D_TOKARSKY):
+        {
+            return(compute_tokarsky_coordinates(-4.0, -2.0, (XMAX - XMIN)/8.4, polyline));
+        }
+        case (D_ISOSPECTRAL):
+        {
+            compute_isospectral_coordinates(0, 0, ISO_XSHIFT_LEFT, ISO_YSHIFT_LEFT, ISO_SCALE, polyline);
+            compute_isospectral_coordinates(1, 9, ISO_XSHIFT_RIGHT, ISO_YSHIFT_RIGHT, ISO_SCALE, polyline);
+            return(18);
+        }
+        case (D_HOMOPHONIC):
+        {
+            compute_homophonic_coordinates(0, 0, ISO_XSHIFT_LEFT, ISO_YSHIFT_LEFT, ISO_SCALE, polyline);
+            compute_homophonic_coordinates(1, 22, ISO_XSHIFT_RIGHT, ISO_YSHIFT_RIGHT, ISO_SCALE, polyline);
+            return(44);
+        }
+        case (D_VONKOCH):
+        {
+            return(compute_vonkoch_coordinates(depth, polyline));
+        }
+        case (D_VONKOCH_HEATED):
+        {
+            return(compute_vonkoch_coordinates(depth, polyline));
+        }
+        default:
+        {
+            return(0);
+        }
     }
 }
 
@@ -783,6 +1121,15 @@ void isospectral_initial_point(double x, double y, double left[2], double right[
     left[1] = (y + ISO_YSHIFT_LEFT)*ISO_SCALE;
     right[0] = (x + ISO_XSHIFT_RIGHT)*ISO_SCALE;
     right[1] = (y + ISO_YSHIFT_RIGHT)*ISO_SCALE;    
+}
+
+void homophonic_initial_point(double xleft, double yleft, double xright, double yright, double left[2], double right[2])
+/* compute initial coordinates in isospectral billiards */
+{
+    left[0] = (xleft + ISO_XSHIFT_LEFT)*ISO_SCALE;
+    left[1] = (yleft + ISO_YSHIFT_LEFT)*ISO_SCALE;
+    right[0] = (xright + ISO_XSHIFT_RIGHT)*ISO_SCALE;
+    right[1] = (yright + ISO_YSHIFT_RIGHT)*ISO_SCALE;    
 }
 
 int xy_in_triangle(double x, double y, double z1[2], double z2[2], double z3[2])
@@ -799,15 +1146,28 @@ int xy_in_triangle(double x, double y, double z1[2], double z2[2], double z3[2])
     else return(0);
 }
 
+int xy_in_triangle_tvertex(double x, double y, t_vertex z1, t_vertex z2, t_vertex z3)
+/* returns 1 iff (x,y) is inside the triangle with vertices z1, z2, z3 */
+{
+    double v1, v2, v3;
+
+    /* compute wedge products */
+    v1 = (z2.x - z1.x)*(y - z1.y) - (z2.y - z1.y)*(x - z1.x);
+    v2 = (z3.x - z2.x)*(y - z2.y) - (z3.y - z2.y)*(x - z2.x);
+    v3 = (z1.x - z3.x)*(y - z3.y) - (z1.y - z3.y)*(x - z3.x);
+    
+    if ((v1 >= 0.0)&&(v2 >= 0.0)&&(v3 >= 0.0)) return(1);
+    else return(0);
+}
+
 
 int xy_in_billiard(double x, double y)
 /* returns 1 if (x,y) represents a point in the billiard */
 // double x, y;
 {
     double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width;
-    int i, j, k, k1, k2, condition;
-    static double vertex[9][2], wertex[9][2];
-    static int first = 1;
+    int i, j, k, k1, k2, condition, m;
+    static int first = 1, nsides;
 
     switch (B_DOMAIN) {
         case (D_RECTANGLE):
@@ -1041,39 +1401,90 @@ int xy_in_billiard(double x, double y)
         }
         case (D_ISOSPECTRAL):
         {
-            if (first)
-            {
-                compute_isospectral_coordinates(0, ISO_XSHIFT_LEFT, ISO_YSHIFT_LEFT, ISO_SCALE, vertex);
-                compute_isospectral_coordinates(1, ISO_XSHIFT_RIGHT, ISO_YSHIFT_RIGHT, ISO_SCALE, wertex);
-                first = 0;
-            }
             /* 1st triangle */
-            condition = xy_in_triangle(x, y, vertex[0], vertex[1], vertex[2]);
-            condition += xy_in_triangle(x, y, vertex[0], vertex[4], vertex[1]);
-            condition += xy_in_triangle(x, y, vertex[1], vertex[5], vertex[2]);
-            condition += xy_in_triangle(x, y, vertex[0], vertex[2], vertex[3]);
-            condition += xy_in_triangle(x, y, vertex[1], vertex[4], vertex[7]);
-            condition += xy_in_triangle(x, y, vertex[2], vertex[5], vertex[8]);
-            condition += xy_in_triangle(x, y, vertex[0], vertex[3], vertex[6]);
+            condition  = xy_in_triangle_tvertex(x, y, polyline[0], polyline[1], polyline[2]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[0], polyline[4], polyline[1]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[1], polyline[5], polyline[2]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[0], polyline[2], polyline[3]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[1], polyline[4], polyline[7]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[2], polyline[5], polyline[8]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[0], polyline[3], polyline[6]);
 
             /* 2nd triangle */
-            condition += xy_in_triangle(x, y, wertex[0], wertex[1], wertex[2]);
-            condition += xy_in_triangle(x, y, wertex[0], wertex[4], wertex[1]);
-            condition += xy_in_triangle(x, y, wertex[1], wertex[5], wertex[2]);
-            condition += xy_in_triangle(x, y, wertex[0], wertex[2], wertex[3]);
-            condition += xy_in_triangle(x, y, wertex[0], wertex[7], wertex[4]);
-            condition += xy_in_triangle(x, y, wertex[1], wertex[8], wertex[5]);
-            condition += xy_in_triangle(x, y, wertex[2], wertex[6], wertex[3]);
+            condition += xy_in_triangle_tvertex(x, y,  polyline[9], polyline[10], polyline[11]);
+            condition += xy_in_triangle_tvertex(x, y,  polyline[9], polyline[13], polyline[10]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[10], polyline[14], polyline[11]);
+            condition += xy_in_triangle_tvertex(x, y,  polyline[9], polyline[11], polyline[12]);
+            condition += xy_in_triangle_tvertex(x, y,  polyline[9], polyline[16], polyline[13]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[10], polyline[17], polyline[14]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[11], polyline[15], polyline[12]);
+            return(condition >= 1);
+        }
+        case (D_HOMOPHONIC):
+        {
+            /* conditions could be summarised in larger triangles, but this is to keep */
+            /* the option of using triangles with other angles than 30-60-90 */
+            
+            /* 1st triangle */
+            condition = xy_in_triangle_tvertex(x, y, polyline[2], polyline[0], polyline[1]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[2], polyline[1], polyline[3]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[0], polyline[21], polyline[1]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[0], polyline[10], polyline[21]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[10], polyline[11], polyline[21]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[11], polyline[13], polyline[21]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[11], polyline[12], polyline[13]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[13], polyline[14], polyline[21]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[14], polyline[20], polyline[21]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[14], polyline[15], polyline[20]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[15], polyline[19], polyline[20]);
+
+            condition += xy_in_triangle_tvertex(x, y, polyline[2], polyline[4], polyline[5]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[2], polyline[5], polyline[7]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[5], polyline[6], polyline[7]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[2], polyline[7], polyline[8]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[2], polyline[8], polyline[0]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[0], polyline[8], polyline[9]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[0], polyline[9], polyline[10]);
+
+            condition += xy_in_triangle_tvertex(x, y, polyline[15], polyline[16], polyline[19]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[16], polyline[17], polyline[18]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[16], polyline[18], polyline[19]);
+
+            /* 2nd triangle */
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+2], polyline[22+0], polyline[22+1]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+2], polyline[22+1], polyline[22+3]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+0], polyline[22+21], polyline[22+1]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+0], polyline[22+10], polyline[22+21]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+10], polyline[22+11], polyline[22+21]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+11], polyline[22+13], polyline[22+21]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+11], polyline[22+12], polyline[22+13]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+13], polyline[22+14], polyline[22+21]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+14], polyline[22+20], polyline[22+21]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+14], polyline[22+15], polyline[22+20]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+15], polyline[22+19], polyline[22+20]);
+            
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+2], polyline[22+3], polyline[22+5]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+3], polyline[22+4], polyline[22+5]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+2], polyline[22+5], polyline[22+6]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+2], polyline[22+6], polyline[22+8]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+2], polyline[22+8], polyline[22+9]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+6], polyline[22+7], polyline[22+8]);
+
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+11], polyline[22+10], polyline[22+16]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+11], polyline[22+16], polyline[22+18]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+11], polyline[22+18], polyline[22+12]);
+            condition += xy_in_triangle_tvertex(x, y, polyline[22+16], polyline[22+17], polyline[22+18]);
+            
             return(condition >= 1);
         }
         case (D_CIRCLES):
         {
             for (i = 0; i < ncircles; i++)
-                if (circleactive[i]) 
+                if (circles[i].active) 
                 {
-                    x1 = circlex[i];
-                    y1 = circley[i];
-                    r2 = circlerad[i]*circlerad[i];
+                    x1 = circles[i].xc;
+                    y1 = circles[i].yc;
+                    r2 = circles[i].radius*circles[i].radius;
                     if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2) return(0); 
                 }
             return(1);
@@ -1081,15 +1492,35 @@ int xy_in_billiard(double x, double y)
         case (D_CIRCLES_IN_RECT):   /* returns 2 inside circles, 0 outside rectangle */
         {
             for (i = 0; i < ncircles; i++)
-                if (circleactive[i]) 
+                if (circles[i].active) 
                 {
-                    x1 = circlex[i];
-                    y1 = circley[i];
-                    r2 = circlerad[i]*circlerad[i];
+                    x1 = circles[i].xc;
+                    y1 = circles[i].yc;
+                    r2 = circles[i].radius*circles[i].radius;
                     if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2) return(2); 
                 }
             if ((vabs(x) >= LAMBDA)||(vabs(y) >= 1.0)) return(0);
             else return(1);
+        }
+        case (D_POLYGONS):
+        {
+            for (i = 0; i < ncircles; i++) 
+                if ((polygons[i].active)&&(in_tpolygon(x, y, polygons[i]))) return(0);
+            return(1);
+        }
+        case (D_VONKOCH):
+        {
+            condition = xy_in_triangle_tvertex(x, y, polyline[0], polyline[npolyline/3], polyline[2*npolyline/3]);
+            m = 1;
+            k = 1;
+            for (i = 0; i < MDEPTH; i++)
+            {
+                m = m*4;
+                for (j = 0; j < npolyline/m; j++)
+                    condition += xy_in_triangle_tvertex(x, y, polyline[j*m + k], polyline[j*m + 2*k], polyline[j*m + 3*k]);
+                k = k*4;
+            }
+            return(condition >= 1);
         }
         case (D_MENGER):       
         {
@@ -1226,6 +1657,25 @@ int xy_in_billiard(double x, double y)
 //             else if ((vabs(x) > XMAX - 0.01)||(vabs(y) > YMAX - 0.01)) return(2);
             else return(1);
         }
+        case (D_VONKOCH_HEATED):
+        {
+            if (x*x + y*y > LAMBDA*LAMBDA) return(2);
+
+            x1 = x;
+            y1 = y;
+            condition = xy_in_triangle_tvertex(x1, y1, polyline[0], polyline[npolyline/3], polyline[2*npolyline/3]);
+            m = 1;
+            k = 1;
+            for (i = 0; i < MDEPTH; i++)
+            {
+                m = m*4;
+                for (j = 0; j < npolyline/m; j++)
+                    condition += xy_in_triangle_tvertex(x1, y1, polyline[j*m + k], polyline[j*m + 2*k], polyline[j*m + 3*k]);
+                k = k*4;
+            }
+            if (condition > 0) return(0);
+            else return(1);
+        }
         default:
         {
             printf("Function ij_in_billiard not defined for this billiard \n");
@@ -1244,34 +1694,18 @@ int ij_in_billiard(int i, int j)
     return(xy_in_billiard(xy[0], xy[1]));
 }
 
-void toka_lineto(double x1, double y1)
-/* draws boundary segments of Tokarsky billiard */
-{
-    double ratio, x, y, pos[2];
-    
-    ratio = (XMAX - XMIN)/8.4;
-    x = ratio*(x1 - 4.0);
-    y = ratio*(y1 - 2.0);
-    xy_to_pos(x, y, pos);
-    glVertex2d(pos[0], pos[1]);
-}
-
-void iso_lineto(double z[2])
+void tvertex_lineto(t_vertex z)
 /* draws boundary segments of isospectral billiard */
 {
-    double pos[2];
-    
-    xy_to_pos(z[0], z[1], pos);
-    glVertex2d(pos[0], pos[1]);
+    glVertex2d(z.posi, z.posj);
 }
 
 
 void draw_billiard()      /* draws the billiard boundary */
 {
     double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax;
-    static double vertex[9][2], wertex[9][2];
     int i, j, k, k1, k2, mr2;
-    static int first = 1;
+    static int first = 1, nsides;
 
     if (BLACK) glColor3f(1.0, 1.0, 1.0);
     else glColor3f(0.0, 0.0, 0.0);
@@ -1802,32 +2236,7 @@ void draw_billiard()      /* draws the billiard boundary */
         case (D_TOKARSKY):
         {
             glBegin(GL_LINE_LOOP);
-            toka_lineto(0.0, 2.0);
-            toka_lineto(1.0, 3.0);
-            toka_lineto(1.0, 4.0);
-            toka_lineto(2.0, 4.0);
-            toka_lineto(2.0, 3.0);
-            toka_lineto(3.0, 3.0);
-            toka_lineto(3.0, 2.0);
-            toka_lineto(5.0, 2.0);
-            toka_lineto(5.0, 3.0);
-            toka_lineto(6.0, 3.0);
-            toka_lineto(6.0, 4.0);
-            toka_lineto(7.0, 3.0);
-            toka_lineto(8.0, 3.0);
-            toka_lineto(8.0, 2.0);
-            toka_lineto(7.0, 2.0);
-            toka_lineto(7.0, 1.0);
-            toka_lineto(6.0, 0.0);
-            toka_lineto(6.0, 1.0);
-            toka_lineto(5.0, 1.0);
-            toka_lineto(4.0, 0.0);
-            toka_lineto(4.0, 1.0);
-            toka_lineto(3.0, 1.0);
-            toka_lineto(2.0, 0.0);
-            toka_lineto(2.0, 1.0);
-            toka_lineto(1.0, 1.0);
-            toka_lineto(1.0, 2.0);
+            for (i=0; i<npolyline; i++) tvertex_lineto(polyline[i]);
             glEnd();
             if (FOCI)
             {
@@ -1840,65 +2249,156 @@ void draw_billiard()      /* draws the billiard boundary */
         }
         case (D_ISOSPECTRAL):
         {
-            if (first) 
-            {
-                compute_isospectral_coordinates(0, ISO_XSHIFT_LEFT, ISO_YSHIFT_LEFT, ISO_SCALE, vertex);
-                compute_isospectral_coordinates(1, ISO_XSHIFT_RIGHT, ISO_YSHIFT_RIGHT, ISO_SCALE, wertex);
-//                 compute_isospectral_coordinates(0, -1.0, 0.05, 0.9, vertex);
-//                 compute_isospectral_coordinates(1, 0.9, 0.05, 0.9, wertex);
-//             for (i=0; i<9; i++) printf("(x%i, y%i) = (%.2f, %.2f)\n", i, i, vertex[i][0], vertex[i][1]);
-                first = 0;
-            }
             /* 1st triangle */
             glBegin(GL_LINE_LOOP);
-            iso_lineto(vertex[0]);
-            iso_lineto(vertex[4]);
-            iso_lineto(vertex[7]);
-            iso_lineto(vertex[1]);
-            iso_lineto(vertex[5]);
-            iso_lineto(vertex[8]);
-            iso_lineto(vertex[2]);
-            iso_lineto(vertex[3]);
-            iso_lineto(vertex[6]);
+            tvertex_lineto(polyline[0]);
+            tvertex_lineto(polyline[4]);
+            tvertex_lineto(polyline[7]);
+            tvertex_lineto(polyline[1]);
+            tvertex_lineto(polyline[5]);
+            tvertex_lineto(polyline[8]);
+            tvertex_lineto(polyline[2]);
+            tvertex_lineto(polyline[3]);
+            tvertex_lineto(polyline[6]);
             glEnd();
             
             /* inner lines */
             glBegin(GL_LINE_LOOP);
-            iso_lineto(vertex[0]);
-            iso_lineto(vertex[1]);
-            iso_lineto(vertex[2]);
-            iso_lineto(vertex[0]);
-            iso_lineto(vertex[3]);
-            iso_lineto(vertex[2]);
-            iso_lineto(vertex[5]);
-            iso_lineto(vertex[1]);
-            iso_lineto(vertex[4]);
+            tvertex_lineto(polyline[0]);
+            tvertex_lineto(polyline[1]);
+            tvertex_lineto(polyline[2]);
+            tvertex_lineto(polyline[0]);
+            tvertex_lineto(polyline[3]);
+            tvertex_lineto(polyline[2]);
+            tvertex_lineto(polyline[5]);
+            tvertex_lineto(polyline[1]);
+            tvertex_lineto(polyline[4]);
             glEnd();
             
             /* 2nd triangle */
             glBegin(GL_LINE_LOOP);
-            iso_lineto(wertex[0]);
-            iso_lineto(wertex[7]);
-            iso_lineto(wertex[4]);
-            iso_lineto(wertex[1]);
-            iso_lineto(wertex[8]);
-            iso_lineto(wertex[5]);
-            iso_lineto(wertex[2]);
-            iso_lineto(wertex[6]);
-            iso_lineto(wertex[3]);
+            tvertex_lineto( polyline[9]);
+            tvertex_lineto(polyline[16]);
+            tvertex_lineto(polyline[13]);
+            tvertex_lineto(polyline[10]);
+            tvertex_lineto(polyline[17]);
+            tvertex_lineto(polyline[14]);
+            tvertex_lineto(polyline[11]);
+            tvertex_lineto(polyline[15]);
+            tvertex_lineto(polyline[12]);
             glEnd();
             
             /* inner lines */
             glBegin(GL_LINE_LOOP);
-            iso_lineto(wertex[0]);
-            iso_lineto(wertex[1]);
-            iso_lineto(wertex[2]);
-            iso_lineto(wertex[0]);
-            iso_lineto(wertex[4]);
-            iso_lineto(wertex[1]);
-            iso_lineto(wertex[5]);
-            iso_lineto(wertex[2]);
-            iso_lineto(wertex[3]);
+            tvertex_lineto( polyline[9]);
+            tvertex_lineto(polyline[10]);
+            tvertex_lineto(polyline[11]);
+            tvertex_lineto( polyline[9]);
+            tvertex_lineto(polyline[13]);
+            tvertex_lineto(polyline[10]);
+            tvertex_lineto(polyline[14]);
+            tvertex_lineto(polyline[11]);
+            tvertex_lineto(polyline[12]);
+            glEnd();
+            break;
+        }
+        case (D_HOMOPHONIC):
+        {
+            /* 1st triangle */
+            glBegin(GL_LINE_LOOP);
+            tvertex_lineto(polyline[1]);
+            tvertex_lineto(polyline[3]);
+            tvertex_lineto(polyline[4]);
+            tvertex_lineto(polyline[5]);
+            tvertex_lineto(polyline[6]);
+            tvertex_lineto(polyline[8]);
+            tvertex_lineto(polyline[9]);
+            tvertex_lineto(polyline[10]);
+            tvertex_lineto(polyline[12]);
+            tvertex_lineto(polyline[13]);
+            tvertex_lineto(polyline[15]);
+            tvertex_lineto(polyline[16]);
+            tvertex_lineto(polyline[17]);
+            tvertex_lineto(polyline[18]);
+            tvertex_lineto(polyline[20]);
+            glEnd();
+            
+            /* inner lines */
+            glLineWidth(BOUNDARY_WIDTH/2);
+            glBegin(GL_LINE_STRIP);
+            tvertex_lineto(polyline[9]);
+            tvertex_lineto(polyline[1]);
+            tvertex_lineto(polyline[2]);
+            tvertex_lineto(polyline[5]);
+            tvertex_lineto(polyline[7]);
+            tvertex_lineto(polyline[2]);
+            tvertex_lineto(polyline[8]);
+            tvertex_lineto(polyline[21]);
+            tvertex_lineto(polyline[10]);
+            tvertex_lineto(polyline[2]);
+            tvertex_lineto(polyline[21]);
+            tvertex_lineto(polyline[11]);
+            tvertex_lineto(polyline[13]);
+            tvertex_lineto(polyline[21]);
+            tvertex_lineto(polyline[14]);
+            tvertex_lineto(polyline[20]);
+            tvertex_lineto(polyline[15]);
+            tvertex_lineto(polyline[19]);
+            tvertex_lineto(polyline[16]);
+            tvertex_lineto(polyline[18]);
+            glEnd();
+            
+            /* 2nd triangle */
+            glLineWidth(BOUNDARY_WIDTH);
+            glBegin(GL_LINE_LOOP);
+            tvertex_lineto(polyline[22+10]);
+            tvertex_lineto(polyline[22+16]);
+            tvertex_lineto(polyline[22+17]);
+            tvertex_lineto(polyline[22+18]);
+            tvertex_lineto(polyline[22+12]);
+            tvertex_lineto(polyline[22+13]);
+            tvertex_lineto(polyline[22+15]);
+            tvertex_lineto(polyline[22+19]);
+            tvertex_lineto(polyline[22+20]);
+            tvertex_lineto(polyline[22+1]);
+            tvertex_lineto(polyline[22+4]);
+            tvertex_lineto(polyline[22+5]);
+            tvertex_lineto(polyline[22+7]);
+            tvertex_lineto(polyline[22+8]);
+            tvertex_lineto(polyline[22+9]);
+            glEnd();
+            
+            /* inner lines */
+            glLineWidth(BOUNDARY_WIDTH/2);
+            glBegin(GL_LINE_STRIP);
+            tvertex_lineto(polyline[22+2]);
+            tvertex_lineto(polyline[22+6]);
+            tvertex_lineto(polyline[22+8]);
+            tvertex_lineto(polyline[22+2]);
+            tvertex_lineto(polyline[22+5]);
+            tvertex_lineto(polyline[22+3]);
+            tvertex_lineto(polyline[22+2]);
+            tvertex_lineto(polyline[22+1]);
+            tvertex_lineto(polyline[22+0]);
+            tvertex_lineto(polyline[22+21]);
+            tvertex_lineto(polyline[22+18]);
+            tvertex_lineto(polyline[22+16]);
+            tvertex_lineto(polyline[22+13]);
+            tvertex_lineto(polyline[22+21]);
+            tvertex_lineto(polyline[22+10]);
+            tvertex_lineto(polyline[22+12]);
+            tvertex_lineto(polyline[22+21]);
+            tvertex_lineto(polyline[22+14]);
+            tvertex_lineto(polyline[22+20]);
+            tvertex_lineto(polyline[22+15]);
+            glEnd();
+            break;
+        }
+        case (D_VONKOCH):
+        {
+            glLineWidth(BOUNDARY_WIDTH/2);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<npolyline; i++) tvertex_lineto(polyline[i]);
             glEnd();
             break;
         }
@@ -1906,20 +2406,27 @@ void draw_billiard()      /* draws the billiard boundary */
         {
             glLineWidth(BOUNDARY_WIDTH);
             for (i = 0; i < ncircles; i++) 
-                if (circleactive[i]) draw_circle(circlex[i], circley[i], circlerad[i], NSEG);
+                if (circles[i].active) draw_circle(circles[i].xc, circles[i].yc, circles[i].radius, NSEG);
             break;
         }
         case (D_CIRCLES_IN_RECT):
         {
             glLineWidth(BOUNDARY_WIDTH);
             for (i = 0; i < ncircles; i++) 
-                if (circleactive[i]) draw_circle(circlex[i], circley[i], circlerad[i], NSEG);
+                if (circles[i].active) draw_circle(circles[i].xc, circles[i].yc, circles[i].radius, NSEG);
             draw_rectangle(-LAMBDA, -1.0, LAMBDA, 1.0);
             if ((FOCI)&&(CIRCLE_PATTERN == C_LASER))
             {
                 glColor3f(0.3, 0.3, 0.3);
                 draw_circle(X_SHOOTER, Y_SHOOTER, r, NSEG);
             }
+            break;
+        }
+        case (D_POLYGONS):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            for (i = 0; i < ncircles; i++) 
+                if (polygons[i].active) draw_tpolygon(polygons[i]);
             break;
         }
         case (D_MENGER):
@@ -2140,9 +2647,100 @@ void draw_billiard()      /* draws the billiard boundary */
             /* Do nothing */
             break;
         }
+        case (D_VONKOCH_HEATED):
+        {
+            glLineWidth(BOUNDARY_WIDTH/2);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<npolyline; i++) glVertex2d(polyline[i].posi, polyline[i].posj);
+            glEnd();
+            break;
+        }
        default:
         {
             printf("Function draw_billiard not defined for this billiard \n");
         }
     }
 }
+
+void draw_color_scheme(double x1, double y1, double x2, double y2, int plot, double min, double max)
+{
+    int j, k, ij_botleft[2], ij_topright[2], imin, imax, jmin, jmax;
+    double y, dy, dy_e, rgb[3], value;
+    
+    xy_to_ij(x1, y1, ij_botleft);
+    xy_to_ij(x2, y2, ij_topright);
+
+    if (ROTATE_COLOR_SCHEME)
+    {
+        jmin = ij_botleft[0];
+        jmax = ij_topright[0];
+        imin = ij_botleft[1];
+        imax = ij_topright[1];    
+    }
+    else
+    {
+        imin = ij_botleft[0];
+        imax = ij_topright[0];
+        jmin = ij_botleft[1];
+        jmax = ij_topright[1];    
+    }
+        
+        
+    glBegin(GL_QUADS);
+    dy = (max - min)/((double)(jmax - jmin));
+    dy_e = max/((double)(jmax - jmin));
+    
+    for (j = jmin; j < jmax; j++)
+    {
+        switch (plot) {
+            case (P_AMPLITUDE):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, value, 1.0, 1, rgb);
+                else color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_MEAN_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, value, 1.0, 1, rgb);
+                else color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_PHASE):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+                break;
+            }
+        }
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+        if (ROTATE_COLOR_SCHEME)
+        {
+            glVertex2i(j, imin);
+            glVertex2i(j, imax);
+            glVertex2i(j+1, imax);
+            glVertex2i(j+1, imin);            
+        }
+        else
+        {
+            glVertex2i(imin, j);
+            glVertex2i(imax, j);
+            glVertex2i(imax, j+1);
+            glVertex2i(imin, j+1);
+        }
+    }
+    glEnd ();
+    
+    glColor3f(1.0, 1.0, 1.0);
+    glLineWidth(BOUNDARY_WIDTH);
+    draw_rectangle(x1, y1, x2, y2);
+}
+
+

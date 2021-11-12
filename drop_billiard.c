@@ -30,14 +30,11 @@
 
 #define MOVIE 0         /* set to 1 to generate movie */
 
-#define WINWIDTH 	720   /* window width */
-// #define WINWIDTH 	1280  /* window width */
+#define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-// #define XMIN -2.0
-// #define XMAX 2.0	/* x interval */
-#define XMIN -1.125
-#define XMAX 1.125	/* x interval */
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
@@ -48,26 +45,29 @@
 #define B_DOMAIN 15      /* choice of domain shape */
 
 #define CIRCLE_PATTERN 0    /* pattern of circles */
+#define POLYLINE_PATTERN 1  /* pattern of polyline */
 
 #define ABSORBING_CIRCLES 0 /* set to 1 for circular scatterers to be absorbing */
 
 #define NMAXCIRCLES 1000        /* total number of circles (must be at least NCX*NCY for square grid) */
+#define NMAXPOLY 1000        /* total number of sides of polygonal line */   
 // #define NCX 10            /* number of circles in x direction */
 // #define NCY 15            /* number of circles in y direction */
 #define NCX 15            /* number of circles in x direction */
 #define NCY 20            /* number of circles in y direction */
 #define NPOISSON 500        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define NGOLDENSPIRAL 2000  /* max number of points for C_GOLDEN_SPIRAL arrandement */
+#define SDEPTH 1            /* Sierpinski gastket depth */
 
-#define LAMBDA 0.0	/* parameter controlling shape of billiard */
+#define LAMBDA 0.3	    /* parameter controlling the dimensions of domain */
 // #define LAMBDA 1.124950941	/* sin(36°)/sin(31.5°) for 5-star shape with 45° angles */
 // #define LAMBDA 1.445124904	/* sin(36°)/sin(24°) for 5-star shape with 60° angles */
 // #define LAMBDA 3.75738973	/* sin(36°)/sin(9°) for 5-star shape with 90° angles */
 // #define LAMBDA -1.73205080756888	/* -sqrt(3) for Reuleaux triangle */
 // #define LAMBDA 1.73205080756888	/* sqrt(3) for triangle tiling plane */
-#define MU 1.0       /* second parameter controlling shape of billiard */
+#define MU 0.7              /* parameter controlling the dimensions of domain */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
-#define NPOLY 6             /* number of sides of polygon */
+#define NPOLY 4             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
 #define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
@@ -75,7 +75,7 @@
 
 #define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
 
-#define NPART 10000	/* number of particles */
+#define NPART 20000	/* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 
 #define NSTEPS 5000         /* number of frames of movie */
@@ -92,7 +92,7 @@
 
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define LPERIODIC 0.1   /* lines longer than this are not drawn (useful for Sinai billiard) */
-#define LCUT 2.0        /* controls the max size of segments not considered as being cut */
+#define LCUT 10000.0        /* controls the max size of segments not considered as being cut */
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 0         /* set to 1 for closed curve (start in all directions) */
 #define ORDER_COLORS 1  /* set to 1 if colors should be drawn in order */ 
@@ -101,18 +101,18 @@
 
 #define COLOR_PALETTE 1     /* Color palette, see list in global_pdes.c  */
 
-#define NCOLORS 6           /* number of colors */
+#define NCOLORS 14           /* number of colors */
 #define COLORSHIFT 3        /* hue of initial color */ 
 #define RAINBOW_COLOR 0     /* set to 1 to use different colors for all particles */
 #define NSEG 100            /* number of segments of boundary */
 #define BILLIARD_WIDTH 4    /* width of billiard */
 #define FRONT_WIDTH 4       /* width of wave front */
 
-#define BLACK 1             /* set to 1 for black background */
+#define BLACK 0             /* set to 1 for black background */
 #define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 
 #define OUTER_COLOR 300.0   /* color outside billiard */
-#define PAINT_INT 1         /* set to 1 to paint interior in other color (for polygon) */
-#define PAINT_EXT 0         /* set to 1 to paint exterior of billiard */
+#define PAINT_INT 0         /* set to 1 to paint interior in other color (for polygon) */
+#define PAINT_EXT 1         /* set to 1 to paint exterior of billiard */
 
 
 #define PAUSE 1000          /* number of frames after which to pause */
@@ -124,6 +124,7 @@
 #define PI 	3.141592654
 #define DPI 	6.283185307
 #define PID 	1.570796327
+
 
 #include "global_particles.c"
 #include "sub_part_billiard.c"
@@ -175,6 +176,27 @@ void init_drop_config(double x0, double y0, double angle1, double angle2, double
     }
 }
  
+void init_partial_drop_config(int i1, int i2, double x0, double y0, double angle1, double angle2, double *configs[NPARTMAX])   
+/* initialize configuration: drop at (x0,y0) */
+{
+    int i;
+    double dalpha, alpha, pos[2];
+  
+    while (angle2 < angle1) angle2 += DPI;
+    dalpha = (angle2 - angle1)/((double)(i2 - i1));
+    if (i2 >= NPART) i2 = NPART;
+    
+    for (i=i1; i<i2; i++) 
+    {
+        alpha = angle1 + dalpha*((double)i);  
+      
+        pos[0] = x0;
+        pos[1] = y0;
+        vbilliard_xy(configs[i], alpha, pos);
+    }
+}
+ 
+
 
 int resample(int color[NPARTMAX], double *configs[NPARTMAX])     
 /* add particles where the front is stretched too thin */
@@ -448,7 +470,10 @@ void animation()
         configs[i] = (double *)malloc(8*sizeof(double));
   
 //     init_drop_config(0.1, 0.1, 0.0, DPI, configs);
-    init_drop_config(0.0, 0.0, 0.0, DPI, configs);
+    init_partial_drop_config(0, NPART/4, LAMBDA, 0.0, 0.0, DPI, configs);
+    init_partial_drop_config(NPART/4, NPART/2, -LAMBDA, 0.0, 0.0, DPI, configs);
+    init_partial_drop_config(NPART/2, 3*NPART/4, 0.0, LAMBDA, 0.0, DPI, configs);
+    init_partial_drop_config(3*NPART/4, NPART, 0.0, -LAMBDA, 0.0, DPI, configs);
 //     init_drop_config(-1.0 + 0.3*sqrt(2.0), -1.0 + 0.5*sqrt(2.0), 0.0, DPI, configs);
 //     init_drop_config(-0.5, -0.5, 0.0, DPI, configs);
 //     init_boundary_config(1.5, 1.5, 0.0, PI, configs);

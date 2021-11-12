@@ -45,8 +45,14 @@
 #define D_TOKARSKY 35           /* Tokarsky unilluminable room */
 
 #define D_ISOSPECTRAL 37        /* isospectral billiards */
+#define D_HOMOPHONIC 38         /* homophonic billiards */
 
-#define NMAXCIRCLES 600        /* total number of circles (must be at least NCX*NCY for square grid) */
+#define D_POLYGONS 40           /* several polygons */
+#define D_VONKOCH 41            /* von Koch snowflake fractal */
+
+#define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
+#define NMAXPOLY 10000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
+// #define NMAXCIRCLES 10000        /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -75,6 +81,7 @@
 #define D_MANDELBROT 24     /* Mandelbrot set */
 #define D_JULIA 25          /* Julia set */
 #define D_MANDELBROT_CIRCLE 26     /* Mandelbrot set with circular conductor */
+#define D_VONKOCH_HEATED 27 /* von Koch snowflake in larger circle */
 
 /* Boundary conditions */
 
@@ -121,11 +128,37 @@
 #define COL_MAGMA 12     /* Magma color palette */
 #define COL_INFERNO 13   /* Inferno color palette */
 #define COL_PLASMA 14    /* Plasma color palette */
+#define COL_CIVIDIS 15   /* Cividis color palette */
+#define COL_PARULA 16    /* Parula color palette */
+
+typedef struct
+{
+    double xc, yc, radius;      /* center and radius of circle */
+    short int active;           /* circle is active */
+} t_circle;
+
+typedef struct
+{
+    double xc, yc, radius, angle;      /* center, radius and angle of polygon */
+    int nsides;                         /* number of sides of polygon */
+    short int active;                  /* polygon is active */
+} t_polygon;
+
+typedef struct
+{
+    double x, y;           /* (x,y) coordinates of vertex */
+    double posi, posj;     /* (i,j) coordinates of vertex */
+} t_vertex;
 
 
-double circlex[NMAXCIRCLES], circley[NMAXCIRCLES], circlerad[NMAXCIRCLES];      /* position and radius of circular scatterers */
-short int circleactive[NMAXCIRCLES];                                      /* tells which circular scatters are active */
-int ncircles = NMAXCIRCLES;            /* actual number of circles, can be decreased e.g. for random patterns */
+// double circlex[NMAXCIRCLES], circley[NMAXCIRCLES], circlerad[NMAXCIRCLES];      /* position and radius of circular scatterers */
+// short int circleactive[NMAXCIRCLES];                                      /* tells which circular scatters are active */
+int ncircles = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */
+int npolyline = NMAXPOLY;           /* actual length of polyline */
+
+t_circle circles[NMAXCIRCLES];      /* circular scatterers */
+t_polygon polygons[NMAXCIRCLES];    /* polygonal scatterers */
+t_vertex polyline[NMAXPOLY];        /* vertices of polygonal line */
 
 double julia_x = -0.5, julia_y = 0.5;    /* parameters for Julia sets */
 // double julia_x = 0.33267, julia_y = 0.06395;    /* parameters for Julia sets */

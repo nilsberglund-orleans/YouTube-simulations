@@ -3,7 +3,7 @@
 short int circletop[NMAXCIRCLES];  /* set to 1 if circle is in top half */
 
 
-void init_circle_config_half(int pattern, int top)
+void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES])
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
@@ -21,12 +21,12 @@ void init_circle_config_half(int pattern, int top)
                 {
                     printf("i = %i, j = %i, n = %i\n", i, j, n);
                     n = ncircles + NGRIDY*i/2 + j;
-                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;
                     y = ((double)j + 0.5)*dy;
-                    if (top) circley[n] = ymean + y;
-                    else circley[n] = ymean - y;
-                    circlerad[n] = MU;
-                    circleactive[n] = 1;
+                    if (top) circles[n].yc = ymean + y;
+                    else circles[n].yc = ymean - y;
+                    circles[n].radius = MU;
+                    circles[n].active = 1;
                     circletop[n] = top;
                 }
             ncircles += NGRIDX*NGRIDY/2;
@@ -40,13 +40,13 @@ void init_circle_config_half(int pattern, int top)
                 for (j = 0; j < NGRIDY/2+1; j++)
                 {
                     n = ncircles + (NGRIDY+1)*i/2 + j;
-                    circlex[n] = ((double)(i-NGRIDX/2))*dy;
+                    circles[n].xc = ((double)(i-NGRIDX/2))*dy;
                     y = ((double)j - 0.5)*dy;
                     if ((i+NGRIDX)%2 == 1) y += 0.5*dy;
-                    if (top) circley[n] = ymean + 0.5*dy + y;
-                    else circley[n] = ymean - 0.5*dy - y;
-                    circlerad[n] = MU;
-                    circleactive[n] = 1;
+                    if (top) circles[n].yc = ymean + 0.5*dy + y;
+                    else circles[n].yc = ymean - 0.5*dy - y;
+                    circles[n].radius = MU;
+                    circles[n].active = 1;
                     circletop[n] = top;
                 }
             ncircles += NGRIDX*(NGRIDY+1)/2;
@@ -59,15 +59,15 @@ void init_circle_config_half(int pattern, int top)
                 for (j = 0; j < NGRIDY/2; j++)
                 {
                     n = ncircles + NGRIDY*i/2 + j;
-                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
-                    if (NGRIDX%2 == 0) circlex[n] += 0.5*dy;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    if (NGRIDX%2 == 0) circles[n].xc += 0.5*dy;
                     y = ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
-                    if (top) circley[n] = ymean + y;
-                    else circley[n] = ymean - y;
-                    circlerad[n] = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
-                    circleactive[n] = 1;
+                    if (top) circles[n].yc = ymean + y;
+                    else circles[n].yc = ymean - y;
+                    circles[n].radius = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
+                    circles[n].active = 1;
                     circletop[n] = top;
-                    printf("n = %i, x = %.3lg\n", n, circlex[n]);
+                    printf("n = %i, x = %.3lg\n", n, circles[n].xc);
                 }
             ncircles += NGRIDX*NGRIDY/2;
             break;
@@ -79,14 +79,14 @@ void init_circle_config_half(int pattern, int top)
                 for (j = 0; j < NGRIDY/2; j++)
                 {
                     n = ncircles + NGRIDY*i/2 + j;
-                    circlex[n] = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;
                     y = YMIN + ((double)j + 0.5)*dy;
                     if ( ((top)&&(y > 0.0))||((!top)&&(y <= 0.0)) )
-                        circley[n] = y;
-                    circlerad[n] = MU;
+                        circles[n].yc = y;
+                    circles[n].radius = MU;
                     p = (double)rand()/RAND_MAX;
-                    if (p < P_PERCOL) circleactive[n] = 1;
-                    else circleactive[n] = 0;
+                    if (p < P_PERCOL) circles[n].active = 1;
+                    else circles[n].active = 0;
                     circletop[n] = top;
                 }
             ncircles += NGRIDX*NGRIDY/2;
@@ -97,15 +97,15 @@ void init_circle_config_half(int pattern, int top)
             for (i = 0; i < NPOISSON/2; i++)
             {
                 n = ncircles + i;
-                circlex[n] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+                circles[n].xc = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
                 if (top) y = ymean + (YMAX-ymean)*(double)rand()/RAND_MAX;
                 else y = ymean + (YMIN-ymean)*(double)rand()/RAND_MAX;
                 if ( ((top)&&(y > 0.0))||((!top)&&(y <= 0.0)) )
-                    circley[n] = y;
-                circlerad[n] = MU;
-                circleactive[n] = 1;
+                    circles[n].yc = y;
+                circles[n].radius = MU;
+                circles[n].active = 1;
                 circletop[n] = top;
-                printf("n = %i, x = %.3lg\n", n, circlex[n]);
+                printf("n = %i, x = %.3lg\n", n, circles[n].xc);
             }
             ncircles += NPOISSON/2;
             break;
@@ -118,12 +118,12 @@ void init_circle_config_half(int pattern, int top)
                     n = ncircles + 5*i + j;
                     phi = (double)i*DPI/40.0;
                     r = LAMBDA*0.5*(1.0 + (double)j/5.0);
-                    circlex[n] = r*cos(phi);
+                    circles[n].xc = r*cos(phi);
                     y = r*sin(phi);
                     if ( ((top)&&(y > 0.0))||((!top)&&(y <= 0.0)) )
-                        circley[n] = y;
-                    circlerad[n] = MU;
-                    circleactive[n] = 1;
+                        circles[n].yc = y;
+                    circles[n].radius = MU;
+                    circles[n].active = 1;
                     circletop[n] = top;
                 }
             ncircles += 200;
@@ -142,25 +142,25 @@ void init_circle_config_half(int pattern, int top)
                     n = ncircles + 5*i + j;
                     phi = (double)i*DPI/40.0;
                     r = LAMBDA*sa[j];
-                    circlex[n] = r*cos(phi);
-                    circley[n] = r*sin(phi);
+                    circles[n].xc = r*cos(phi);
+                    circles[n].yc = r*sin(phi);
                     
                     if (top) y = r*sin(phi);
                     else y = -r*sin(phi);
                         
-                    circley[n] = y;
+                    circles[n].yc = y;
                     
-                    circlerad[n] = LAMBDA*ra[j];
-                    circleactive[n] = 1;
+                    circles[n].radius = LAMBDA*ra[j];
+                    circles[n].active = 1;
                     circletop[n] = top;
                 }
             ncircles += 105;
             
             /* add circle in the center */
-            circlex[ncircles] = 0.0;
-            circley[ncircles] = 0.0;
-            circlerad[ncircles] = MU;
-            circleactive[ncircles] = 2;
+            circles[ncircles].xc = 0.0;
+            circles[ncircles].yc = 0.0;
+            circles[ncircles].radius = MU;
+            circles[ncircles].active = 2;
             circletop[ncircles] = top; 
             ncircles += 1;
             break;
@@ -170,12 +170,12 @@ void init_circle_config_half(int pattern, int top)
             printf("Generating Poisson disc sample\n");
             /* generate first circle */
             n = ncircles;
-            circlex[n] = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
+            circles[n].xc = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
             if (top) y = ymean + (YMAX-ymean)*(double)rand()/RAND_MAX;
             else y = ymean + (YMIN-ymean)*(double)rand()/RAND_MAX;
-            circley[n] = y;
-            circlerad[n] = MU;
-            circleactive[n] = 1;
+            circles[n].yc = y;
+            circles[n].radius = MU;
+            circles[n].active = 1;
             circletop[n] = top;
             active_poisson[n] = 1;
             n_p_active = 1;
@@ -187,21 +187,21 @@ void init_circle_config_half(int pattern, int top)
                 i = rand()%(ncirc0);
                 n = ncircles + i;
                 while (!active_poisson[ncircles + i]) i = rand()%(ncirc0);                 
-//                 printf("Starting from circle %i at (%.3f,%.3f)\n", i, circlex[i], circley[i]);
+//                 printf("Starting from circle %i at (%.3f,%.3f)\n", i, circles[i].xc, circles[i].yc);
                 /* generate new candidates */
                 naccepted = 0;
                 for (j=0; j<ncandidates; j++)
                 {
                     r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
                     phi = DPI*(double)rand()/RAND_MAX;
-                    x = circlex[n] + r*cos(phi);
-                    y = circley[n] + r*sin(phi);
+                    x = circles[n].xc + r*cos(phi);
+                    y = circles[n].yc + r*sin(phi);
 //                        printf("Testing new circle at (%.3f,%.3f)\t", x, y);
                     far = 1;
                     for (k=ncircles; k<ncircles + ncirc0; k++) if ((k!=n))
                     {
                         /* new circle is far away from circle k */
-                        far = far*((x - circlex[k])*(x - circlex[k]) + (y - circley[k])*(y - circley[k]) >= dpoisson*dpoisson);
+                        far = far*((x - circles[k].xc)*(x - circles[k].xc) + (y - circles[k].yc)*(y - circles[k].yc) >= dpoisson*dpoisson);
                         /* new circle is in domain */
                         if (top) far = far*(vabs(x) < LAMBDA)*(y < YMAX)*(y > 0.0);
                         else far = far*(vabs(x) < LAMBDA)*(y > YMIN)*(y < 0.0);
@@ -210,12 +210,12 @@ void init_circle_config_half(int pattern, int top)
                     {
                         printf("New circle at (%.3f,%.3f) accepted\n", x, y);
                         nnew = ncircles + ncirc0;
-                        circlex[nnew] = x;
-                        circley[nnew] = y;
-                        circlerad[nnew] = MU;
-                        circleactive[nnew] = 1;
+                        circles[nnew].xc = x;
+                        circles[nnew].yc = y;
+                        circles[nnew].radius = MU;
+                        circles[nnew].active = 1;
                         active_poisson[nnew] = 1;
-                        circleactive[nnew] = 1;
+//                         circleactive[nnew] = 1;
                         circletop[nnew] = top;
                         ncirc0++;
                         n_p_active++;
@@ -248,8 +248,8 @@ void init_circle_config_half(int pattern, int top)
             else y = ymean - 0.5*height; 
             for (n = 0; n < 150; n++)
             {
-                circlex[ncircles + n] = -LAMBDA + n*dx;
-                circley[ncircles + n] = y;
+                circles[ncircles + n].xc = -LAMBDA + n*dx;
+                circles[ncircles + n].yc = y;
                 
                 if (top)
                 {
@@ -263,8 +263,8 @@ void init_circle_config_half(int pattern, int top)
                    
                 }
                 
-                circlerad[ncircles + n] = MU;
-                circleactive[ncircles + n] = 1;
+                circles[ncircles + n].radius = MU;
+                circles[ncircles + n].active = 1;
                 circletop[ncircles] = top; 
             }
             
@@ -279,20 +279,20 @@ void init_circle_config_half(int pattern, int top)
             
             for (n=0; n < 150; n++)
             {
-                if (circley[ncirc0 + n] + circlerad[ncirc0 + n] > ytop)
+                if (circles[ncirc0+n].yc + circles[ncirc0 + n].radius > ytop)
                 {
-                    circlex[ncircles] = circlex[ncirc0 + n];
-                    circley[ncircles] = circley[ncirc0 + n] - height;
-                    circlerad[ncircles] = MU;
-                    circleactive[ncircles] = 1;
+                    circles[ncircles].xc = circles[ncirc0 + n].xc;
+                    circles[ncircles].yc = circles[ncirc0+n].yc - height;
+                    circles[ncircles].radius = MU;
+                    circles[ncircles].active = 1;
                     ncircles ++;
                 }
-                else if (circley[ncirc0 + n] - circlerad[ncirc0 + n] < ybottom)
+                else if (circles[ncirc0+n].yc - circles[ncirc0 + n].radius < ybottom)
                 {
-                    circlex[ncircles] = circlex[ncirc0 + n];
-                    circley[ncircles] = circley[ncirc0 + n] + height;
-                    circlerad[ncircles] = MU;
-                    circleactive[ncircles] = 1;
+                    circles[ncircles].xc = circles[ncirc0 + n].xc;
+                    circles[ncircles].yc = circles[ncirc0+n].yc + height;
+                    circles[ncircles].radius = MU;
+                    circles[ncircles].active = 1;
                     ncircles ++;
                 }
             }
@@ -301,10 +301,10 @@ void init_circle_config_half(int pattern, int top)
         }
         case (C_GOLDEN_SPIRAL):
         {
-            circlex[ncircles] = 0.0;
-            circley[ncircles] = 0.0;
-            circlerad[ncircles] = MU;
-            circleactive[ncircles] = 1;
+            circles[ncircles].xc = 0.0;
+            circles[ncircles].yc = 0.0;
+            circles[ncircles].radius = MU;
+            circles[ncircles].active = 1;
             circletop[ncircles] = top; 
             
             gamma = (sqrt(5.0) - 1.0)*PI;    /* golden mean times 2Pi */
@@ -322,13 +322,13 @@ void init_circle_config_half(int pattern, int top)
                 
                 if ((vabs(x) < LAMBDA)&&(vabs(y) < YMAX + MU))
                 {
-                    circlex[ncircles] = x;
-                    circley[ncircles] = y;
-                    circlerad[ncircles] = MU;
-                    if (((top)&&(circley[ncircles] < YMAX + MU)&&(circley[ncircles] > ymean - MU))
-                        ||((!top)&&(circley[ncircles] < ymean + MU)&&(circley[ncircles] > YMIN - MU)))
+                    circles[ncircles].xc = x;
+                    circles[ncircles].yc = y;
+                    circles[ncircles].radius = MU;
+                    if (((top)&&(circles[ncircles].yc < YMAX + MU)&&(circles[ncircles].yc > ymean - MU))
+                        ||((!top)&&(circles[ncircles].yc < ymean + MU)&&(circles[ncircles].yc > YMIN - MU)))
                     {
-                        circleactive[ncircles] = 1;
+                        circles[ncircles].active = 1;
                         circletop[ncircles] = top; 
                         ncircles++;
                     }
@@ -338,30 +338,30 @@ void init_circle_config_half(int pattern, int top)
         }
         case (C_ONE):
         {
-            circlex[ncircles] = 0.0;
-            circley[ncircles] = 0.0;
-            if (top) circlerad[ncircles] = MU;
-            else circlerad[ncircles] = MUB;
-            circleactive[ncircles] = 1;
+            circles[ncircles].xc = 0.0;
+            circles[ncircles].yc = 0.0;
+            if (top) circles[ncircles].radius = MU;
+            else circles[ncircles].radius = MUB;
+            circles[ncircles].active = 1;
             circletop[ncircles] = top; 
             ncircles += 1;
             break;
         }
         case (C_TWO):
         {
-            circlex[ncircles] = 0.0;
-            circley[ncircles] = 0.0;
-            if (top) circlerad[ncircles] = MU;
-            else circlerad[ncircles] = MUB;
-            circleactive[ncircles] = 2;
+            circles[ncircles].xc = 0.0;
+            circles[ncircles].yc = 0.0;
+            if (top) circles[ncircles].radius = MU;
+            else circles[ncircles].radius = MUB;
+            circles[ncircles].active = 2;
             circletop[ncircles] = top; 
             ncircles += 1;
 
-            circlex[ncircles] = 0.0;
-            circley[ncircles] = 0.0;
-            if (top) circlerad[ncircles] = 2.0*MU;
-            else circlerad[ncircles] = 2.0*MUB;
-            circleactive[ncircles] = 1;
+            circles[ncircles].xc = 0.0;
+            circles[ncircles].yc = 0.0;
+            if (top) circles[ncircles].radius = 2.0*MU;
+            else circles[ncircles].radius = 2.0*MUB;
+            circles[ncircles].active = 1;
             circletop[ncircles] = top; 
             ncircles += 1; 
             break;
@@ -379,21 +379,21 @@ void init_circle_config_half(int pattern, int top)
 }
 
 
-void init_circle_config_comp()
+void init_circle_config_comp(t_circle circles[NMAXCIRCLES])
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
     ncircles = 0;
-    init_circle_config_half(CIRCLE_PATTERN, 1);
-    init_circle_config_half(CIRCLE_PATTERN_B, 0);
+    init_circle_config_half(CIRCLE_PATTERN, 1, circles);
+    init_circle_config_half(CIRCLE_PATTERN_B, 0, circles);
 }
 
-void init_circle_config_energy()
+void init_circle_config_energy(t_circle circles[NMAXCIRCLES])
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
     ncircles = 0;
-    init_circle_config_half(CIRCLE_PATTERN, 0);
+    init_circle_config_half(CIRCLE_PATTERN, 0, circles);
 }
 
 int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
@@ -419,15 +419,15 @@ int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
         case D_CIRCLES:
         {
             for (i = 0; i < ncircles; i++)
-                if (circleactive[i] != 0) 
+                if (circles[i].active != 0) 
                 {
-                    /* choose specific type according to value of circleactive[i] */
-                    if (circleactive[i] == 1) type = 0;
-                    else type = circleactive[i];
+                    /* choose specific type according to value of circles[i].active */
+                    if (circles[i].active == 1) type = 0;
+                    else type = circles[i].active;
                     
-                    x1 = circlex[i];
-                    y1 = circley[i];
-                    r2 = circlerad[i]*circlerad[i];
+                    x1 = circles[i].xc;
+                    y1 = circles[i].yc;
+                    r2 = circles[i].radius*circles[i].radius;
                     if ((top)&&(circletop[i])&&(y > 0.0)&&((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2)) return(type); 
                     else if ((!top)&&(!circletop[i])&&(y < 0.0)&&((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2)) return(type); 
                 }
@@ -535,14 +535,14 @@ void draw_billiard_half(int domain, int pattern, int top)      /* draws the bill
         {
             glLineWidth(2);
             for (i = 0; i < ncircles; i++) 
-                if ((circleactive[i])&&(circletop[i] == top)) 
+                if ((circles[i].active)&&(circletop[i] == top)) 
                 {
                     glBegin(GL_LINE_STRIP);
                     for (k=0; k<=NSEG; k++)
                     {
                         phi = (double)k*DPI/(double)NSEG;
-                        x = circlex[i] + circlerad[i]*cos(phi);
-                        y = circley[i] + circlerad[i]*sin(phi);
+                        x = circles[i].xc + circles[i].radius*cos(phi);
+                        y = circles[i].yc + circles[i].radius*sin(phi);
                         if ((top)&&(circletop[i])&&(y < 0.0)) y = 0.0;
                         if ((!top)&&(!circletop[i])&&(y > 0.0)) y = 0.0;
                         xy_to_pos(x, y, pos);
@@ -681,9 +681,9 @@ void compute_energy_tblr(double *phi[NX], double *psi[NX], short int *xy_in[NX],
     {
         /* find leftmost and rightmost circle */
         for (i=0; i<ncircles; i++) 
-            if ((circleactive[i])&&(circlex[i] - circlerad[i] < xleft)) xleft = circlex[i] - circlerad[i]; 
+            if ((circles[i].active)&&(circles[i].xc - circles[i].radius < xleft)) xleft = circles[i].xc - circles[i].radius; 
         for (i=0; i<ncircles; i++) 
-            if ((circleactive[i])&&(circlex[i] + circlerad[i] > xright)) xright = circlex[i] + circlerad[i]; 
+            if ((circles[i].active)&&(circles[i].xc + circles[i].radius > xright)) xright = circles[i].xc + circles[i].radius; 
         
         xy_to_ij(xleft, 0.0, ij);
         ileft = ij[0];

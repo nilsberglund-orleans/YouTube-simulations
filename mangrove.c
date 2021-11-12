@@ -70,6 +70,7 @@
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 340        /* number of points for Poisson C_RAND_POISSON arrangement */
+#define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 0.85	    /* parameter controlling the dimensions of domain */
 #define MU 0.03	            /* parameter controlling the dimensions of domain */
@@ -101,7 +102,7 @@
 
 #define TWOSPEEDS 1         /* set to 1 to replace hardcore boundary by medium with different speed */
 #define OSCILLATE_LEFT 1    /* set to 1 to add oscilating boundary condition on the left */
-#define OSCILLATE_TOPBOT 1  /* set to 1 to enforce a planar wave on top and bottom boundary */
+#define OSCILLATE_TOPBOT 0  /* set to 1 to enforce a planar wave on top and bottom boundary */
 #define X_SHIFT -0.9        /* x range on which to apply OSCILLATE_TOPBOT */
 
 #define OMEGA 0.00133333333        /* frequency of periodic excitation */
@@ -139,7 +140,7 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 1000      /* number of frames of movie */
+#define NSTEPS 2000      /* number of frames of movie */
 // #define NSTEPS 5500      /* number of frames of movie */
 #define NVID 60          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
@@ -211,6 +212,11 @@
 #define HASHMAX 10  /* maximal number of mangroves per hashgrid cell */
 #define HASHGRID_PADDING 0.1    /* padding of hashgrid outside simulation window */
 
+#define DRAW_COLOR_SCHEME 0     /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 8.0    /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 12.0    /* scale of color scheme bar for 2nd part */
+#define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
+
 /* For debugging purposes only */
 #define FLOOR 1         /* set to 1 to limit wave amplitude to VMAX */
 #define VMAX 10.0       /* max value of wave amplitude */
@@ -221,6 +227,28 @@
 
 double courant2, courantb2;  /* Courant parameters squared */
 
+typedef struct
+{
+    double xc, yc, radius;      /* center and radius of circle */
+    short int active;           /* circle is active */
+    double energy;              /* dissipated energy */
+    double yc_wrapped;          /* position of circle centers wrapped vertically */
+    double anchorx;             /* points moving circles are attached to */
+    double anchory;             /* points moving circles are attached to */
+    double vx;                  /* x velocity of circles */
+    double vy;                  /* y velocity of circles */
+    double radius_initial;      /* initial circle radii */
+    double mass_inv;            /* inverse of mangrove mass */
+    short int attached;         /* has value 1 if the circle is attached to its anchor */
+    int hashx;                  /* hash grid positions of mangroves */
+    int hashy;                  /* hash grid positions of mangroves */
+} t_mangrove;
+
+typedef struct
+{
+    int number;                 /* total number of mangroves in cell */
+    int mangroves[HASHMAX];     /* numbers of mangroves in cell */
+} t_hashgrid;
 
 /*********************/
 /* animation part    */
@@ -248,17 +276,189 @@ void init_bc_phase(double left_bc[NY], double top_bc[NX], double bot_bc[NX])
 }
 
 
+// void evolve_wave_half_old(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], double *psi_out[NX], 
+//                       short int *xy_in[NX])
+// // void evolve_wave_half(phi_in, psi_in, phi_out, psi_out, xy_in)
+// /* time step of field evolution */
+// /* phi is value of field at time t, psi at time t-1 */
+// {
+//     int i, j, iplus, iminus, jplus, jminus, tb_shift;
+//     double delta, x, y, c, cc, gamma, kappa, phase, phasemin;
+//     static long time = 0;
+//     static int init_bc = 1;
+//     static double left_bc[NY], top_bc[NX], bot_bc[NX];
+//     
+//     time++;
+//     
+//     /* initialize boundary condition phase KX*x + KY*y */
+//     if ((OSCILLATE_LEFT)&&(init_bc)) 
+//     {
+//         init_bc_phase(left_bc, top_bc, bot_bc);
+//         tb_shift = (int)((X_SHIFT - XMIN)*(double)NX/(XMAX - XMIN));
+//         printf("tb_shift %i\n", tb_shift);
+//         init_bc = 0;
+//     }
+//     
+//     #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta,x,y,c,cc,gamma,kappa)
+//     for (i=0; i<NX; i++){
+//         for (j=0; j<NY; j++){
+//             if (xy_in[i][j])
+//             {
+//                 c = COURANT;
+//                 cc = courant2;
+//                 gamma = GAMMA;
+//                 kappa = KAPPA;
+//             }
+//             else if (TWOSPEEDS)
+//             {
+//                 c = COURANTB;
+//                 cc = courantb2;
+//                 gamma = GAMMAB;
+//                 kappa = KAPPAB;
+//             }
+// 
+//             if ((TWOSPEEDS)||(xy_in[i][j])){
+//                 /* discretized Laplacian for various boundary conditions */
+//                 if ((B_COND == BC_DIRICHLET)||(B_COND == BC_ABSORBING))
+//                 {
+//                     iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+//                     iminus = (i-1);  if (iminus == -1) iminus = 0;
+//                     jplus = (j+1);   if (jplus == NY) jplus = NY-1;
+//                     jminus = (j-1);  if (jminus == -1) jminus = 0;
+//                 }
+//                 else if (B_COND == BC_PERIODIC)
+//                 {
+//                     iplus = (i+1) % NX;
+//                     iminus = (i-1) % NX;
+//                     if (iminus < 0) iminus += NX;
+//                     jplus = (j+1) % NY;
+//                     jminus = (j-1) % NY;
+//                     if (jminus < 0) jminus += NY;
+//                 }
+//                 else if (B_COND == BC_VPER_HABS)
+//                 {
+//                     iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+//                     iminus = (i-1);  if (iminus == -1) iminus = 0;
+//                     jplus = (j+1) % NY;
+//                     jminus = (j-1) % NY;
+//                     if (jminus < 0) jminus += NY;
+//                 }
+//                 
+//                 /* imposing linear wave on top and bottom by making Laplacian 1d */
+//                 if ((OSCILLATE_TOPBOT)&&(i < tb_shift))
+//                 {
+//                     if (j == NY-1) 
+//                     {
+//                         jminus = NY-1;
+//                         jplus = NY-1;
+//                     }
+//                     else if (j == 0) 
+//                     {   
+//                         jminus = 0;
+//                         jplus = 0;
+//                     }
+//                 }
+//                 
+//                 delta = phi_in[iplus][j] + phi_in[iminus][j] + phi_in[i][jplus] + phi_in[i][jminus] - 4.0*phi_in[i][j];
+// 
+//                 x = phi_in[i][j];
+// 		y = psi_in[i][j];
+// 
+//                 /* evolve phi */
+//                 if ((B_COND == BC_PERIODIC)||(B_COND == BC_DIRICHLET)) 
+//                     phi_out[i][j] = -y + 2*x + cc*delta - kappa*x - gamma*(x-y);
+//                 else if (B_COND == BC_ABSORBING)
+//                 {
+//                     if ((i>0)&&(i<NX-1)&&(j>0)&&(j<NY-1))
+//                         phi_out[i][j] = -y + 2*x + cc*delta - kappa*x - gamma*(x-y);
+//                 
+//                     /* upper border */
+//                     else if (j==NY-1) 
+//                         phi_out[i][j] = x - c*(x - phi_in[i][NY-2]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
+//                     
+//                     /* lower border */
+//                     else if (j==0) 
+//                         phi_out[i][j] = x - c*(x - phi_in[i][1]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
+//                 
+//                     /* right border */
+//                     if (i==NX-1) 
+//                         phi_out[i][j] = x - c*(x - phi_in[NX-2][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+//                     
+//                     /* left border */
+//                     else if (i==0) 
+//                         phi_out[i][j] = x - c*(x - phi_in[1][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+//                 }
+//                 else if (B_COND == BC_VPER_HABS)
+//                 {
+//                     if ((i>0)&&(i<NX-1))
+//                         phi_out[i][j] = -y + 2*x + cc*delta - kappa*x - gamma*(x-y);
+//                 
+//                     /* right border */
+//                     else if (i==NX-1) 
+//                         phi_out[i][j] = x - c*(x - phi_in[NX-2][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+//                     
+//                     /* left border */
+//                     else if (i==0) 
+//                         phi_out[i][j] = x - c*(x - phi_in[1][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+//                 }
+//                 psi_out[i][j] = x;
+//                 
+//                 /* add oscillating boundary condition on the left */
+// //                 if ((i == 0)&&(OSCILLATE_LEFT)) 
+// //                 {
+// //                     phase =  (double)time*OMEGA - DPI*K_BC*(double)j/(double)NY;
+// //                     if (phase < 0.0) phase = 0.0;
+// //                     phi_out[i][j] = AMPLITUDE*sin(phase);
+// //                 }
+// 
+//                 /* add oscillating boundary condition on the left */
+//                 if (OSCILLATE_LEFT)
+//                 {
+//                     phasemin = left_bc[0]; 
+//                     if (i == 0)
+//                     {
+//                         phase =  (double)time*OMEGA - left_bc[j] + phasemin;
+//                         if (phase < 0.0) phase = 0.0;
+//                         phi_out[i][j] = AMPLITUDE*sin(phase);
+//                     }
+//                     if ((j == 0)&&(i < tb_shift))
+//                     {
+//                         phase =  (double)time*OMEGA - bot_bc[i] + phasemin;
+//                         if (phase < 0.0) phase = 0.0;
+//                         phi_out[i][j] = AMPLITUDE*sin(phase);
+//                     }
+//                     else if ((j == NY-1)&&(i < tb_shift))
+//                     {
+//                         phase =  (double)time*OMEGA - top_bc[i] + phasemin;
+//                         if (phase < 0.0) phase = 0.0;
+//                         phi_out[i][j] = AMPLITUDE*sin(phase);
+//                     }                    
+//                 }
+//                 
+//                 if (FLOOR)
+//                 {
+//                     if (phi_out[i][j] > VMAX) phi_out[i][j] = VMAX;
+//                     if (phi_out[i][j] < -VMAX) phi_out[i][j] = -VMAX;
+//                     if (psi_out[i][j] > VMAX) psi_out[i][j] = VMAX;
+//                     if (psi_out[i][j] < -VMAX) psi_out[i][j] = -VMAX;
+//                 }
+//             }
+//         }
+//     }
+// //     printf("phi(0,0) = %.3lg, psi(0,0) = %.3lg\n", phi[NX/2][NY/2], psi[NX/2][NY/2]);
+// }
+
 void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], double *psi_out[NX], 
                       short int *xy_in[NX])
-// void evolve_wave_half(phi_in, psi_in, phi_out, psi_out, xy_in)
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
+/* this version of the function has been rewritten in order to minimize the number of if-branches */
 {
     int i, j, iplus, iminus, jplus, jminus, tb_shift;
     double delta, x, y, c, cc, gamma, kappa, phase, phasemin;
     static long time = 0;
-    static int init_bc = 1;
-    static double left_bc[NY], top_bc[NX], bot_bc[NX];
+    static double tc[NX][NY], tcc[NX][NY], tgamma[NX][NY], left_bc[NY], top_bc[NX], bot_bc[NX];
+    static short int first = 1, init_bc = 1;
     
     time++;
     
@@ -271,153 +471,272 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
         init_bc = 0;
     }
     
-    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta,x,y,c,cc,gamma,kappa)
-    for (i=0; i<NX; i++){
-        for (j=0; j<NY; j++){
-            if (xy_in[i][j])
-            {
-                c = COURANT;
-                cc = courant2;
-                gamma = GAMMA;
-                kappa = KAPPA;
+    /* initialize tables with wave speeds and dissipation */
+//     if (first)
+    {
+        for (i=0; i<NX; i++){
+            for (j=0; j<NY; j++){
+                if (xy_in[i][j] != 0)
+                {
+                    tc[i][j] = COURANT;
+                    tcc[i][j] = courant2;
+                    if (xy_in[i][j] == 1) tgamma[i][j] = GAMMA;
+                    else tgamma[i][j] = GAMMAB;
+                }
+                else if (TWOSPEEDS)
+                {
+                    tc[i][j] = COURANTB;
+                    tcc[i][j] = courantb2;
+                    tgamma[i][j] = GAMMAB;
+                }
             }
-            else if (TWOSPEEDS)
-            {
-                c = COURANTB;
-                cc = courantb2;
-                gamma = GAMMAB;
-                kappa = KAPPAB;
-            }
+        }
+//         first = 0;
+    }
+    
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta,x,y)
+    /* evolution in the bulk */
+    for (i=1; i<NX-1; i++){
+        for (j=1; j<NY-1; j++){
+            if ((TWOSPEEDS)||(xy_in[i][j] != 0)){
+                x = phi_in[i][j];
+		y = psi_in[i][j];
+                
+                /* discretized Laplacian */
+                delta = phi_in[i+1][j] + phi_in[i-1][j] + phi_in[i][j+1] + phi_in[i][j-1] - 4.0*x;
 
-            if ((TWOSPEEDS)||(xy_in[i][j])){
-                /* discretized Laplacian for various boundary conditions */
-                if ((B_COND == BC_DIRICHLET)||(B_COND == BC_ABSORBING))
+                /* evolve phi */
+                phi_out[i][j] = -y + 2*x + tcc[i][j]*delta - KAPPA*x - tgamma[i][j]*(x-y);
+                psi_out[i][j] = x;
+            }
+        }
+    }
+    
+    /* left boundary */
+//     if (OSCILLATE_LEFT) for (j=1; j<NY-1; j++) phi_out[0][j] = AMPLITUDE*cos((double)time*OMEGA);
+    if (OSCILLATE_LEFT) for (j=1; j<NY-1; j++) 
+    {
+        phasemin = left_bc[0]; 
+        phase =  (double)time*OMEGA - left_bc[j] + phasemin;
+        if (phase < 0.0) phase = 0.0;
+        phi_out[0][j] = AMPLITUDE*sin(phase);
+    }
+    else for (j=1; j<NY-1; j++){
+        if ((TWOSPEEDS)||(xy_in[0][j] != 0)){
+            x = phi_in[0][j];
+            y = psi_in[0][j];
+                    
+            switch (B_COND) {
+                case (BC_DIRICHLET):
+                {
+                    delta = phi_in[1][j] + phi_in[0][j+1] + phi_in[0][j-1] - 3.0*x;
+                    phi_out[0][j] = -y + 2*x + tcc[0][j]*delta - KAPPA*x - tgamma[0][j]*(x-y);
+                    break;
+                }
+                case (BC_PERIODIC):
+                {
+                    delta = phi_in[1][j] + phi_in[NX-1][j] + phi_in[0][j+1] + phi_in[0][j-1] - 4.0*x;
+                    phi_out[0][j] = -y + 2*x + tcc[0][j]*delta - KAPPA*x - tgamma[0][j]*(x-y);
+                    break;
+                }
+                case (BC_ABSORBING):
+                {
+                    delta = phi_in[1][j] + phi_in[0][j+1] + phi_in[0][j-1] - 3.0*x;
+                    phi_out[0][j] = x - tc[0][j]*(x - phi_in[1][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
+                case (BC_VPER_HABS):
+                {
+                    delta = phi_in[1][j] + phi_in[0][j+1] + phi_in[0][j-1] - 3.0*x;
+                    phi_out[0][j] = x - tc[0][j]*(x - phi_in[1][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
+            }
+            psi_out[0][j] = x;
+        }
+    }
+    
+    /* right boundary */
+    for (j=1; j<NY-1; j++){
+        if ((TWOSPEEDS)||(xy_in[NX-1][j] != 0)){
+            x = phi_in[NX-1][j];
+            y = psi_in[NX-1][j];
+                    
+            switch (B_COND) {
+                case (BC_DIRICHLET):
+                {
+                    delta = phi_in[NX-2][j] + phi_in[NX-1][j+1] + phi_in[NX-1][j-1] - 3.0*x;
+                    phi_out[NX-1][j] = -y + 2*x + tcc[NX-1][j]*delta - KAPPA*x - tgamma[NX-1][j]*(x-y);
+                    break;
+                }
+                case (BC_PERIODIC):
+                {
+                    delta = phi_in[NX-2][j] + phi_in[0][j] + phi_in[NX-1][j+1] + phi_in[NX-1][j-1] - 4.0*x;
+                    phi_out[NX-1][j] = -y + 2*x + tcc[NX-1][j]*delta - KAPPA*x - tgamma[NX-1][j]*(x-y);
+                    break;
+                }
+                case (BC_ABSORBING):
+                {
+                    delta = phi_in[NX-2][j] + phi_in[NX-1][j+1] + phi_in[NX-1][j-1] - 3.0*x;
+                    phi_out[NX-1][j] = x - tc[NX-1][j]*(x - phi_in[NX-2][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
+                case (BC_VPER_HABS):
+                {
+                    delta = phi_in[NX-2][j] + phi_in[NX-1][j+1] + phi_in[NX-1][j-1] - 3.0*x;
+                    phi_out[NX-1][j] = x - tc[NX-1][j]*(x - phi_in[NX-2][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
+            }
+            psi_out[NX-1][j] = x;
+        }
+    }
+    
+    /* top boundary */
+    for (i=0; i<NX; i++){
+        if ((TWOSPEEDS)||(xy_in[i][NY-1] != 0)){
+            x = phi_in[i][NY-1];
+            y = psi_in[i][NY-1];
+            
+            if ((OSCILLATE_TOPBOT)&&(i < tb_shift))
+            {
+                iplus = i+1;
+                iminus = i-1;   if (iminus < 0) iminus = 0;
+                delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + - 2.0*x;
+                phi_out[i][NY-1] = -y + 2*x + tcc[i][NY-1]*delta - KAPPA*x - tgamma[i][NY-1]*(x-y);
+            }
+            else if ((OSCILLATE_LEFT)&&(i < tb_shift))
+            {
+                phasemin = left_bc[0]; 
+                phase =  (double)time*OMEGA - top_bc[i] + phasemin;
+                if (phase < 0.0) phase = 0.0;
+                phi_out[i][NY-1] = AMPLITUDE*sin(phase);
+            }
+            else switch (B_COND) {
+                case (BC_DIRICHLET):
                 {
                     iplus = (i+1);   if (iplus == NX) iplus = NX-1;
                     iminus = (i-1);  if (iminus == -1) iminus = 0;
-                    jplus = (j+1);   if (jplus == NY) jplus = NY-1;
-                    jminus = (j-1);  if (jminus == -1) jminus = 0;
+                    
+                    delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + phi_in[i][NY-2] - 3.0*x;
+                    phi_out[i][NY-1] = -y + 2*x + tcc[i][NY-1]*delta - KAPPA*x - tgamma[i][NY-1]*(x-y);
+                    break;
                 }
-                else if (B_COND == BC_PERIODIC)
+                case (BC_PERIODIC):
                 {
                     iplus = (i+1) % NX;
                     iminus = (i-1) % NX;
                     if (iminus < 0) iminus += NX;
-                    jplus = (j+1) % NY;
-                    jminus = (j-1) % NY;
-                    if (jminus < 0) jminus += NY;
+                    
+                    delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + phi_in[i][NY-2] + phi_in[i][0] - 4.0*x;
+                    phi_out[i][NY-1] = -y + 2*x + tcc[i][NY-1]*delta - KAPPA*x - tgamma[i][NY-1]*(x-y);
+                    break;
                 }
-                else if (B_COND == BC_VPER_HABS)
+                case (BC_ABSORBING):
                 {
                     iplus = (i+1);   if (iplus == NX) iplus = NX-1;
                     iminus = (i-1);  if (iminus == -1) iminus = 0;
-                    jplus = (j+1) % NY;
-                    jminus = (j-1) % NY;
-                    if (jminus < 0) jminus += NY;
-                }
-                
-                /* imposing linear wave on top and bottom by making Laplacian 1d */
-                if ((OSCILLATE_TOPBOT)&&(i < tb_shift))
-                {
-                    if (j == NY-1) 
-                    {
-                        jminus = NY-1;
-                        jplus = NY-1;
-                    }
-                    else if (j == 0) 
-                    {   
-                        jminus = 0;
-                        jplus = 0;
-                    }
-                }
-                
-                delta = phi_in[iplus][j] + phi_in[iminus][j] + phi_in[i][jplus] + phi_in[i][jminus] - 4.0*phi_in[i][j];
-
-                x = phi_in[i][j];
-		y = psi_in[i][j];
-
-                /* evolve phi */
-                if ((B_COND == BC_PERIODIC)||(B_COND == BC_DIRICHLET)) 
-                    phi_out[i][j] = -y + 2*x + cc*delta - kappa*x - gamma*(x-y);
-                else if (B_COND == BC_ABSORBING)
-                {
-                    if ((i>0)&&(i<NX-1)&&(j>0)&&(j<NY-1))
-                        phi_out[i][j] = -y + 2*x + cc*delta - kappa*x - gamma*(x-y);
-                
-                    /* upper border */
-                    else if (j==NY-1) 
-                        phi_out[i][j] = x - c*(x - phi_in[i][NY-2]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
                     
-                    /* lower border */
-                    else if (j==0) 
-                        phi_out[i][j] = x - c*(x - phi_in[i][1]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
-                
-                    /* right border */
-                    if (i==NX-1) 
-                        phi_out[i][j] = x - c*(x - phi_in[NX-2][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
-                    
-                    /* left border */
-                    else if (i==0) 
-                        phi_out[i][j] = x - c*(x - phi_in[1][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + phi_in[i][NY-2] - 3.0*x;
+                    phi_out[i][NY-1] = x - tc[i][NY-1]*(x - phi_in[i][NY-2]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
+                    break;
                 }
-                else if (B_COND == BC_VPER_HABS)
+                case (BC_VPER_HABS):
                 {
-                    if ((i>0)&&(i<NX-1))
-                        phi_out[i][j] = -y + 2*x + cc*delta - kappa*x - gamma*(x-y);
-                
-                    /* right border */
-                    else if (i==NX-1) 
-                        phi_out[i][j] = x - c*(x - phi_in[NX-2][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
-                    
-                    /* left border */
-                    else if (i==0) 
-                        phi_out[i][j] = x - c*(x - phi_in[1][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
-                }
-                psi_out[i][j] = x;
-                
-                /* add oscillating boundary condition on the left */
-//                 if ((i == 0)&&(OSCILLATE_LEFT)) 
-//                 {
-//                     phase =  (double)time*OMEGA - DPI*K_BC*(double)j/(double)NY;
-//                     if (phase < 0.0) phase = 0.0;
-//                     phi_out[i][j] = AMPLITUDE*sin(phase);
-//                 }
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
 
-                /* add oscillating boundary condition on the left */
-                if (OSCILLATE_LEFT)
-                {
-                    phasemin = left_bc[0]; 
-                    if (i == 0)
-                    {
-                        phase =  (double)time*OMEGA - left_bc[j] + phasemin;
-                        if (phase < 0.0) phase = 0.0;
-                        phi_out[i][j] = AMPLITUDE*sin(phase);
-                    }
-                    if ((j == 0)&&(i < tb_shift))
-                    {
-                        phase =  (double)time*OMEGA - bot_bc[i] + phasemin;
-                        if (phase < 0.0) phase = 0.0;
-                        phi_out[i][j] = AMPLITUDE*sin(phase);
-                    }
-                    else if ((j == NY-1)&&(i < tb_shift))
-                    {
-                        phase =  (double)time*OMEGA - top_bc[i] + phasemin;
-                        if (phase < 0.0) phase = 0.0;
-                        phi_out[i][j] = AMPLITUDE*sin(phase);
-                    }                    
+                    delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + phi_in[i][NY-2] + phi_in[i][0] - 4.0*x;
+                    phi_out[i][NY-1] = -y + 2*x + tcc[i][NY-1]*delta - KAPPA*x - tgamma[i][NY-1]*(x-y);
+                    break;
                 }
-                
-                if (FLOOR)
+            }
+            psi_out[i][NY-1] = x;
+        }
+    }
+    
+    /* bottom boundary */
+    for (i=0; i<NX; i++){
+        if ((TWOSPEEDS)||(xy_in[i][0] != 0)){
+            x = phi_in[i][0];
+            y = psi_in[i][0];
+                    
+            if ((OSCILLATE_TOPBOT)&&(i < tb_shift))
+            {
+                iplus = i+1;
+                iminus = i-1;   if (iminus < 0) iminus = 0;
+                delta = phi_in[iplus][0] + phi_in[iminus][0] + - 2.0*x;
+                phi_out[i][0] = -y + 2*x + tcc[i][0]*delta - KAPPA*x - tgamma[i][0]*(x-y);
+            }
+            else if ((OSCILLATE_LEFT)&&(i < tb_shift))
+            {
+                phasemin = left_bc[0]; 
+                phase =  (double)time*OMEGA - bot_bc[i] + phasemin;
+                if (phase < 0.0) phase = 0.0;
+                phi_out[i][0] = AMPLITUDE*sin(phase);
+            }
+            else switch (B_COND) {
+                case (BC_DIRICHLET):
                 {
-                    if (phi_out[i][j] > VMAX) phi_out[i][j] = VMAX;
-                    if (phi_out[i][j] < -VMAX) phi_out[i][j] = -VMAX;
-                    if (psi_out[i][j] > VMAX) psi_out[i][j] = VMAX;
-                    if (psi_out[i][j] < -VMAX) psi_out[i][j] = -VMAX;
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                    delta = phi_in[iplus][0] + phi_in[iminus][0] + phi_in[i][1] - 3.0*x;
+                    phi_out[i][0] = -y + 2*x + tcc[i][0]*delta - KAPPA*x - tgamma[i][0]*(x-y);
+                    break;
                 }
+                case (BC_PERIODIC):
+                {
+                    iplus = (i+1) % NX;
+                    iminus = (i-1) % NX;
+                    if (iminus < 0) iminus += NX;
+                    
+                    delta = phi_in[iplus][0] + phi_in[iminus][0] + phi_in[i][1] + phi_in[i][NY-1] - 4.0*x;
+                    phi_out[i][0] = -y + 2*x + tcc[i][0]*delta - KAPPA*x - tgamma[i][0]*(x-y);
+                    break;
+                }
+                case (BC_ABSORBING):
+                {
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                    delta = phi_in[iplus][0] + phi_in[iminus][0] + phi_in[i][1] - 3.0*x;
+                    phi_out[i][0] = x - tc[i][0]*(x - phi_in[i][1]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
+                    break;
+                }
+                case (BC_VPER_HABS):
+                {
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+
+                    delta = phi_in[iplus][0] + phi_in[iminus][0] + phi_in[i][1] + phi_in[i][NY-1] - 4.0*x;
+                    phi_out[i][0] = -y + 2*x + tcc[i][0]*delta - KAPPA*x - tgamma[i][0]*(x-y);
+                    break;
+                }
+            }
+            psi_out[i][0] = x;
+        }
+    }
+    
+    /* add oscillating boundary condition on the left corners - NEEDED ? */
+    if ((i == 0)&&(OSCILLATE_LEFT))
+    {
+        phi_out[i][0] = AMPLITUDE*cos((double)time*OMEGA);
+        phi_out[i][NY-1] = AMPLITUDE*cos((double)time*OMEGA);
+    }
+    
+    /* for debugging purposes/if there is a risk of blow-up */
+    if (FLOOR) for (i=0; i<NX; i++){
+        for (j=0; j<NY; j++){
+            if (xy_in[i][j] != 0) 
+            {
+                if (phi_out[i][j] > VMAX) phi_out[i][j] = VMAX;
+                if (phi_out[i][j] < -VMAX) phi_out[i][j] = -VMAX;
+                if (psi_out[i][j] > VMAX) psi_out[i][j] = VMAX;
+                if (psi_out[i][j] < -VMAX) psi_out[i][j] = -VMAX;
             }
         }
     }
-//     printf("phi(0,0) = %.3lg, psi(0,0) = %.3lg\n", phi[NX/2][NY/2], psi[NX/2][NY/2]);
 }
 
 
@@ -428,6 +747,7 @@ void evolve_wave(double *phi[NX], double *psi[NX], double *phi_tmp[NX], double *
     evolve_wave_half(phi, psi, phi_tmp, psi_tmp, xy_in);
     evolve_wave_half(phi_tmp, psi_tmp, phi, psi, xy_in);
 }
+
 
 void hash_xy_to_ij(double x, double y, int ij[2])
 {
@@ -457,18 +777,18 @@ void hash_xy_to_ij(double x, double y, int ij[2])
 }
 
 
-void compute_repelling_force(int i, int j, double force[2])
+void compute_repelling_force(int i, int j, double force[2], t_mangrove* mangrove)
 /* compute repelling force of mangrove j on mangrove i */
 {
     double x1, y1, x2, y2, distance, r, f;
     
-    x1 = circlex[i];
-    y1 = circley[i];
-    x2 = circlex[j];
-    y2 = circley[j];
+    x1 = mangrove[i].xc;
+    y1 = mangrove[i].yc;
+    x2 = mangrove[j].xc;
+    y2 = mangrove[j].yc;
     
     distance = module2(x2 - x1, y2 - y1);
-    r = circlerad[i] + circlerad[j];
+    r = mangrove[i].radius + mangrove[j].radius;
     if (r <= 0.0) r = 0.001*MU;
     f = KREPEL/(0.001 + distance*distance);
     
@@ -485,7 +805,7 @@ void compute_repelling_force(int i, int j, double force[2])
 }
 
 
-void update_hashgrid(int* mangrove_hashx, int* mangrove_hashy, int* hashgrid_number, int* hashgrid_mangroves)
+void update_hashgrid(t_mangrove* mangrove, int* hashgrid_number, int* hashgrid_mangroves)
 {
     int i, j, k, n, m, ij[2], max = 0;
     
@@ -498,7 +818,7 @@ void update_hashgrid(int* mangrove_hashx, int* mangrove_hashy, int* hashgrid_num
 //         if (circleactive[k])
         {
 //             printf("placing circle %i\t", k);
-            hash_xy_to_ij(circlex[k], circley[k], ij);
+            hash_xy_to_ij(mangrove[k].xc, mangrove[k].yc, ij);
             i = ij[0];  j = ij[1];
 //             printf("ij = (%i, %i)\t", i, j);
             n = hashgrid_number[i*HASHY + j];
@@ -507,8 +827,8 @@ void update_hashgrid(int* mangrove_hashx, int* mangrove_hashy, int* hashgrid_num
             if (m < HASHX*HASHY*HASHMAX) hashgrid_mangroves[m] = k;
             else printf("Too many mangroves in hash cell, try increasing HASHMAX\n");
             hashgrid_number[i*HASHY + j]++;
-            mangrove_hashx[k] = i;
-            mangrove_hashy[k] = j;
+            mangrove[k].hashx = i;
+            mangrove[k].hashy = j;
             
             if (n > max) max = n;
 //                 printf("Placed mangrove %i at (%i,%i) in hashgrid\n", k, ij[0], ij[1]);
@@ -528,10 +848,9 @@ void animation()
     int i, j, k, n, s, ij[2], i0, iplus, iminus, j0, jplus, jminus, p, q;
     static int imin, imax;
     static short int first = 1;
-    
-    double *circleenergy, *circley_wrapped, *anchor_x, *anchor_y, *vx, *vy, *circlerad_initial, *mass_inverse;  
-    short int *circle_attached;
-    int *mangrove_hashx, *mangrove_hashy, *hashgrid_number, *hashgrid_mangroves;  
+    t_mangrove *mangrove;
+    int *hashgrid_number, *hashgrid_mangroves;  
+    t_hashgrid *hashgrid;
 
     /* Since NX and NY are big, it seemed wiser to use some memory allocation here */
     for (i=0; i<NX; i++)
@@ -542,24 +861,18 @@ void animation()
         psi_tmp[i] = (double *)malloc(NY*sizeof(double));
         xy_in[i] = (short int *)malloc(NY*sizeof(short int));
     }
+    mangrove = (t_mangrove *)malloc(NMAXCIRCLES*sizeof(t_mangrove));    /* mangroves */  
     
-    circleenergy = (double *)malloc(NMAXCIRCLES*sizeof(double));     /* energy dissipated by the circles */
-    circley_wrapped = (double *)malloc(NMAXCIRCLES*sizeof(double));   /* position of circle centers wrapped vertically */
-    anchor_x = (double *)malloc(NMAXCIRCLES*sizeof(double));          /* points moving circles are attached to */
-    anchor_y = (double *)malloc(NMAXCIRCLES*sizeof(double));          /* points moving circles are attached to */
-    vx = (double *)malloc(NMAXCIRCLES*sizeof(double));                /* x velocity of circles */
-    vy = (double *)malloc(NMAXCIRCLES*sizeof(double));                /* y velocity of circles */
-    circlerad_initial = (double *)malloc(NMAXCIRCLES*sizeof(double)); /* initial circle radii */
-    mass_inverse = (double *)malloc(NMAXCIRCLES*sizeof(double));      /* inverse of mangrove mass */
-    circle_attached = (short int *)malloc(NMAXCIRCLES*sizeof(short int)); /* has value 1 if the circle is attached to its anchor */
-    
-    mangrove_hashx = (int *)malloc(NMAXCIRCLES*sizeof(int));    /* hash grid positions of mangroves */
-    mangrove_hashy = (int *)malloc(NMAXCIRCLES*sizeof(int));    /* hash grid positions of mangroves */
+    hashgrid = (t_hashgrid *)malloc(HASHX*HASHY*sizeof(t_hashgrid));    /* hashgrid */      
+        
     hashgrid_number = (int *)malloc(HASHX*HASHY*sizeof(int));   /* total number of mangroves in each hash grid cell */
-    hashgrid_mangroves = (int *)malloc(HASHX*HASHY*HASHMAX*sizeof(int)); /* numbers of mangoves in each hash grid cell */
+    hashgrid_mangroves = (int *)malloc(HASHX*HASHY*HASHMAX*sizeof(int)); /* numbers of mangroves in each hash grid cell */
     
     /* initialise positions and radii of circles */
-    if (B_DOMAIN == D_CIRCLES) init_circle_config();
+    if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)) init_circle_config(circles);
+    else if (B_DOMAIN == D_POLYGONS) init_polygon_config(polygons);
+
+    
 
     courant2 = COURANT*COURANT;
     courantb2 = COURANTB*COURANTB;
@@ -568,59 +881,54 @@ void animation()
     /* initialize wave with a drop at one point, zero elsewhere */
     init_wave_flat(phi, psi, xy_in);
     
-//     init_planar_wave(XMIN + 0.01, 0.0, phi, psi, xy_in);
-//     init_planar_wave(XMIN + 0.02, 0.0, phi, psi, xy_in);
-//     init_planar_wave(XMIN + 1.0, 0.0, phi, psi, xy_in);
-//     init_wave(-1.5, 0.0, phi, psi, xy_in);
-//     init_wave(0.0, 0.0, phi, psi, xy_in);
-
-    /* add a drop at another point */
-//     add_drop_to_wave(1.0, 0.7, 0.0, phi, psi);
-//     add_drop_to_wave(1.0, -0.7, 0.0, phi, psi);
-//     add_drop_to_wave(1.0, 0.0, -0.7, phi, psi);
-
     /* initialise mangroves */
     for (i=0; i < ncircles; i++) 
     {
-        circleenergy[i] = 0.0;
-        y = circley[i];
-        if (y >= YMAX) y -= circlerad[i];
-        if (y <= YMIN) y += circlerad[i];
+        /* to avoid having to recode init_circle_config, would be more elegant in C++ */
+        mangrove[i].xc = circles[i].xc;
+        mangrove[i].yc = circles[i].yc;
+        mangrove[i].radius = circles[i].radius;
+        mangrove[i].active = circles[i].active;
+
+        mangrove[i].energy = 0.0;
+        y = mangrove[i].yc;
+        if (y >= YMAX) y -= mangrove[i].radius;
+        if (y <= YMIN) y += mangrove[i].radius;
 //         if (y >= YMAX) y -= (YMAX - YMIN);
 //         if (y <= YMIN) y += (YMAX - YMIN);
-        circley_wrapped[i] = y;
-//         circleactive[i] = 1;
+        mangrove[i].yc_wrapped = y;
+//         mangrove[i].active = 1;
         
-        if (RANDOM_RADIUS) circlerad[i] = circlerad[i]*(0.75 + 0.5*((double)rand()/RAND_MAX));
+        if (RANDOM_RADIUS) mangrove[i].radius = mangrove[i].radius*(0.75 + 0.5*((double)rand()/RAND_MAX));
         
-        circlerad_initial[i] = circlerad[i];
-        circle_attached[i] = 1; 
-        mass_inverse[i] = MU*MU/(MANGROVE_MASS*circlerad[i]*circlerad[i]);
+        mangrove[i].radius_initial = mangrove[i].radius;
+        mangrove[i].attached = 1; 
+        mangrove[i].mass_inv = MU*MU/(MANGROVE_MASS*mangrove[i].radius*mangrove[i].radius);
         
         if (MOVE_MANGROVES)
         {
-            anchor_x[i] = circlex[i];
-            anchor_y[i] = circley_wrapped[i];
-//             anchor_y[i] = circley[i];
+            mangrove[i].anchorx = mangrove[i].xc;
+            mangrove[i].anchory = mangrove[i].yc_wrapped;
+//             mangrove[i].anchory = mangrove[i].yc;
         }
         
         if (INERTIA)
         {
-            vx[i] = 0.0;
-            vy[i] = 0.0;
+            mangrove[i].vx = 0.0;
+            mangrove[i].vy = 0.0;
         }
     }
     
     /* initialise hash table for interacting mangroves */
-    if (REPELL_MANGROVES) update_hashgrid(mangrove_hashx, mangrove_hashy, hashgrid_number, hashgrid_mangroves);
+    if (REPELL_MANGROVES) update_hashgrid(mangrove, hashgrid_number, hashgrid_mangroves);
     
     if (first) /* compute box limits where circles are reset */
     {
         /* find leftmost and rightmost circle */
         for (i=0; i<ncircles; i++) 
-            if ((circleactive[i])&&(circlex[i] - circlerad[i] < xleft)) xleft = circlex[i] - circlerad[i]; 
+            if ((mangrove[i].active)&&(mangrove[i].xc - mangrove[i].radius < xleft)) xleft = mangrove[i].xc - mangrove[i].radius; 
         for (i=0; i<ncircles; i++) 
-            if ((circleactive[i])&&(circlex[i] + circlerad[i] > xright)) xright = circlex[i] + circlerad[i]; 
+            if ((mangrove[i].active)&&(mangrove[i].xc + mangrove[i].radius > xright)) xright = mangrove[i].xc + mangrove[i].radius; 
         
         xy_to_ij(xleft, 0.0, ij);
         imin = ij[0] - 10;
@@ -670,34 +978,34 @@ void animation()
         
         
         /* move mangroves */
-        if (MOVE_MANGROVES) for (j=0; j<ncircles; j++) if (circleactive[j])
+        if (MOVE_MANGROVES) for (j=0; j<ncircles; j++) if (mangrove[j].active)
         {
-            compute_gradient(phi, psi, circlex[j], circley_wrapped[j], gradient);
+            compute_gradient(phi, psi, mangrove[j].xc, mangrove[j].yc_wrapped, gradient);
 //             printf("gradient = (%.3lg, %.3lg)\t", gradient[0], gradient[1]);
             
 //             if (j%NGRIDY == 0) printf("gradient (%.3lg, %.3lg)\n", gradient[0], gradient[1]);
-//             if (j%NGRIDY == 0) printf("circle %i (%.3lg, %.3lg) -> ", j, circlex[j], circley[j]);
+//             if (j%NGRIDY == 0) printf("circle %i (%.3lg, %.3lg) -> ", j, mangrove[j].xc, mangrove[j].yc);
             
             /* compute force of wave */
             dx = DT_MANGROVE*KWAVE*gradient[0];
             dy = DT_MANGROVE*KWAVE*gradient[1];
 
             /* compute force of spring */
-            if (circle_attached[j])
+            if (mangrove[j].attached)
             {
-                dx += DT_MANGROVE*(-KSPRING*(circlex[j] - anchor_x[j]));
-                dy += DT_MANGROVE*(-KSPRING*(circley_wrapped[j] - anchor_y[j]));
+                dx += DT_MANGROVE*(-KSPRING*(mangrove[j].xc - mangrove[j].anchorx));
+                dy += DT_MANGROVE*(-KSPRING*(mangrove[j].yc_wrapped - mangrove[j].anchory));
             }
             
             /* compute repelling force from other mangroves */
             if (REPELL_MANGROVES)
             {
                 /* determine neighboring grid points */
-                i0 = mangrove_hashx[j];
+                i0 = mangrove[j].hashx;
                 iminus = i0 - 1;    if (iminus < 0) iminus = 0;
                 iplus = i0 + 1;     if (iplus >= HASHX) iplus = HASHX-1;
 
-                j0 = mangrove_hashy[j];
+                j0 = mangrove[j].hashy;
                 jminus = j0 - 1;    if (jminus < 0) jminus = 0;
                 jplus = j0 + 1;     if (jplus >= HASHY) jplus = HASHY-1;
                 
@@ -706,9 +1014,9 @@ void animation()
                 for (p=iminus; p<= iplus; p++)
                     for (q=jminus; q<= jplus; q++)
                         for (k=0; k<hashgrid_number[p*HASHY+q]; k++) 
-                            if (circleactive[hashgrid_mangroves[p*HASHY*HASHMAX + q*HASHMAX + k]])
+                            if (mangrove[hashgrid_mangroves[p*HASHY*HASHMAX + q*HASHMAX + k]].active)
                             {
-                                compute_repelling_force(j, hashgrid_mangroves[p*HASHY*HASHMAX + q*HASHMAX + k], force);
+                                compute_repelling_force(j, hashgrid_mangroves[p*HASHY*HASHMAX + q*HASHMAX + k], force, mangrove);
                                 fx += force[0];
                                 fy += force[1];
                             }
@@ -722,10 +1030,10 @@ void animation()
             /* detach mangrove if spring is too long */
             if (DETACH_MANGROVES)
             {
-                length = module2(circlex[j] - anchor_x[j], circley_wrapped[j] - anchor_y[j]);
+                length = module2(mangrove[j].xc - mangrove[j].anchorx, mangrove[j].yc_wrapped - mangrove[j].anchory);
 //                 if (j%NGRIDY == 0) printf("spring length %.i:  %.3lg\n", j, length);
-//                 if (length > L_DETACH) circle_attached[j] = 0;
-                if (length*mass_inverse[j] > L_DETACH) circle_attached[j] = 0;
+//                 if (length > L_DETACH) mangrove[j].attached = 0;
+                if (length*mangrove[j].mass_inv > L_DETACH) mangrove[j].attached = 0;
             }
             
             if (dx > DXMAX) dx = DXMAX;
@@ -735,36 +1043,36 @@ void animation()
             
             if (INERTIA)
             {
-                vx[j] += (dx - DAMP_MANGROVE*vx[j])*mass_inverse[j];
-                vy[j] += (dy - DAMP_MANGROVE*vy[j])*mass_inverse[j];
-                circlex[j] += vx[j]*DT_MANGROVE;
-                circley[j] += vy[j]*DT_MANGROVE;
-                circley_wrapped[j] += vy[j]*DT_MANGROVE;
+                mangrove[j].vx += (dx - DAMP_MANGROVE*mangrove[j].vx)*mangrove[j].mass_inv;
+                mangrove[j].vy += (dy - DAMP_MANGROVE*mangrove[j].vy)*mangrove[j].mass_inv;
+                mangrove[j].xc += mangrove[j].vx*DT_MANGROVE;
+                mangrove[j].yc += mangrove[j].vy*DT_MANGROVE;
+                mangrove[j].yc_wrapped += mangrove[j].vy*DT_MANGROVE;
 //                 if (j%NGRIDY == 0) 
 //                     printf("circle %.i: (dx,dy) = (%.3lg,%.3lg), (vx,vy) = (%.3lg,%.3lg)\n", 
-//                            j, circlex[j]-anchor_x[j], circley[j]-anchor_y[j], vx[j], vy[j]);
+//                            j, mangrove[j].xc-mangrove[j].anchorx, mangrove[j].yc-mangrove[j].anchory, mangrove[j].vx, mangrove[j].vy);
             }
             else
             {
-                circlex[j] += dx*mass_inverse[j]*DT_MANGROVE;
-                circley[j] += dy*mass_inverse[j]*DT_MANGROVE;
-                circley_wrapped[j] += dy*mass_inverse[j]*DT_MANGROVE;
+                mangrove[j].xc += dx*mangrove[j].mass_inv*DT_MANGROVE;
+                mangrove[j].yc += dy*mangrove[j].mass_inv*DT_MANGROVE;
+                mangrove[j].yc_wrapped += dy*mangrove[j].mass_inv*DT_MANGROVE;
             }
             
-            if (circlex[j] <= XMIN) circlex[j] = XMIN;
-            if (circlex[j] >= XMAX) circlex[j] = XMAX;
-            if (circley_wrapped[j] <= YMIN) circley_wrapped[j] = YMIN;
-            if (circley_wrapped[j] >= YMAX) circley_wrapped[j] = YMAX;
+            if (mangrove[j].xc <= XMIN) mangrove[j].xc = XMIN;
+            if (mangrove[j].xc >= XMAX) mangrove[j].xc = XMAX;
+            if (mangrove[j].yc_wrapped <= YMIN) mangrove[j].yc_wrapped = YMIN;
+            if (mangrove[j].yc_wrapped >= YMAX) mangrove[j].yc_wrapped = YMAX;
         
-//             if (j%NGRIDY == 0) printf("(%.3lg, %.3lg)\n", circlex[j], circley[j]);
-            
+//             if (j%NGRIDY == 0) printf("(%.3lg, %.3lg)\n", mangrove[j].xc, mangrove[j].yc);
+                        
             redraw = 1;
         }
         
         /* test for debugging */
         if (1) for (j=0; j<ncircles; j++) 
         {
-            dissip = compute_dissipation(phi, psi, xy_in, circlex[j], circley_wrapped[j]);
+            dissip = compute_dissipation(phi, psi, xy_in, mangrove[j].xc, mangrove[j].yc_wrapped);
             
             /* make sure the dissipation does not grow too fast because of round-off/blow-up */
             if (dissip > 0.1*MANGROVE_EMAX) 
@@ -773,10 +1081,10 @@ void animation()
                 printf("Flooring dissipation!\n");
             }
             
-            if (circleactive[j]) 
+            if (mangrove[j].active) 
             {
-                circleenergy[j] += dissip;
-                ej = circleenergy[j];
+                mangrove[j].energy += dissip;
+                ej = mangrove[j].energy;
 //                 printf("ej = %.3f\n", ej);
                 if (ej <= MANGROVE_EMAX)
                 {
@@ -788,35 +1096,35 @@ void animation()
                     else hue = MANGROVE_HUE_MIN;
                     hsl_to_rgb(hue, 0.9, 0.5, rgb);
 //                     if (j%NGRIDY == 0) printf("Circle %i, energy %.5lg, hue %.5lg\n", j, ej, hue);
-                    draw_colored_circle(circlex[j], circley[j], circlerad[j], NSEG, rgb);
+                    draw_colored_circle(mangrove[j].xc, mangrove[j].yc, mangrove[j].radius, NSEG, rgb);
                     
                     /* shrink mangrove */
                     if ((ERODE_MANGROVES)&&(ej > 0.0))
                     {
-                        circlerad[j] = circlerad_initial[j]*(1.0 - ej*ej/(MANGROVE_EMAX*MANGROVE_EMAX));
+                        mangrove[j].radius = mangrove[j].radius_initial*(1.0 - ej*ej/(MANGROVE_EMAX*MANGROVE_EMAX));
                         redraw = 1;
                     }
-                    else circlerad[j] = circlerad_initial[j];
+                    else mangrove[j].radius = mangrove[j].radius_initial;
 
                 }
                 else    /* remove mangrove */
                 {
-                    circleactive[j] = 0;
+                    mangrove[j].active = 0;
                     /* reinitialize table xy_in */
                     redraw = 1;
                 } 
             }
             else if (RECOVER_MANGROVES)   /* allow disabled mangroves to recover */
             {
-                circleenergy[j] -= 0.15*dissip;
-                printf("Circle %i energy %.3lg\n", j, circleenergy[j]);
-                if (circleenergy[j] < 0.0)
+                mangrove[j].energy -= 0.15*dissip;
+                printf("Circle %i energy %.3lg\n", j, mangrove[j].energy);
+                if (mangrove[j].energy < 0.0)
                 {
                     printf("Reactivating circle %i?\n", j);
                     /* THE PROBLEM occurs when circleactive[0] is set to 1 again */
-                    if (j>0) circleactive[j] = 1;
-                    circlerad[j] = circlerad_initial[j];
-                    circleenergy[j] = -MANGROVE_EMAX;
+                    if (j>0) mangrove[j].active = 1;
+                    mangrove[j].radius = mangrove[j].radius_initial;
+                    mangrove[j].energy = -MANGROVE_EMAX;
                     /* reinitialize table xy_in */
                     redraw = 1;
                 }   
@@ -824,11 +1132,19 @@ void animation()
             }
         }
         
+    /* for compatibility with draw_billiard, may be improvable */
+    for (j=0; j<ncircles; j++)
+    {
+            circles[j].xc = mangrove[j].xc;
+            circles[j].yc = mangrove[j].yc;
+            circles[j].radius = mangrove[j].radius;
+    }
+        
         /* compute energy dissipated in obstacles */
 /*        if (ERODE_MANGROVES) for (j=0; j<ncircles; j++) 
         {
 //             printf("j = %i\t", j);
-            dissip = compute_dissipation(phi, psi, xy_in, circlex[j], circley_wrapped[j]);
+            dissip = compute_dissipation(phi, psi, xy_in, mangrove[j].xc, mangrove[j].yc_wrapped);
             printf("dissip = %.3f\t", dissip);
             
             /* make sure the dissipation does not grow too fast because of round-off/blow-up */
@@ -838,10 +1154,10 @@ void animation()
 //                 printf("Flooring dissipation!\n");
 //             }
 //             
-//             if (circleactive[j]) 
+//             if (mangrove[j].active) 
 //             {
-//                 circleenergy[j] += dissip;
-//                 ej = circleenergy[j];
+//                 mangrove[j].energy += dissip;
+//                 ej = mangrove[j].energy;
 //                 printf("ej = %.3f\n", ej);
 //                 if (ej <= MANGROVE_EMAX)
 //                 {
@@ -853,49 +1169,49 @@ void animation()
 //                     else hue = MANGROVE_HUE_MIN;
 //                     hsl_to_rgb(hue, 0.9, 0.5, rgb);
 //                     if (j%NGRIDY == 0) printf("Circle %i, energy %.5lg, hue %.5lg\n", j, ej, hue);
-//                     draw_colored_circle(circlex[j], circley[j], circlerad[j], NSEG, rgb);
+//                     draw_colored_circle(mangrove[j].xc, mangrove[j].yc, mangrove[j].radius, NSEG, rgb);
 //                     
 //                     /* shrink mangrove */
 //                     if (ej > 0.0)
 //                     {
-//                         circlerad[j] -= MU*ej*ej/(MANGROVE_EMAX*MANGROVE_EMAX);
-//                         if (circlerad[j] < 0.0) circlerad[j] = 0.0;
-//                         circlerad[j] = circlerad_initial[j]*(1.0 - ej*ej/(MANGROVE_EMAX*MANGROVE_EMAX));
+//                         mangrove[j].radius -= MU*ej*ej/(MANGROVE_EMAX*MANGROVE_EMAX);
+//                         if (mangrove[j].radius < 0.0) mangrove[j].radius = 0.0;
+//                         mangrove[j].radius = mangrove[j].radius_initial*(1.0 - ej*ej/(MANGROVE_EMAX*MANGROVE_EMAX));
 //                         redraw = 1;
 //                     }
-//                     else circlerad[j] = circlerad_initial[j];
+//                     else mangrove[j].radius = mangrove[j].radius_initial;
 //                 }
 //                 else    /* remove mangrove */
 //                 {
-//                     circleactive[j] = 0;
+//                     mangrove[j].active = 0;
                     /* reinitialize table xy_in */
 //                     redraw = 1;
 //                 }   
 //             }
 //             else    /* allow disabled mangroves to recover */
 //             {
-//                 circleenergy[j] -= 0.15*dissip;
-//                 printf("ej = %.3f\n", circleenergy[j]);
-//                 circlerad[j] += 0.005*MU;
-//                 if (circlerad[j] > MU) circlerad[j] = MU;
-//                 if ((circleenergy[j] < 0.0)&&(circlerad[j] > 0.0))
-//                 if (circleenergy[j] < 0.0)
+//                 mangrove[j].energy -= 0.15*dissip;
+//                 printf("ej = %.3f\n", mangrove[j].energy);
+//                 mangrove[j].radius += 0.005*MU;
+//                 if (mangrove[j].radius > MU) mangrove[j].radius = MU;
+//                 if ((mangrove[j].energy < 0.0)&&(mangrove[j].radius > 0.0))
+//                 if (mangrove[j].energy < 0.0)
 //                 {
-//                     circleactive[j] = 1;
-//                     circlerad[j] = circlerad[j]*(0.75 + 0.5*((double)rand()/RAND_MAX));
-//                     circlerad[j] = circlerad_initial[j];
-//                     circleenergy[j] = -MANGROVE_EMAX;
+//                     mangrove[j].active = 1;
+//                     mangrove[j].radius = mangrove[j].radius*(0.75 + 0.5*((double)rand()/RAND_MAX));
+//                     mangrove[j].radius = mangrove[j].radius_initial;
+//                     mangrove[j].energy = -MANGROVE_EMAX;
                     /* reinitialize table xy_in */
 //                     redraw = 1;
 //                 }   
                 
 //             }
             
-//             printf("Circle %i, energy %.5lg\n", j, circleenergy[j]);
+//             printf("Circle %i, energy %.5lg\n", j, mangrove[j].energy);
 //         }
 
         printf("Updating hashgrid\n");
-        if (REPELL_MANGROVES) update_hashgrid(mangrove_hashx, mangrove_hashy, hashgrid_number, hashgrid_mangroves);
+        if (REPELL_MANGROVES) update_hashgrid(mangrove, hashgrid_number, hashgrid_mangroves);
 
         
         printf("Drawing billiard\n");
@@ -941,22 +1257,10 @@ void animation()
         free(psi_tmp[i]);
         free(xy_in[i]);
     }
-    
-    free(circleenergy);
-    free(circley_wrapped);
-    free(anchor_x);
-    free(anchor_y);
-    free(vx);
-    free(vy);
-    free(circlerad_initial);
-    free(mass_inverse);
-    free(circle_attached);
-    
-    free(mangrove_hashx);
-    free(mangrove_hashy);
+    free(mangrove);
+        
     free(hashgrid_number);
     free(hashgrid_mangroves);
-
 }
 
 

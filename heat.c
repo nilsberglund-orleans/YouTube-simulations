@@ -57,7 +57,7 @@
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
-#define JULIA_SCALE 1.0 /* scaling for Julia sets */
+#define JULIA_SCALE 0.5 /* scaling for Julia sets */
 
 /* Choice of the billiard table */
 
@@ -67,12 +67,13 @@
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
+#define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA -1.0	    /* parameter controlling the dimensions of domain */
 #define MU 0.1	            /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */
-#define MDEPTH 2            /* depth of computation of Menger gasket */
+#define MDEPTH 5            /* depth of computation of Menger gasket */
 #define MRATIO 5            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0     /* limit value for approximation of Mandelbrot set */
@@ -114,11 +115,11 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 4500      /* number of frames of movie */
+#define NSTEPS 1000      /* number of frames of movie */
 #define NVID 50          /* number of iterations between images displayed on screen */
 // #define NVID 100          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
-#define BOUNDARY_WIDTH 2    /* width of billiard boundary */
+#define BOUNDARY_WIDTH 1    /* width of billiard boundary */
 
 #define PAUSE 100       /* number of frames after which to pause */
 #define PSLEEP 1         /* sleep time during pause */
@@ -138,12 +139,12 @@
 
 #define DRAW_FIELD_LINES 1  /* set to 1 to draw field lines */
 #define FIELD_LINE_WIDTH 1  /* width of field lines */
-#define N_FIELD_LINES 50   /* number of field lines */
-#define FIELD_LINE_FACTOR 100 /* factor controlling precision when computing origin of field lines */
+#define N_FIELD_LINES 120   /* number of field lines */
+#define FIELD_LINE_FACTOR 120 /* factor controlling precision when computing origin of field lines */
 
 /* Color schemes, see list in global_pdes.c  */
 
-#define COLOR_PALETTE 0     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 10     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
 
@@ -151,17 +152,25 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 // #define SLOPE 0.1        /* sensitivity of color on wave amplitude */
-#define SLOPE 0.3        /* sensitivity of color on wave amplitude */
+#define SLOPE 0.2        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+#define E_SCALE 100.0     /* scaling factor for energy representation */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
 #define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
 #define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
-#define HUEMEAN 220.0    /* mean value of hue for color scheme C_HUE */
-#define HUEAMP -220.0      /* amplitude of variation of hue for color scheme C_HUE */
+// #define HUEMEAN 180.0    /* mean value of hue for color scheme C_HUE */
+// #define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
+#define HUEMEAN 359.0    /* mean value of hue for color scheme C_HUE */
+#define HUEAMP -359.0      /* amplitude of variation of hue for color scheme C_HUE */
 // #define HUEMEAN 270.0    /* mean value of hue for color scheme C_HUE */
 // #define HUEAMP -130.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+#define DRAW_COLOR_SCHEME 0     /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 2.0    /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 12.0    /* scale of color scheme bar for 2nd part */
+#define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 
 
 #include "global_pdes.c"
@@ -258,6 +267,7 @@ void draw_field_line(double x, double y, short int *xy_in[NX], double *nablax[NX
     int i = 0, ij[2], cont = 1;
     
     glColor3f(1.0, 1.0, 1.0);
+//     glColor3f(0.0, 0.0, 0.0);
     glLineWidth(FIELD_LINE_WIDTH);
     x1 = x;
     y1 = y;
@@ -351,7 +361,8 @@ void draw_wave(double *phi[NX], short int *xy_in[NX], double scale, int time)
             x1 = x2;
             y1 = y2;
         }
-        distance[N_FIELD_LINES*FIELD_LINE_FACTOR - 1] = module2(x2-LAMBDA,y2-0.5);
+        distance[N_FIELD_LINES*FIELD_LINE_FACTOR - 1] = module2(x2- 0.99*LAMBDA,y2);
+//         distance[N_FIELD_LINES*FIELD_LINE_FACTOR - 1] = module2(x2-LAMBDA,y2-0.5);
     }
 
     dx = (XMAX-XMIN)/((double)NX);
@@ -503,97 +514,7 @@ void evolve_wave(double *phi[NX], double *phi_tmp[NX], short int *xy_in[NX])
 }
 
 
-void old_evolve_wave(double *phi[NX], short int *xy_in[NX])
-/* time step of field evolution */
-{
-    int i, j, iplus, iminus, jplus, jminus;
-    double delta1, delta2, x, y, *newphi[NX];
-    
-    for (i=0; i<NX; i++) newphi[i] = (double *)malloc(NY*sizeof(double));
 
-    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta1,delta2,x,y)
-    for (i=0; i<NX; i++){
-        for (j=0; j<NY; j++){
-            if (xy_in[i][j] == 1){
-                /* discretized Laplacian depending on boundary conditions */
-                if ((B_COND == BC_DIRICHLET)||(B_COND == BC_ABSORBING))
-                {
-                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
-                    iminus = (i-1);  if (iminus == -1) iminus = 0;
-                    jplus = (j+1);   if (jplus == NY) jplus = NY-1;
-                    jminus = (j-1);  if (jminus == -1) jminus = 0;
-                }
-                else if (B_COND == BC_PERIODIC)
-                {
-                    iplus = (i+1) % NX;
-                    iminus = (i-1) % NX;
-                    if (iminus < 0) iminus += NX;
-                    jplus = (j+1) % NY;
-                    jminus = (j-1) % NY;
-                    if (jminus < 0) jminus += NY;
-                }
-                
-                delta1 = phi[iplus][j] + phi[iminus][j] + phi[i][jplus] + phi[i][jminus] - 4.0*phi[i][j];
-
-                x = phi[i][j];
-
-                /* evolve phi */
-                if (B_COND != BC_ABSORBING)
-                {
-                    newphi[i][j] = x + intstep*(delta1 - SPEED*(phi[iplus][j] - phi[i][j]));
-                }
-                else        /* case of absorbing b.c. - this is only an approximation of correct way of implementing */
-                {
-                    /* in the bulk */
-                    if ((i>0)&&(i<NX-1)&&(j>0)&&(j<NY-1))
-                    {
-                        newphi[i][j] = x - intstep*delta2;
-                    }
-                     /* right border */
-                    else if (i==NX-1) 
-                    {
-                        newphi[i][j] = x - intstep1*(x - phi[i-1][j]);
-                    }
-                    /* upper border */
-                    else if (j==NY-1) 
-                    {
-                        newphi[i][j] = x - intstep1*(x - phi[i][j-1]);
-                    }
-                    /* left border */
-                    else if (i==0) 
-                    {
-                        newphi[i][j] = x - intstep1*(x - phi[1][j]);
-                    }
-                   /* lower border */
-                    else if (j==0) 
-                    {
-                        newphi[i][j] = x - intstep1*(x - phi[i][1]);
-                    }
-                }
-
-
-                if (FLOOR)
-                {
-                    if (newphi[i][j] > VMAX) phi[i][j] = VMAX;
-                    if (newphi[i][j] < -VMAX) phi[i][j] = -VMAX;
-                }
-            }
-        }
-    }
-    
-    for (i=0; i<NX; i++){
-        for (j=0; j<NY; j++){
-            if (xy_in[i][j] == 1) phi[i][j] = newphi[i][j];
-        }
-    }
-    
-    for (i=0; i<NX; i++)
-    {
-        free(newphi[i]);
-    }
-
-//     printf("phi(0,0) = %.3lg, psi(0,0) = %.3lg\n", phi[NX/2][NY/2], psi[NX/2][NY/2]);
-}
 
 double compute_variance(double *phi[NX], short int * xy_in[NX])
 /* compute the variance (total probability) of the field */
@@ -709,6 +630,9 @@ void animation()
         phi_tmp[i] = (double *)malloc(NY*sizeof(double));
         xy_in[i] = (short int *)malloc(NY*sizeof(short int));
     }
+
+    npolyline = init_polyline(MDEPTH, polyline);
+    for (i=0; i<npolyline; i++) printf("vertex %i: (%.3f, %.3f)\n", i, polyline[i].x, polyline[i].y);
 
     dx = (XMAX-XMIN)/((double)NX);
     intstep = DT/(dx*dx*VISCOSITY);

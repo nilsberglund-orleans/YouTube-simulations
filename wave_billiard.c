@@ -62,35 +62,38 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 32      /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 38       /* choice of domain shape, see list in global_pdes.c */
 
-#define CIRCLE_PATTERN 7   /* pattern of circles, see list in global_pdes.c */
+#define CIRCLE_PATTERN 2   /* pattern of circles or polygons, see list in global_pdes.c */
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
+#define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 0.0	    /* parameter controlling the dimensions of domain */
-#define MU 1.0              /* parameter controlling the dimensions of domain */
-#define NPOLY 7             /* number of sides of polygon */
-#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
-#define MDEPTH 4            /* depth of computation of Menger gasket */
+#define LAMBDA 0.9	    /* parameter controlling the dimensions of domain */
+#define MU 0.03              /* parameter controlling the dimensions of domain */
+#define NPOLY 6             /* number of sides of polygon */
+#define APOLY 2.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define MDEPTH 5            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0    /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-#define NGRIDX 16           /* number of grid point for grid of disks */
-#define NGRIDY 20           /* number of grid point for grid of disks */
+#define NGRIDX 10           /* number of grid point for grid of disks */
+#define NGRIDY 12           /* number of grid point for grid of disks */
+// #define NGRIDX 16           /* number of grid point for grid of disks */
+// #define NGRIDY 20           /* number of grid point for grid of disks */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
 #define X_TARGET 0.4
 #define Y_TARGET 0.7        /* shooter and target positions in laser fight */
 
-#define ISO_XSHIFT_LEFT -1.65  
-#define ISO_XSHIFT_RIGHT 0.4
-#define ISO_YSHIFT_LEFT -0.05
-#define ISO_YSHIFT_RIGHT -0.05 
-#define ISO_SCALE 0.85           /* coordinates for isospectral billiards */
+#define ISO_XSHIFT_LEFT -2.9
+#define ISO_XSHIFT_RIGHT 1.4
+#define ISO_YSHIFT_LEFT -0.15
+#define ISO_YSHIFT_RIGHT -0.15 
+#define ISO_SCALE 0.5           /* coordinates for isospectral billiards */
 
 /* You can add more billiard tables by adapting the functions */
 /* xy_in_billiard and draw_billiard below */
@@ -104,9 +107,11 @@
 #define OMEGA 0.002        /* frequency of periodic excitation */
 #define AMPLITUDE 1.0      /* amplitude of periodic excitation */ 
 #define COURANT 0.02       /* Courant number */
-#define COURANTB 0.02      /* Courant number in medium B */
+#define COURANTB 0.01      /* Courant number in medium B */
 #define GAMMA 0.0          /* damping factor in wave equation */
-#define GAMMAB 5.0e-3           /* damping factor in wave equation */
+// #define GAMMAB 5.0e-3           /* damping factor in wave equation */
+// #define GAMMAB 1.0e-2           /* damping factor in wave equation */
+#define GAMMAB 1.0e-6           /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
 #define GAMMA_TOPBOT 1.0e-7     /* damping factor on boundary */
 #define KAPPA 0.0           /* "elasticity" term enforcing oscillations */
@@ -119,12 +124,13 @@
 
 /* Boundary conditions, see list in global_pdes.c  */
 
-#define B_COND 2
+#define B_COND 3
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 5000      /* number of frames of movie */
-#define NVID 50          /* number of iterations between images displayed on screen */
+// #define NSTEPS 500      /* number of frames of movie */
+#define NSTEPS 1500      /* number of frames of movie */
+#define NVID 40          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
@@ -134,31 +140,35 @@
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1        /* final sleeping time */
 #define MID_FRAMES 20    /* number of still frames between parts of two-part movie */
-#define END_FRAMES 100   /* number of still frames at end of movie */
+#define END_FRAMES 50    /* number of still frames at end of movie */
 
 /* Parameters of initial condition */
 
 #define INITIAL_AMP 0.75         /* amplitude of initial condition */
-#define INITIAL_VARIANCE 0.0005  /* variance of initial condition */
-#define INITIAL_WAVELENGTH  0.02 /* wavelength of initial condition */
+// #define INITIAL_VARIANCE 0.0003  /* variance of initial condition */
+// #define INITIAL_WAVELENGTH  0.015 /* wavelength of initial condition */
+#define INITIAL_VARIANCE 0.0003  /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.015  /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 
 #define PLOT 1
 
-#define PLOT_B 3        /* plot type for second movie */
+#define PLOT_B 0        /* plot type for second movie */
 
 /* Color schemes */
 
-#define COLOR_PALETTE 13     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 14     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
 #define COLOR_SCHEME 3   /* choice of color scheme, see list in global_pdes.c  */
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
-#define SLOPE 0.15        /* sensitivity of color on wave amplitude */
+// #define SLOPE 0.25        /* sensitivity of color on wave amplitude */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+// #define E_SCALE 150.0     /* scaling factor for energy representation */
 #define E_SCALE 100.0     /* scaling factor for energy representation */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
@@ -166,9 +176,14 @@
 #define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
 #define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
 #define HUEMEAN 180.0    /* mean value of hue for color scheme C_HUE */
+// #define HUEMEAN 210.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
+// #define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
 
 #define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 2.0    /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 12.0    /* scale of color scheme bar for 2nd part */
+#define ROTATE_COLOR_SCHEME 1   /* set to 1 to draw color scheme horizontally */
 
 #define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
 
@@ -188,8 +203,7 @@ double courant2, courantb2;  /* Courant parameters squared */
 /* animation part    */
 /*********************/
 
-
-void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], double *psi_out[NX], 
+void evolve_wave_half_old(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], double *psi_out[NX], 
                       short int *xy_in[NX])
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
@@ -306,7 +320,7 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                 
                 /* add oscillating boundary condition on the left */
                 if ((i == 0)&&(OSCILLATE_LEFT)) phi_out[i][j] = AMPLITUDE*cos((double)time*OMEGA);
-                psi_out[i][j] = x;
+//                 psi_out[i][j] = x;
 
                 if (FLOOR)
                 {
@@ -322,12 +336,271 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
 }
 
 
+void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], double *psi_out[NX], 
+                      short int *xy_in[NX])
+/* time step of field evolution */
+/* phi is value of field at time t, psi at time t-1 */
+/* this version of the function has been rewritten in order to minimize the number of if-branches */
+{
+    int i, j, iplus, iminus, jplus, jminus;
+    double delta, x, y, c, cc, gamma;
+    static long time = 0;
+    static double tc[NX][NY], tcc[NX][NY], tgamma[NX][NY];
+    static short int first = 1;
+    
+    time++;
+    
+    /* initialize tables with wave speeds and dissipation */
+    if (first)
+    {
+        for (i=0; i<NX; i++){
+            for (j=0; j<NY; j++){
+                if (xy_in[i][j] != 0)
+                {
+                    tc[i][j] = COURANT;
+                    tcc[i][j] = courant2;
+                    if (xy_in[i][j] == 1) tgamma[i][j] = GAMMA;
+                    else tgamma[i][j] = GAMMAB;
+                }
+                else if (TWOSPEEDS)
+                {
+                    tc[i][j] = COURANTB;
+                    tcc[i][j] = courantb2;
+                    tgamma[i][j] = GAMMAB;
+                }
+            }
+        }
+        first = 0;
+    }
+    
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta,x,y)
+    /* evolution in the bulk */
+    for (i=1; i<NX-1; i++){
+        for (j=1; j<NY-1; j++){
+            if ((TWOSPEEDS)||(xy_in[i][j] != 0)){
+                x = phi_in[i][j];
+		y = psi_in[i][j];
+                
+                /* discretized Laplacian */
+                delta = phi_in[i+1][j] + phi_in[i-1][j] + phi_in[i][j+1] + phi_in[i][j-1] - 4.0*x;
+
+                /* evolve phi */
+                phi_out[i][j] = -y + 2*x + tcc[i][j]*delta - KAPPA*x - tgamma[i][j]*(x-y);
+                psi_out[i][j] = x;
+            }
+        }
+    }
+    
+    /* left boundary */
+    if (OSCILLATE_LEFT) for (j=1; j<NY-1; j++) phi_out[0][j] = AMPLITUDE*cos((double)time*OMEGA);
+    else for (j=1; j<NY-1; j++){
+        if ((TWOSPEEDS)||(xy_in[0][j] != 0)){
+            x = phi_in[0][j];
+            y = psi_in[0][j];
+                    
+            switch (B_COND) {
+                case (BC_DIRICHLET):
+                {
+                    delta = phi_in[1][j] + phi_in[0][j+1] + phi_in[0][j-1] - 3.0*x;
+                    phi_out[0][j] = -y + 2*x + tcc[0][j]*delta - KAPPA*x - tgamma[0][j]*(x-y);
+                    break;
+                }
+                case (BC_PERIODIC):
+                {
+                    delta = phi_in[1][j] + phi_in[NX-1][j] + phi_in[0][j+1] + phi_in[0][j-1] - 4.0*x;
+                    phi_out[0][j] = -y + 2*x + tcc[0][j]*delta - KAPPA*x - tgamma[0][j]*(x-y);
+                    break;
+                }
+                case (BC_ABSORBING):
+                {
+                    delta = phi_in[1][j] + phi_in[0][j+1] + phi_in[0][j-1] - 3.0*x;
+                    phi_out[0][j] = x - tc[0][j]*(x - phi_in[1][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
+                case (BC_VPER_HABS):
+                {
+                    delta = phi_in[1][j] + phi_in[0][j+1] + phi_in[0][j-1] - 3.0*x;
+                    phi_out[0][j] = x - tc[0][j]*(x - phi_in[1][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
+            }
+            psi_out[0][j] = x;
+        }
+    }
+    
+    /* right boundary */
+    for (j=1; j<NY-1; j++){
+        if ((TWOSPEEDS)||(xy_in[NX-1][j] != 0)){
+            x = phi_in[NX-1][j];
+            y = psi_in[NX-1][j];
+                    
+            switch (B_COND) {
+                case (BC_DIRICHLET):
+                {
+                    delta = phi_in[NX-2][j] + phi_in[NX-1][j+1] + phi_in[NX-1][j-1] - 3.0*x;
+                    phi_out[NX-1][j] = -y + 2*x + tcc[NX-1][j]*delta - KAPPA*x - tgamma[NX-1][j]*(x-y);
+                    break;
+                }
+                case (BC_PERIODIC):
+                {
+                    delta = phi_in[NX-2][j] + phi_in[0][j] + phi_in[NX-1][j+1] + phi_in[NX-1][j-1] - 4.0*x;
+                    phi_out[NX-1][j] = -y + 2*x + tcc[NX-1][j]*delta - KAPPA*x - tgamma[NX-1][j]*(x-y);
+                    break;
+                }
+                case (BC_ABSORBING):
+                {
+                    delta = phi_in[NX-2][j] + phi_in[NX-1][j+1] + phi_in[NX-1][j-1] - 3.0*x;
+                    phi_out[NX-1][j] = x - tc[NX-1][j]*(x - phi_in[NX-2][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
+                case (BC_VPER_HABS):
+                {
+                    delta = phi_in[NX-2][j] + phi_in[NX-1][j+1] + phi_in[NX-1][j-1] - 3.0*x;
+                    phi_out[NX-1][j] = x - tc[NX-1][j]*(x - phi_in[NX-2][j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
+            }
+            psi_out[NX-1][j] = x;
+        }
+    }
+    
+    /* top boundary */
+    for (i=0; i<NX; i++){
+        if ((TWOSPEEDS)||(xy_in[i][NY-1] != 0)){
+            x = phi_in[i][NY-1];
+            y = psi_in[i][NY-1];
+                    
+            switch (B_COND) {
+                case (BC_DIRICHLET):
+                {
+                    iplus = i+1;   if (iplus == NX) iplus = NX-1;
+                    iminus = i-1;  if (iminus == -1) iminus = 0;
+                    
+                    delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + phi_in[i][NY-2] - 3.0*x;
+                    phi_out[i][NY-1] = -y + 2*x + tcc[i][NY-1]*delta - KAPPA*x - tgamma[i][NY-1]*(x-y);
+                    break;
+                }
+                case (BC_PERIODIC):
+                {
+                    iplus = (i+1) % NX;
+                    iminus = (i-1) % NX;
+                    if (iminus < 0) iminus += NX;
+                    
+                    delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + phi_in[i][NY-2] + phi_in[i][0] - 4.0*x;
+                    phi_out[i][NY-1] = -y + 2*x + tcc[i][NY-1]*delta - KAPPA*x - tgamma[i][NY-1]*(x-y);
+                    break;
+                }
+                case (BC_ABSORBING):
+                {
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                    delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + phi_in[i][NY-2] - 3.0*x;
+                    phi_out[i][NY-1] = x - tc[i][NY-1]*(x - phi_in[i][NY-2]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
+                    break;
+                }
+                case (BC_VPER_HABS):
+                {
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+
+                    delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + phi_in[i][NY-2] + phi_in[i][0] - 4.0*x;
+                    if (i==0) phi_out[0][NY-1] = x - tc[0][NY-1]*(x - phi_in[1][NY-1]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    else phi_out[i][NY-1] = -y + 2*x + tcc[i][NY-1]*delta - KAPPA*x - tgamma[i][NY-1]*(x-y);
+                    break;
+                }
+            }
+            psi_out[i][NY-1] = x;
+        }
+    }
+    
+    /* bottom boundary */
+    for (i=0; i<NX; i++){
+        if ((TWOSPEEDS)||(xy_in[i][0] != 0)){
+            x = phi_in[i][0];
+            y = psi_in[i][0];
+                    
+            switch (B_COND) {
+                case (BC_DIRICHLET):
+                {
+                    iplus = i+1;   if (iplus == NX) iplus = NX-1;
+                    iminus = i-1;  if (iminus == -1) iminus = 0;
+                    
+                    delta = phi_in[iplus][0] + phi_in[iminus][0] + phi_in[i][1] - 3.0*x;
+                    phi_out[i][0] = -y + 2*x + tcc[i][0]*delta - KAPPA*x - tgamma[i][0]*(x-y);
+                    break;
+                }
+                case (BC_PERIODIC):
+                {
+                    iplus = (i+1) % NX;
+                    iminus = (i-1) % NX;
+                    if (iminus < 0) iminus += NX;
+                    
+                    delta = phi_in[iplus][0] + phi_in[iminus][0] + phi_in[i][1] + phi_in[i][NY-1] - 4.0*x;
+                    phi_out[i][0] = -y + 2*x + tcc[i][0]*delta - KAPPA*x - tgamma[i][0]*(x-y);
+                    break;
+                }
+                case (BC_ABSORBING):
+                {
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                    delta = phi_in[iplus][0] + phi_in[iminus][0] + phi_in[i][1] - 3.0*x;
+                    phi_out[i][0] = x - tc[i][0]*(x - phi_in[i][1]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
+                    break;
+                }
+                case (BC_VPER_HABS):
+                {
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+
+                    delta = phi_in[iplus][0] + phi_in[iminus][0] + phi_in[i][1] + phi_in[i][NY-1] - 4.0*x;
+                    if (i==0) phi_out[0][0] = x - tc[0][0]*(x - phi_in[1][0]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    else phi_out[i][0] = -y + 2*x + tcc[i][0]*delta - KAPPA*x - tgamma[i][0]*(x-y);
+                    break;
+                }
+            }
+            psi_out[i][0] = x;
+        }
+    }
+    
+    /* add oscillating boundary condition on the left corners */
+    if (OSCILLATE_LEFT)
+    {
+        phi_out[0][0] = AMPLITUDE*cos((double)time*OMEGA);
+        phi_out[0][NY-1] = AMPLITUDE*cos((double)time*OMEGA);
+    }
+    
+    /* for debugging purposes/if there is a risk of blow-up */
+    if (FLOOR) for (i=0; i<NX; i++){
+        for (j=0; j<NY; j++){
+            if (xy_in[i][j] != 0) 
+            {
+                if (phi_out[i][j] > VMAX) phi_out[i][j] = VMAX;
+                if (phi_out[i][j] < -VMAX) phi_out[i][j] = -VMAX;
+                if (psi_out[i][j] > VMAX) psi_out[i][j] = VMAX;
+                if (psi_out[i][j] < -VMAX) psi_out[i][j] = -VMAX;
+            }
+        }
+    }
+}
+
+
 void evolve_wave(double *phi[NX], double *psi[NX], double *phi_tmp[NX], double *psi_tmp[NX], short int *xy_in[NX])
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 {
     evolve_wave_half(phi, psi, phi_tmp, psi_tmp, xy_in);
     evolve_wave_half(phi_tmp, psi_tmp, phi, psi, xy_in);
+//     evolve_wave_half_old(phi, psi, phi_tmp, psi_tmp, xy_in);
+//     evolve_wave_half_old(phi_tmp, psi_tmp, phi, psi, xy_in);
+}
+
+
+void draw_color_bar(int plot, double range)
+{
+    if (ROTATE_COLOR_SCHEME) draw_color_scheme(-1.0, -0.8, XMAX - 0.1, -1.0, plot, -range, range);
+    else draw_color_scheme(1.7, YMIN + 0.1, 1.9, YMAX - 0.1, plot, -range, range);
 }
 
 
@@ -358,7 +631,13 @@ void animation()
     }
     
     /* initialise positions and radii of circles */
-    if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)) init_circle_config();
+    if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)) init_circle_config(circles);
+    else if (B_DOMAIN == D_POLYGONS) init_polygon_config(polygons);
+    printf("Polygons initialized\n");
+    
+    /* initialise polyline for von Koch and simular domains */
+    npolyline = init_polyline(MDEPTH, polyline);
+    for (i=0; i<npolyline; i++) printf("vertex %i: (%.3f, %.3f)\n", i, polyline[i].x, polyline[i].y);
 
     courant2 = COURANT*COURANT;
     courantb2 = COURANTB*COURANTB;
@@ -374,7 +653,11 @@ void animation()
     
     ratio = (XMAX - XMIN)/8.4;  /* for Tokarsky billiard */
     
-    isospectral_initial_point(0.25, 0.0, startleft, startright);    /* for isospectral billiards */
+//     isospectral_initial_point(0.2, 0.0, startleft, startright);    /* for isospectral billiards */
+    homophonic_initial_point(0.5, -0.25, 1.5, -0.25, startleft, startright);
+//     homophonic_initial_point(0.5, -0.25, 1.5, -0.25, startleft, startright);
+//     printf("xleft = (%.3f, %.3f) xright = (%.3f, %.3f)\n", startleft[0], startleft[1], startright[0], startright[1]);    
+    
     xy_to_ij(startleft[0], startleft[1], sample_left);
     xy_to_ij(startright[0], startright[1], sample_right);
 //     printf("xleft = (%.3f, %.3f) xright = (%.3f, %.3f)\n", xin_left, yin_left, xin_right, yin_right);
@@ -384,18 +667,21 @@ void animation()
 //     init_wave_plus(LAMBDA - 0.3*MU, 0.5*MU, phi, psi, xy_in);
 //     init_wave(LAMBDA - 0.3*MU, 0.5*MU, phi, psi, xy_in);
 //     init_circular_wave(X_SHOOTER, Y_SHOOTER, phi, psi, xy_in);
-    init_circular_wave(-LAMBDA, 0.0, phi, psi, xy_in);
-//     init_circular_wave(0.5, 0.5, phi, psi, xy_in);
+//     printf("Initializing wave\n");
+//     init_circular_wave(-1.0, 0.0, phi, psi, xy_in);
+//     printf("Wave initialized\n");
+//     init_circular_wave(0.0, 0.0, phi, psi, xy_in);
 //     add_circular_wave(-1.0, 0.0, LAMBDA, phi, psi, xy_in);
 //     add_circular_wave(1.0, -LAMBDA, 0.0, phi, psi, xy_in);
 //     add_circular_wave(-1.0, 0.0, -LAMBDA, phi, psi, xy_in);
     
-//     init_circular_wave_xplusminus(startleft[0], startleft[1], startright[0], startright[1], phi, psi, xy_in);
+    init_circular_wave_xplusminus(startleft[0], startleft[1], startright[0], startright[1], phi, psi, xy_in);
+
 //     init_circular_wave_xplusminus(-0.9, 0.0, 0.81, 0.0, phi, psi, xy_in);
 //     init_circular_wave(-2.0*ratio, 0.0, phi, psi, xy_in);
 //     init_planar_wave(XMIN + 0.015, 0.0, phi, psi, xy_in);
 //     init_planar_wave(XMIN + 0.02, 0.0, phi, psi, xy_in);
-//     init_planar_wave(XMIN + 0.8, 0.0, phi, psi, xy_in);
+//     init_planar_wave(XMIN + 0.5, 0.0, phi, psi, xy_in);
 //     init_wave(-1.5, 0.0, phi, psi, xy_in);
 //     init_wave(0.0, 0.0, phi, psi, xy_in);
 
@@ -410,7 +696,8 @@ void animation()
     draw_wave_e(phi, psi, total_energy, xy_in, 1.0, 0, PLOT);
     draw_billiard();
     
-    if (DRAW_COLOR_SCHEME) draw_color_scheme(1.7, YMIN + 0.1, 1.9, YMAX - 0.1, PLOT, -12.0, 12.0);
+    
+    if (DRAW_COLOR_SCHEME) draw_color_bar(PLOT, COLORBAR_RANGE);
 
     glutSwapBuffers();
 
@@ -449,13 +736,13 @@ void animation()
         
         draw_billiard();
         
-        if (DRAW_COLOR_SCHEME) draw_color_scheme(1.7, YMIN + 0.1, 1.9, YMAX - 0.1, PLOT, -12.0, 12.0);
+        if (DRAW_COLOR_SCHEME) draw_color_bar(PLOT, COLORBAR_RANGE); 
         
         /* add oscillating waves */
-        if (i%345 == 344)
-        {
-                add_circular_wave(1.0, -LAMBDA, 0.0, phi, psi, xy_in);
-        }
+//         if (i%345 == 344)
+//         {
+//                 add_circular_wave(1.0, -LAMBDA, 0.0, phi, psi, xy_in);
+//         }
 
 	glutSwapBuffers();
 
@@ -468,7 +755,7 @@ void animation()
             {
 //                 draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
                 draw_wave_e(phi, psi, total_energy, xy_in, scale, i, PLOT_B);
-                if (DRAW_COLOR_SCHEME) draw_color_scheme(1.7, YMIN + 0.1, 1.9, YMAX - 0.1, PLOT_B, -12.0, 12.0);
+                if (DRAW_COLOR_SCHEME) draw_color_bar(PLOT_B, COLORBAR_RANGE_B);  
                 draw_billiard();
                 glutSwapBuffers();
                 save_frame_counter(NSTEPS + 21 + counter);
@@ -494,6 +781,7 @@ void animation()
 //             draw_wave(phi, psi, xy_in, scale, i, PLOT);
             draw_wave_e(phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT);
             draw_billiard();
+            if (DRAW_COLOR_SCHEME) draw_color_bar(PLOT, COLORBAR_RANGE);   
             glutSwapBuffers();
         }
         for (i=0; i<MID_FRAMES; i++) save_frame();
@@ -502,8 +790,8 @@ void animation()
 //             draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
             draw_wave_e(phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT_B);
             draw_billiard();
+            if (DRAW_COLOR_SCHEME) draw_color_bar(PLOT_B, COLORBAR_RANGE_B); 
             glutSwapBuffers();
-//             for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
         }
         for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
         

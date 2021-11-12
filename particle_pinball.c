@@ -38,7 +38,6 @@
 #define XMIN -4.0
 #define XMAX 4.0	/* x interval */
 #define YMIN -1.25
-// #define YMID 1.25
 #define YMAX 3.25	/* y interval for 9/16 aspect ratio */
 // #define XMIN -2.0
 // #define XMAX 2.0	/* x interval */
@@ -54,27 +53,25 @@
 
 #define B_DOMAIN 23      /* choice of domain shape */
 
-#define CIRCLE_PATTERN 6    /* pattern of circles */
+#define CIRCLE_PATTERN 7    /* pattern of circles */
+#define POLYLINE_PATTERN 1  /* pattern of polyline */
 // #define CIRCLE_PATTERN 21    /* pattern of circles */
 
 #define ABSORBING_CIRCLES 0 /* set to 1 for circular scatterers to be absorbing */
 
-#define NMAXCIRCLES 1000        /* total number of circles (must be at least NCX*NCY for square grid) */
+#define NMAXCIRCLES 5000        /* total number of circles (must be at least NCX*NCY for square grid) */
+#define NMAXPOLY 1000        /* total number of sides of polygonal line */   
 #define NCX 44            /* number of circles in x direction */
 #define NCY 10            /* number of circles in y direction */
-
-// #define NCX 50            /* number of circles in x direction */
-// #define NCY 20            /* number of circles in y direction */
-// #define NCX 52            /* number of circles in x direction */
-// #define NCY 30            /* number of circles in y direction */
 #define NPOISSON 350        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define NGOLDENSPIRAL 2000  /* max number of points for C_GOLDEN_SPIRAL arrandement */
+#define SDEPTH 1            /* Sierpinski gastket depth */
 
-#define LAMBDA 3.8105	/* parameter controlling shape of domain */
+#define LAMBDA 3.8     /* parameter controlling shape of domain */
 // #define MU 0.1         /* second parameter controlling shape of billiard */
+#define MU 0.07         /* second parameter controlling shape of billiard */
 // #define MU 0.085         /* second parameter controlling shape of billiard */
 // #define MU 0.09         /* second parameter controlling shape of billiard */
-#define MU 0.05         /* second parameter controlling shape of billiard */
 // #define MU 0.034         /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 4             /* number of sides of polygon */
@@ -96,7 +93,7 @@
 #define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
 #define TEST_ACTIVE 0   /* set to 1 to test whether particle is in billiard */
 
-#define NSTEPS 11700     /* number of frames of movie */
+#define NSTEPS 10400     /* number of frames of movie */
 // #define NSTEPS 1000     /* number of frames of movie */
 // #define TIME 1500         /* time between movie frames, for fluidity of real-time simulation */ 
 #define TIME 4000         /* time between movie frames, for fluidity of real-time simulation */ 
@@ -145,7 +142,7 @@
 #define END_FRAMES 100   /* number of still frames at end of movie */
 
 #define NPATHBINS 200     /* number of bins for path length histogramm */
-#define PATHLMAX 2.5     /* max free path on graph */
+#define PATHLMAX 1.8     /* max free path on graph */
 
 #include "global_particles.c"
 #include "sub_part_billiard.c"
@@ -454,13 +451,13 @@ void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX], int a
                 if (B_DOMAIN != D_CIRCLES_IN_TORUS) ncol++;
                 else if (c >= 0) ncol++;
                 
-                if ((c >= 0)&&(circlecolor[c] == 0)) nobst++;
-                circlecolor[c]++;
+                if ((c >= 0)&&(circles[c].color == 0)) nobst++;
+                circles[c].color++;
                 
                 /* take care of circles doubled because of periodic boundary conditions */ 
-                if ((circleactive[c])&&(B_DOMAIN == D_CIRCLES_IN_TORUS)&&(partner_circle[c] != c)) circlecolor[partner_circle[c]]++;
+                if ((circles[c].active)&&(B_DOMAIN == D_CIRCLES_IN_TORUS)&&(circles[c].partner != c))                     circles[circles[c].partner].color++;
                     
-                newcircle[c] = 10;
+                circles[c].new = 10;
                 
                 /* update free path statistics */
                 if (ncol > 1) /* disregard very first collision */
@@ -519,9 +516,9 @@ void print_particle_numbers(double *configs[NPARTMAX])
     {
         /* find leftmost and rightmost circle */
         for (i=0; i<ncircles; i++) 
-            if ((circleactive[i])&&(circlex[i] - circlerad[i] < xleft)) xleft = circlex[i] - circlerad[i]; 
+            if ((circles[i].active)&&(circles[i].xc - circles[i].radius < xleft)) xleft = circles[i].xc - circles[i].radius; 
         for (i=0; i<ncircles; i++) 
-            if ((circleactive[i])&&(circlex[i] + circlerad[i] > xright)) xright = circlex[i] + circlerad[i]; 
+            if ((circles[i].active)&&(circles[i].xc + circles[i].radius > xright)) xright = circles[i].xc + circles[i].radius; 
         
         first = 0;
         
@@ -574,9 +571,9 @@ void draw_statistics()
     /* histogram of number of collisions per peg */
     for (i=0; i<colmax; i++) pegcollisions[i] = 0;
     
-    for (i=0; i<ncircles; i++) if ((circleactive[i])&&(!double_circle[i]))
+    for (i=0; i<ncircles; i++) if ((circles[i].active)&&(!circles[i].double_circle))
     {
-        n = circlecolor[i];
+        n = circles[i].color;
         if (n < colmax) pegcollisions[n]++;
     }
     for (i=1; i<colmax; i++) 
@@ -758,23 +755,28 @@ void animation(int circle_config)
         configs[i] = (double *)malloc(8*sizeof(double));
     
     /* init circle configuration if the domain is D_CIRCLES */
+//     if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)||(B_DOMAIN == D_CIRCLES_IN_GENUSN)
+//         ||(B_DOMAIN == D_CIRCLES_IN_TORUS)) 
+//         init_circle_config_pinball(circle_config);
+    
+    /* init circle configuration if the domain is D_CIRCLES */
     if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)||(B_DOMAIN == D_CIRCLES_IN_GENUSN)
-        ||(B_DOMAIN == D_CIRCLES_IN_TORUS)) 
-        init_circle_config_pinball(circle_config);
+        ||(B_DOMAIN == D_CIRCLES_IN_TORUS)) init_circles_pinball(circle_config, circles);
+    
     
     /* remove discs that are not in domain */
     if ((B_DOMAIN == D_CIRCLES_IN_RECT)||(B_DOMAIN == D_CIRCLES_IN_GENUSN))
 //         ||(B_DOMAIN == D_CIRCLES_IN_TORUS)) 
         for (i=0; i<ncircles; i++)
         {
-            if (vabs(circley[i]) + circlerad[i] > 0.99) circleactive[i] = 0;
-            if (vabs(circlex[i]) + circlerad[i] > 0.99*LAMBDA) circleactive[i] = 0;
+            if (vabs(circles[i].xc) + circles[i].radius > 0.99) circles[i].active = 0;
+            if (vabs(circles[i].xc) + circles[i].radius > 0.99*LAMBDA) circles[i].active = 0;
         }
     else if (B_DOMAIN == D_CIRCLES_IN_TORUS)
         for (i=0; i<ncircles; i++)
         {
-            if (vabs(circley[i]) - circlerad[i] > 1.0) circleactive[i] = 0;
-            if (vabs(circlex[i]) - circlerad[i] > LAMBDA) circleactive[i] = 0;
+            if (vabs(circles[i].yc) - circles[i].radius > 1.0) circles[i].active = 0;
+            if (vabs(circles[i].xc) - circles[i].radius > LAMBDA) circles[i].active = 0;
         }
         
 //     for (i=0; i<ncircles; i++) 
@@ -884,7 +886,7 @@ void animation(int circle_config)
         /* count max number a peg is hit */
         nmaxpeg = 0;
         for (j=0; j<ncircles; j++)
-            if (circlecolor[j] > nmaxpeg) nmaxpeg = circlecolor[j];
+            if (circles[j].color > nmaxpeg) nmaxpeg = circles[j].color;
 
 //         sprintf(message, "max hits per peg: %d", nmaxpeg);
 //         glColor3f(1.0, 1.0, 1.0);
