@@ -25,7 +25,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                     y = ((double)j + 0.5)*dy;
                     if (top) circles[n].yc = ymean + y;
                     else circles[n].yc = ymean - y;
-                    circles[n].radius = MU;
+                    if (top) circles[n].radius = MU;
+                    else circles[n].radius = MUB;
                     circles[n].active = 1;
                     circletop[n] = top;
                 }
@@ -45,7 +46,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                     if ((i+NGRIDX)%2 == 1) y += 0.5*dy;
                     if (top) circles[n].yc = ymean + 0.5*dy + y;
                     else circles[n].yc = ymean - 0.5*dy - y;
-                    circles[n].radius = MU;
+                    if (top) circles[n].radius = MU;
+                    else circles[n].radius = MUB;
                     circles[n].active = 1;
                     circletop[n] = top;
                 }
@@ -64,7 +66,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                     y = ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
                     if (top) circles[n].yc = ymean + y;
                     else circles[n].yc = ymean - y;
-                    circles[n].radius = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
+                    if (top) circles[n].radius = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
+                    else circles[n].radius = MUB*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
                     circles[n].active = 1;
                     circletop[n] = top;
                     printf("n = %i, x = %.3lg\n", n, circles[n].xc);
@@ -83,7 +86,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                     y = YMIN + ((double)j + 0.5)*dy;
                     if ( ((top)&&(y > 0.0))||((!top)&&(y <= 0.0)) )
                         circles[n].yc = y;
-                    circles[n].radius = MU;
+                    if (top) circles[n].radius = MU;
+                    else circles[n].radius = MUB;
                     p = (double)rand()/RAND_MAX;
                     if (p < P_PERCOL) circles[n].active = 1;
                     else circles[n].active = 0;
@@ -102,7 +106,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                 else y = ymean + (YMIN-ymean)*(double)rand()/RAND_MAX;
                 if ( ((top)&&(y > 0.0))||((!top)&&(y <= 0.0)) )
                     circles[n].yc = y;
-                circles[n].radius = MU;
+                if (top) circles[n].radius = MU;
+                else circles[n].radius = MUB;
                 circles[n].active = 1;
                 circletop[n] = top;
                 printf("n = %i, x = %.3lg\n", n, circles[n].xc);
@@ -122,7 +127,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                     y = r*sin(phi);
                     if ( ((top)&&(y > 0.0))||((!top)&&(y <= 0.0)) )
                         circles[n].yc = y;
-                    circles[n].radius = MU;
+                    if (top) circles[n].radius = MU;
+                    else circles[n].radius = MUB;
                     circles[n].active = 1;
                     circletop[n] = top;
                 }
@@ -159,7 +165,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
             /* add circle in the center */
             circles[ncircles].xc = 0.0;
             circles[ncircles].yc = 0.0;
-            circles[ncircles].radius = MU;
+            if (top) circles[ncircles].radius = MU;
+            else circles[ncircles].radius = MUB;
             circles[ncircles].active = 2;
             circletop[ncircles] = top; 
             ncircles += 1;
@@ -174,7 +181,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
             if (top) y = ymean + (YMAX-ymean)*(double)rand()/RAND_MAX;
             else y = ymean + (YMIN-ymean)*(double)rand()/RAND_MAX;
             circles[n].yc = y;
-            circles[n].radius = MU;
+            if (top) circles[n].radius = MU;
+            else circles[n].radius = MUB;
             circles[n].active = 1;
             circletop[n] = top;
             active_poisson[n] = 1;
@@ -212,7 +220,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                         nnew = ncircles + ncirc0;
                         circles[nnew].xc = x;
                         circles[nnew].yc = y;
-                        circles[nnew].radius = MU;
+                        if (top) circles[nnew].radius = MU;
+                        else circles[nnew].radius = MUB;
                         circles[nnew].active = 1;
                         active_poisson[nnew] = 1;
 //                         circleactive[nnew] = 1;
@@ -263,7 +272,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                    
                 }
                 
-                circles[ncircles + n].radius = MU;
+                if (top) circles[ncircles + n].radius = MU;
+                else circles[ncircles + n].radius = MUB;
                 circles[ncircles + n].active = 1;
                 circletop[ncircles] = top; 
             }
@@ -303,7 +313,8 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
         {
             circles[ncircles].xc = 0.0;
             circles[ncircles].yc = 0.0;
-            circles[ncircles].radius = MU;
+            if (top) circles[ncircles].radius = MU;
+            else circles[ncircles].radius = MUB;
             circles[ncircles].active = 1;
             circletop[ncircles] = top; 
             
@@ -396,6 +407,41 @@ void init_circle_config_energy(t_circle circles[NMAXCIRCLES])
     init_circle_config_half(CIRCLE_PATTERN, 0, circles);
 }
 
+
+void init_polygon_config_half(int pattern, int top, t_polygon polygons[NMAXCIRCLES])
+/* initialise the polygon configuration, for billiard shape D_CIRCLES */
+/* uses init_circle_config, this is where C++ would be more elegant */
+{
+    int i;
+    t_circle circle[NMAXCIRCLES];
+    
+//     ncircles = 0;
+    init_circle_config_half(pattern, top, circle);
+    for (i=0; i<NMAXCIRCLES; i++)
+    {
+        polygons[i].xc = circle[i].xc;
+        polygons[i].yc = circle[i].yc;
+        polygons[i].radius = circle[i].radius;
+        polygons[i].active = circle[i].active;
+        polygons[i].nsides = NPOLY;
+        
+        if (RANDOM_POLY_ANGLE) polygons[i].angle = DPI*(double)rand()/RAND_MAX;
+        else polygons[i].angle = APOLY;
+        
+//         if (i < ncircles) printf("(x,y) = (%.2f, %.2f), r = %.2f, angle = %.2f, sides = %i\n", polygons[i].xc, polygons[i].yc, polygons[i].radius, polygons[i].angle, polygons[i].nsides);
+    }
+}
+
+void init_polygon_config_comp(t_polygon polygons[NMAXCIRCLES])
+/* initialise polygon configuration for billiard shape D_POLYGONS */
+{
+    ncircles = 0;
+    init_polygon_config_half(CIRCLE_PATTERN, 1, polygons);
+    init_polygon_config_half(CIRCLE_PATTERN_B, 0, polygons);
+}
+
+
+
 int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
 /* returns 1 if (x,y) represents a point in the billiard */
 {
@@ -403,7 +449,7 @@ int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
     int i, j, k, k1, k2, condition, type;
 
     switch (domain) {
-        case D_MENGER:       
+        case (D_MENGER):       
         {
             x1 = 0.5*(x+1.0);
             y1 = 0.5*(y+1.0);
@@ -416,7 +462,7 @@ int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
             }
             return(1);
         }
-        case D_CIRCLES:
+        case (D_CIRCLES):
         {
             for (i = 0; i < ncircles; i++)
                 if (circles[i].active != 0) 
@@ -433,7 +479,21 @@ int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
                 }
             return(1);
         }
-        default:
+        case (D_POLYGONS):
+        {
+            for (i = 0; i < ncircles; i++) 
+                if (polygons[i].active)
+                {
+                    /* choose specific type according to value of circles[i].active */
+                    if (polygons[i].active == 1) type = 0;
+                    else type = polygons[i].active;
+                    
+                    if ((top)&&(circletop[i])&&(y > 0.0)&&(in_tpolygon(x, y, polygons[i]))) return(type); 
+                    else if ((!top)&&(!circletop[i])&&(y < 0.0)&&(in_tpolygon(x, y, polygons[i]))) return(type); 
+                }
+            return(1);
+        }
+        cdefault:
         {
             printf("Function ij_in_billiard not defined for this billiard \n");
             return(0);
@@ -552,6 +612,17 @@ void draw_billiard_half(int domain, int pattern, int top)      /* draws the bill
                 }
             break;
         }
+        case (D_POLYGONS):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            for (i = 0; i < ncircles; i++) 
+                if ((polygons[i].active)&&(circletop[i] == top)) 
+                {
+                    if ((top)&&(circletop[i])) draw_tpolygon(polygons[i]);
+                    else if ((!top)&&(!circletop[i])) draw_tpolygon(polygons[i]);
+                }
+            break;
+        }
         case (D_MANDELBROT):
         {
             /* Do nothing */
@@ -639,7 +710,11 @@ void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], doub
                 if (PLOT == P_AMPLITUDE)
                     color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
                 else if (PLOT == P_ENERGY)
-                    color_scheme(COLOR_SCHEME, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
+                {
+                    energy = compute_energy(phi, psi, xy_in, i, j);
+                    if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, energy, scale, time, rgb);
+                    else color_scheme(COLOR_SCHEME, energy, scale, time, rgb);
+                }
                 else if (PLOT == P_MIXED)
                 {
                     if (j > NY/2) color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
@@ -767,48 +842,57 @@ void compute_energy_tblr(double *phi[NX], double *psi[NX], short int *xy_in[NX],
 void print_energies(double energies[6], double top_energy, double bottom_energy)
 {
     char message[50];
-    double ytop, ybot, pos[2], centerx = -0.075;
+    double ytop, ybot, pos[2], centerx = -0.075, boxxright = XMAX - 0.17, textxright = XMAX - 0.28;
     
     ytop = YMAX - 0.1;
 //     ybot = -0.1;
     ybot = YMIN + 0.05;
+    if (DRAW_COLOR_SCHEME) 
+    {   
+        boxxright -= 0.35;
+        textxright -= 0.35;
+    }
     
-    erase_area(XMIN + 0.175, ytop + 0.025, 0.1, 0.05);
+    erase_area(XMIN + 0.185, ytop + 0.025, 0.1, 0.05);
 
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.3f", energies[0]/top_energy);
     xy_to_pos(XMIN + 0.1, ytop, pos);
     write_text(pos[0], pos[1], message);
     
-    erase_area(centerx + 0.075, ytop + 0.025, 0.1, 0.05);
+    erase_area(centerx + 0.085, ytop + 0.025, 0.1, 0.05);
 
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.3f", energies[1]/top_energy);
     xy_to_pos(centerx, ytop, pos);
     write_text(pos[0], pos[1], message);
     
+    erase_area(boxxright, ytop + 0.025, 0.15, 0.05);
+
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.5f", energies[2]/top_energy);
-    xy_to_pos(XMAX - 0.28, ytop, pos);
+    xy_to_pos(textxright, ytop, pos);
     write_text(pos[0], pos[1], message);
     
-    erase_area(XMIN + 0.175, ybot + 0.025, 0.1, 0.05);
+    erase_area(XMIN + 0.185, ybot + 0.025, 0.1, 0.05);
 
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.3f", energies[3]/bottom_energy);
     xy_to_pos(XMIN + 0.1, ybot, pos);
     write_text(pos[0], pos[1], message);
 
-    erase_area(centerx + 0.075, ybot + 0.025, 0.1, 0.05);
+    erase_area(centerx + 0.085, ybot + 0.025, 0.1, 0.05);
 
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.3f", energies[4]/bottom_energy);
     xy_to_pos(centerx, ybot, pos);
     write_text(pos[0], pos[1], message);
 
+    erase_area(boxxright, ybot + 0.025, 0.15, 0.05);
+
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.5f", energies[5]/bottom_energy);
-    xy_to_pos(XMAX - 0.28, ybot, pos);
+    xy_to_pos(textxright, ybot, pos);
     write_text(pos[0], pos[1], message);
     
 }

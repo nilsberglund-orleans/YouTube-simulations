@@ -738,6 +738,7 @@ void animation()
     /* initialise positions and radii of circles */
     printf("initializing circle configuration\n");
     if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN_B == D_CIRCLES)) init_circle_config_comp(circles);
+    if ((B_DOMAIN == D_POLYGONS)|(B_DOMAIN_B == D_POLYGONS)) init_polygon_config_comp(polygons);
 
     courant2 = COURANT*COURANT;
     courantb2 = COURANTB*COURANTB;
