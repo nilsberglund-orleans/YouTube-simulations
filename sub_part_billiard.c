@@ -190,7 +190,7 @@ void save_frame()
     strcat(n2, ".tif");
     printf(" saving frame %s \n",n2);
     
-    // mod by eux - chose on of the following according to the comment beside.
+    // mod by eux - chose one of the following according to the comment beside.
     writetiff(n2, "Billiard in an ellipse", 0, 0, WINWIDTH, WINHEIGHT-40, COMPRESSION_LZW);    /* to use with 1080p in drop_billiard.c- probably the best because it's
                                                                                                 generating 1080p image, lighter, and then cropping those 40 pixels to
                                                                                                 avoid the strange band*/

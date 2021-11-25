@@ -8,7 +8,8 @@
 /*  line to nils.berglund@univ-orleans.fr - Thanks!                              */
 /*                                                                               */
 /*  compile with                                                                 */
-/*  gcc -o drop_billiard drop_billiard.c -O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut */
+/*  gcc -o drop_billiard drop_billiard.c                                         */
+/*  -O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut                */
 /*                                                                               */
 /*                                                                               */
 /*  To make a video, set MOVIE to 1 and create subfolder tif_drop                */
@@ -116,9 +117,7 @@
 
 #define BLACK 1             /* set to 1 for black background */
 #define COLOR_OUTSIDE 1     /* set to 1 for colored outside */ 
-// #define COLOR_OUTSIDE 0     /* _eux */ 
 #define OUTER_COLOR 300.0   /* color outside billiard */
-// #define OUTER_COLOR 0.0       //_eux
 #define PAINT_INT 0         /* set to 1 to paint interior in other color (for polygon) */
 #define PAINT_EXT 1         /* set to 1 to paint exterior of billiard */
 
