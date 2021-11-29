@@ -30,10 +30,13 @@
 #include <sys/types.h>
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 
-#define MOVIE 0         /* set to 1 to generate movie */
+#define MOVIE 1         /* set to 1 to generate movie */
 
-#define WINWIDTH 	1280  /* window width */
-#define WINHEIGHT 	720   /* window height */
+// #define WINWIDTH 	1280  /* window width */
+// #define WINHEIGHT 	720   /* window height */
+
+#define WINWIDTH 	1920  /* window width */
+#define WINHEIGHT 	1080   /* window height */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
@@ -87,10 +90,10 @@
 #define PRINT_PARTICLE_NUMBER 0 /* set to 1 to print number of particles */
 #define TEST_ACTIVE 1   /* set to 1 to test whether particle is in billiard */
 
-#define NSTEPS 1000      /* number of frames of movie */
-#define TIME 1500         /* time between movie frames, for fluidity of real-time simulation */ 
+#define NSTEPS 5000      /* number of frames of movie */
+#define TIME 400         /* time between movie frames, for fluidity of real-time simulation */ 
 // #define DPHI 0.00001    /* integration step */
-#define DPHI 0.000005    /* integration step */
+#define DPHI 0.00005    /* integration step */
 #define NVID 150         /* number of iterations between images displayed on screen */
 
 /* Decreasing TIME accelerates the animation and the movie                               */

@@ -8,8 +8,8 @@
 /*  line to nils.berglund@univ-orleans.fr - Thanks!                              */
 /*                                                                               */
 /*  compile with                                                                 */
-/*  gcc -o drop_billiard drop_billiard.c                                         */
-/*  -O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut                */
+/*  gcc -o drop_billiard drop_billiard.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut                */
+/*  gcc -o drop_billiard drop_billiard.c -O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut                */
 /*                                                                               */
 /*                                                                               */
 /*  To make a video, set MOVIE to 1 and create subfolder tif_drop                */
