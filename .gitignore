@@ -1,0 +1,6 @@
+*.tif
+**/*.tif
+production/
+tif_drop/
+*.mp4
+**/*.mp4
