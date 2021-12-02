@@ -109,7 +109,8 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
   TIFFSetField(file, TIFFTAG_ROWSPERSTRIP, 1);
   TIFFSetField(file, TIFFTAG_IMAGEDESCRIPTION, description);
   p = image;
-  for (i = height - 1; i >= 0; i--) 
+
+  for (i = height - 1; i >= 0; i--)
   {
 //     if (TIFFWriteScanline(file, p, height - i - 1, 0) < 0) 
     if (TIFFWriteScanline(file, p, i, 0) < 0) 
@@ -120,10 +121,10 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
     }
     p += width * sizeof(GLubyte) * 3;
   }
+  free(image); /* prenvents RAM consumption*/
   TIFFClose(file);
   return 0;
 }
-
   
 void init()		/* initialisation of window */
 {
@@ -134,8 +135,6 @@ void init()		/* initialisation of window */
 
     glOrtho(XMIN, XMAX, YMIN, YMAX , -1.0, 1.0);
 }
-
-
 
 void rgb_color_scheme(int i, double rgb[3]) /* color scheme */
 {
@@ -172,14 +171,13 @@ void blank()
     
     if (COLOR_OUTSIDE)
     {
-        hsl_to_rgb(OUTER_COLOR, 0.9, 0.15, rgb); 
+        hsl_to_rgb(OUTER_COLOR, 0.9, 0.15, rgb);
         glClearColor(rgb[0], rgb[1], rgb[2], 1.0);
     }
     else if (BLACK) glClearColor(0.0, 0.0, 0.0, 1.0);
     else glClearColor(1.0, 1.0, 1.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 }
-
 
 void save_frame()
 {
@@ -193,11 +191,15 @@ void save_frame()
     sprintf(strstr(n2,"."), format, counter);
     strcat(n2, ".tif");
     printf(" saving frame %s \n",n2);
-    writetiff(n2, "Billiard in an ellipse", 0, 0,
-         WINWIDTH, WINHEIGHT, COMPRESSION_LZW);
-
+    
+    // choose one of the following according to the comment beside.
+    writetiff(n2, "Billiard in an ellipse", 0, 0, WINWIDTH, WINHEIGHT-40, COMPRESSION_LZW);  /* to use with 1080p in drop_billiard.c- probably the best because it's
+                                                                                                // generating 1080p image, lighter, and then cropping those 40 pixels to
+                                                                                                // avoid the strange band*/
+    // writetiff(n2, "Billiard in an ellipse", 0, 0, WINWIDTH, WINHEIGHT-50, COMPRESSION_LZW);  // works for 1080p -> "-50px" band!!!
+    // writetiff(n2, "Billiard in an ellipse", 0, 0, 1920, 1080-40, COMPRESSION_LZW);           //another perfect 1080p from 1440p in setup
+    // writetiff(n2, "Billiard in an ellipse", -WINWIDTH/8+320, -WINHEIGHT/8+180, WINWIDTH-640, WINHEIGHT-400, COMPRESSION_LZW); // perfect 1040p from 1440p in setup
 }
-
 
 void write_text_fixedwidth( double x, double y, char *st)
 {
