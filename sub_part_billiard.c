@@ -109,8 +109,8 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
   TIFFSetField(file, TIFFTAG_ROWSPERSTRIP, 1);
   TIFFSetField(file, TIFFTAG_IMAGEDESCRIPTION, description);
   p = image;
-//   for (i = height - 1; i >= 0; i--)
-  for (i = height - 1; i >= 0; i--) // _eux
+
+  for (i = height - 1; i >= 0; i--)
   {
 //     if (TIFFWriteScanline(file, p, height - i - 1, 0) < 0) 
     if (TIFFWriteScanline(file, p, i, 0) < 0) 
@@ -121,7 +121,7 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
     }
     p += width * sizeof(GLubyte) * 3;
   }
-  free(image); /* _Michale_eux*/
+  free(image); /* prenvents RAM consumption*/
   TIFFClose(file);
   return 0;
 }
@@ -192,14 +192,13 @@ void save_frame()
     strcat(n2, ".tif");
     printf(" saving frame %s \n",n2);
     
-    // mod by _eux - chose one of the following according to the comment beside.
-    // writetiff(n2, "Billiard in an ellipse", 0, 0, WINWIDTH, WINHEIGHT-40, COMPRESSION_LZW);  /* to use with 1080p in drop_billiard.c- probably the best because it's
+    // choose one of the following according to the comment beside.
+    writetiff(n2, "Billiard in an ellipse", 0, 0, WINWIDTH, WINHEIGHT-40, COMPRESSION_LZW);  /* to use with 1080p in drop_billiard.c- probably the best because it's
                                                                                                 // generating 1080p image, lighter, and then cropping those 40 pixels to
                                                                                                 // avoid the strange band*/
     // writetiff(n2, "Billiard in an ellipse", 0, 0, WINWIDTH, WINHEIGHT-50, COMPRESSION_LZW);  // works for 1080p -> "-50px" band!!!
     // writetiff(n2, "Billiard in an ellipse", 0, 0, 1920, 1080-40, COMPRESSION_LZW);           //another perfect 1080p from 1440p in setup
     // writetiff(n2, "Billiard in an ellipse", -WINWIDTH/8+320, -WINHEIGHT/8+180, WINWIDTH-640, WINHEIGHT-400, COMPRESSION_LZW); // perfect 1040p from 1440p in setup
-    writetiff(n2, "Billiard in an ellipse", 0, 0, WINWIDTH, WINHEIGHT-40, COMPRESSION_LZW);        // _Michael_eux
 }
 
 void write_text_fixedwidth( double x, double y, char *st)

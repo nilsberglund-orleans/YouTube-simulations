@@ -8,8 +8,8 @@
 /*  line to nils.berglund@univ-orleans.fr - Thanks!                              */
 /*                                                                               */
 /*  compile with                                                                 */
-/*  gcc -o drop_billiard drop_billiard.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut                */
-/*  gcc -o drop_billiard drop_billiard.c -O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut                */
+/*  gcc -o drop_billiard drop_billiard.c                                         */
+/*  -O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut                */
 /*                                                                               */
 /*                                                                               */
 /*  To make a video, set MOVIE to 1 and create subfolder tif_drop                */
@@ -110,8 +110,7 @@
 #define NCOLORS 14          /* number of colors */
 #define COLORSHIFT 3        /* hue of initial color */ 
 #define RAINBOW_COLOR 0     /* set to 1 to use different colors for all particles */
-// #define NSEG 100            /* number of segments of boundary */
-#define NSEG 150            /* _eux */
+#define NSEG 150            /* number of segments of boundary */
 #define BILLIARD_WIDTH 4    /* width of billiard */
 #define FRONT_WIDTH 4       /* width of wave front */
 
@@ -122,7 +121,7 @@
 #define PAINT_EXT 1         /* set to 1 to paint exterior of billiard */
 
 #define PAUSE 1000          /* number of frames after which to pause */
-#define PSLEEP 10           /* sleep time during pause */
+#define PSLEEP 1            /* sleep time during pause */
 #define SLEEP1  1           /* initial sleeping time */
 #define SLEEP2  100         /* final sleeping time */
 #define END_FRAMES 0        /* number of frames at end of movie */
