@@ -72,8 +72,11 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define P_RECTANGLE 0     /* rectangle (for test purposes) */
 #define P_TOKARSKY 1      /* Tokarsky unilluminable room */
 #define P_POLYRING 2      /* polygonal ring */
-#define P_SIERPINSKI 3    /* polygonal ring */
+#define P_SIERPINSKI 3    /* sierpinski carpet */
 #define P_VONKOCH 4       /* von Koch curve */
+#define P_POLYGON 5       /* regular polygon, alternative for D_POLYGON */
+#define P_TOKA_PRIME 6    /* Tokarsky room made of 86 triangles */
+#define P_TREE 7          /* pine tree */
 
 /* Color palettes */
 

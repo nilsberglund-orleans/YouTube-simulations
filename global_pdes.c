@@ -43,15 +43,16 @@
 #define D_PENROSE 33            /* Penrose unilluminable room */
 #define D_HYPERBOLA 34          /* one branch of hyperbola */
 #define D_TOKARSKY 35           /* Tokarsky unilluminable room */
-
+#define D_TOKA_PRIME 36         /* Tokarsky room made of 86 triangles */
 #define D_ISOSPECTRAL 37        /* isospectral billiards */
 #define D_HOMOPHONIC 38         /* homophonic billiards */
 
 #define D_POLYGONS 40           /* several polygons */
 #define D_VONKOCH 41            /* von Koch snowflake fractal */
+#define D_STAR 42               /* star shape */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
-#define NMAXPOLY 10000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
+#define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
 // #define NMAXCIRCLES 10000        /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 
 #define C_SQUARE 0          /* square grid of circles */
@@ -67,6 +68,8 @@
 #define C_GOLDEN_MEAN 10    /* pattern based on vertical shifts by golden mean */
 #define C_GOLDEN_SPIRAL 11  /* spiral pattern based on golden mean */
 #define C_SQUARE_HEX 12     /* alternating between square and hexagonal/triangular */
+
+#define C_RINGS 20          /* obstacles arranged in concentruc rings */
 
 #define C_ONE 97            /* one single circle, as for Sinai */
 #define C_TWO 98            /* two concentric circles of different type */
@@ -103,6 +106,8 @@
 #define P_ENERGY 1       /* plot energy of wave */
 #define P_MIXED 2        /* plot amplitude in upper half, energy in lower half */
 #define P_MEAN_ENERGY 3  /* energy averaged over time */
+#define P_LOG_ENERGY 4  /* log of energy averaged over time */
+#define P_LOG_MEAN_ENERGY 5  /* log of energy averaged over time */
 
 /* For Schrodinger equation */
 #define P_MODULE 10        /* plot module of wave function squared */
@@ -134,14 +139,14 @@
 typedef struct
 {
     double xc, yc, radius;      /* center and radius of circle */
-    short int active;           /* circle is active */
+    short int active, top;      /* circle is active, circle is in top half */
 } t_circle;
 
 typedef struct
 {
     double xc, yc, radius, angle;      /* center, radius and angle of polygon */
     int nsides;                         /* number of sides of polygon */
-    short int active;                  /* polygon is active */
+    short int active, top;              /* polygon is active, polygon is in top half */
 } t_polygon;
 
 typedef struct

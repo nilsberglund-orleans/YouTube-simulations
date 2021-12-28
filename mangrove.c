@@ -175,6 +175,7 @@
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define E_SCALE 2500.0     /* scaling factor for energy representation */
+#define LOG_SCALE 1.0    /* scaling factor for energy log representation */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */

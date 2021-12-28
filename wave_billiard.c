@@ -42,27 +42,37 @@
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 #include <omp.h>
 
-#define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define MOVIE 1         /* set to 1 to generate movie */
+#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
 
 /* General geometrical parameters */
 
-#define WINWIDTH 	1280  /* window width */
-#define WINHEIGHT 	720   /* window height */
-
-#define NX 1280          /* number of grid points on x axis */
-#define NY 720          /* number of grid points on y axis */
+#define WINWIDTH 	1920  /* window width */
+#define WINHEIGHT 	1000  /* window height */
+#define NX 1920          /* number of grid points on x axis */
+#define NY 1000          /* number of grid points on y axis */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
-#define YMIN -1.125
-#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+#define YMIN -1.0329
+#define YMAX 1.1129	/* y interval for 9/16 aspect ratio */
+
+// #define WINWIDTH 	1280  /* window width */
+// #define WINHEIGHT 	720   /* window height */
+
+// #define NX 1280          /* number of grid points on x axis */
+// #define NY 720          /* number of grid points on y axis */
+// #define NX 2560          /* number of grid points on x axis */
+// #define NY 1440          /* number of grid points on y axis */
+
+// #define YMIN -1.125
+// #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
 #define JULIA_SCALE 1.0 /* scaling for Julia sets */
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 38       /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 42       /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 2   /* pattern of circles or polygons, see list in global_pdes.c */
 
@@ -70,10 +80,10 @@
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 0.9	    /* parameter controlling the dimensions of domain */
-#define MU 0.03              /* parameter controlling the dimensions of domain */
-#define NPOLY 6             /* number of sides of polygon */
-#define APOLY 2.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define LAMBDA 1.1	    /* parameter controlling the dimensions of domain */
+#define MU 0.4              /* parameter controlling the dimensions of domain */
+#define NPOLY 14             /* number of sides of polygon */
+#define APOLY -1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 5            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
@@ -81,8 +91,6 @@
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
 #define NGRIDX 10           /* number of grid point for grid of disks */
 #define NGRIDY 12           /* number of grid point for grid of disks */
-// #define NGRIDX 16           /* number of grid point for grid of disks */
-// #define NGRIDY 20           /* number of grid point for grid of disks */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
@@ -106,11 +114,9 @@
 
 #define OMEGA 0.002        /* frequency of periodic excitation */
 #define AMPLITUDE 1.0      /* amplitude of periodic excitation */ 
-#define COURANT 0.02       /* Courant number */
+#define COURANT 0.04       /* Courant number */
 #define COURANTB 0.01      /* Courant number in medium B */
 #define GAMMA 0.0          /* damping factor in wave equation */
-// #define GAMMAB 5.0e-3           /* damping factor in wave equation */
-// #define GAMMAB 1.0e-2           /* damping factor in wave equation */
 #define GAMMAB 1.0e-6           /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
 #define GAMMA_TOPBOT 1.0e-7     /* damping factor on boundary */
@@ -128,12 +134,11 @@
 
 /* Parameters for length and speed of simulation */
 
-// #define NSTEPS 500      /* number of frames of movie */
-#define NSTEPS 1500      /* number of frames of movie */
-#define NVID 40          /* number of iterations between images displayed on screen */
+#define NSTEPS 2100      /* number of frames of movie */
+#define NVID 25          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
-#define BOUNDARY_WIDTH 2    /* width of billiard boundary */
+#define BOUNDARY_WIDTH 3    /* width of billiard boundary */
 
 #define PAUSE 1000       /* number of frames after which to pause */
 #define PSLEEP 1         /* sleep time during pause */
@@ -145,8 +150,6 @@
 /* Parameters of initial condition */
 
 #define INITIAL_AMP 0.75         /* amplitude of initial condition */
-// #define INITIAL_VARIANCE 0.0003  /* variance of initial condition */
-// #define INITIAL_WAVELENGTH  0.015 /* wavelength of initial condition */
 #define INITIAL_VARIANCE 0.0003  /* variance of initial condition */
 #define INITIAL_WAVELENGTH  0.015  /* wavelength of initial condition */
 
@@ -158,32 +161,29 @@
 
 /* Color schemes */
 
-#define COLOR_PALETTE 14     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 12     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
 #define COLOR_SCHEME 3   /* choice of color scheme, see list in global_pdes.c  */
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
-// #define SLOPE 0.25        /* sensitivity of color on wave amplitude */
-#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define SLOPE 0.5        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-// #define E_SCALE 150.0     /* scaling factor for energy representation */
-#define E_SCALE 100.0     /* scaling factor for energy representation */
+#define E_SCALE 150.0     /* scaling factor for energy representation */
+#define LOG_SCALE 2.5     /* scaling factor for energy log representation */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
 #define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
 #define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
 #define HUEMEAN 180.0    /* mean value of hue for color scheme C_HUE */
-// #define HUEMEAN 210.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
-// #define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
 
 #define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 2.0    /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 12.0    /* scale of color scheme bar for 2nd part */
-#define ROTATE_COLOR_SCHEME 1   /* set to 1 to draw color scheme horizontally */
+#define COLORBAR_RANGE 6.0    /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 10.0    /* scale of color scheme bar for 2nd part */
+#define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 
 #define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
 
@@ -606,7 +606,7 @@ void draw_color_bar(int plot, double range)
 
 void animation()
 {
-    double time, scale, ratio, startleft[2], startright[2]; 
+    double time, scale, ratio, startleft[2], startright[2], sign; 
     double *phi[NX], *psi[NX], *phi_tmp[NX], *psi_tmp[NX], *total_energy[NX];
     short int *xy_in[NX];
     int i, j, s, sample_left[2], sample_right[2];
@@ -635,7 +635,7 @@ void animation()
     else if (B_DOMAIN == D_POLYGONS) init_polygon_config(polygons);
     printf("Polygons initialized\n");
     
-    /* initialise polyline for von Koch and simular domains */
+    /* initialise polyline for von Koch and similar domains */
     npolyline = init_polyline(MDEPTH, polyline);
     for (i=0; i<npolyline; i++) printf("vertex %i: (%.3f, %.3f)\n", i, polyline[i].x, polyline[i].y);
 
@@ -646,7 +646,7 @@ void animation()
 //     init_circular_wave(0.0, -LAMBDA, phi, psi, xy_in);
     
     /* initialize total energy table */
-    if ((PLOT == P_MEAN_ENERGY)||(PLOT_B == P_MEAN_ENERGY))
+    if ((PLOT == P_MEAN_ENERGY)||(PLOT_B == P_MEAN_ENERGY)||(PLOT == P_LOG_MEAN_ENERGY)||(PLOT_B == P_LOG_MEAN_ENERGY))
         for (i=0; i<NX; i++)
             for (j=0; j<NY; j++) 
                 total_energy[i][j] = 0.0;
@@ -654,12 +654,12 @@ void animation()
     ratio = (XMAX - XMIN)/8.4;  /* for Tokarsky billiard */
     
 //     isospectral_initial_point(0.2, 0.0, startleft, startright);    /* for isospectral billiards */
-    homophonic_initial_point(0.5, -0.25, 1.5, -0.25, startleft, startright);
+//     homophonic_initial_point(0.5, -0.25, 1.5, -0.25, startleft, startright);
 //     homophonic_initial_point(0.5, -0.25, 1.5, -0.25, startleft, startright);
 //     printf("xleft = (%.3f, %.3f) xright = (%.3f, %.3f)\n", startleft[0], startleft[1], startright[0], startright[1]);    
     
-    xy_to_ij(startleft[0], startleft[1], sample_left);
-    xy_to_ij(startright[0], startright[1], sample_right);
+//     xy_to_ij(startleft[0], startleft[1], sample_left);
+//     xy_to_ij(startright[0], startright[1], sample_right);
 //     printf("xleft = (%.3f, %.3f) xright = (%.3f, %.3f)\n", xin_left, yin_left, xin_right, yin_right);
     
 //     init_wave_flat(phi, psi, xy_in);
@@ -670,12 +670,16 @@ void animation()
 //     printf("Initializing wave\n");
 //     init_circular_wave(-1.0, 0.0, phi, psi, xy_in);
 //     printf("Wave initialized\n");
-//     init_circular_wave(0.0, 0.0, phi, psi, xy_in);
+    init_circular_wave(0.0, 0.0, phi, psi, xy_in);
+//     for (i=0; i<3; i++)
+//     {
+//         add_circular_wave(-1.0, 0.6*cos(PID + (double)(i)*DPI/3.0), 0.6*sin(PID + (double)(i)*DPI/3.0), phi, psi, xy_in);
+//     }
 //     add_circular_wave(-1.0, 0.0, LAMBDA, phi, psi, xy_in);
 //     add_circular_wave(1.0, -LAMBDA, 0.0, phi, psi, xy_in);
 //     add_circular_wave(-1.0, 0.0, -LAMBDA, phi, psi, xy_in);
     
-    init_circular_wave_xplusminus(startleft[0], startleft[1], startright[0], startright[1], phi, psi, xy_in);
+//     init_circular_wave_xplusminus(startleft[0], startleft[1], startright[0], startright[1], phi, psi, xy_in);
 
 //     init_circular_wave_xplusminus(-0.9, 0.0, 0.81, 0.0, phi, psi, xy_in);
 //     init_circular_wave(-2.0*ratio, 0.0, phi, psi, xy_in);

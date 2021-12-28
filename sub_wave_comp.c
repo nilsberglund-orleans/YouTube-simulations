@@ -38,10 +38,10 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
             dy = (YMAX - YMIN)/((double)NGRIDY);
             dx = dy*0.5*sqrt(3.0);
             for (i = 0; i < NGRIDX; i++)
-                for (j = 0; j < NGRIDY/2+1; j++)
+                for (j = 0; j < NGRIDY/2+2; j++)
                 {
-                    n = ncircles + (NGRIDY+1)*i/2 + j;
-                    circles[n].xc = ((double)(i-NGRIDX/2))*dy;
+                    n = ncircles + (NGRIDY+2)*i/2 + j;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;
                     y = ((double)j - 0.5)*dy;
                     if ((i+NGRIDX)%2 == 1) y += 0.5*dy;
                     if (top) circles[n].yc = ymean + 0.5*dy + y;
@@ -51,7 +51,7 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                     circles[n].active = 1;
                     circletop[n] = top;
                 }
-            ncircles += NGRIDX*(NGRIDY+1)/2;
+            ncircles += NGRIDX*(NGRIDY+2)/2;
             break;
         }
         case (C_RAND_DISPLACED):
@@ -408,7 +408,7 @@ void init_circle_config_energy(t_circle circles[NMAXCIRCLES])
 }
 
 
-void init_polygon_config_half(int pattern, int top, t_polygon polygons[NMAXCIRCLES])
+void init_polygon_config_half(int pattern, int top, int random_angle, int xdep_angle, t_polygon polygons[NMAXCIRCLES])
 /* initialise the polygon configuration, for billiard shape D_CIRCLES */
 /* uses init_circle_config, this is where C++ would be more elegant */
 {
@@ -425,10 +425,20 @@ void init_polygon_config_half(int pattern, int top, t_polygon polygons[NMAXCIRCL
         polygons[i].active = circle[i].active;
         polygons[i].nsides = NPOLY;
         
-        if (RANDOM_POLY_ANGLE) polygons[i].angle = DPI*(double)rand()/RAND_MAX;
-        else polygons[i].angle = APOLY;
-        
-//         if (i < ncircles) printf("(x,y) = (%.2f, %.2f), r = %.2f, angle = %.2f, sides = %i\n", polygons[i].xc, polygons[i].yc, polygons[i].radius, polygons[i].angle, polygons[i].nsides);
+        if ((top)&&(circletop[i])) 
+        {
+            if (random_angle) polygons[i].angle = DPI*(double)rand()/RAND_MAX;
+            else if (xdep_angle) polygons[i].angle = APOLY + PID*POLY_ROTATION_ANGLE*polygons[i].xc;
+            else polygons[i].angle = APOLY;
+        }
+        else if ((!top)&&(!circletop[i]))
+        {
+            if (random_angle) polygons[i].angle = DPI*(double)rand()/RAND_MAX;
+            else if (xdep_angle) polygons[i].angle = APOLY_B + PID*POLY_ROTATION_ANGLE*polygons[i].xc;
+            else polygons[i].angle = APOLY_B;            
+        }
+            
+        if (i < ncircles) printf("(x,y) = (%.2f, %.2f), r = %.2f, angle = %.2f, sides = %i\n", polygons[i].xc, polygons[i].yc, polygons[i].radius, polygons[i].angle, polygons[i].nsides);
     }
 }
 
@@ -436,8 +446,8 @@ void init_polygon_config_comp(t_polygon polygons[NMAXCIRCLES])
 /* initialise polygon configuration for billiard shape D_POLYGONS */
 {
     ncircles = 0;
-    init_polygon_config_half(CIRCLE_PATTERN, 1, polygons);
-    init_polygon_config_half(CIRCLE_PATTERN_B, 0, polygons);
+    init_polygon_config_half(CIRCLE_PATTERN, 1, RANDOM_POLY_ANGLE, XDEP_POLY_ANGLE, polygons);
+    init_polygon_config_half(CIRCLE_PATTERN_B, 0, RANDOM_POLY_ANGLE_B, XDEP_POLY_ANGLE_B, polygons);
 }
 
 
@@ -526,6 +536,10 @@ void draw_billiard_half(int domain, int pattern, int top)      /* draws the bill
 {
     double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, signtop;
     int i, j, k, k1, k2, mr2;
+    
+    glEnable(GL_SCISSOR_TEST);
+    if (top) glScissor(0.0, YMID, NX, YMID);
+    else glScissor(0.0, 0.0, NX, YMID);
 
     if (BLACK) glColor3f(1.0, 1.0, 1.0);
     else glColor3f(0.0, 0.0, 0.0);
@@ -643,6 +657,8 @@ void draw_billiard_half(int domain, int pattern, int top)      /* draws the bill
             printf("Function draw_billiard not defined for this billiard \n");
         }
     }
+    
+    glDisable(GL_SCISSOR_TEST);
 }
 
 
@@ -707,19 +723,63 @@ void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], doub
         {
             if (((TWOSPEEDS)&&(xy_in[i][j] != 2))||(xy_in[i][j] == 1))
             {
-                if (PLOT == P_AMPLITUDE)
-                    color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
-                else if (PLOT == P_ENERGY)
-                {
-                    energy = compute_energy(phi, psi, xy_in, i, j);
-                    if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, energy, scale, time, rgb);
-                    else color_scheme(COLOR_SCHEME, energy, scale, time, rgb);
+                switch (PLOT) {
+                    case (P_AMPLITUDE):
+                    {
+                        color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
+                        break;
+                    }
+                    case (P_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, energy, scale, time, rgb);
+                        else color_scheme(COLOR_SCHEME, energy, scale, time, rgb);
+                        break;
+                    }
+                    case (P_MIXED):
+                    {
+                        if (j > NY/2) color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
+                        else color_scheme(COLOR_SCHEME, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
+                        break;
+                    }
+//                     case (P_MEAN_ENERGY):
+//                     {
+//                         energy = compute_energy(phi, psi, xy_in, i, j);
+//                         total_energy[i][j] += energy;
+//                         if (COLOR_PALETTE >= COL_TURBO) 
+//                             color_scheme_asym(COLOR_SCHEME, total_energy[i][j]/(double)(time+1), scale, time, rgb);
+//                         else color_scheme(COLOR_SCHEME, total_energy[i][j]/(double)(time+1), scale, time, rgb);
+//                         break;
+//                     }
+                    case (P_LOG_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        color_scheme(COLOR_SCHEME, LOG_SHIFT + LOG_SCALE*log(energy), scale, time, rgb);
+                        break;
+                    }
+//                     case (P_LOG_MEAN_ENERGY):
+//                     {
+//                         energy = compute_energy(phi, psi, xy_in, i, j);
+//                         if (energy == 0.0) energy = 1.0e-20;
+//                         total_energy[i][j] += energy;
+//                         color_scheme(COLOR_SCHEME, LOG_SCALE*log(total_energy[i][j]/(double)(time+1)), scale, time, rgb);
+//                         break;
+//                     }
                 }
-                else if (PLOT == P_MIXED)
-                {
-                    if (j > NY/2) color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
-                    else color_scheme(COLOR_SCHEME, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
-                }
+                    
+//                 if (PLOT == P_AMPLITUDE)
+//                     color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
+//                 else if (PLOT == P_ENERGY)
+//                 {
+//                     energy = compute_energy(phi, psi, xy_in, i, j);
+//                     if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, energy, scale, time, rgb);
+//                     else color_scheme(COLOR_SCHEME, energy, scale, time, rgb);
+//                 }
+//                 else if (PLOT == P_MIXED)
+//                 {
+//                     if (j > NY/2) color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
+//                     else color_scheme(COLOR_SCHEME, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
+//                 }
                 glColor3f(rgb[0], rgb[1], rgb[2]);
 
                 glVertex2i(i, j);
@@ -745,20 +805,29 @@ void compute_energy_tblr(double *phi[NX], double *psi[NX], short int *xy_in[NX],
 /* compute total energy in top/bottom left/right boxes */ 
 {
     int i, j, ij[2];
-    double energy = 0.0, rescale, pos, xleft = XMAX, xright = XMIN, emax = 1.2;
-    double energy_ij[NX][NY];
+    double energy = 0.0, rescale, pos, xleft = XMAX, xright = XMIN, emax = 1.2, xc, r;
+    double *energy_ij[NX];
     static short int first = 1;
     static int ileft, iright, jmid = NY/2; 
     static double sqremax;
     
+    for (i=0; i<NX; i++) energy_ij[i] = (double *)malloc(NY*sizeof(double));
+        
     
     if (first) /* compute box limits */
     {
         /* find leftmost and rightmost circle */
         for (i=0; i<ncircles; i++) 
-            if ((circles[i].active)&&(circles[i].xc - circles[i].radius < xleft)) xleft = circles[i].xc - circles[i].radius; 
-        for (i=0; i<ncircles; i++) 
+        {
+            if ((circles[i].active)&&(circles[i].xc - circles[i].radius < xleft)) xleft = circles[i].xc - circles[i].radius;
+            if ((polygons[i].active)&&(polygons[i].xc - polygons[i].radius < xleft)) xleft = polygons[i].xc - polygons[i].radius;
             if ((circles[i].active)&&(circles[i].xc + circles[i].radius > xright)) xright = circles[i].xc + circles[i].radius; 
+            if ((polygons[i].active)&&(polygons[i].xc + polygons[i].radius > xright)) xright = polygons[i].xc +         polygons[i].radius; 
+        }
+//         for (i=0; i<ncircles; i++) 
+//             if ((circles[i].active)&&(circles[i].xc - circles[i].radius < xleft)) xleft = circles[i].xc - circles[i].radius; 
+//         for (i=0; i<ncircles; i++) 
+//             if ((circles[i].active)&&(circles[i].xc + circles[i].radius > xright)) xright = circles[i].xc + circles[i].radius; 
         
         xy_to_ij(xleft, 0.0, ij);
         ileft = ij[0];
@@ -837,15 +906,26 @@ void compute_energy_tblr(double *phi[NX], double *psi[NX], short int *xy_in[NX],
     
 //     printf("Energies: %.5lg, %.5lg, %.5lg\n %.5lg, %.5lg, %.5lg\n", energies[0], energies[1], energies[2], energies[3], energies[4], energies[5]);
     
+    for (i=0; i<NX; i++) free(energy_ij[i]);
 }
 
 void print_energies(double energies[6], double top_energy, double bottom_energy)
 {
     char message[50];
-    double ytop, ybot, pos[2], centerx = -0.075, boxxright = XMAX - 0.17, textxright = XMAX - 0.28;
+    double ytop, ybot, pos[2], centerx = -0.075, boxxright = XMAX - 0.17, textxright = XMAX - 0.28, boxwidth = 0.1, 
+            boxheight = 0.05, leftboxshift = 0.185, centerboxshift = 0.085;
+
+    /* adapt sizes of text areas to high resolution */
+    if (WINWIDTH > 1280)
+    {
+        boxheight = 0.035;
+//         centerx -= 0.2;
+        boxwidth = 0.08;
+        leftboxshift = 0.16;
+        centerboxshift = 0.06;
+    }
     
     ytop = YMAX - 0.1;
-//     ybot = -0.1;
     ybot = YMIN + 0.05;
     if (DRAW_COLOR_SCHEME) 
     {   
@@ -853,42 +933,42 @@ void print_energies(double energies[6], double top_energy, double bottom_energy)
         textxright -= 0.35;
     }
     
-    erase_area(XMIN + 0.185, ytop + 0.025, 0.1, 0.05);
+    erase_area(XMIN + leftboxshift, ytop + 0.025, boxwidth, boxheight);
 
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.3f", energies[0]/top_energy);
     xy_to_pos(XMIN + 0.1, ytop, pos);
     write_text(pos[0], pos[1], message);
     
-    erase_area(centerx + 0.085, ytop + 0.025, 0.1, 0.05);
+    erase_area(centerx + centerboxshift, ytop + 0.025, boxwidth, boxheight);
 
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.3f", energies[1]/top_energy);
     xy_to_pos(centerx, ytop, pos);
     write_text(pos[0], pos[1], message);
     
-    erase_area(boxxright, ytop + 0.025, 0.15, 0.05);
+    erase_area(boxxright, ytop + 0.025, boxwidth + 0.05, boxheight);
 
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.5f", energies[2]/top_energy);
     xy_to_pos(textxright, ytop, pos);
     write_text(pos[0], pos[1], message);
     
-    erase_area(XMIN + 0.185, ybot + 0.025, 0.1, 0.05);
+    erase_area(XMIN + leftboxshift, ybot + 0.025, boxwidth, boxheight);
 
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.3f", energies[3]/bottom_energy);
     xy_to_pos(XMIN + 0.1, ybot, pos);
     write_text(pos[0], pos[1], message);
 
-    erase_area(centerx + 0.085, ybot + 0.025, 0.1, 0.05);
+    erase_area(centerx + centerboxshift, ybot + 0.025, boxwidth, boxheight);
 
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.3f", energies[4]/bottom_energy);
     xy_to_pos(centerx, ybot, pos);
     write_text(pos[0], pos[1], message);
 
-    erase_area(boxxright, ybot + 0.025, 0.15, 0.05);
+    erase_area(boxxright, ybot + 0.025, boxwidth + 0.05, boxheight);
 
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "%.5f", energies[5]/bottom_energy);

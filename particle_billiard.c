@@ -32,11 +32,8 @@
 
 #define MOVIE 1         /* set to 1 to generate movie */
 
-// #define WINWIDTH 	1280  /* window width */
-// #define WINHEIGHT 	720   /* window height */
-
-#define WINWIDTH 	1920  /* window width */
-#define WINHEIGHT 	1080   /* window height */
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
@@ -50,7 +47,7 @@
 #define B_DOMAIN 30     /* choice of domain shape */
 
 #define CIRCLE_PATTERN 1    /* pattern of circles */
-#define POLYLINE_PATTERN 1  /* pattern of polyline */
+#define POLYLINE_PATTERN 6  /* pattern of polyline */
 
 #define ABSORBING_CIRCLES 1 /* set to 1 for circular scatterers to be absorbing */
 
@@ -64,10 +61,8 @@
 #define NGOLDENSPIRAL 2000  /* max number of points for C_GOLDEN_SPIRAL arrandement */
 #define SDEPTH 1            /* Sierpinski gastket depth */
 
-#define LAMBDA 1.8	/* parameter controlling shape of domain */
-#define MU 0.01          /* second parameter controlling shape of billiard */
-// #define LAMBDA 0.3	/* parameter controlling shape of domain */
-// #define MU 0.7          /* second parameter controlling shape of billiard */
+#define LAMBDA 0.8	/* parameter controlling shape of domain */
+#define MU 0.0025        /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
@@ -80,21 +75,21 @@
 
 /* Simulation parameters */
 
-#define NPART 5000        /* number of particles */
+#define NPART 1     /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
-#define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
+#define SHOWTRAILS 1    /* set to 1 to keep trails of the particles */
 #define SHOWZOOM 1      /* set to 1 to show zoom on specific area */
 #define PRINT_PARTICLE_NUMBER 0 /* set to 1 to print number of particles */
+#define PRINT_COLLISION_NUMBER 1 /* set to 1 to print number of collisions */
 #define TEST_ACTIVE 1   /* set to 1 to test whether particle is in billiard */
 
-#define NSTEPS 5000      /* number of frames of movie */
-#define TIME 400         /* time between movie frames, for fluidity of real-time simulation */ 
-// #define DPHI 0.00001    /* integration step */
-#define DPHI 0.00005    /* integration step */
-#define NVID 150         /* number of iterations between images displayed on screen */
+#define NSTEPS 9000      /* number of frames of movie */
+#define TIME 1500         /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.00001    /* integration step */
+#define NVID 300         /* number of iterations between images displayed on screen */
 
 /* Decreasing TIME accelerates the animation and the movie                               */
 /* For constant speed of movie, TIME*DPHI should be kept constant                        */
@@ -104,23 +99,23 @@
 
 /* Colors and other graphical parameters */
 
-#define COLOR_PALETTE 10     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 16     /* Color palette, see list in global_pdes.c  */
 
-#define NCOLORS 16       /* number of colors */
+#define NCOLORS 32       /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
-#define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
+#define RAINBOW_COLOR 0  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
-#define LENGTH 0.025        /* length of velocity vectors */
-#define BILLIARD_WIDTH 3    /* width of billiard */
-#define PARTICLE_WIDTH 2    /* width of particles */
+#define LENGTH 0.015       /* length of velocity vectors */
+#define BILLIARD_WIDTH 2    /* width of billiard */
+#define PARTICLE_WIDTH 3    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
 
 #define BLACK 1             /* set to 1 for black background */
 #define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 
 #define OUTER_COLOR 270.0   /* color outside billiard */
 #define PAINT_INT 0         /* set to 1 to paint interior in other color (for polygon/Reuleaux) */
-#define PAINT_EXT 0         /* set to 1 to paint exterior */
+#define PAINT_EXT 1         /* set to 1 to paint exterior */
 
 #define PAUSE 1000       /* number of frames after which to pause */
 #define PSLEEP 1         /* sleep time during pause */
@@ -131,6 +126,7 @@
 #include "global_particles.c"
 #include "sub_part_billiard.c"
 
+int ncollisions = 0;
 
 /*********************/
 /* animation part    */
@@ -253,11 +249,17 @@ void init_line_config(double x0, double y0, double x1, double y1, double angle, 
     }
 }
 
-void draw_zoom(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTMAX], double x_target, double y_target, double width)
+void draw_zoom(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTMAX], 
+               double x_target, double y_target, double width, double shiftx, double shifty, double zoomwidth, int shooter)
 /* draw zoom around target (for laser in room of mirrors) */
 {
     int i;
-    double x1, y1, x2, y2, xb, yb, cosphi, sinphi, rgb[3], shiftx = 0.0, shifty = 0.65, tradius, phi, zoomwidth = 0.4;
+    double x1, y1, x2, y2, xb, yb, cosphi, sinphi, rgb[3], tradius, phi;
+//     double x1, y1, x2, y2, xb, yb, cosphi, sinphi, rgb[3], shiftx = 0.0, shifty = 0.65, tradius, phi, zoomwidth = 0.4;
+    
+//     shiftx = 1.65;
+//     shifty = 0.75;
+//     zoomwidth = 0.3;
     
     glEnable(GL_LINE_SMOOTH);
     glColor3f(1.0, 1.0, 1.0);
@@ -308,17 +310,10 @@ void draw_zoom(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTM
     /* draw target in zoom */
     glLineWidth(BILLIARD_WIDTH*2);
     
-    glColor3f(0.0, 0.8, 0.2);
-    glBegin(GL_LINE_LOOP);
+    if (shooter) glColor3f(1.0, 0.0, 0.0);
+    else glColor3f(0.0, 0.8, 0.2);
     tradius = zoomwidth*MU/width;
-    for (i=0; i<=NSEG; i++)
-    {
-        phi = (double)i*DPI/(double)NSEG;
-        x1 = shiftx + tradius*cos(phi);
-        y1 = shifty + tradius*sin(phi);
-        glVertex2d(x1, y1);
-    }
-    glEnd ();
+    draw_circle(shiftx, shifty, tradius, NSEG);
     
 //     glLineWidth(PARTICLE_WIDTH*2);
     
@@ -442,7 +437,12 @@ void draw_config_showtrails(int color[NPARTMAX], double *configs[NPARTMAX], int 
     }
     if (DRAW_BILLIARD) draw_billiard();    
     
-    if (SHOWZOOM) draw_zoom(color, configs, active, 0.95, 0.0, 0.1);
+    if (SHOWZOOM) 
+    {
+        draw_zoom(color, configs, active, x_target, y_target, 0.1, 1.65, 0.75, 0.3, 0);
+        draw_zoom(color, configs, active, x_shooter, y_shooter, 0.1, -1.65, 0.75, 0.3, 1);    
+    }
+//     if (SHOWZOOM) draw_zoom(color, configs, active, 0.95, 0.0, 0.1);
 }
 
 
@@ -547,7 +547,12 @@ void draw_config(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPAR
     }
     if (DRAW_BILLIARD) draw_billiard();    
     
-    if (SHOWZOOM) draw_zoom(color, configs, active, 0.95, 0.0, 0.1);
+    if (SHOWZOOM) 
+    {
+        draw_zoom(color, configs, active, x_target, y_target, 0.1, 1.65, 0.75, 0.3, 0);
+        draw_zoom(color, configs, active, x_shooter, y_shooter, 0.1, -1.65, 0.75, 0.3, 1);     
+    }
+//     if (SHOWZOOM) draw_zoom(color, configs, active, 0.95, 0.0, 0.1);
 }
 
 
@@ -564,7 +569,9 @@ void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX], int a
             {    
 //                 printf("reflecting particle %i\n", i);
                 c = vbilliard(configs[i]);
+                
                 if ((ABSORBING_CIRCLES)&&(c < 0)) active[i] = 0;
+                else ncollisions++;
 //                 if (c>=0) color[i]++;
                 if ((!RAINBOW_COLOR)&&(c>=0)) color[i]++;
                 if (!RAINBOW_COLOR)
@@ -606,13 +613,25 @@ void print_part_number(double *configs[NPARTMAX], int active[NPARTMAX], double x
     
 }
 
-
+void print_collision_number(int ncollisions, double x, double y)
+{
+    char message[50];
+    double rgb[3];
+            
+    hsl_to_rgb(0.0, 0.0, 0.0, rgb);
+    erase_area(x, y, 0.5, 0.1, rgb);
+    
+    glColor3f(1.0, 1.0, 1.0);
+    sprintf(message, "%i collisions", ncollisions);
+    write_text(x, y, message);
+    
+}
 
 void animation()
 {
-    double time, dt, alpha, r, rgb[3];
+    double time, dt, alpha, r, rgb[3], alphamax;
     double *configs[NPARTMAX];
-    int i, j, resamp = 1, s, i1, i2;
+    int i, j, resamp = 1, s, i1, i2, c, lengthmax;
     int *color, *newcolor, *active;
 //     t_circle *circles;      /* experimental */
     
@@ -630,7 +649,15 @@ void animation()
         ||(B_DOMAIN == D_CIRCLES_IN_TORUS)) init_circles(circles);
     
     else if (B_DOMAIN == D_POLYLINE) init_polyline(polyline, circles);
-      
+
+    if (POLYLINE_PATTERN == P_TOKA_PRIME)
+    {
+        x_shooter = -polyline[84].x1;
+        y_shooter = polyline[84].y1;
+        x_target = polyline[84].x1;
+        y_target = polyline[84].y1;
+    }
+
     /* initialize system by putting particles in a given point with a range of velocities */
     r = cos(PI/(double)NPOLY)/cos(DPI/(double)NPOLY);
     
@@ -642,8 +669,35 @@ void animation()
 //     init_drop_config(-1.0 + 0.3*sqrt(2.0), -1.0 + 0.5*sqrt(2.0), 0.0, DPI, configs);
 
 //     init_line_config(-1.25, -0.5, -1.25, 0.5, 0.0, configs);   
-//     init_drop_config(0.0, 0.0, -PI, PI, configs);    
-    init_drop_config(-0.95, 0.0, PI, 3.0*PI, configs);
+//     init_drop_config(-0.95, 0.0, -0.103 + DPI/15.0, -0.1 + DPI/15.0, configs);
+    
+    /* find long trajectory */
+//     alphamax = 0.0;
+//     lengthmax = 1;
+//     for (alpha = 0.0; alpha < DPI; alpha += 0.00001)
+//     {
+//         init_drop_config(x_shooter, y_shooter, alpha, alpha + DPI, configs);
+//         i = 0;
+//         c = 1;
+//         while ((c >= 0)&&(i<=1000))
+//         {    
+//             c = vbilliard(configs[0]);
+//             i++;
+//         }
+//         if (i > 100) printf("Angle %.6lg, length %i\n", alpha, i);
+//         if (i > lengthmax)
+//         {
+//             lengthmax = i;
+//             alphamax = alpha;
+//         }
+//     }
+//     printf("Angle %.6lg, max length %i\n", alphamax, lengthmax);
+    
+    alphamax = 2.50949;
+    init_drop_config(x_shooter, y_shooter, alphamax, alphamax + DPI, configs);
+    
+    
+//     init_drop_config(-0.95, 0.0, 1.0, 1.0 + DPI, configs);    
 //     init_drop_config(-1.3, -0.1, 0.0, DPI, configs);    
 //     init_drop_config(1.4, 0.1, 0.0, DPI, configs);    
 //     init_drop_config(0.5, 0.5, -1.0, 1.0, configs);    
@@ -663,7 +717,8 @@ void animation()
     glColor3f(0.0, 0.0, 0.0);
     if (DRAW_BILLIARD) draw_billiard();
     if (PRINT_PARTICLE_NUMBER) print_part_number(configs, active, XMIN + 0.1, YMIN + 0.1);
-  
+    else if (PRINT_COLLISION_NUMBER) print_collision_number(ncollisions, XMIN + 0.1, YMIN + 0.1);
+    
     glutSwapBuffers();   
   
   
@@ -716,6 +771,8 @@ void animation()
 //         draw_config(newcolor, configs, active);
         if (DRAW_BILLIARD) draw_billiard();
         if (PRINT_PARTICLE_NUMBER) print_part_number(configs, active, XMIN + 0.1, YMIN + 0.1);
+        else if (PRINT_COLLISION_NUMBER) print_collision_number(ncollisions, XMIN + 0.1, YMIN + 0.1);
+    
         for (j=0; j<NPARTMAX; j++) color[j] = newcolor[j];
         
         /* draw initial points */

@@ -109,8 +109,7 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
   TIFFSetField(file, TIFFTAG_ROWSPERSTRIP, 1);
   TIFFSetField(file, TIFFTAG_IMAGEDESCRIPTION, description);
   p = image;
-
-  for (i = height - 1; i >= 0; i--)
+  for (i = height - 1; i >= 0; i--) 
   {
 //     if (TIFFWriteScanline(file, p, height - i - 1, 0) < 0) 
     if (TIFFWriteScanline(file, p, i, 0) < 0) 
@@ -121,10 +120,10 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
     }
     p += width * sizeof(GLubyte) * 3;
   }
-  free(image); /* prenvents RAM consumption*/
   TIFFClose(file);
   return 0;
 }
+
   
 void init()		/* initialisation of window */
 {
@@ -135,6 +134,8 @@ void init()		/* initialisation of window */
 
     glOrtho(XMIN, XMAX, YMIN, YMAX , -1.0, 1.0);
 }
+
+
 
 void rgb_color_scheme(int i, double rgb[3]) /* color scheme */
 {
@@ -171,13 +172,14 @@ void blank()
     
     if (COLOR_OUTSIDE)
     {
-        hsl_to_rgb(OUTER_COLOR, 0.9, 0.15, rgb);
+        hsl_to_rgb(OUTER_COLOR, 0.9, 0.15, rgb); 
         glClearColor(rgb[0], rgb[1], rgb[2], 1.0);
     }
     else if (BLACK) glClearColor(0.0, 0.0, 0.0, 1.0);
     else glClearColor(1.0, 1.0, 1.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 }
+
 
 void save_frame()
 {
@@ -191,15 +193,11 @@ void save_frame()
     sprintf(strstr(n2,"."), format, counter);
     strcat(n2, ".tif");
     printf(" saving frame %s \n",n2);
-    
-    // choose one of the following according to the comment beside.
-    writetiff(n2, "Billiard in an ellipse", 0, 0, WINWIDTH, WINHEIGHT-40, COMPRESSION_LZW);  /* to use with 1080p in drop_billiard.c- probably the best because it's
-                                                                                                // generating 1080p image, lighter, and then cropping those 40 pixels to
-                                                                                                // avoid the strange band*/
-    // writetiff(n2, "Billiard in an ellipse", 0, 0, WINWIDTH, WINHEIGHT-50, COMPRESSION_LZW);  // works for 1080p -> "-50px" band!!!
-    // writetiff(n2, "Billiard in an ellipse", 0, 0, 1920, 1080-40, COMPRESSION_LZW);           //another perfect 1080p from 1440p in setup
-    // writetiff(n2, "Billiard in an ellipse", -WINWIDTH/8+320, -WINHEIGHT/8+180, WINWIDTH-640, WINHEIGHT-400, COMPRESSION_LZW); // perfect 1040p from 1440p in setup
+    writetiff(n2, "Billiard in an ellipse", 0, 0,
+         WINWIDTH, WINHEIGHT, COMPRESSION_LZW);
+
 }
+
 
 void write_text_fixedwidth( double x, double y, char *st)
 {
@@ -1173,28 +1171,6 @@ void draw_billiard()      /* draws the billiard boundary */
                  draw_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG);
             break; 
         }
-//         {
-//             rgb[0] = 0.0; rgb[1] = 0.0; rgb[2] = 0.0;
-//             for (k=0; k<ncircles; k++) if (circleactive[k])
-//             {
-//                 printf("k = %i, color = %i\n", k, circlecolor[k]);
-//                 if (circlecolor[k] == 0) draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb);
-//                 else
-//                 {
-//                     if (newcircle[k] >= 1)
-//                     {
-//                         rgb_color_scheme_lum(circlecolor[k], 0.85, rgb1);
-//                         newcircle[k]--;
-//                     }
-//                     else rgb_color_scheme(circlecolor[k], rgb1);
-//                     draw_colored_circle(circlex[k], circley[k], circlerad[k], NSEG, rgb1);
-//                 }
-//             }
-//             init_billiard_color();
-//             for (k=0; k<ncircles; k++) if (circleactive[k])
-//                  draw_circle(circlex[k], circley[k], circlerad[k], NSEG);
-//             break; 
-//         }
         case (D_CIRCLES_IN_RECT):
         {
             rgb[0] = 0.0; rgb[1] = 0.0; rgb[2] = 0.0;
@@ -1343,13 +1319,24 @@ void draw_billiard()      /* draws the billiard boundary */
                 glVertex2d(polyline[k].x2, polyline[k].y2);
                 glEnd();
             }
-            if ((FOCI)&&(POLYLINE_PATTERN == P_TOKARSKY))
+            if (FOCI)
             {
-                glLineWidth(2);
-                rgb[0] = 1.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
-                draw_colored_circle(-0.95, 0.0, r, NSEG, rgb);
-                rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
-                draw_colored_circle(0.95, 0.0, r, NSEG, rgb);
+                if (POLYLINE_PATTERN == P_TOKARSKY)
+                {
+                    glLineWidth(2);
+                    rgb[0] = 1.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+                    draw_colored_circle(-0.95, 0.0, r, NSEG, rgb);
+                    rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
+                    draw_colored_circle(0.95, 0.0, r, NSEG, rgb);
+                }
+                else if (POLYLINE_PATTERN == P_TOKA_PRIME)
+                {
+                    glLineWidth(2);
+                    rgb[0] = 1.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+                    draw_colored_circle(-polyline[84].x1, polyline[84].y1, r, NSEG, rgb);
+                    rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
+                    draw_colored_circle(polyline[84].x1, polyline[84].y1, r, NSEG, rgb);
+                }
             }
             if (ABSORBING_CIRCLES)
             {
@@ -4747,7 +4734,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
 
         c = pos_polyline(config, pos, &alpha);
         
-        c = vpolyline_xy(config, alpha, pos);
+        vpolyline_xy(config, alpha, pos);
+//         c = vpolyline_xy(config, alpha, pos);
 	
 	return(c);
  }
@@ -5679,11 +5667,43 @@ int add_rectangle_to_polyline(double xc, double yc, double width, double height,
     return(1);
 }
 
+
+int axial_symmetry_tsegment(t_segment z1, t_segment z2, t_segment z, t_segment *zprime)
+/* compute reflection of point z wrt axis through z1 and z2 */
+{
+    double r, zdotu;
+    t_segment u, zparallel, zperp;
+    
+    /* compute unit vector parallel to z1-z2 */
+    u.x1 = z2.x1 - z1.x1;
+    u.y1 = z2.y1 - z1.y1;
+    r = module2(u.x1, u.y1);
+    if (r == 0) return(0);      /* z1 and z2 are the same */
+    
+    u.x1 = u.x1/r;
+    u.y1 = u.y1/r;
+    
+    /* projection of z1z on z1z2 */
+    zdotu = (z.x1 - z1.x1)*u.x1 + (z.y1 - z1.y1)*u.y1;
+    zparallel.x1 = zdotu*u.x1;
+    zparallel.y1 = zdotu*u.y1;
+    
+    /* normal vector to z1z2 */
+    zperp.x1 = z.x1 - z1.x1 - zparallel.x1;
+    zperp.y1 = z.y1 - z1.y1 - zparallel.y1;
+    
+    /* reflected point */
+    zprime->x1 = z.x1 - 2.0*zperp.x1;
+    zprime->y1 = z.y1 - 2.0*zperp.y1;
+    
+    return(1);
+}
+
 void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
 {
     int i, j, k, l, n, z, ii, jj, terni[SDEPTH], ternj[SDEPTH], quater[SDEPTH], cond;
     short int vkoch[NMAXCIRCLES], turnright; 
-    double ratio, omega, angle, sw, length, dist, x, y;
+    double ratio, omega, angle, sw, length, dist, x, y, ta, tb, a, b;
     
     switch (POLYLINE_PATTERN) {
         case (P_RECTANGLE):
@@ -5930,6 +5950,139 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
             }
             
             break;
+        }
+        case (P_POLYGON):
+        {
+            nsides = NPOLY;
+            ncircles = 0;
+            omega = DPI/(double)NPOLY;
+            sw = sin(omega/2.0);
+            
+            for (i=0; i<NPOLY; i++)
+            {
+                angle = APOLY + (double)i*omega;
+                polyline[i].x1 = LAMBDA*cos(angle);
+                polyline[i].y1 = LAMBDA*sin(angle);
+                polyline[i].angle = angle + PID + 0.5*omega;
+                polyline[i].length = 2.0*LAMBDA*sw;
+            }
+            for (i=0; i<NPOLY; i++)
+            {
+                polyline[i].x2 = polyline[(i+1)%NPOLY].x1;
+                polyline[i].y2 = polyline[(i+1)%NPOLY].y1;
+            }
+                
+            for (i=0; i<nsides; i++) polyline[i].color = 0;
+                            
+            break;
+        }
+        case (P_TOKA_PRIME):
+        {
+            nsides = 84;
+            ncircles = 84;
+            
+            polyline[0].x1 = 0.0;
+            polyline[0].y1 = 1.0;
+    
+            polyline[42].x1 = 0.0;
+            polyline[42].y1 = 1.0 - LAMBDA;
+    
+            ta = tan(0.05*PI);
+            tb = tan(0.4*PI);
+    
+            a = LAMBDA*tb/(ta + tb);
+            b = a*ta;
+    
+            polyline[41].x1 = b;
+            polyline[41].y1 = 1.0 - a;
+    
+            axial_symmetry_tsegment(polyline[0], polyline[41], polyline[42], &polyline[40]);
+            axial_symmetry_tsegment(polyline[0], polyline[40], polyline[41], &polyline[1]);
+            axial_symmetry_tsegment(polyline[40], polyline[1], polyline[0], &polyline[84]);
+            
+            axial_symmetry_tsegment(polyline[1], polyline[84], polyline[40], &polyline[2]);
+            for (i=2; i<39; i++)
+                axial_symmetry_tsegment(polyline[i], polyline[84], polyline[i-1], &polyline[i+1]);
+    
+            for (i=1; i<42; i++)
+            {
+                polyline[84-i].x1 = -polyline[i].x1;
+                polyline[84-i].y1 = polyline[i].y1;
+            }
+            
+            printf("xc = %.5f, yc = %.5f\n", polyline[84].x1, polyline[84].y1);
+    
+            for (i=0; i<nsides; i++)
+            {
+//                 polyline[i].x1 += -MU;
+                x = polyline[(i+1)%nsides].x1;
+                y = polyline[(i+1)%nsides].y1;
+                
+                polyline[i].x2 = x;
+                polyline[i].y2 = y;
+                polyline[i].length = module2(x - polyline[i].x1, y - polyline[i].y1);
+                polyline[i].angle = argument(x - polyline[i].x1, y - polyline[i].y1);
+            }
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].xc = polyline[i].x1;
+                circles[i].yc = polyline[i].y1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
+            }
+    
+            break;
+        }
+        case (P_TREE):
+        {
+            nsides = 11;
+            ncircles = 11;
+            
+            polyline[0].x1 = 0.85;
+            polyline[0].y1 = -1.0;
+            
+            polyline[1].x1 = 0.4;
+            polyline[1].y1 = -0.4;
+            
+            polyline[2].x1 = 0.65;
+            polyline[2].y1 = -0.4;
+            
+            polyline[3].x1 = 0.25;
+            polyline[3].y1 = 0.2;
+            
+            polyline[4].x1 = 0.5;
+            polyline[4].y1 = 0.2;
+            
+            polyline[5].x1 = 0.0;
+            polyline[5].y1 = 1.0;
+            
+            for (i=6; i<11; i++)
+            {
+                polyline[i].x1 = -polyline[10-i].x1;
+                polyline[i].y1 = polyline[10-i].y1;
+            }
+
+            for (i=0; i<nsides; i++)
+            {
+                x = polyline[(i+1)%nsides].x1;
+                y = polyline[(i+1)%nsides].y1;
+                
+                polyline[i].x2 = x;
+                polyline[i].y2 = y;
+                polyline[i].length = module2(x - polyline[i].x1, y - polyline[i].y1);
+                polyline[i].angle = argument(x - polyline[i].x1, y - polyline[i].y1);
+            }
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].xc = polyline[i].x1;
+                circles[i].yc = polyline[i].y1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
+            }
+    
+            
         }
     }
 }

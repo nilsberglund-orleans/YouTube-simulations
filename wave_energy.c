@@ -49,6 +49,7 @@
 
 #define NX 1280          /* number of grid points on x axis */
 #define NY 720          /* number of grid points on y axis */
+#define YMID 360        /* mid point of display */
 
 // #define XMIN -1.777777778
 // #define XMAX 1.777777778	/* x interval */
@@ -72,12 +73,18 @@
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
+#define RANDOM_POLY_ANGLE_B 0 /* set to 1 to randomize angle of polygons */
+
+#define XDEP_POLY_ANGLE 0   /* set to 1 to rotate polygons depending on x coordinate */
+#define XDEP_POLY_ANGLE_B 1   /* set to 1 to rotate polygons depending on x coordinate */
+#define POLY_ROTATION_ANGLE -0.645 /* rotation angle for |x|=1 in units of Pi/2 */
 
 #define LAMBDA 0.75	    /* parameter controlling the dimensions of domain */
 #define MU 0.03 	    /* parameter controlling the dimensions of domain */
 #define MUB 0.03	    /* parameter controlling the dimensions of domain */
 #define NPOLY 3             /* number of sides of polygon */
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define APOLY_B 0.335         /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 4            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
@@ -164,6 +171,8 @@
 #define SLOPE 10.0        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define E_SCALE 500.0     /* scaling factor for energy representation */
+#define LOG_SCALE 1.5     /* scaling factor for energy log representation */
+#define LOG_SHIFT 1.0     /* shift of colors on log scale */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */

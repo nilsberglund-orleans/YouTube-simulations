@@ -4,6 +4,59 @@
 
 #include "colors_waves.c"
 
+int writetiff_new(char *filename, char *description, int x, int y, int width, int height, int compression)
+{
+  TIFF *file;
+  GLubyte *image, *p;
+  int i;
+
+  file = TIFFOpen(filename, "w");
+  if (file == NULL) 
+  {
+    return 1;
+  }
+
+  image = (GLubyte *) malloc(width * height * sizeof(GLubyte) * 3);
+
+  /* OpenGL's default 4 byte pack alignment would leave extra bytes at the
+     end of each image row so that each full row contained a number of bytes
+     divisible by 4.  Ie, an RGB row with 3 pixels and 8-bit componets would
+     be laid out like "RGBRGBRGBxxx" where the last three "xxx" bytes exist
+     just to pad the row out to 12 bytes (12 is divisible by 4). To make sure
+     the rows are packed as tight as possible (no row padding), set the pack
+     alignment to 1. */
+
+  glPixelStorei(GL_PACK_ALIGNMENT, 1);
+
+  glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
+  TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (uint32) width);
+  TIFFSetField(file, TIFFTAG_IMAGELENGTH, (uint32) height);
+  TIFFSetField(file, TIFFTAG_BITSPERSAMPLE, 8);
+  TIFFSetField(file, TIFFTAG_COMPRESSION, compression);
+  TIFFSetField(file, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
+  TIFFSetField(file, TIFFTAG_ORIENTATION, ORIENTATION_BOTLEFT);
+  TIFFSetField(file, TIFFTAG_SAMPLESPERPIXEL, 3);
+  TIFFSetField(file, TIFFTAG_PLANARCONFIG, PLANARCONFIG_CONTIG);
+  TIFFSetField(file, TIFFTAG_ROWSPERSTRIP, 1);
+  TIFFSetField(file, TIFFTAG_IMAGEDESCRIPTION, description);
+  p = image;
+
+  for (i = height - 1; i >= 0; i--)
+  {
+//     if (TIFFWriteScanline(file, p, height - i - 1, 0) < 0) 
+    if (TIFFWriteScanline(file, p, i, 0) < 0) 
+    {
+      free(image);
+      TIFFClose(file);
+      return 1;
+    }
+    p += width * sizeof(GLubyte) * 3;
+  }
+  free(image); /* prenvents RAM consumption*/
+  TIFFClose(file);
+  return 0;
+}
+
 
 int writetiff(char *filename, char *description, int x, int y, int width, int height, int compression)
 {
@@ -68,18 +121,59 @@ void init()		/* initialisation of window */
     glOrtho(0.0, NX, 0.0, NY, -1.0, 1.0);
 }
 
-
-
-
-
-
-
 void blank()
 {
     if (BLACK) glClearColor(0.0, 0.0, 0.0, 1.0);
     else glClearColor(1.0, 1.0, 1.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 }
+
+
+void test_save_frame()  /* some tests with various resolutions */
+{
+  static int counter = 0;
+  char *name="wave.", n2[100];
+  char format[6]=".%05i";
+  
+    counter++; 
+//     printf (" p2 counter = %d \n",counter);
+    strcpy(n2, name);
+    sprintf(strstr(n2,"."), format, counter);
+    strcat(n2, ".tif");
+    printf(" saving frame %s \n",n2);
+    writetiff(n2, "Wave equation in a planar domain", 0, 0, WINWIDTH, WINHEIGHT, COMPRESSION_LZW);  // works for 1080p -> "-50px" 
+    // choose one of the following according to the comment beside.
+//     writetiff(n2, "Wave equation in a planar domain", 0, 0, WINWIDTH, WINHEIGHT-40, COMPRESSION_LZW);  
+    /* to use with 1080p in drop_billiard.c- probably the best because it's
+                                                                                                // generating 1080p image, lighter, and then cropping those 40 pixels to
+                                                                                                // avoid the strange band*/
+//     writetiff(n2, "Wave equation in a planar domain", 0, 0, WINWIDTH, WINHEIGHT-50, COMPRESSION_LZW);  // works for 1080p -> "-50px" band!!!
+    // writetiff(n2, "Wave equation in a planar domain", 0, 0, 1920, 1080-40, COMPRESSION_LZW);           //another perfect 1080p from 1440p in setup
+    // writetiff(n2, "Wave equation in a planar domain", -WINWIDTH/8+320, -WINHEIGHT/8+180, WINWIDTH-640, WINHEIGHT-400, COMPRESSION_LZW); // perfect 1040p from 1440p in setup
+}
+
+void test_save_frame_counter(int counter)  /* some tests with various resolutions */
+/* same as save_frame, but with imposed image number (for option DOUBLE_MOVIE) */
+{
+  char *name="wave.", n2[100];
+  char format[6]=".%05i";
+  
+    strcpy(n2, name);
+    sprintf(strstr(n2,"."), format, counter);
+    strcat(n2, ".tif");
+    printf(" saving frame %s \n",n2);
+    writetiff(n2, "Wave equation in a planar domain", 0, 0, WINWIDTH, WINHEIGHT, COMPRESSION_LZW);  // works for 1080p -> "-50px" 
+    
+    // choose one of the following according to the comment beside.
+//     writetiff(n2, "Wave equation in a planar domain", 0, 0, WINWIDTH, WINHEIGHT-40, COMPRESSION_LZW);  
+    /* to use with 1080p in drop_billiard.c- probably the best because it's
+                                                                                                // generating 1080p image, lighter, and then cropping those 40 pixels to
+                                                                                                // avoid the strange band*/
+//     writetiff(n2, "Wave equation in a planar domain", 0, 0, WINWIDTH, WINHEIGHT-50, COMPRESSION_LZW);  // works for 1080p -> "-50px" band!!!
+    // writetiff(n2, "Wave equation in a planar domain", 0, 0, 1920, 1080-40, COMPRESSION_LZW);           //another perfect 1080p from 1440p in setup
+    // writetiff(n2, "BWave equation in a planar domain", -WINWIDTH/8+320, -WINHEIGHT/8+180, WINWIDTH-640, WINHEIGHT-400, COMPRESSION_LZW); // perfect 1040p from 1440p in setup
+}
+
 
 
 
@@ -419,7 +513,7 @@ void init_circle_config(t_circle circles[NMAXCIRCLES])
 /* for billiard shape D_CIRCLES */
 {
     int i, j, k, n, ncirc0, n_p_active, ncandidates=5000, naccepted; 
-    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, dpoisson = 3.25*MU, xx[4], yy[4];
+    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, dpoisson = 3.25*MU, xx[4], yy[4], dr, dphi;
     short int active_poisson[NMAXCIRCLES], far;
     
     switch (CIRCLE_PATTERN) {
@@ -728,6 +822,26 @@ void init_circle_config(t_circle circles[NMAXCIRCLES])
                 }
             break;
         }
+        case (C_RINGS):
+        {
+            ncircles = NGRIDX*NGRIDY;
+            dphi = DPI/((double)NGRIDX);
+            dr = 0.5*LAMBDA/(double)NGRIDY;
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY; j++)
+                {
+                    n = NGRIDY*i + j;
+                    phi = (double)i*dphi;
+                    r = 0.5*LAMBDA + (double)j*dr;
+                    circles[n].xc = r*cos(phi);
+                    circles[n].yc = r*sin(phi);
+                    circles[n].radius = MU;
+                    /* activate only circles that intersect the domain */
+                    if ((circles[n].yc < YMAX + MU)&&(circles[n].yc > YMIN - MU)) circles[n].active = 1;
+                    else circles[n].active = 0;
+                }
+            break;
+        }
         case (C_ONE):
         {
             circles[ncircles].xc = 0.0;
@@ -785,7 +899,11 @@ void init_polygon_config(t_polygon polygons[NMAXCIRCLES])
 /*        
         if (i < ncircles) printf("(x,y) = (%.2f, %.2f), r = %.2f, angle = %.2f, sides = %i\n", polygons[i].xc, polygons[i].yc, polygons[i].radius, polygons[i].angle, polygons[i].nsides);*/
     }
-
+    
+    /* adjust angles for C_RINGS configuration */
+    if (CIRCLE_PATTERN == C_RINGS)
+        for (i=0; i<ncircles; i++) if (polygons[i].active)
+            polygons[i].angle += argument(polygons[i].xc, polygons[i].yc)/PID;
 }
     
 int axial_symmetry(double z1[2], double z2[2], double z[2], double zprime[2])
@@ -943,6 +1061,51 @@ void compute_isospectral_coordinates(int type, int ishift, double xshift, double
 }
 
 
+int compute_tokaprime_coordinates(double xshift, t_vertex polyline[NMAXPOLY])
+/* compute positions of vertices of Tokarsky room made of 86 triangles */
+{
+    double ta, tb, a, b, pos[2];
+    int i;
+    
+    polyline[0].x = 0.0;
+    polyline[0].y = 1.0;
+    
+    polyline[1].x = 0.0;
+    polyline[1].y = 1.0 - LAMBDA;
+    
+    ta = tan(0.05*PI);
+    tb = tan(0.4*PI);
+    
+    a = LAMBDA*tb/(ta + tb);
+    b = a*ta;
+    
+    polyline[2].x = b;
+    polyline[2].y = 1.0 - a;
+    
+    axial_symmetry_tvertex(polyline[0], polyline[2], polyline[1], &polyline[3]);
+    axial_symmetry_tvertex(polyline[0], polyline[3], polyline[2], &polyline[4]);
+    axial_symmetry_tvertex(polyline[3], polyline[4], polyline[0], &polyline[43]);
+    
+    for (i=4; i<42; i++)
+        axial_symmetry_tvertex(polyline[i], polyline[43], polyline[i-1], &polyline[i+1]);
+    
+    for (i=2; i<44; i++)
+    {
+        polyline[i+42].x = -polyline[i].x;
+        polyline[i+42].y = polyline[i].y;
+    }
+    
+    for (i=0; i<86; i++)
+    {
+        polyline[i].x += xshift;
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+    
+    return(86);
+}
+
 void compute_homophonic_coordinates(int type, int ishift, double xshift, double yshift, double scaling, 
                                     t_vertex polyline[NMAXPOLY])
 /* compute positions of vertices of homophonic billiards */
@@ -1047,10 +1210,10 @@ int compute_vonkoch_coordinates(int depth, t_vertex polyline[NMAXPOLY])
     }
             
     /* compute vertices */
-    angle = 2.0*PI/3.0;
-    x = cos(PI/6.0);
-    y = -sin(PI/6.0);
-    length = 2.0*sin(PI/3.0);
+    angle = APOLY*PID + 2.0*PI/3.0;
+    x = LAMBDA*cos(APOLY*PID - PI/6.0);
+    y = LAMBDA*sin(APOLY*PID - PI/6.0);
+    length = 2.0*LAMBDA*sin(PI/3.0);
             
     for (k=0; k<depth; k++) length = length/3.0;
     printf("Length = %.2f\n", length);
@@ -1079,6 +1242,37 @@ int compute_vonkoch_coordinates(int depth, t_vertex polyline[NMAXPOLY])
 }
 
 
+int compute_star_coordinates(t_vertex polyline[NMAXPOLY])
+/* compute positions of vertices of star-shaped domain */
+{
+    int i;
+    double alpha, r, x, y, pos[2];
+    
+    alpha = DPI/(double)NPOLY;
+    
+    for (i=0; i<NPOLY; i++)
+    {
+        if (i%2 == 0) r = LAMBDA - MU;
+        else r = LAMBDA;
+        
+        x = r*cos(APOLY*PID + alpha*(double)i);
+        y = r*sin(APOLY*PID + alpha*(double)i);
+        polyline[i].x = x;
+        polyline[i].y = y;
+        
+        xy_to_pos(x, y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+    
+    /* add origin to compute xy_in_billiard */
+    polyline[NPOLY].x = 0.0;
+    polyline[NPOLY].y = 0.0;
+    
+    return(NPOLY);
+}
+
+
 int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
 /* initialise variable polyline, for certain polygonal domain shapes */
 {
@@ -1086,6 +1280,10 @@ int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
         case (D_TOKARSKY):
         {
             return(compute_tokarsky_coordinates(-4.0, -2.0, (XMAX - XMIN)/8.4, polyline));
+        }
+        case (D_TOKA_PRIME):
+        {
+            return(compute_tokaprime_coordinates(-MU, polyline));
         }
         case (D_ISOSPECTRAL):
         {
@@ -1106,6 +1304,10 @@ int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
         case (D_VONKOCH_HEATED):
         {
             return(compute_vonkoch_coordinates(depth, polyline));
+        }
+        case (D_STAR):
+        {
+            return(compute_star_coordinates(polyline));
         }
         default:
         {
@@ -1165,8 +1367,8 @@ int xy_in_billiard(double x, double y)
 /* returns 1 if (x,y) represents a point in the billiard */
 // double x, y;
 {
-    double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width;
-    int i, j, k, k1, k2, condition, m;
+    double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, alpha;
+    int i, j, k, k1, k2, condition = 0, m;
     static int first = 1, nsides;
 
     switch (B_DOMAIN) {
@@ -1399,6 +1601,22 @@ int xy_in_billiard(double x, double y)
                 else return(1);
             }
         }
+        case (D_TOKA_PRIME):
+        {
+//             x1 = vabs(x);
+            if (x + MU > 0.0) x1 = x;
+            else x1 = -2.0*MU - x;
+            
+            condition = xy_in_triangle_tvertex(x1, y, polyline[0], polyline[1], polyline[2]);
+            condition += xy_in_triangle_tvertex(x1, y, polyline[0], polyline[2], polyline[3]);
+            condition += xy_in_triangle_tvertex(x1, y, polyline[i], polyline[3], polyline[4]);
+            
+            for (i=3; i<42; i++)
+                condition += xy_in_triangle_tvertex(x1, y, polyline[i], polyline[43], polyline[i+1]);
+            
+            condition += xy_in_triangle_tvertex(x1, y, polyline[42], polyline[43], polyline[3]);
+            return(condition >= 1);
+        }
         case (D_ISOSPECTRAL):
         {
             /* 1st triangle */
@@ -1520,6 +1738,13 @@ int xy_in_billiard(double x, double y)
                     condition += xy_in_triangle_tvertex(x, y, polyline[j*m + k], polyline[j*m + 2*k], polyline[j*m + 3*k]);
                 k = k*4;
             }
+            return(condition >= 1);
+        }
+        case (D_STAR):
+        {
+            condition = xy_in_triangle_tvertex(x, y, polyline[NPOLY], polyline[NPOLY-1], polyline[0]);
+            for (i = 0; i < NPOLY-1; i++)
+                condition += xy_in_triangle_tvertex(x, y, polyline[NPOLY], polyline[i], polyline[i+1]);
             return(condition >= 1);
         }
         case (D_MENGER):       
@@ -2247,6 +2472,56 @@ void draw_billiard()      /* draws the billiard boundary */
             }
             break;
         }
+        case (D_TOKA_PRIME):
+        {
+            glBegin(GL_LINE_LOOP);
+            tvertex_lineto(polyline[0]);
+            for (i=4; i<43; i++) tvertex_lineto(polyline[i]);
+            tvertex_lineto(polyline[3]);
+            tvertex_lineto(polyline[2]);
+            tvertex_lineto(polyline[1]);
+
+            tvertex_lineto(polyline[44]);
+            tvertex_lineto(polyline[45]);
+            for (i=84; i>45; i--) tvertex_lineto(polyline[i]);
+            glEnd();
+            
+            /* inner lines */ 
+//             glLineWidth(BOUNDARY_WIDTH/2);
+            glLineWidth(1);
+            glColor3f(0.75, 0.75, 0.75);
+            glBegin(GL_LINE_STRIP);
+            tvertex_lineto(polyline[0]);
+            tvertex_lineto(polyline[1]);
+            tvertex_lineto(polyline[2]);
+            tvertex_lineto(polyline[0]);
+            tvertex_lineto(polyline[3]);
+            tvertex_lineto(polyline[4]);
+            glEnd();
+            
+            glBegin(GL_LINE_STRIP);
+            tvertex_lineto(polyline[0]);
+            tvertex_lineto(polyline[44]);
+            tvertex_lineto(polyline[45]);
+            tvertex_lineto(polyline[0]);
+            tvertex_lineto(polyline[46]);
+            tvertex_lineto(polyline[45]);
+            glEnd();
+            
+            for (i=3; i<43; i++)
+            {
+                glBegin(GL_LINE_STRIP);
+                tvertex_lineto(polyline[i]);
+                tvertex_lineto(polyline[43]);
+                glEnd();
+                glBegin(GL_LINE_STRIP);
+                tvertex_lineto(polyline[i+42]);
+                tvertex_lineto(polyline[85]);
+                glEnd();
+            }
+            
+            break;
+        }
         case (D_ISOSPECTRAL):
         {
             /* 1st triangle */
@@ -2397,6 +2672,14 @@ void draw_billiard()      /* draws the billiard boundary */
         case (D_VONKOCH):
         {
             glLineWidth(BOUNDARY_WIDTH/2);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<npolyline; i++) tvertex_lineto(polyline[i]);
+            glEnd();
+            break;
+        }
+        case (D_STAR):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
             glBegin(GL_LINE_LOOP);
             for (i=0; i<npolyline; i++) tvertex_lineto(polyline[i]);
             glEnd();
@@ -2711,6 +2994,18 @@ void draw_color_scheme(double x1, double y1, double x2, double y2, int plot, dou
                 value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
                 if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, value, 1.0, 1, rgb);
                 else color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_LOG_ENERGY):
+            {
+                value = LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+                color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_LOG_MEAN_ENERGY):
+            {
+                value = LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+                color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
                 break;
             }
             case (P_PHASE):

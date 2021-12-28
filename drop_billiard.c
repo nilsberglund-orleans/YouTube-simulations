@@ -16,10 +16,10 @@
 /*  It may be possible to increase parameter PAUSE                               */
 /*                                                                               */
 /*  create movie using                                                           */
-/*  ffmpeg -i tif_drop/part.%05d.tif -vcodec libx264 drop.mp4                    */
+/*  ffmpeg -i part.%05d.tif -vcodec libx264 drop.mp4                             */
 /*                                                                               */
 /*********************************************************************************/
-
+  
 #include <math.h>
 #include <string.h>
 #include <GL/glut.h>
@@ -28,16 +28,10 @@
 #include <sys/types.h>
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 
-#define MOVIE 1         /* set to 1 to generate movie */
+#define MOVIE 0         /* set to 1 to generate movie */
 
-// #define WINWIDTH 	1280  /* window width */
-// #define WINHEIGHT 	720   /* window height */
-
-#define WINWIDTH 	1920  /* window width */
-#define WINHEIGHT 	1080  /* window height */
-
-// #define WINWIDTH 	2560  /* window width */
-// #define WINHEIGHT 	1440  /* window height */
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
@@ -65,7 +59,7 @@
 #define NGOLDENSPIRAL 2000  /* max number of points for C_GOLDEN_SPIRAL arrandement */
 #define SDEPTH 1            /* Sierpinski gastket depth */
 
-#define LAMBDA 0.3	    /* parameter controlling the dimensions of domain - with 0.5 @1440p it cut out top-bottom borders. 0.4 is @limit */
+#define LAMBDA 0.3	    /* parameter controlling the dimensions of domain */
 // #define LAMBDA 1.124950941	/* sin(36°)/sin(31.5°) for 5-star shape with 45° angles */
 // #define LAMBDA 1.445124904	/* sin(36°)/sin(24°) for 5-star shape with 60° angles */
 // #define LAMBDA 3.75738973	/* sin(36°)/sin(9°) for 5-star shape with 90° angles */
@@ -85,7 +79,7 @@
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 
 #define NSTEPS 5000         /* number of frames of movie */
-#define TIME 150            /* time between movie frames, for fluidity of real-time simulation */ 
+#define TIME 150             /* time between movie frames, for fluidity of real-time simulation */ 
 #define DPHI 0.0001         /* integration step */
 #define NVID 75             /* number of iterations between images displayed on screen */
 
@@ -107,18 +101,19 @@
 
 #define COLOR_PALETTE 1     /* Color palette, see list in global_pdes.c  */
 
-#define NCOLORS 14          /* number of colors */
+#define NCOLORS 14           /* number of colors */
 #define COLORSHIFT 3        /* hue of initial color */ 
 #define RAINBOW_COLOR 0     /* set to 1 to use different colors for all particles */
-#define NSEG 150            /* number of segments of boundary */
+#define NSEG 100            /* number of segments of boundary */
 #define BILLIARD_WIDTH 4    /* width of billiard */
 #define FRONT_WIDTH 4       /* width of wave front */
 
-#define BLACK 1             /* set to 1 for black background */
-#define COLOR_OUTSIDE 1     /* set to 1 for colored outside */ 
+#define BLACK 0             /* set to 1 for black background */
+#define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 
 #define OUTER_COLOR 300.0   /* color outside billiard */
 #define PAINT_INT 0         /* set to 1 to paint interior in other color (for polygon) */
 #define PAINT_EXT 1         /* set to 1 to paint exterior of billiard */
+
 
 #define PAUSE 1000          /* number of frames after which to pause */
 #define PSLEEP 1            /* sleep time during pause */
@@ -126,9 +121,10 @@
 #define SLEEP2  100         /* final sleeping time */
 #define END_FRAMES 0        /* number of frames at end of movie */
 
-#define PI      3.141592654
+#define PI 	3.141592654
 #define DPI 	6.283185307
 #define PID 	1.570796327
+
 
 #include "global_particles.c"
 #include "sub_part_billiard.c"
@@ -200,6 +196,8 @@ void init_partial_drop_config(int i1, int i2, double x0, double y0, double angle
     }
 }
  
+
+
 int resample(int color[NPARTMAX], double *configs[NPARTMAX])     
 /* add particles where the front is stretched too thin */
 {
@@ -412,7 +410,7 @@ void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX])
         {
 //      print_config(configs[i]);
       
-            if (configs[i][2]<0.0)
+            if (configs[i][2]<0.0) 
             {    
                 vbilliard(configs[i]);
                 if (!RAINBOW_COLOR)

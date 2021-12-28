@@ -388,6 +388,20 @@ void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], sho
                         else color_scheme(COLOR_SCHEME, total_energy[i][j]/(double)(time+1), scale, time, rgb);
                         break;
                     }
+                    case (P_LOG_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        color_scheme(COLOR_SCHEME, LOG_SCALE*log(energy), scale, time, rgb);
+                        break;
+                    }
+                    case (P_LOG_MEAN_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        if (energy == 0.0) energy = 1.0e-20;
+                        total_energy[i][j] += energy;
+                        color_scheme(COLOR_SCHEME, LOG_SCALE*log(total_energy[i][j]/(double)(time+1)), scale, time, rgb);
+                        break;
+                    }
                 }
                 glColor3f(rgb[0], rgb[1], rgb[2]);
 
