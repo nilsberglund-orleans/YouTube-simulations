@@ -81,7 +81,7 @@ in the shell before running the program
 2. *sub_lj.c*:            some drawing and initialization routines
 3. *lennardjones.c*:      simulation of molecular dynamics
 
-- Create subfolders `tif_ljones`
+- Create subfolder `tif_ljones`
 - Customize constants at beginning of .c file
 - Compile with 
 
