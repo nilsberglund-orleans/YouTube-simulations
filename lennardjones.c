@@ -35,7 +35,8 @@
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 #include <omp.h>
 
-#define MOVIE 1         /* set to 1 to generate movie */
+#define MOVIE 0         /* set to 1 to generate movie */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 
 /* General geometrical parameters */
 
@@ -49,22 +50,26 @@
 
 #define INITXMIN -2.0
 #define INITXMAX 2.0	/* x interval for initial condition */
-#define INITYMIN -1.125
+#define INITYMIN -0.8
 #define INITYMAX 1.125	/* y interval for initial condition */
+
+/* Choice of the billiard table */
+
+// #define B_DOMAIN 20      /* choice of domain shape, see list in global_ljones.c */
 
 #define CIRCLE_PATTERN 8   /* pattern of circles, see list in global_ljones.c */
 
-#define INTERACTION 3       /* particle interaction, see list in global_ljones.c */
+#define INTERACTION 1       /* particle interaction, see list in global_ljones.c */
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 100        /* number of points for Poisson C_RAND_POISSON arrangement */
-#define PDISC_DISTANCE 2.5  /* minimal distance in Poisson disc process, controls density of particles */
+#define PDISC_DISTANCE 5.0  /* minimal distance in Poisson disc process, controls density of particles */
 #define PDISC_CANDIDATES 100 /* number of candidates in construction of Poisson disc process */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 2.0	    /* parameter controlling the dimensions of domain */
-#define MU 0.02 	    /* parameter controlling radius of particles */
-// #define MU 0.015 	    /* parameter controlling radius of particles */
+// #define MU 0.02 	    /* parameter controlling radius of particles */
+#define MU 0.015 	    /* parameter controlling radius of particles */
 #define NPOLY 3             /* number of sides of polygon */
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 4            /* depth of computation of Menger gasket */
@@ -88,8 +93,8 @@
 /* Parameters for length and speed of simulation */
 
 #define NSTEPS 3600      /* number of frames of movie */
-// #define NSTEPS 1300      /* number of frames of movie */
-#define NVID 150          /* number of iterations between images displayed on screen */
+// #define NSTEPS 100      /* number of frames of movie */
+#define NVID 250          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
 #define INITIAL_TIME 0    /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
@@ -98,6 +103,7 @@
 #define PSLEEP 1         /* sleep time during pause */
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1   /* final sleeping time */
+#define MID_FRAMES 20    /* number of still frames between parts of two-part movie */
 #define END_FRAMES 100   /* number of still frames at end of movie */
 
 /* Parameters of initial condition */
@@ -105,7 +111,9 @@
 
 /* Plot type, see list in global_ljones.c  */
 
-#define PLOT 3
+#define PLOT 1
+#define PLOT_B 3        /* plot type for second movie */
+
 
 /* Color schemes */
 
@@ -136,8 +144,8 @@
 #define MOVE_PARTICLES 1    /* set to 1 for mobile particles */
 #define INERTIA 1           /* set to 1 for taking inertia into account */
 #define DT_PARTICLE 2.0e-6     /* time step for particle displacement */
-#define KREPEL 20.0          /* constant in repelling force between particles */
-#define EQUILIBRIUM_DIST 5.0  /* Lennard-Jones equilibrium distance */
+#define KREPEL 10.0          /* constant in repelling force between particles */
+#define EQUILIBRIUM_DIST 4.0  /* Lennard-Jones equilibrium distance */
 // #define EQUILIBRIUM_DIST 15.0  /* Lennard-Jones equilibrium distance */
 #define REPEL_RADIUS 20.0    /* radius in which repelling force acts (in units of particle radius) */
 #define DAMPING 1.5e5   /* damping coefficient of particles */
@@ -146,22 +154,28 @@
 // #define V_INITIAL 0.0       /* initial velocity range */
 #define V_INITIAL 5.0        /* initial velocity range */
 #define SIGMA 5.0           /* noise intensity in thermostat */
-#define BETA 5.0e-3          /* initial inverse temperature */
+#define BETA 1.0e-2          /* initial inverse temperature */
 #define MU_XI 0.1            /* friction constant in thermostat */
 #define KSPRING_BOUNDARY 1.0e5    /* confining harmonic potential outside simulation region */
 #define NBH_DIST_FACTOR 4.5        /* radius in which to count neighbours */
+#define GRAVITY 300.0         /* gravity acting on all particles */
 
 #define INCREASE_BETA 1   /* set to 1 to increase BETA during simulation */
-#define BETA_FACTOR 5.0e2   /* factor by which to change BETA during simulation */
-#define N_TOSCILLATIONS 2.5   /* number of temperature oscillations in BETA schedule */
+#define BETA_FACTOR 1.0e1   /* factor by which to change BETA during simulation */
+#define N_TOSCILLATIONS 0.25   /* number of temperature oscillations in BETA schedule */
 // #define BETA_FACTOR 2.0e3   /* factor by which to change BETA during simulation */
 
 #define INCREASE_KREPEL 0   /* set to 1 to increase KREPEL during simulation */
 #define KREPEL_FACTOR 1000.0   /* factor by which to change KREPEL during simulation */
 
-#define ADD_PARTICLES 0    /* set to 1 to add particles */
-#define ADD_TIME 300       /* time at which to add first particle */
-#define ADD_PERIOD 2000     /* time interval between adding further particles */
+#define PART_AT_BOTTOM 1     /* set to 1 to include "seed" particles at bottom */
+#define MASS_PART_BOTTOM 10000.0 /* mass of particles at bottom */
+#define NPART_BOTTOM 100     /* number of particles at the bottom */
+
+#define ADD_PARTICLES 1    /* set to 1 to add particles */
+#define ADD_TIME 50       /* time at which to add first particle */
+#define ADD_PERIOD 7      /* time interval between adding further particles */
+#define SAFETY_FACTOR 3.0  /* no particles are added at distance less than MU*SAFETY_FACTOR of other particles */
 
 #define FLOOR_FORCE 0      /* set to 1 to limit force on particle to FMAX */
 #define FMAX 2.0e10         /* maximal force */
@@ -215,6 +229,8 @@ double gaussian()
 /*********************/
 /* animation part    */
 /*********************/
+
+
 
 void hash_xy_to_ij(double x, double y, int ij[2])
 {
@@ -458,35 +474,58 @@ void update_hashgrid(t_particle* particle, int* hashgrid_number, int* hashgrid_p
     printf("Maximal number of particles per hash cell: %i\n", max);
 }
 
-void add_particle(double x, double y, double vx, double vy, t_particle particle[NMAXCIRCLES])
+int add_particle(double x, double y, double vx, double vy, t_particle particle[NMAXCIRCLES])
 {
-    int i = ncircles;
+    int i, closeby = 0;
+    double dist;
     
-    particle[i].xc = x;
-    particle[i].yc = y;
-    particle[i].radius = MU;
-    particle[i].active = 1;
-    particle[i].neighb = 0;
-
-    particle[i].energy = 0.0;
-
-    if (RANDOM_RADIUS) particle[i].radius = particle[i].radius*(0.75 + 0.5*((double)rand()/RAND_MAX));
+    /* test distance to other particles */
+    for (i=0; i<ncircles; i++)
+    {
+        dist = module2(x - particle[i].xc, y - particle[i].yc);
+        if (dist < SAFETY_FACTOR*MU) closeby = 1;
+    }
+    
+    if ((closeby)||(ncircles >= NMAXCIRCLES)) 
+    {
+        printf("Cannot add particle at (%.3lg, %.3lg)\n", x, y);
+        return(0);
+    }
+    else
+    {
+        i = ncircles;
         
-    particle[i].mass_inv = 1.0;
+        particle[i].xc = x;
+        particle[i].yc = y;
+        particle[i].radius = MU;
+        particle[i].active = 1;
+        particle[i].neighb = 0;
+
+        particle[i].energy = 0.0;
+
+        if (RANDOM_RADIUS) particle[i].radius = particle[i].radius*(0.75 + 0.5*((double)rand()/RAND_MAX));
+        
+        particle[i].mass_inv = 1.0;
                 
-    particle[i].vx = vx;
-    particle[i].vy = vy;
-    particle[i].energy = (particle[i].vx*particle[i].vx + particle[i].vy*particle[i].vy)*particle[i].mass_inv;
+        particle[i].vx = vx;
+        particle[i].vy = vy;
+        particle[i].energy = (particle[i].vx*particle[i].vx + particle[i].vy*particle[i].vy)*particle[i].mass_inv;
     
-    ncircles++;
+        ncircles++;
+        
+        printf("Added particle at (%.3lg, %.3lg)\n", x, y);
+        printf("Number of particles: %i\n", ncircles);
+
+        return(1);
+    }
 }
 
 double neighbour_color(int nnbg)
 {
     if (nnbg > 7) nnbg = 7;
     switch(nnbg){
-        case (7): return(350.0);
-        case (6): return(320.0);
+        case (7): return(340.0);
+        case (6): return(310.0);
         case (5): return(260.0);
         case (4): return(200.0);
         case (3): return(140.0);
@@ -496,17 +535,19 @@ double neighbour_color(int nnbg)
     }   
 }
 
-void draw_particles(t_particle particle[NMAXCIRCLES])
+void draw_particles(t_particle particle[NMAXCIRCLES], int plot)
 {
     int j, k, m, width, nnbg;
     double ej, hue, rgb[3], radius, x1, y1, x2, y2, angle;
     
+    blank();
+                
     for (j=0; j<ncircles; j++) if (particle[j].active)
     {
         glLineWidth(BOUNDARY_WIDTH);
         glColor3f(1.0, 1.0, 1.0);
         
-        switch (PLOT) {
+        switch (plot) {
             case (P_KINETIC): 
             {
                 ej = particle[j].energy;
@@ -557,6 +598,27 @@ void draw_particles(t_particle particle[NMAXCIRCLES])
         glColor3f(1.0, 1.0, 1.0);
         draw_circle(particle[j].xc, particle[j].yc, radius, NSEG);
     }
+}
+
+
+void print_parameters(double beta, double krepel)
+{
+    char message[100];
+    
+    if (INCREASE_BETA)  /* print force constant */
+    {
+        erase_area_hsl(XMAX - 0.39, YMAX - 0.1 + 0.025, 0.37, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Temperature %.3f", 1.0/beta);
+        write_text(XMAX - 0.7, YMAX - 0.1, message);
+    }
+    else if (INCREASE_KREPEL)  /* print force constant */
+    {
+        erase_area_hsl(XMAX - 0.24, YMAX - 0.1 + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Force %.0f", krepel);
+        write_text(XMAX - 0.42, YMAX - 0.1, message);
+    }   
 }
 
 
@@ -659,6 +721,24 @@ void animation()
         py[i] = 0.0;        
     }
     
+    /* add particles at the bottom as seed */
+    if (PART_AT_BOTTOM) for (i=0; i<=NPART_BOTTOM; i++)
+    {   
+        x = XMIN + (double)i*(XMAX - XMIN)/(double)NPART_BOTTOM;
+        y = YMIN + 2.0*MU;
+        add_particle(x, y, 0.0, 0.0, particle);
+        particle[ncircles-1].mass_inv = 1.0/MASS_PART_BOTTOM;
+//         particle[ncircles-1].radius *= 1.2;
+    }
+    for (i=0; i<=NPART_BOTTOM; i++)
+    {   
+        x = XMIN + (double)i*(XMAX - XMIN)/(double)NPART_BOTTOM;
+        y = YMIN + 4.0*MU;
+        add_particle(x, y, 0.0, 0.0, particle);
+        particle[ncircles-1].mass_inv = 1.0/MASS_PART_BOTTOM;
+//         particle[ncircles-1].radius *= 1.2;
+    }
+    
     xi = 0.0;
     
     for (i=0; i<ncircles; i++)
@@ -732,6 +812,9 @@ void animation()
                 else if (particle[j].xc < XMIN) fx += KSPRING_BOUNDARY*(XMIN - particle[j].xc);
                 if (particle[j].yc > YMAX) fy -= KSPRING_BOUNDARY*(particle[j].yc - YMAX);
                 else if (particle[j].yc < YMIN) fy += KSPRING_BOUNDARY*(YMIN - particle[j].yc);
+                
+                /* add gravity */
+                fy -= GRAVITY;
                                                 
                 if (FLOOR_FORCE)
                 {
@@ -756,8 +839,8 @@ void animation()
                 
                 particle[j].energy = (px[j]*px[j] + py[j]*py[j])*particle[j].mass_inv;
                 
-                qx[j] = particle[j].xc + 0.5*DT_PARTICLE*px[j];
-                qy[j] = particle[j].yc + 0.5*DT_PARTICLE*py[j];
+                qx[j] = particle[j].xc + 0.5*DT_PARTICLE*px[j]*particle[j].mass_inv;
+                qy[j] = particle[j].yc + 0.5*DT_PARTICLE*py[j]*particle[j].mass_inv;
                 
                 px[j] *= exp(- 0.5*DT_PARTICLE*xi);
                 py[j] *= exp(- 0.5*DT_PARTICLE*xi);
@@ -775,8 +858,8 @@ void animation()
                 px[j] *= exp(- 0.5*DT_PARTICLE*xi);
                 py[j] *= exp(- 0.5*DT_PARTICLE*xi);
                 
-                particle[j].xc = qx[j] + 0.5*DT_PARTICLE*px[j];
-                particle[j].yc = qy[j] + 0.5*DT_PARTICLE*py[j];
+                particle[j].xc = qx[j] + 0.5*DT_PARTICLE*px[j]*particle[j].mass_inv;
+                particle[j].yc = qy[j] + 0.5*DT_PARTICLE*py[j]*particle[j].mass_inv;
             }
         }
                 
@@ -795,34 +878,24 @@ void animation()
         printf("Min number of neighbours: %i\n", min_nb); 
         printf("Max number of neighbours: %i\n", max_nb); 
         
-        draw_particles(particle);
+        draw_particles(particle, PLOT);
 
         /* add a particle */
         if ((ADD_PARTICLES)&&((i - ADD_TIME + 1)%ADD_PERIOD == 0))
         {
-            j = 0;
-            while (module2(particle[j].xc,particle[j].yc) > 0.7) j = rand()%ncircles;
-            x =  particle[j].xc + 2.5*MU;
-            y =  particle[j].yc;
+//             j = 0;
+//             while (module2(particle[j].xc,particle[j].yc) > 0.7) j = rand()%ncircles;
+//             x =  particle[j].xc + 2.5*MU;
+//             y =  particle[j].yc;
+            
+            x =  XMIN + (XMAX - XMIN)*rand()/RAND_MAX;
+            y =  YMAX + 0.1*rand()/RAND_MAX;
             add_particle(x, y, 0.0, 0.0, particle);
         }
         
         update_hashgrid(particle, hashgrid_number, hashgrid_particles);
-
-        if (INCREASE_BETA)  /* print force constant */
-        {
-            erase_area_hsl(XMAX - 0.39, YMAX - 0.1 + 0.025, 0.37, 0.05, 0.0, 0.9, 0.0);
-            glColor3f(1.0, 1.0, 1.0);
-            sprintf(message, "Temperature %.3f", 1.0/beta);
-            write_text(XMAX - 0.7, YMAX - 0.1, message);
-        }
-        else if (INCREASE_KREPEL)  /* print force constant */
-        {
-            erase_area_hsl(XMAX - 0.24, YMAX - 0.1 + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
-            glColor3f(1.0, 1.0, 1.0);
-            sprintf(message, "Force %.0f", krepel);
-            write_text(XMAX - 0.42, YMAX - 0.1, message);
-        }
+        
+        print_parameters(beta, krepel);
 
 	glutSwapBuffers();
 
@@ -831,6 +904,15 @@ void animation()
         {
             if (i >= INITIAL_TIME) save_frame_lj();
             else printf("Initial phase time %i of %i\n", i, INITIAL_TIME);
+            
+            if ((i >= INITIAL_TIME)&&(DOUBLE_MOVIE))
+            {
+                draw_particles(particle, PLOT_B);
+                print_parameters(beta, krepel);
+                glutSwapBuffers();
+                save_frame_lj_counter(NSTEPS + 21 + counter);
+                counter++;
+            }
 
             /* it seems that saving too many files too fast can cause trouble with the file system */
             /* so this is to make a pause from time to time - parameter PAUSE may need adjusting   */
@@ -846,7 +928,21 @@ void animation()
 
     if (MOVIE) 
     {
-        for (i=0; i<END_FRAMES; i++) save_frame_lj();
+        if (DOUBLE_MOVIE) 
+        {
+            draw_particles(particle, PLOT);   
+            print_parameters(beta, krepel);
+            glutSwapBuffers();
+        }
+        for (i=0; i<MID_FRAMES; i++) save_frame_lj();
+        if (DOUBLE_MOVIE) 
+        {
+            draw_particles(particle, PLOT_B);
+            print_parameters(beta, krepel);
+            glutSwapBuffers();
+        }
+        for (i=0; i<END_FRAMES; i++) save_frame_lj_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
+
         s = system("mv lj*.tif tif_ljones/");
     }
     free(particle);
