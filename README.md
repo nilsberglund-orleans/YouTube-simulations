@@ -75,7 +75,7 @@ in the shell before running the program
 
 `ffmpeg -i wave.%05d.tif -vcodec libx264 wave.mp4`
 
-### Molecular dynamics simulations
+### Molecular dynamics simulations.
 
 1. *global_ljones.c*:     global variables and parameters
 2. *sub_lj.c*:            some drawing and initialization routines
