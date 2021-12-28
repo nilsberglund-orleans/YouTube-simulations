@@ -98,5 +98,5 @@ in the shell before running the program
 - Cloaking device: https://www.sciencedirect.com/science/article/pii/S0165212514001759
 - Poisson disc sampling: https://bl.ocks.org/mbostock/dbb02448b0f93e4c82c3
 - Thermostat algorithm: https://doi.org/10.1007/s10955-009-9734-0
-http://www.maths.warwick.ac.uk/~theil/HL12-3-2009.pdf
+or http://www.maths.warwick.ac.uk/~theil/HL12-3-2009.pdf
 
