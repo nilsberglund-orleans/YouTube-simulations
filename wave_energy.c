@@ -78,6 +78,8 @@
 #define XDEP_POLY_ANGLE 0   /* set to 1 to rotate polygons depending on x coordinate */
 #define XDEP_POLY_ANGLE_B 1   /* set to 1 to rotate polygons depending on x coordinate */
 #define POLY_ROTATION_ANGLE -0.645 /* rotation angle for |x|=1 in units of Pi/2 */
+#define HEX_NONUNIF_COMPRESSSION 0.15 /* compression factor for HEX_NONUNIF pattern */
+#define HEX_NONUNIF_COMPRESSSION_B -0.15 /* compression factor for HEX_NONUNIF pattern */
 
 #define LAMBDA 0.75	    /* parameter controlling the dimensions of domain */
 #define MU 0.03 	    /* parameter controlling the dimensions of domain */
@@ -164,6 +166,7 @@
 #define COLOR_PALETTE 14     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
+#define BLACK_TEXT 0     /* set to 1 to write text in black instead of white */
 
 #define COLOR_SCHEME 3   /* choice of color scheme, see list in global_pdes.c  */
 
@@ -173,6 +176,7 @@
 #define E_SCALE 500.0     /* scaling factor for energy representation */
 #define LOG_SCALE 1.5     /* scaling factor for energy log representation */
 #define LOG_SHIFT 1.0     /* shift of colors on log scale */
+#define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */

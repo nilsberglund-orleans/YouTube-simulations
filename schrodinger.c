@@ -142,6 +142,8 @@
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define E_SCALE 150.0     /* scaling factor for energy representation */
 #define LOG_SCALE 1.0    /* scaling factor for energy log representation */
+#define LOG_SHIFT 0.0     /* shift of colors on log scale */
+#define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */

@@ -179,6 +179,17 @@ void write_text( double x, double y, char *st)
 	return(alph);
  }
  
+ double ipow(double x, int n)
+ {
+    double y;
+    int i;
+    
+    y = x;
+    for (i=1; i<n; i++) y *= x;
+    
+    return(y);
+ }
+ 
 
 
 /*********************/
@@ -222,6 +233,14 @@ void erase_area_hsl(double x, double y, double dx, double dy, double h, double s
     double pos[2], rgb[3];
     
     hsl_to_rgb(h, s, l, rgb);
+    erase_area_rgb(x, y, dx, dy, rgb);
+}
+
+void erase_area_hsl_turbo(double x, double y, double dx, double dy, double h, double s, double l)
+{
+    double pos[2], rgb[3];
+    
+    hsl_to_rgb_turbo(h, s, l, rgb);
     erase_area_rgb(x, y, dx, dy, rgb);
 }
 
@@ -289,7 +308,83 @@ void draw_colored_circle(double x, double y, double r, int nseg, double rgb[3])
     glEnd();
 }
 
+void draw_polygon(double x, double y, double r, int nsides, double angle)
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI/(double)nsides;
+    
+    glBegin(GL_LINE_LOOP);
+    for (i=0; i<=nsides; i++)
+    {
+        alpha = angle + (double)i*dalpha;
+        glVertex2d(x + r*cos(alpha), y + r*sin(alpha));
+    }
+    glEnd();
+}
 
+void draw_colored_polygon(double x, double y, double r, int nsides, double angle, double rgb[3])
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI/(double)nsides;
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(x, y);
+    for (i=0; i<=nsides; i++)
+    {
+        alpha = angle + (double)i*dalpha;
+        glVertex2d(x + r*cos(alpha), y + r*sin(alpha));
+    }
+    
+    glEnd();
+}
+
+void draw_rhombus(double x, double y, double r, double angle)
+{
+    int i;
+    static int first = 1;
+    static double ratio;
+    
+    if (first)
+    {
+        ratio = tan(0.1*PI);
+        first = 0;
+    }
+    
+    glBegin(GL_LINE_LOOP);
+    glVertex2d(x + r*cos(angle), y + r*sin(angle));
+    glVertex2d(x - ratio*r*sin(angle), y + ratio*r*cos(angle));
+    glVertex2d(x - r*cos(angle), y - r*sin(angle));
+    glVertex2d(x + ratio*r*sin(angle), y - ratio*r*cos(angle));
+    glEnd();
+}
+
+void draw_colored_rhombus(double x, double y, double r, double angle, double rgb[3])
+{
+    int i;
+    static int first = 1;
+    static double ratio;
+    
+    if (first)
+    {
+        ratio = tan(0.1*PI);
+        first = 0;
+    }
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(x, y);
+    glVertex2d(x + r*cos(angle), y + r*sin(angle));
+    glVertex2d(x - ratio*r*sin(angle), y + ratio*r*cos(angle));
+    glVertex2d(x - r*cos(angle), y - r*sin(angle));
+    glVertex2d(x + ratio*r*sin(angle), y - ratio*r*cos(angle));
+    glVertex2d(x + r*cos(angle), y + r*sin(angle));
+    glEnd();
+}
 
 void init_particle_config(t_particle particles[NMAXCIRCLES])
 /* initialise particle configuration */

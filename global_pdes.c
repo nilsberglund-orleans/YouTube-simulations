@@ -50,6 +50,9 @@
 #define D_POLYGONS 40           /* several polygons */
 #define D_VONKOCH 41            /* von Koch snowflake fractal */
 #define D_STAR 42               /* star shape */
+#define D_FRESNEL 43            /* Fresnel lens */
+#define D_NOISEPANEL 44         /* zigzag noise insulating panel */
+#define D_DOUBLE_FRESNEL 45     /* two facing Fresnel lenses */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
@@ -68,8 +71,11 @@
 #define C_GOLDEN_MEAN 10    /* pattern based on vertical shifts by golden mean */
 #define C_GOLDEN_SPIRAL 11  /* spiral pattern based on golden mean */
 #define C_SQUARE_HEX 12     /* alternating between square and hexagonal/triangular */
+#define C_HEX_NONUNIF 13    /* triangular grid with non-constant column distance */
 
-#define C_RINGS 20          /* obstacles arranged in concentruc rings */
+#define C_RINGS 20          /* obstacles arranged in concentric rings */
+#define C_RINGS_T 201       /* obstacles arranged in concentric rings, triangular lattice */
+#define C_RINGS_SPIRAL 202  /* obstacles arranged on a "subflower" spiral, similar to C_GOLDEN_SPIRAL */
 
 #define C_ONE 97            /* one single circle, as for Sinai */
 #define C_TWO 98            /* two concentric circles of different type */
@@ -122,11 +128,13 @@
 #define C_HUE 1          /* color scheme modifies hue */
 #define C_PHASE 2        /* color scheme shows phase */
 #define C_ONEDIM 3       /* use preset 1d color scheme (for Turbo, Viridis, Magma, Inferno, Plasma) */
+#define C_ONEDIM_LINEAR 4   /* use preset 1d color scheme with linear scale */
 
 /* Color palettes */
 
 #define COL_JET 0       /* JET color palette */
 #define COL_HSLUV 1     /* HSLUV color palette (perceptually uniform) */
+#define COL_GRAY 2      /* grayscale */
 
 #define COL_TURBO 10     /* TURBO color palette (by Anton Mikhailov) */
 #define COL_VIRIDIS 11   /* Viridis color palette */
@@ -135,6 +143,11 @@
 #define COL_PLASMA 14    /* Plasma color palette */
 #define COL_CIVIDIS 15   /* Cividis color palette */
 #define COL_PARULA 16    /* Parula color palette */
+#define COL_TWILIGHT 17  /* Twilight color palette */
+#define COL_TWILIGHT_SHIFTED 18  /* Shifted twilight color palette */
+
+#define COL_TURBO_CYCLIC 101    /* TURBO color palette (by Anton Mikhailov) corrected to be cyclic, beta */
+
 
 typedef struct
 {

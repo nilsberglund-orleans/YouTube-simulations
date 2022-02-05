@@ -82,6 +82,7 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 
 #define COL_JET 0       /* JET color palette */
 #define COL_HSLUV 1     /* HSLUV color palette (perceptually uniform) */
+#define COL_GRAY 2      /* grayscale */
 
 #define COL_TURBO 10     /* TURBO color palette (by Anton Mikhailov) */
 #define COL_VIRIDIS 11   /* Viridis color palette */
@@ -90,5 +91,9 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define COL_PLASMA 14    /* Plasma color palette */
 #define COL_CIVIDIS 15   /* Cividis color palette */
 #define COL_PARULA 16    /* Parula color palette */
+#define COL_TWILIGHT 17  /* Twilight color palette */
+#define COL_TWILIGHT_SHIFTED 18  /* Shifted twilight color palette */
+
+#define COL_TURBO_CYCLIC 101    /* TURBO color palette (by Anton Mikhailov) corrected to be cyclic, beta */
 
 

@@ -341,7 +341,92 @@ void draw_wave(double *phi[NX], double *psi[NX], short int *xy_in[NX], double sc
     glEnd ();
 }
 
-void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], short int *xy_in[NX], double scale, int time, int plot)
+void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], double *color_scale[NX], short int *xy_in[NX], 
+                 double scale, int time, int plot)
+/* draw the field, new version with total energy option */
+{
+    int i, j, iplus, iminus, jplus, jminus;
+    double rgb[3], xy[2], x1, y1, x2, y2, velocity, field_value, energy, gradientx2, gradienty2, r2;
+    static double dtinverse = ((double)NX)/(COURANT*(XMAX-XMIN)), dx = (XMAX-XMIN)/((double)NX);
+
+    glBegin(GL_QUADS);
+    
+//     printf("dtinverse = %.5lg\n", dtinverse);
+
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            if ((TWOSPEEDS)||(xy_in[i][j]))
+            {
+                switch (plot) {
+                    case (P_AMPLITUDE):
+                    {
+                        /* make wave luminosity larger inside obstacles */
+                        field_value = phi[i][j];
+                        if (RESCALE_COLOR_IN_CENTER)
+                        {
+                            field_value *= color_scale[i][j];
+                        }
+                        if (!(xy_in[i][j])) color_scheme_lum(COLOR_SCHEME, field_value, scale, time, 0.7, rgb);
+                        else color_scheme(COLOR_SCHEME, field_value, scale, time, rgb);
+                        break;
+                    }
+                    case (P_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        if (RESCALE_COLOR_IN_CENTER)
+                        {
+                            energy *= color_scale[i][j];
+                        }
+                        /* adjust energy to color palette */
+                        if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, energy, scale, time, rgb);
+                        else color_scheme(COLOR_SCHEME, energy, scale, time, rgb);
+                        break;
+                    }
+                    case (P_MIXED):
+                    {
+                        if (j > NY/2) color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
+                        else color_scheme(COLOR_SCHEME, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
+                        break;
+                    }
+                    case (P_MEAN_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        total_energy[i][j] += energy;
+                        if (COLOR_PALETTE >= COL_TURBO) 
+                            color_scheme_asym(COLOR_SCHEME, total_energy[i][j]/(double)(time+1), scale, time, rgb);
+                        else color_scheme(COLOR_SCHEME, total_energy[i][j]/(double)(time+1), scale, time, rgb);
+                        break;
+                    }
+                    case (P_LOG_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        color_scheme(COLOR_SCHEME, LOG_SHIFT + LOG_SCALE*log(energy), scale, time, rgb);
+                        break;
+                    }
+                    case (P_LOG_MEAN_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        if (energy == 0.0) energy = 1.0e-20;
+                        total_energy[i][j] += energy;
+                        color_scheme(COLOR_SCHEME, LOG_SHIFT + LOG_SCALE*log(total_energy[i][j]/(double)(time+1)), scale, time, rgb);
+                        break;
+                    }
+                }
+                glColor3f(rgb[0], rgb[1], rgb[2]);
+
+                glVertex2i(i, j);
+                glVertex2i(i+1, j);
+                glVertex2i(i+1, j+1);
+                glVertex2i(i, j+1);
+            }
+        }
+
+    glEnd ();
+}
+
+
+void draw_wave_highres(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], short int *xy_in[NX], double scale, int time, int plot)
 /* draw the field, new version with total energy option */
 {
     int i, j, iplus, iminus, jplus, jminus;
@@ -352,8 +437,8 @@ void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], sho
     
 //     printf("dtinverse = %.5lg\n", dtinverse);
 
-    for (i=0; i<NX; i++)
-        for (j=0; j<NY; j++)
+    for (i=0; i<NX; i+=size)
+        for (j=0; j<NY; j+=size)
         {
             if ((TWOSPEEDS)||(xy_in[i][j]))
             {
@@ -391,31 +476,22 @@ void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], sho
                     case (P_LOG_ENERGY):
                     {
                         energy = compute_energy(phi, psi, xy_in, i, j);
-                        color_scheme(COLOR_SCHEME, LOG_SCALE*log(energy), scale, time, rgb);
+                        color_scheme(COLOR_SCHEME, LOG_SHIFT + LOG_SCALE*log(energy), scale, time, rgb);
                         break;
                     }
-                    case (P_LOG_MEAN_ENERGY):
-                    {
-                        energy = compute_energy(phi, psi, xy_in, i, j);
-                        if (energy == 0.0) energy = 1.0e-20;
-                        total_energy[i][j] += energy;
-                        color_scheme(COLOR_SCHEME, LOG_SCALE*log(total_energy[i][j]/(double)(time+1)), scale, time, rgb);
-                        break;
-                    }
+                    
                 }
                 glColor3f(rgb[0], rgb[1], rgb[2]);
 
                 glVertex2i(i, j);
-                glVertex2i(i+1, j);
-                glVertex2i(i+1, j+1);
-                glVertex2i(i, j+1);
+                glVertex2i(i+size, j);
+                glVertex2i(i+size, j+size);
+                glVertex2i(i, j+size);
             }
         }
 
     glEnd ();
 }
-
-
 
 
 

@@ -8,7 +8,7 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
 /* for billiard shape D_CIRCLES */
 {
     int i, j, k, n, ncirc0, n_p_active, ncandidates=5000, naccepted, nnew; 
-    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, ymean, ytop, ybottom, dpoisson = 3.05*MU;
+    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, ymean, ytop, ybottom, dpoisson = 3.05*MU, xmax;
     short int active_poisson[NMAXCIRCLES], far;
    
     ymean = 0.5*(YMIN + YMAX);
@@ -42,6 +42,30 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                 {
                     n = ncircles + (NGRIDY+2)*i/2 + j;
                     circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    y = ((double)j - 0.5)*dy;
+                    if ((i+NGRIDX)%2 == 1) y += 0.5*dy;
+                    if (top) circles[n].yc = ymean + 0.5*dy + y;
+                    else circles[n].yc = ymean - 0.5*dy - y;
+                    if (top) circles[n].radius = MU;
+                    else circles[n].radius = MUB;
+                    circles[n].active = 1;
+                    circletop[n] = top;
+                }
+            ncircles += NGRIDX*(NGRIDY+2)/2;
+            break;
+        }
+        case (C_HEX_NONUNIF):
+        {
+            dy = (YMAX - YMIN)/((double)NGRIDY);
+            dx = dy*0.5*sqrt(3.0);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY/2+2; j++)
+                {
+                    n = ncircles + (NGRIDY+2)*i/2 + j;
+                    x = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    xmax = ((double)(NGRIDX/2) - 0.5)*dy;
+                    if (top) circles[n].xc = x - HEX_NONUNIF_COMPRESSSION*(x*x - xmax*xmax);
+                    else circles[n].xc = x - HEX_NONUNIF_COMPRESSSION_B*(x*x - xmax*xmax);
                     y = ((double)j - 0.5)*dy;
                     if ((i+NGRIDX)%2 == 1) y += 0.5*dy;
                     if (top) circles[n].yc = ymean + 0.5*dy + y;
@@ -913,8 +937,11 @@ void print_energies(double energies[6], double top_energy, double bottom_energy)
 {
     char message[50];
     double ytop, ybot, pos[2], centerx = -0.075, boxxright = XMAX - 0.17, textxright = XMAX - 0.28, boxwidth = 0.1, 
-            boxheight = 0.05, leftboxshift = 0.185, centerboxshift = 0.085;
+            boxheight = 0.05, leftboxshift = 0.185, centerboxshift = 0.085, text_color;
 
+    if (BLACK_TEXT) text_color = 0.0;
+    else text_color = 1.0;
+    
     /* adapt sizes of text areas to high resolution */
     if (WINWIDTH > 1280)
     {
@@ -935,42 +962,42 @@ void print_energies(double energies[6], double top_energy, double bottom_energy)
     
     erase_area(XMIN + leftboxshift, ytop + 0.025, boxwidth, boxheight);
 
-    glColor3f(1.0, 1.0, 1.0);
+    glColor3f(text_color, text_color, text_color);
     sprintf(message, "%.3f", energies[0]/top_energy);
     xy_to_pos(XMIN + 0.1, ytop, pos);
     write_text(pos[0], pos[1], message);
     
     erase_area(centerx + centerboxshift, ytop + 0.025, boxwidth, boxheight);
 
-    glColor3f(1.0, 1.0, 1.0);
+    glColor3f(text_color, text_color, text_color);
     sprintf(message, "%.3f", energies[1]/top_energy);
     xy_to_pos(centerx, ytop, pos);
     write_text(pos[0], pos[1], message);
     
     erase_area(boxxright, ytop + 0.025, boxwidth + 0.05, boxheight);
 
-    glColor3f(1.0, 1.0, 1.0);
+    glColor3f(text_color, text_color, text_color);
     sprintf(message, "%.5f", energies[2]/top_energy);
     xy_to_pos(textxright, ytop, pos);
     write_text(pos[0], pos[1], message);
     
     erase_area(XMIN + leftboxshift, ybot + 0.025, boxwidth, boxheight);
 
-    glColor3f(1.0, 1.0, 1.0);
+    glColor3f(text_color, text_color, text_color);
     sprintf(message, "%.3f", energies[3]/bottom_energy);
     xy_to_pos(XMIN + 0.1, ybot, pos);
     write_text(pos[0], pos[1], message);
 
     erase_area(centerx + centerboxshift, ybot + 0.025, boxwidth, boxheight);
 
-    glColor3f(1.0, 1.0, 1.0);
+    glColor3f(text_color, text_color, text_color);
     sprintf(message, "%.3f", energies[4]/bottom_energy);
     xy_to_pos(centerx, ybot, pos);
     write_text(pos[0], pos[1], message);
 
     erase_area(boxxright, ybot + 0.025, boxwidth + 0.05, boxheight);
 
-    glColor3f(1.0, 1.0, 1.0);
+    glColor3f(text_color, text_color, text_color);
     sprintf(message, "%.5f", energies[5]/bottom_energy);
     xy_to_pos(textxright, ybot, pos);
     write_text(pos[0], pos[1], message);

@@ -39,10 +39,12 @@
 
 /* General geometrical parameters */
 
-#define WINWIDTH 	1280  /* window width */
+// #define WINWIDTH 	1280  /* window width */
+#define WINWIDTH 	720  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define NX 1280          /* number of grid points on x axis */
+// #define NX 1280          /* number of grid points on x axis */
+#define NX 720          /* number of grid points on x axis */
 #define NY 720          /* number of grid points on y axis */
 // #define NX 640          /* number of grid points on x axis */
 // #define NY 360          /* number of grid points on y axis */
@@ -52,8 +54,8 @@
 
 // #define XMIN -2.0
 // #define XMAX 2.0	/* x interval */
-#define XMIN -2.5
-#define XMAX 1.5	/* x interval */
+#define XMIN -1.125
+#define XMAX 1.125	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
@@ -61,7 +63,7 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 26      /* choice of domain shape, see list in global_pdes.c  */
+#define B_DOMAIN 27      /* choice of domain shape, see list in global_pdes.c  */
 
 #define CIRCLE_PATTERN 0    /* pattern of circles, see list in global_pdes.c */
 
@@ -69,11 +71,11 @@
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA -1.0	    /* parameter controlling the dimensions of domain */
-#define MU 0.1	            /* parameter controlling the dimensions of domain */
+#define LAMBDA 1.1	    /* parameter controlling the dimensions of domain */
+#define MU 0.8	            /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */
-#define MDEPTH 5            /* depth of computation of Menger gasket */
+#define MDEPTH 6            /* depth of computation of Menger gasket */
 #define MRATIO 5            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0     /* limit value for approximation of Mandelbrot set */
@@ -115,11 +117,12 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 1000      /* number of frames of movie */
-#define NVID 50          /* number of iterations between images displayed on screen */
+#define NSTEPS 1200      /* number of frames of movie */
+#define NVID 30          /* number of iterations between images displayed on screen */
 // #define NVID 100          /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
 #define BOUNDARY_WIDTH 1    /* width of billiard boundary */
+#define DRAW_BILLIARD 0     /* set to 1 to draw billiard boundary */
 
 #define PAUSE 100       /* number of frames after which to pause */
 #define PSLEEP 1         /* sleep time during pause */
@@ -132,12 +135,12 @@
 
 /* Field representation */
 
-#define FIELD_REP 1
+#define FIELD_REP 0
 
 #define F_INTENSITY 0   /* color represents intensity */
 #define F_GRADIENT 1    /* color represents norm of gradient */ 
 
-#define DRAW_FIELD_LINES 1  /* set to 1 to draw field lines */
+#define DRAW_FIELD_LINES 0  /* set to 1 to draw field lines */
 #define FIELD_LINE_WIDTH 1  /* width of field lines */
 #define N_FIELD_LINES 120   /* number of field lines */
 #define FIELD_LINE_FACTOR 120 /* factor controlling precision when computing origin of field lines */
@@ -154,8 +157,6 @@
 // #define SLOPE 0.1        /* sensitivity of color on wave amplitude */
 #define SLOPE 0.2        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-#define E_SCALE 100.0    /* scaling factor for energy representation */
-#define LOG_SCALE 1.0    /* scaling factor for energy log representation */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
@@ -167,12 +168,14 @@
 #define HUEAMP -359.0      /* amplitude of variation of hue for color scheme C_HUE */
 // #define HUEMEAN 270.0    /* mean value of hue for color scheme C_HUE */
 // #define HUEAMP -130.0      /* amplitude of variation of hue for color scheme C_HUE */
+#define E_SCALE 100.0     /* scaling factor for energy representation */
+#define LOG_SCALE 1.0     /* scaling factor for energy log representation */
+#define LOG_SHIFT 0.0   
 
-#define DRAW_COLOR_SCHEME 0     /* set to 1 to plot the color scheme */
+#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
 #define COLORBAR_RANGE 2.0    /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 12.0    /* scale of color scheme bar for 2nd part */
-#define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
-
+#define ROTATE_COLOR_SCHEME 1   /* set to 1 to draw color scheme horizontally */
 
 #include "global_pdes.c"
 #include "sub_wave.c"
@@ -345,8 +348,10 @@ void draw_wave(double *phi[NX], short int *xy_in[NX], double scale, int time)
         
         printf("computing linex\n");
         
-        x1 = LAMBDA + MU*1.01;
-        y1 = 1.0;
+//         x1 = LAMBDA + MU*1.01;
+//         y1 = 1.0;
+        x1 = 0.99*LAMBDA;
+        y1 = 0.0;
         linex[0] = x1;
         liney[0] = y1;
         dangle = DPI/((double)(N_FIELD_LINES*FIELD_LINE_FACTOR));
@@ -354,8 +359,10 @@ void draw_wave(double *phi[NX], short int *xy_in[NX], double scale, int time)
         for (i = 1; i < N_FIELD_LINES*FIELD_LINE_FACTOR; i++)
         {
             angle = (double)i*dangle;
-            x2 = LAMBDA + MU*1.01*cos(angle);
-            y2 = 0.5 + MU*1.01*sin(angle);
+//             x2 = LAMBDA + MU*1.01*cos(angle);
+//             y2 = 0.5 + MU*1.01*sin(angle);
+            x2 = 0.99*LAMBDA*cos(angle);
+            y2 = 0.99*LAMBDA*sin(angle);
             linex[i] = x2;
             liney[i] = y2;
             distance[i-1] = module2(x2-x1,y2-y1);
@@ -664,7 +671,7 @@ void animation()
     glutSwapBuffers();
     
     draw_wave(phi, xy_in, 1.0, 0);
-    draw_billiard();
+    if (DRAW_BILLIARD) draw_billiard();
 //     print_Julia_parameters(i);
     
 //     print_level(MDEPTH);
@@ -691,7 +698,7 @@ void animation()
         
         for (j=0; j<NVID; j++) evolve_wave(phi, phi_tmp, xy_in);
 
-        draw_billiard();
+        if (DRAW_BILLIARD) draw_billiard();
         
 //         print_level(MDEPTH);
 //         print_Julia_parameters(i);

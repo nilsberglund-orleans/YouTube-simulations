@@ -12,6 +12,11 @@ double color_amplitude_asym(double value, double scale, int time)
     return(2.0*tanh(SLOPE*value/scale)*exp(-((double)time*ATTENUATION)) - 1.0);
 }
 
+double color_amplitude_linear(double value, double scale, int time)
+/* transforms the wave amplitude into a double in [-1,1] to feed into color scheme */
+{
+    return(SLOPE*value/scale);
+}
 
 void color_scheme(int scheme, double value, double scale, int time, double rgb[3]) /* color scheme */
 {
@@ -48,6 +53,14 @@ void color_scheme(int scheme, double value, double scale, int time, double rgb[3
         {
             amplitude = color_amplitude(value, scale, time);
             amp_to_rgb(0.5*(1.0 + amplitude), rgb);
+            break;
+        }
+        case (C_ONEDIM_LINEAR):
+        {
+            amplitude = color_amplitude_linear(value, scale, time);
+            if (amplitude > 1.0) amplitude -= 1.0;
+            else if (amplitude < 0.0) amplitude += 1.0;
+            amp_to_rgb(amplitude, rgb);
             break;
         }
     }

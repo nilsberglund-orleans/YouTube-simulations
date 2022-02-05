@@ -412,6 +412,18 @@ void erase_area_hsl(double x, double y, double dx, double dy, double h, double s
     erase_area_rgb(x, y, dx, dy, rgb);
 }
 
+void draw_line(double x1, double y1, double x2, double y2)
+{
+    double pos[2];
+    
+    glBegin(GL_LINE_STRIP);
+    xy_to_pos(x1, y1, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x2, y2, pos);
+    glVertex2d(pos[0], pos[1]);
+    glEnd();    
+}
+
 void draw_rectangle(double x1, double y1, double x2, double y2)
 {
     double pos[2];
@@ -842,6 +854,62 @@ void init_circle_config(t_circle circles[NMAXCIRCLES])
                 }
             break;
         }
+        case (C_RINGS_T):
+        {
+            ncircles = NGRIDX*NGRIDY;
+            dphi = DPI/((double)NGRIDX);
+            dr = 0.5*LAMBDA/(double)NGRIDY;
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY; j++)
+                {
+                    n = NGRIDY*i + j;
+                    phi = (double)i*dphi;
+                    phi += 0.5*(double)j*dphi;
+                    r = 0.5*LAMBDA + (double)j*dr;
+                    circles[n].xc = r*cos(phi);
+                    circles[n].yc = r*sin(phi);
+                    circles[n].radius = MU;
+                    /* activate only circles that intersect the domain */
+                    if ((circles[n].yc < YMAX + MU)&&(circles[n].yc > YMIN - MU)) circles[n].active = 1;
+                    else circles[n].active = 0;
+                }
+            break;
+        }
+        case (C_RINGS_SPIRAL):
+        {
+            ncircles = 0;
+//             circles[0].xc = 0.5*LAMBDA;
+//             circles[0].yc = 0.0;
+            
+            gamma = (sqrt(5.0) - 1.0)*PI;    /* golden mean times 2Pi */
+            phi = 0.0;
+            r0 = 0.5*LAMBDA;
+            r = r0 + MU;
+            
+            for (i=0; i<1000; i++) 
+            {
+                x = r*cos(phi);
+                y = r*sin(phi);
+                
+                phi += gamma;
+                r += 0.1*MU*r0/r;
+                
+                if (x*x + y*y < LAMBDA)
+                {
+                    circles[ncircles].xc = x;
+                    circles[ncircles].yc = y;
+                    ncircles++;
+                }
+            }
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].radius = MU;
+                /* inactivate circles outside the domain */
+                if ((circles[i].yc < YMAX + MU)&&(circles[i].yc > YMIN - MU)) circles[i].active = 1;
+            }
+            break;
+        }
         case (C_ONE):
         {
             circles[ncircles].xc = 0.0;
@@ -901,7 +969,7 @@ void init_polygon_config(t_polygon polygons[NMAXCIRCLES])
     }
     
     /* adjust angles for C_RINGS configuration */
-    if (CIRCLE_PATTERN == C_RINGS)
+    if ((CIRCLE_PATTERN == C_RINGS)||(CIRCLE_PATTERN == C_RINGS_T)||(CIRCLE_PATTERN == C_RINGS_SPIRAL))
         for (i=0; i<ncircles; i++) if (polygons[i].active)
             polygons[i].angle += argument(polygons[i].xc, polygons[i].yc)/PID;
 }
@@ -1272,6 +1340,117 @@ int compute_star_coordinates(t_vertex polyline[NMAXPOLY])
     return(NPOLY);
 }
 
+int compute_fresnel_coordinates(t_vertex polyline[NMAXPOLY])
+/* compute positions of vertices approximating Fresnel lens */
+{
+    int i;
+    double ymax, dy, x, y, x1, pos[2];
+    
+    ymax = 0.9*LAMBDA;
+    dy = 2.0*ymax/(double)NSEG;
+    
+    polyline[0].x = -MU;
+    polyline[0].y = -ymax;
+    xy_to_pos(-MU, -ymax, pos);        
+    polyline[0].posi = pos[0];
+    polyline[0].posj = pos[1];
+    
+    for (i=1; i<NSEG; i++)
+    {
+        y = -ymax + dy*(double)i;
+        x = sqrt(LAMBDA*LAMBDA - y*y) - vabs(LAMBDA);
+//         x = sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA*LAMBDA;
+        
+        while (x <= 0.0) x+= MU;
+        
+        polyline[i].x = x;
+        polyline[i].y = y;
+        
+        xy_to_pos(x, y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+        
+    polyline[NSEG].x = -MU;
+    polyline[NSEG].y = ymax;
+    xy_to_pos(-MU, ymax, pos);        
+    polyline[NSEG].posi = pos[0];
+    polyline[NSEG].posj = pos[1];
+
+    return(NSEG+1);
+}
+
+int compute_double_fresnel_coordinates(t_vertex polyline[NMAXPOLY], double xshift)
+/* compute positions of vertices approximating two facing Fresnel lenses */
+{
+    int i;
+    double pos[2];
+    
+    compute_fresnel_coordinates(polyline);
+        
+    for (i=0; i<=NSEG; i++)
+    {
+        polyline[i].x -= xshift;
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+        
+        polyline[NSEG + 1 + i].x = -polyline[i].x;
+        polyline[NSEG + 1 + i].y = polyline[i].y;
+        xy_to_pos(polyline[NSEG + 1 + i].x, polyline[NSEG + 1 + i].y, pos);        
+        polyline[NSEG + 1 + i].posi = pos[0];
+        polyline[NSEG + 1 + i].posj = pos[1];
+    }
+
+    return(2*NSEG+2);
+}
+
+
+int compute_noisepanel_coordinates(t_vertex polyline[NMAXPOLY])
+/* compute positions of vertices approximating Fresnel lens */
+{
+    int i, n, even;
+    double ymax, dy, x, y, x1, pos[2];
+    
+    /* find the leftmost point */
+    x = 0.0;
+    n = 0;
+    while (x > XMIN) 
+    {
+        x -= LAMBDA;
+        n++;
+    }
+    if (n%2 == 0) even = 1;
+    else even = 0;
+    
+    i = 0;
+    while (x <= XMAX + LAMBDA)
+    {
+        if (even) y = YMIN + 0.1;
+        else y = YMIN + 0.1 + MU;
+        
+        polyline[i].x = x;
+        polyline[i].y = y;
+        
+        xy_to_pos(x, y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+        
+        x += LAMBDA;
+        even = 1 - even;
+        i++;
+    }
+    n = i;
+    for (i=0; i<n; i++)
+    {
+        polyline[n+i].x = polyline[n-i-1].x;
+        polyline[n+i].y = -polyline[n-i-1].y;
+        polyline[n+i].posi = polyline[n-i-1].posi;
+        polyline[n+i].posj = NY - polyline[n-i-1].posj;
+    }
+        
+    return(2*n);
+}
 
 int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
 /* initialise variable polyline, for certain polygonal domain shapes */
@@ -1308,6 +1487,18 @@ int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
         case (D_STAR):
         {
             return(compute_star_coordinates(polyline));
+        }
+        case (D_FRESNEL):
+        {
+            return(compute_fresnel_coordinates(polyline));
+        }
+        case (D_DOUBLE_FRESNEL):
+        {
+            return(compute_double_fresnel_coordinates(polyline, LAMBDA));
+        }
+        case (D_NOISEPANEL):
+        {
+            return(compute_noisepanel_coordinates(polyline));
         }
         default:
         {
@@ -1746,6 +1937,53 @@ int xy_in_billiard(double x, double y)
             for (i = 0; i < NPOLY-1; i++)
                 condition += xy_in_triangle_tvertex(x, y, polyline[NPOLY], polyline[i], polyline[i+1]);
             return(condition >= 1);
+        }
+        case (D_FRESNEL):
+        {
+            if (vabs(y) > 0.9*LAMBDA) return(1);
+            if (vabs(x) > MU) return(1);
+            
+            x1 = sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA;
+            while (x1 <= 0.0) x1 += MU;
+            if (x < x1) return(0);
+            else return(1);
+        }
+        case (D_DOUBLE_FRESNEL):
+        {
+            if (vabs(y) > 0.9*vabs(LAMBDA)) return(1);
+            if (LAMBDA > 0.0)
+            {
+                if (vabs(x) > LAMBDA + MU) return(1);
+            
+                x1 = sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA;
+                while (x1 <= 0.0) x1 += MU;
+                x1 -= LAMBDA;
+                if (vabs(x) > -x1) return(0);
+                else return(1);
+            }
+            else
+            {
+                if (vabs(x) < -LAMBDA - MU) return(1);
+            
+                x1 = sqrt(LAMBDA*LAMBDA - y*y) + LAMBDA;
+                while (x1 <= 0.0) x1 += MU;
+                x1 -= LAMBDA;
+                if (vabs(x) > x1) return(1);
+                else return(0);
+            }
+        }
+        case (D_NOISEPANEL):
+        {
+            x1 = vabs(x);
+            while (x1 > 2.0*LAMBDA) x1 -= 2.0*LAMBDA;
+            if (x1 <= LAMBDA) y1 = 0.1 + MU*x1/LAMBDA;
+            else y1 = 0.1 + 2.0*MU - MU*x1/LAMBDA;
+            return((y > YMIN + y1)&&(y < YMAX - y1));
+//             x1 = vabs(x);
+//             while (x1 > 2.0*LAMBDA) x1 -= 2.0*LAMBDA;
+//             if (x1 <= LAMBDA) y1 = MU + x1;
+//             else y1 = 3.0*MU - x1;
+//             return((y > YMIN + y1)&&(y < YMAX - y1));
         }
         case (D_MENGER):       
         {
@@ -2685,6 +2923,33 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd();
             break;
         }
+        case (D_FRESNEL):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<npolyline; i++) tvertex_lineto(polyline[i]);
+            glEnd();
+            break;
+        }
+        case (D_DOUBLE_FRESNEL):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<npolyline/2; i++) tvertex_lineto(polyline[i]);
+            glEnd();
+            glBegin(GL_LINE_LOOP);
+            for (i=npolyline/2; i<npolyline; i++) tvertex_lineto(polyline[i]);
+            glEnd();
+            break;
+        }
+        case (D_NOISEPANEL):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            glBegin(GL_LINE_STRIP);
+            for (i=0; i<npolyline; i++) tvertex_lineto(polyline[i]);
+            glEnd();
+            break;
+        }
         case (D_CIRCLES):
         {
             glLineWidth(BOUNDARY_WIDTH);
@@ -2948,10 +3213,13 @@ void draw_billiard()      /* draws the billiard boundary */
 void draw_color_scheme(double x1, double y1, double x2, double y2, int plot, double min, double max)
 {
     int j, k, ij_botleft[2], ij_topright[2], imin, imax, jmin, jmax;
-    double y, dy, dy_e, rgb[3], value;
+    double y, dy, dy_e, rgb[3], value, lum, amp;
     
     xy_to_ij(x1, y1, ij_botleft);
     xy_to_ij(x2, y2, ij_topright);
+    
+    rgb[0] = 0.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+    erase_area_rgb(0.5*(x1 + x2), x2 - x1, 0.5*(y1 + y2), y2 - y1, rgb);
 
     if (ROTATE_COLOR_SCHEME)
     {
@@ -2998,20 +3266,30 @@ void draw_color_scheme(double x1, double y1, double x2, double y2, int plot, dou
             }
             case (P_LOG_ENERGY):
             {
-                value = LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+                value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+//                 if (value <= 0.0) value = 0.0;
                 color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
                 break;
             }
             case (P_LOG_MEAN_ENERGY):
             {
-                value = LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+                value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+//                 if (value <= 0.0) value = 0.0;
                 color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
                 break;
             }
             case (P_PHASE):
             {
                 value = min + 1.0*dy*(double)(j - jmin);
-                color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+//                 lum = (color_amplitude(value, 1.0, 1))*0.5;
+//                 if (lum < 0.0) lum = 0.0;
+//                 hsl_to_rgb(value*360.0, 0.9, 0.5, rgb);
+//                 color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+//                 amp = color_amplitude_linear(value, 1.0, 1);
+                amp = 0.5*color_amplitude_linear(value, 1.0, 1);
+                while (amp > 1.0) amp -= 2.0;
+                while (amp < -1.0) amp += 2.0;
+                amp_to_rgb(0.5*(1.0 + amp), rgb);
                 break;
             }
         }
