@@ -2339,3 +2339,210 @@ void hsl_to_rgb_twilight(double h, double s, double l, double rgb[3])
     else if (color_hue < 0) color_hue = 0;
     for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)twilight_srgb_floats[color_hue][i];
 }
+
+void hsl_to_rgb_palette(double h, double s, double l, double rgb[3], int palette)        
+/* color conversion from HSL to RGB */
+{
+    int color_hue, i;
+    double r, g, b, ratio = 0.711111111, interpolate;    /* ratio equals 256/360 */
+     
+    switch (palette) {
+        case (COL_JET): 
+        {
+            hsl_to_rgb_jet(h, s, l, rgb);
+            break;
+        }
+        case (COL_HSLUV): 
+        {
+            hsluv2rgb(h, 100.0*s, l, &r, &g, &b);
+            rgb[0] = 2.0*l*r*100.0;
+            rgb[1] = 2.0*l*g*100.0;
+            rgb[2] = 2.0*l*b*100.0;
+            break;
+        }
+        case (COL_GRAY): 
+        {
+            color_hue = h/360.0;
+            rgb[0] = color_hue;
+            rgb[1] = color_hue;
+            rgb[2] = color_hue;
+            break;
+        }
+        case (COL_TURBO):
+        {
+            color_hue = 255 - (int)(ratio*h);
+            for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)turbo_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_VIRIDIS):
+        {
+            color_hue = 255 - (int)(ratio*h);
+            for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)viridis_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_MAGMA):
+        {
+            color_hue = 255 - (int)(ratio*h);
+            for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)magma_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_INFERNO):
+        {
+            color_hue = 255 - (int)(ratio*h);
+            for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)inferno_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_PLASMA):
+        {
+            color_hue = 255 - (int)(ratio*h);
+            for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)plasma_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_CIVIDIS):
+        {
+            color_hue = 255 - (int)(ratio*h);
+            for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)cividis_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_PARULA):
+        {
+            color_hue = 255 - (int)(ratio*h);
+            for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)parula_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_TWILIGHT):
+        {
+            color_hue = 510 - (int)(2.0*ratio*h);
+            if (color_hue > 510) color_hue = 510;
+            else if (color_hue < 0) color_hue = 0;
+            for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)twilight_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_TWILIGHT_SHIFTED):
+        {
+//             color_hue = 255 - (int)(2.0*ratio*h);
+            color_hue = (int)(2.0*ratio*h) - 255;
+            if (color_hue > 510) color_hue -= 510;
+            else if (color_hue < 0) color_hue += 510;
+            for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)twilight_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_TURBO_CYCLIC):
+        {
+            if (h < 330.0)
+            {
+                color_hue = 255 - (int)(ratio*h*12.0/11.0);
+                for (i=0; i<3; i++) rgb[i] = 2.0*l*(double)turbo_srgb_floats[color_hue][i];
+            }
+            else    /* use a convex combination to interpolate between extremal Turbo values */
+            {
+                if (h > 360.0) h = 360.0;
+                interpolate = (h - 330.0)/30.0;
+                for (i=0; i<3; i++) 
+                    rgb[i] = (1.0 - interpolate)*(double)turbo_srgb_floats[255][i] + interpolate*(double)turbo_srgb_floats[0][i];
+            }
+            break;
+        }
+    }
+}
+
+void amp_to_rgb_palette(double h, double rgb[3], int palette)        /* color conversion from amplitude in [0,1] to RGB */
+{
+    int color_hue, i;
+    double r, g, b, interpolate;
+     
+    color_hue = (int)(256.0*h);
+    if (color_hue > 255) color_hue = 255;
+    
+    switch (palette) {
+        case (COL_JET): 
+        {
+            hsl_to_rgb_jet(360.0*(1.0 - h), 0.9, 0.5, rgb);
+            break;
+        }
+        case (COL_HSLUV): 
+        {
+            hsluv2rgb(360.0*(1.0 - h), 90.0, 0.5, &r, &g, &b);
+            rgb[0] = r*100.0;
+            rgb[1] = g*100.0;
+            rgb[2] = b*100.0;
+            break;
+        }
+        case (COL_GRAY): 
+        {
+            rgb[0] = h;
+            rgb[1] = h;
+            rgb[2] = h;
+            break;
+        }
+        case (COL_TURBO):
+        {
+            for (i=0; i<3; i++) rgb[i] = (double)turbo_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_VIRIDIS):
+        {
+            for (i=0; i<3; i++) rgb[i] = (double)viridis_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_MAGMA):
+        {
+            for (i=0; i<3; i++) rgb[i] = (double)magma_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_INFERNO):
+        {
+            for (i=0; i<3; i++) rgb[i] = (double)inferno_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_PLASMA):
+        {
+            for (i=0; i<3; i++) rgb[i] = (double)plasma_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_CIVIDIS):
+        {
+            for (i=0; i<3; i++) rgb[i] = (double)cividis_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_PARULA):
+        {
+            for (i=0; i<3; i++) rgb[i] = (double)parula_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_TWILIGHT):
+        {
+            color_hue = (int)(511.0*h);
+            if (color_hue > 510) color_hue = 510;
+            else if (color_hue < 0) color_hue = 0;
+            for (i=0; i<3; i++) rgb[i] = (double)twilight_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_TWILIGHT_SHIFTED):
+        {
+//             color_hue = (int)(511.0*h) + 255;
+            color_hue = 255 - (int)(511.0*h);
+            if (color_hue > 510) color_hue -= 510;
+            else if (color_hue < 0) color_hue += 510;
+            for (i=0; i<3; i++) rgb[i] = (double)twilight_srgb_floats[color_hue][i];
+            break;
+        }
+        case (COL_TURBO_CYCLIC):
+        {
+            if (h < 0.9)
+            {
+                color_hue = (int)(256.0*h/0.9);
+                for (i=0; i<3; i++) rgb[i] = (double)turbo_srgb_floats[color_hue][i];
+            }
+            else    /* use a convex combination to interpolate between extremal Turbo values */
+            {
+                if (h > 1.0) h = 1.0;
+                interpolate = (h - 0.9)/0.1;
+                for (i=0; i<3; i++) 
+                    rgb[i] = (1.0 - interpolate)*(double)turbo_srgb_floats[255][i] + interpolate*(double)turbo_srgb_floats[0][i];
+            }
+            break;
+        }
+    }
+}
+

@@ -1349,9 +1349,11 @@ int compute_fresnel_coordinates(t_vertex polyline[NMAXPOLY])
     ymax = 0.9*LAMBDA;
     dy = 2.0*ymax/(double)NSEG;
     
-    polyline[0].x = -MU;
+    if (LAMBDA > 0.0) x = -MU;
+    else x = MU;
+    polyline[0].x = x;
     polyline[0].y = -ymax;
-    xy_to_pos(-MU, -ymax, pos);        
+    xy_to_pos(x, -ymax, pos);        
     polyline[0].posi = pos[0];
     polyline[0].posj = pos[1];
     
@@ -1362,6 +1364,7 @@ int compute_fresnel_coordinates(t_vertex polyline[NMAXPOLY])
 //         x = sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA*LAMBDA;
         
         while (x <= 0.0) x+= MU;
+        if (LAMBDA < 0.0) x = -x;
         
         polyline[i].x = x;
         polyline[i].y = y;
@@ -1371,9 +1374,11 @@ int compute_fresnel_coordinates(t_vertex polyline[NMAXPOLY])
         polyline[i].posj = pos[1];
     }
         
-    polyline[NSEG].x = -MU;
+    if (LAMBDA > 0.0) x = -MU;
+    else x = MU;
+    polyline[NSEG].x = x;
     polyline[NSEG].y = ymax;
-    xy_to_pos(-MU, ymax, pos);        
+    xy_to_pos(x, ymax, pos);
     polyline[NSEG].posi = pos[0];
     polyline[NSEG].posj = pos[1];
 
@@ -1407,7 +1412,7 @@ int compute_double_fresnel_coordinates(t_vertex polyline[NMAXPOLY], double xshif
 
 
 int compute_noisepanel_coordinates(t_vertex polyline[NMAXPOLY])
-/* compute positions of vertices approximating Fresnel lens */
+/* compute positions of vertices of noise panel */
 {
     int i, n, even;
     double ymax, dy, x, y, x1, pos[2];
@@ -1450,6 +1455,46 @@ int compute_noisepanel_coordinates(t_vertex polyline[NMAXPOLY])
     }
         
     return(2*n);
+}
+
+int compute_qrd_coordinates(t_vertex polyline[NMAXPOLY])
+/* compute positions of quadratic noise diffuser */
+{
+    int n = 0, b, k, k1, kmin, kmax;
+    double x, y, x1, y1 = YMIN, pos[2];
+    
+    kmin = (int)(XMIN/LAMBDA) - 2;
+    kmax = (int)(XMAX/LAMBDA) + 2;
+    
+    for (b = -1; b <= 1; b+= 2)
+    {
+        if (b == 1) y1 = YMAX;
+        for (k = kmin; k < kmax; k++)
+        {
+            x = LAMBDA*((double)(k) - 0.5);
+            k1 = (k*k) % 13;
+            if (b == -1) y = YMIN + (MU/13.0)*(14.0 - (double)k1);
+            else y = YMAX - (MU/13.0)*(14.0 - (double)k1);
+        
+            polyline[n].x = x;
+            polyline[n].y = y1;
+            xy_to_pos(x, y1, pos);        
+            polyline[n].posi = pos[0];
+            polyline[n].posj = pos[1];
+            n++;
+
+            polyline[n].x = x;
+            polyline[n].y = y;
+            xy_to_pos(x, y, pos);        
+            polyline[n].posi = pos[0];
+            polyline[n].posj = pos[1];
+            n++;
+        
+            y1 = y;
+        }
+    }
+    
+    return(n);
 }
 
 int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
@@ -1499,6 +1544,10 @@ int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
         case (D_NOISEPANEL):
         {
             return(compute_noisepanel_coordinates(polyline));
+        }
+        case (D_QRD):
+        {
+            return(compute_qrd_coordinates(polyline));
         }
         default:
         {
@@ -1940,13 +1989,22 @@ int xy_in_billiard(double x, double y)
         }
         case (D_FRESNEL):
         {
-            if (vabs(y) > 0.9*LAMBDA) return(1);
+            if (vabs(y) > 0.9*vabs(LAMBDA)) return(1);
             if (vabs(x) > MU) return(1);
             
-            x1 = sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA;
+            x1 = sqrt(LAMBDA*LAMBDA - y*y) - vabs(LAMBDA);
             while (x1 <= 0.0) x1 += MU;
-            if (x < x1) return(0);
-            else return(1);
+            if (LAMBDA > 0.0)
+            {
+                if (x < x1) return(0);
+                else return(1);
+            }
+            else 
+            {
+                x1 = -x1;
+                if (x > x1) return(0);
+                else return(1);
+            }
         }
         case (D_DOUBLE_FRESNEL):
         {
@@ -1979,11 +2037,35 @@ int xy_in_billiard(double x, double y)
             if (x1 <= LAMBDA) y1 = 0.1 + MU*x1/LAMBDA;
             else y1 = 0.1 + 2.0*MU - MU*x1/LAMBDA;
             return((y > YMIN + y1)&&(y < YMAX - y1));
-//             x1 = vabs(x);
-//             while (x1 > 2.0*LAMBDA) x1 -= 2.0*LAMBDA;
-//             if (x1 <= LAMBDA) y1 = MU + x1;
-//             else y1 = 3.0*MU - x1;
-//             return((y > YMIN + y1)&&(y < YMAX - y1));
+        }
+        case (D_QRD):
+        {
+            x1 = vabs(x)/LAMBDA;
+            k = (int)(x1 + 0.5);
+            k1 = (k*k) % 13;
+            y1 = (MU/13.0)*(14.0 - (double)k1);
+            return ((y > YMIN + y1)&&(y < YMAX - y1));
+        }
+        case (D_CIRCLE_SEGMENT):
+        {
+            if (vabs(y) > 0.9*vabs(LAMBDA)) return(1);
+            
+            y1 = 0.9*LAMBDA;
+            x1 = sqrt(LAMBDA*LAMBDA - y1*y1) - vabs(LAMBDA) + MU;
+            if ((LAMBDA > 0.0)&&(x < x1)) return(1);
+            else if ((LAMBDA < 0.0)&&(x > -x1)) return(1);
+            
+            x1 = sqrt(LAMBDA*LAMBDA - y*y) - vabs(LAMBDA) + MU;
+            if (LAMBDA > 0.0)
+            {
+                if (x < x1) return(0);
+                else return(1);
+            }
+            else
+            {
+                if (x > -x1) return(0);
+                else return(1);                
+            }
         }
         case (D_MENGER):       
         {
@@ -2950,6 +3032,37 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd();
             break;
         }
+        case (D_QRD):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            glBegin(GL_LINE_STRIP);
+            for (i=0; i<npolyline/2; i++) tvertex_lineto(polyline[i]);
+            glEnd();
+            glBegin(GL_LINE_STRIP);
+            for (i=npolyline/2; i<npolyline; i++) tvertex_lineto(polyline[i]);
+            glEnd();
+            break;
+        }
+        case (D_CIRCLE_SEGMENT):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<NSEG; i++) 
+            {
+                y = -0.9*LAMBDA + (double)i*1.8*LAMBDA/(double)NSEG;
+                if (LAMBDA > 0.0) x = sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA + MU;
+                else x = -sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA - MU;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            y = 0.9*LAMBDA;
+            if (LAMBDA > 0.0) x = sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA + MU;
+            else x = -sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA - MU;
+            xy_to_pos(x, y, pos);
+            glVertex2d(pos[0], pos[1]);
+            glEnd();
+            break;
+        }
         case (D_CIRCLES):
         {
             glLineWidth(BOUNDARY_WIDTH);
@@ -3276,6 +3389,112 @@ void draw_color_scheme(double x1, double y1, double x2, double y2, int plot, dou
                 value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
 //                 if (value <= 0.0) value = 0.0;
                 color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_PHASE):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+//                 lum = (color_amplitude(value, 1.0, 1))*0.5;
+//                 if (lum < 0.0) lum = 0.0;
+//                 hsl_to_rgb(value*360.0, 0.9, 0.5, rgb);
+//                 color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+//                 amp = color_amplitude_linear(value, 1.0, 1);
+                amp = 0.5*color_amplitude_linear(value, 1.0, 1);
+                while (amp > 1.0) amp -= 2.0;
+                while (amp < -1.0) amp += 2.0;
+                amp_to_rgb(0.5*(1.0 + amp), rgb);
+                break;
+            }
+        }
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+        if (ROTATE_COLOR_SCHEME)
+        {
+            glVertex2i(j, imin);
+            glVertex2i(j, imax);
+            glVertex2i(j+1, imax);
+            glVertex2i(j+1, imin);            
+        }
+        else
+        {
+            glVertex2i(imin, j);
+            glVertex2i(imax, j);
+            glVertex2i(imax, j+1);
+            glVertex2i(imin, j+1);
+        }
+    }
+    glEnd ();
+    
+    glColor3f(1.0, 1.0, 1.0);
+    glLineWidth(BOUNDARY_WIDTH);
+    draw_rectangle(x1, y1, x2, y2);
+}
+
+void draw_color_scheme_palette(double x1, double y1, double x2, double y2, int plot, double min, double max, int palette)
+{
+    int j, k, ij_botleft[2], ij_topright[2], imin, imax, jmin, jmax;
+    double y, dy, dy_e, rgb[3], value, lum, amp;
+    
+    xy_to_ij(x1, y1, ij_botleft);
+    xy_to_ij(x2, y2, ij_topright);
+    
+    rgb[0] = 0.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+    erase_area_rgb(0.5*(x1 + x2), x2 - x1, 0.5*(y1 + y2), y2 - y1, rgb);
+
+    if (ROTATE_COLOR_SCHEME)
+    {
+        jmin = ij_botleft[0];
+        jmax = ij_topright[0];
+        imin = ij_botleft[1];
+        imax = ij_topright[1];    
+    }
+    else
+    {
+        imin = ij_botleft[0];
+        imax = ij_topright[0];
+        jmin = ij_botleft[1];
+        jmax = ij_topright[1];    
+    }
+        
+        
+    glBegin(GL_QUADS);
+    dy = (max - min)/((double)(jmax - jmin));
+    dy_e = max/((double)(jmax - jmin));
+    
+    for (j = jmin; j < jmax; j++)
+    {
+        switch (plot) {
+            case (P_AMPLITUDE):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_MEAN_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_LOG_ENERGY):
+            {
+                value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+//                 if (value <= 0.0) value = 0.0;
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_LOG_MEAN_ENERGY):
+            {
+                value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+//                 if (value <= 0.0) value = 0.0;
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
                 break;
             }
             case (P_PHASE):

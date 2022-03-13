@@ -53,6 +53,8 @@
 #define D_FRESNEL 43            /* Fresnel lens */
 #define D_NOISEPANEL 44         /* zigzag noise insulating panel */
 #define D_DOUBLE_FRESNEL 45     /* two facing Fresnel lenses */
+#define D_QRD 46                /* quadratic resonance diffuser */
+#define D_CIRCLE_SEGMENT 47     /* lens-shaped circular segment */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */

@@ -527,7 +527,46 @@ int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
                 }
             return(1);
         }
-        cdefault:
+        case (D_FRESNEL):
+        {
+            if (vabs(y) > 0.9*vabs(LAMBDA)) return(1);
+            if (vabs(x) > MU) return(1);
+            
+            x1 = sqrt(LAMBDA*LAMBDA - y*y) - vabs(LAMBDA);
+            while (x1 <= 0.0) x1 += MU;
+            if (LAMBDA > 0.0)
+            {
+                if (x < x1) return(0);
+                else return(1);
+            }
+            else 
+            {
+                if (x > -x1) return(0);
+                else return(1);
+            }
+        }
+        case (D_CIRCLE_SEGMENT):
+        {
+            if (vabs(y) > 0.9*vabs(LAMBDA)) return(1);
+            
+            y1 = 0.9*LAMBDA;
+            x1 = sqrt(LAMBDA*LAMBDA - y1*y1) - vabs(LAMBDA) + MU;
+            if ((LAMBDA > 0.0)&&(x < x1)) return(1);
+            else if ((LAMBDA < 0.0)&&(x > -x1)) return(1);
+            
+            x1 = sqrt(LAMBDA*LAMBDA - y*y) - vabs(LAMBDA) + MU;
+            if (LAMBDA > 0.0)
+            {
+                if (x < x1) return(0);
+                else return(1);
+            }
+            else
+            {
+                if (x > -x1) return(0);
+                else return(1);                
+            }
+        }
+        default:
         {
             printf("Function ij_in_billiard not defined for this billiard \n");
             return(0);
@@ -563,6 +602,7 @@ void draw_billiard_half(int domain, int pattern, int top)      /* draws the bill
     
     glEnable(GL_SCISSOR_TEST);
     if (top) glScissor(0.0, YMID, NX, YMID);
+//     if (top) glScissor(0.0, YMID, NX, YMAX);
     else glScissor(0.0, 0.0, NX, YMID);
 
     if (BLACK) glColor3f(1.0, 1.0, 1.0);
@@ -661,6 +701,34 @@ void draw_billiard_half(int domain, int pattern, int top)      /* draws the bill
                 }
             break;
         }
+        case (D_FRESNEL):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<npolyline; i++) tvertex_lineto(polyline[i]);
+            glEnd();
+            break;
+        }
+        case (D_CIRCLE_SEGMENT):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<NSEG; i++) 
+            {
+                y = -0.9*LAMBDA + (double)i*1.8*LAMBDA/(double)NSEG;
+                if (LAMBDA > 0.0) x = sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA + MU;
+                else x = -sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA - MU;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            y = 0.9*LAMBDA;
+            if (LAMBDA > 0.0) x = sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA + MU;
+            else x = -sqrt(LAMBDA*LAMBDA - y*y) - LAMBDA - MU;
+            xy_to_pos(x, y, pos);
+            glVertex2d(pos[0], pos[1]);
+            glEnd();
+            break;
+        }
         case (D_MANDELBROT):
         {
             /* Do nothing */
@@ -731,7 +799,7 @@ void init_wave_flat_comp( double *phi[NX], double *psi[NX], short int * xy_in[NX
 }
 
 
-void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], double scale, int time)
+void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], double scale, int time, int plot)
 /* draw the field */
 {
     int i, j, iplus, iminus, jplus, jminus;
@@ -747,7 +815,7 @@ void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], doub
         {
             if (((TWOSPEEDS)&&(xy_in[i][j] != 2))||(xy_in[i][j] == 1))
             {
-                switch (PLOT) {
+                switch (plot) {
                     case (P_AMPLITUDE):
                     {
                         color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);

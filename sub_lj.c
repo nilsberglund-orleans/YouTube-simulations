@@ -4,6 +4,8 @@
 
 #include "colors_waves.c"
 
+#define HUE_TYPE0 300.0     /* hue of particles of type 0 */
+#define HUE_TYPE1 90.0      /* hue of particles of type 1 */
 
 int writetiff(char *filename, char *description, int x, int y, int width, int height, int compression)
 {
@@ -191,6 +193,33 @@ void write_text( double x, double y, char *st)
  }
  
 
+double gaussian()
+/* returns standard normal random variable, using Box-Mueller algorithm */
+{
+    static double V1, V2, S;
+    static int phase = 0;
+    double X;
+
+    if (phase == 0) 
+    {
+        do 
+        {
+        double U1 = (double)rand() / RAND_MAX;
+        double U2 = (double)rand() / RAND_MAX;
+        V1 = 2 * U1 - 1;
+        V2 = 2 * U2 - 1;
+        S = V1 * V1 + V2 * V2;
+        } 
+        while(S >= 1 || S == 0);
+        X = V1 * sqrt(-2 * log(S) / S);
+    } 
+    else X = V2 * sqrt(-2 * log(S) / S);
+
+    phase = 1 - phase;
+
+    return X;
+}
+
 
 /*********************/
 /* drawing routines  */
@@ -259,6 +288,26 @@ void draw_rectangle(double x1, double y1, double x2, double y2)
     glVertex2d(x2, y1);
     glVertex2d(x2, y2);
     glVertex2d(x1, y2);
+    glEnd();    
+}
+
+void draw_colored_rectangle(double x1, double y1, double x2, double y2, double rgb[3])
+{    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(x1, y1);
+    glVertex2d(x2, y1);
+    glVertex2d(x2, y2);
+    glVertex2d(x1, y2);
+    glEnd();    
+}
+
+void draw_triangle(double x1, double y1, double x2, double y2, double x3, double y3)
+{    
+    glBegin(GL_LINE_LOOP);
+    glVertex2d(x1, y1);
+    glVertex2d(x2, y2);
+    glVertex2d(x3, y3);
     glEnd();    
 }
 
@@ -385,6 +434,34 @@ void draw_colored_rhombus(double x, double y, double r, double angle, double rgb
     glVertex2d(x + r*cos(angle), y + r*sin(angle));
     glEnd();
 }
+
+void draw_colored_sector(double xc, double yc, double r1, double r2, double angle1, double angle2, double rgb[3], int nsides)
+{    
+    int i;
+    double angle, dangle;
+    
+    dangle = (angle2 - angle1)/(double)nsides;
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(xc + r1*cos(angle1), yc + r1*sin(angle1));
+    for (i = 0; i < nsides+1; i++)
+    {
+        angle = angle1 + dangle*(double)i;
+        glVertex2d(xc + r2*cos(angle), yc + r2*sin(angle));
+    }
+    glEnd();  
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(xc + r2*cos(angle2), yc + r2*sin(angle2));
+    for (i = 0; i < nsides+1; i++)
+    {
+        angle = angle1 + dangle*(double)i;
+        glVertex2d(xc + r1*cos(angle), yc + r1*sin(angle));
+    }
+    glEnd();   
+}
+
+
 
 void init_particle_config(t_particle particles[NMAXCIRCLES])
 /* initialise particle configuration */
@@ -758,4 +835,2388 @@ void init_people_config(t_person people[NMAXCIRCLES])
     
 }
 
+void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
+/* initialise particle configuration */
+{
+    int i, j, n; 
+    double x, y, dx, dy;
+    
+    switch (OBSTACLE_PATTERN) {
+        case (O_CORNERS):
+        {
+            n = 0;
+            for (i = 0; i < 2; i++)
+                for (j = 0; j < 2; j++)
+                {
+                    obstacle[n].xc = BCXMIN + ((double)i)*(BCXMAX - BCXMIN);
+                    obstacle[n].yc = BCYMIN + ((double)j)*(BCYMAX - BCYMIN);
+                    obstacle[n].radius = OBSTACLE_RADIUS;
+                    obstacle[n].active = 1;
+                    n++;
+                }
+            nobstacles = n;
+            break;
+        }
+        case (O_GALTON_BOARD):
+        {
+            dy = (YMAX - YMIN)/((double)NGRIDX + 3);
+            dx = dy/cos(PI/6.0);
+            n = 0;
+            for (i = 0; i < NGRIDX + 1; i++)
+                for (j = 0; j < i; j++)
+                {
+                    obstacle[n].yc = YMAX - ((double)i)*dy;
+                    obstacle[n].xc = ((double)j - 0.5*(double)i + 0.5)*dx;
+                    obstacle[n].radius = OBSTACLE_RADIUS;
+                    obstacle[n].active = 1;
+                    n++;
+                }
+            nobstacles = n;
+            break;
+        }
+        default: 
+        {
+            printf("Function init_obstacle_config not defined for this pattern \n");
+        }
+    }
+}
+ 
+ 
+/* Computation of interaction force */
 
+double lennard_jones_force(double r, t_particle particle)
+{
+    int i;
+    double rmin = 0.01, rplus, ratio = 1.0;
+    
+    if (r > REPEL_RADIUS*particle.radius) return(0.0);
+    else
+    {
+        if (r > rmin) rplus = r;
+        else rplus = rmin;
+    
+//         ratio = ipow(particle.eq_dist*particle.radius/rplus, 6);
+        ratio = ipow(particle.eq_dist*particle.radius/rplus, 3);
+        ratio = ratio*ratio;
+        
+        return((ratio - 2.0*ratio*ratio)/rplus);
+    }
+}
+
+void aniso_lj_force(double r, double ca, double sa, double ca_rel, double sa_rel, double force[2], t_particle particle)
+{
+    int i;
+    double rmin = 0.01, rplus, ratio = 1.0, c2, s2, c4, s4, a, aprime, f1, f2;
+    
+    if (r > REPEL_RADIUS*particle.radius)
+    {
+        force[0] = 0.0;
+        force[1] = 0.0;
+    }
+    else
+    {
+        if (r > rmin) rplus = r;
+        else rplus = rmin;
+    
+//         ratio = ipow(particle.eq_dist*particle.radius/rplus, 6);
+        ratio = ipow(particle.eq_dist*particle.radius/rplus, 3);
+        ratio = ratio*ratio;
+
+        /* cos(2phi) and sin(2phi) */
+        c2 = ca_rel*ca_rel - sa_rel*sa_rel;
+        s2 = 2.0*ca_rel*sa_rel;
+
+        /* cos(4phi) and sin(4phi) */
+        c4 = c2*c2 - s2*s2;
+        s4 = 2.0*c2*s2;
+        
+        a = 0.5*(9.0 - 7.0*c4);
+        aprime = 14.0*s4;
+        
+        f1 = ratio*(a - ratio)/rplus;
+        f2 = ratio*aprime/rplus;
+        
+        force[0] = f1*ca - f2*sa;
+        force[1] = f1*sa + f2*ca;
+    }
+}
+
+void penta_lj_force(double r, double ca, double sa, double ca_rel, double sa_rel, double force[2], t_particle particle)
+{
+    int i;
+    double rmin = 0.01, rplus, ratio = 1.0, c2, s2, c4, s4, c5, s5, a, aprime, f1, f2;
+    static double a0, b0;
+    static int first = 1;
+    
+    if (first)
+    {
+        a0 = cos(0.1*PI) + 0.5;
+        b0 = a0 - 1.0;
+        first = 0;
+    }
+    
+    if (r > REPEL_RADIUS*particle.radius)
+    {
+        force[0] = 0.0;
+        force[1] = 0.0;
+    }
+    else
+    {
+        if (r > rmin) rplus = r;
+        else rplus = rmin;
+    
+//         ratio = ipow(particle.eq_dist*particle.radius/rplus, 6);
+        ratio = ipow(particle.eq_dist*particle.radius/rplus, 3);
+        ratio = ratio*ratio;
+
+    
+        /* cos(2phi) and sin(2phi) */
+        c2 = ca_rel*ca_rel - sa_rel*sa_rel;
+        s2 = 2.0*ca_rel*sa_rel;
+
+        /* cos(4phi) and sin(4phi) */
+        c4 = c2*c2 - s2*s2;
+        s4 = 2.0*c2*s2;
+        
+        /* cos(5phi) and sin(5phi) */
+        c5 = ca_rel*c4 - sa_rel*s4;
+        s5 = sa_rel*c4 + ca_rel*s4;
+        
+        a = a0 - b0*c5;
+        aprime = 5.0*b0*s5;
+        
+        f1 = ratio*(a - ratio)/rplus;
+        f2 = ratio*aprime/rplus;
+        
+        force[0] = f1*ca - f2*sa;
+        force[1] = f1*sa + f2*ca;
+    }
+}
+
+double old_golden_ratio_force(double r, t_particle particle)
+/* potential with two minima at distances whose ratio is the golden ratio Phi */
+/* old version that does not work very well */
+{
+    int i;
+    double x, y, z, rplus, ratio = 1.0, phi, a, phi3;
+    static int first = 1;
+    static double rmin, b, c, d;
+    
+    if (first) 
+    {
+        rmin = 0.5*particle.radius;
+        phi = 0.5*(1.0 + sqrt(5.0));
+        phi3 = 1.0/(phi*phi*phi);
+        a = 0.66;
+        b = 1.0 + phi3 + a;
+        d = phi3*a;
+        c = phi3 + a + d;
+//         b = 7.04;
+//         c = 13.66;
+//         d = 6.7;
+        first = 0;
+        printf("a = %.4lg, b = %.4lg, c = %.4lg, d = %.4lg\n", a, b, c, d);
+    }
+    
+    if (r > REPEL_RADIUS*particle.radius) return(0.0);
+    else
+    {
+        if (r > rmin) rplus = r;
+        else rplus = rmin;
+    
+        x = particle.eq_dist*particle.radius/rplus;
+        y = x*x*x;
+        z = d - c*y + b*y*y - y*y*y;
+        return(x*z/rplus);
+    }
+}
+
+double golden_ratio_force(double r, t_particle particle)
+/* potential with two minima at distances whose ratio is the golden ratio Phi */
+/* piecewise polynomial/LJ version */
+{
+    int i;
+    double x, rplus, xm6, y1;
+    static int first = 1;
+    static double rmin, phi, a, h1, h2, phi6;
+    
+    if (first) 
+    {
+        rmin = 0.5*particle.radius;
+        phi = 0.5*(1.0 + sqrt(5.0));
+        a = 1.2;
+        
+        h1 = 1.0;       /* inner potential well depth */
+        h2 = 10.0;      /* outer potential well depth */
+        phi6 = ipow(phi, 6);
+        
+        first = 0;
+    }
+    
+    if (r > REPEL_RADIUS*particle.radius) return(0.0);
+    else
+    {
+        if (r > rmin) rplus = r;
+        else rplus = rmin;
+        
+        x = rplus/(particle.eq_dist*particle.radius);
+//         xm6 = 1.0/ipow(x, 6);
+        xm6 = 1.0/ipow(x, 3);
+        xm6 = xm6*xm6;
+    
+        if (x <= 1.0) return(12.0*h1*xm6*(1.0 - xm6)/x);
+        else if (x <= a)
+        {
+            y1 = ipow(a - 1.0, 3);
+            return(6.0*h1*(x - 1.0)*(a - x)/y1);
+        }
+        else if (x <= phi)
+        {
+            y1 = ipow(phi - a, 3);
+            return(6.0*h2*(x - a)*(x - phi)/y1);
+        }
+        else return(12.0*h2*phi6*(1.0 - phi6*xm6)*xm6/x);
+    }
+}
+
+void dipole_lj_force(double r, double ca, double sa, double ca_rel, double sa_rel, double force[2], t_particle particle)
+{
+    int i;
+    double rmin = 0.01, rplus, ratio = 1.0, a, aprime, f1, f2;
+    
+    if (r > REPEL_RADIUS*MU)
+    {
+        force[0] = 0.0;
+        force[1] = 0.0;
+    }
+    else
+    {
+        if (r > rmin) rplus = r;
+        else rplus = rmin;
+    
+//         ratio = ipow(particle.eq_dist*particle.radius/rplus, 6);
+        ratio = ipow(particle.eq_dist*particle.radius/rplus, 3);
+        ratio = ratio*ratio;
+            
+        a = 1.0 + 0.25*ca_rel;
+        aprime = -0.25*sa_rel;
+        
+        f1 = ratio*(a - ratio)/rplus;
+        f2 = ratio*aprime/rplus;
+        
+        force[0] = f1*ca - f2*sa;
+        force[1] = f1*sa + f2*ca;
+    }
+}
+
+void quadrupole_lj_force(double r, double ca, double sa, double ca_rel, double sa_rel, double force[2], t_particle particle)
+{
+    int i;
+    double rmin = 0.01, rplus, ratio = 1.0, a, aprime, f1, f2, ca2, sa2, x, y, dplus, dminus;
+    static int first = 1;
+    static double a0, b0, aplus, aminus;
+
+    if (first)
+    {
+        dplus = cos(0.2*PI)*cos(0.1*PI);
+//         dminus = 0.8*dplus;
+        dminus = QUADRUPOLE_RATIO*dplus;
+        aplus = ipow(1.0/dplus, 6);
+        aminus = ipow(1.0/dminus, 6);
+//         aminus = ipow(cos(0.2*PI)*(0.25 + 0.5*sin(0.1*PI)), 6);
+        a0 = 0.5*(aplus + aminus);
+        b0 = 0.5*(aplus - aminus);
+        first = 0;
+    }
+    
+    if (r > REPEL_RADIUS*particle.radius)
+    {
+        force[0] = 0.0;
+        force[1] = 0.0;
+    }
+    else
+    {
+        if (r > rmin) rplus = r;
+        else rplus = rmin;
+    
+//         ratio = ipow(particle.eq_dist*particle.radius/rplus, 6);
+        ratio = ipow(particle.eq_dist*particle.radius/rplus, 3);
+        ratio = ratio*ratio;
+        
+        /* cos(2*phi) and sin(2*phi) */
+        ca2 = ca_rel*ca_rel - sa_rel*sa_rel;
+        sa2 = 2.0*ca_rel*sa_rel;
+            
+        a = a0 + b0*ca2;
+//         if (a == 0.0) a = 1.0e-10; 
+        aprime = -2.0*b0*sa2;
+                
+        f1 = ratio*(a - ratio)/rplus;
+        f2 = ratio*aprime/rplus;
+        
+        force[0] = f1*ca - f2*sa;
+        force[1] = f1*sa + f2*ca;
+    }
+}
+
+
+void quadrupole_lj_force2(double r, double ca, double sa, double ca_rel, double sa_rel, double force[2], t_particle particle)
+{
+    int i;
+    double rmin = 0.01, rplus, ratio = 1.0, a, aprime, f1, f2, ca2, sa2, x, y, eqdist;
+    static int first = 1;
+    static double aplus, aminus, a0, b0;
+
+    if (first)
+    {
+        aplus = ipow(cos(0.2*PI)*cos(0.1*PI), 6);
+        aminus = 0.1*aplus;
+//         aminus = 0.0;
+//         aminus = -2.0*ipow(cos(0.2*PI)*(0.5*sin(0.1*PI)), 6);
+//         aminus = ipow(cos(0.2*PI)*(0.25 + 0.5*sin(0.1*PI)), 6);
+        a0 = 0.5*(aplus + aminus);
+        b0 = 0.5*(aplus - aminus);
+        first = 0;
+    }
+    
+    if (r > REPEL_RADIUS*particle.radius)
+    {
+        force[0] = 0.0;
+        force[1] = 0.0;
+    }
+    else
+    {        
+        if (r > rmin) rplus = r;
+        else rplus = rmin;
+    
+        /* correct distance */
+//         ratio = ipow(particle.eq_dist*particle.radius/rplus, 6);
+        ratio = ipow(particle.eq_dist*particle.radius/rplus, 3);
+        ratio = ratio*ratio;
+        
+        /* cos(2*phi) and sin(2*phi) */
+        
+        ca2 = ca_rel*ca_rel - sa_rel*sa_rel;
+        sa2 = 2.0*ca_rel*sa_rel;
+            
+        a = a0 + b0*ca2;
+        if (a == 0.0) a = 1.0e-10; 
+        aprime = -2.0*b0*sa2;
+        
+//         f1 = ratio*(a - ratio)/rplus;
+//         f2 = ratio*aprime/rplus;
+        
+        f1 = ratio*(aplus - ratio)/(rplus);
+        f2 = ratio*(aminus - ratio)/(rplus);
+        
+//         force[0] = f1*ca_rel - f2*sa_rel;
+//         force[1] = f1*sa_rel + f2*ca_rel;
+
+        force[0] = f1*ca - f2*sa;
+        force[1] = f1*sa + f2*ca;
+    }
+}
+
+double water_torque(double r, double ca, double sa, double ca_rel, double sa_rel, double ck_rel, double sk_rel)
+/* compute torque of water molecule #k on water molecule #j (for interaction I_LJ_WATER) - OLD VERSION */
+{
+    double c1p, c1m, c2p, c2m, s2p, s2m, s21, s21p, s21m, c21, c21p, c21m, torque;
+    double r2, rd, rd2, rr[3][3];
+    static double cw = -0.5, sw = 0.866025404, delta = 1.5*MU, d2 = 2.25*MU*MU;
+    int i, j;
+    
+    c1p = ck_rel*cw - sk_rel*sw;
+    c1m = ck_rel*cw + sk_rel*sw;
+    c2p = ca_rel*cw - sa_rel*sw;
+    c2m = ca_rel*cw + sa_rel*sw;
+    s2p = sa_rel*cw + ca_rel*sw;
+    s2m = sa_rel*cw - ca_rel*sw;
+    
+    s21 = sa_rel*ck_rel - ca_rel*sk_rel;
+    c21 = ca_rel*ck_rel + sa_rel*sk_rel;
+    
+    s21p = s21*cw - c21*sw;
+    s21m = s21*cw + c21*sw;
+    c21p = c21*cw + s21*sw;
+    c21m = c21*cw - s21*sw;
+    
+    r2 = r*r;
+    rd = 2.0*r*delta;
+    rd2 = r2 + d2;
+    
+    rr[0][0] = r;
+    rr[0][1] = sqrt(rd2 + rd*c2p);
+    rr[0][2] = sqrt(rd2 + rd*c2m);
+    rr[1][0] = sqrt(rd2 - rd*c1p);
+    rr[2][0] = sqrt(rd2 - rd*c1m);
+    
+    rr[1][1] = sqrt(r2 + rd*(c2p - c1p) + 2.0*d2*(1.0 - c21));
+    rr[1][2] = sqrt(r2 + rd*(c2m - c1p) + 2.0*d2*(1.0 - c21m));
+    rr[2][1] = sqrt(r2 + rd*(c2p - c1m) + 2.0*d2*(1.0 - c21p));
+    rr[2][2] = sqrt(r2 + rd*(c2m - c1m) + 2.0*d2*(1.0 - c21));
+    
+    for (i=0; i<3; i++) for (j=0; j<3; j++) 
+    {   
+        if (rr[i][j] < 1.0e-4) rr[i][j] = 1.0e-4;
+        rr[i][j] = rr[i][j]*rr[i][j]*rr[i][j];
+    }
+    
+    torque = rd*(s2p/rr[0][1] + s2m/rr[0][2]);
+    torque += -0.5*rd*(s2p/rr[1][1] + s2p/rr[2][1] + s2m/rr[1][2] + s2m/rr[2][2]);
+    torque += d2*(s21/rr[1][1] + s21/rr[2][2] + s21m/rr[1][2] + s21p/rr[2][1]);
+    
+    return(torque);
+    
+}
+
+double water_force(double r, double ca, double sa, double ca_rel, double sa_rel, double ck_rel, double sk_rel, double f[2])
+/* compute force and torque of water molecule #k on water molecule #j (for interaction I_LJ_WATER) */
+{
+    double x1[3], y1[3], x2[3], y2[3], rr[3][3], dx[3][3], dy[3][3], fx[3][3], fy[3][3], m[3][3], torque = 0.0;
+    static double cw[3], sw[3], q[3], d[3], delta = 1.25*MU, dmin = 0.5*MU, fscale = 1.0;
+    int i, j;
+    static int first = 1;
+    
+    if (first)
+    {
+        cw[0] = 1.0; cw[1] = -0.5; cw[2] = -0.5;
+        sw[0] = 0.0; sw[1] = 866025404; sw[2] = -866025404;     /* sines and cosines of angles */
+        q[0] = -2.0; q[1] = 1.0; q[2] = 1.0;                    /* charges */
+        d[0] = 0.5*delta; d[1] = delta; d[2] = delta;           /* distances to center */
+        first = 0;
+    }
+    
+    /* positions of O and H atoms */
+    for (i=0; i<3; i++)
+    {
+        x1[i] = d[i]*(ca_rel*cw[i] - sa_rel*sw[i]);
+        y1[i] = d[i]*(ca_rel*sw[i] + sa_rel*cw[i]);
+        x2[i] = r + d[i]*(ck_rel*cw[i] - sk_rel*sw[i]);
+        y2[i] = d[i]*(ck_rel*sw[i] + sk_rel*cw[i]);
+    }
+    
+    /* relative positions */
+    for (i=0; i<3; i++) for (j=0; j<3; j++) 
+    {
+        dx[i][j] = x2[j] - x1[i];
+        dy[i][j] = y2[j] - y1[i];
+        rr[i][j] = module2(dx[i][j], dy[i][j]);
+        if (rr[i][j] < dmin) rr[i][j] = dmin;
+        rr[i][j] = ipow(rr[i][j],3);
+//         rr[i][j] = rr[i][j]*rr[i][j]*rr[i][j];
+    }
+    
+    /* forces between particles */
+    for (i=0; i<3; i++) for (j=0; j<3; j++) 
+    {
+        fx[i][j] = -q[i]*q[j]*dx[i][j]/rr[i][j];
+        fy[i][j] = -q[i]*q[j]*dy[i][j]/rr[i][j];
+    }
+    
+    /* torques between particles */
+    for (i=0; i<3; i++) for (j=0; j<3; j++) 
+    {
+        m[i][j] = x1[i]*fy[i][j] - y1[i]*fx[i][j];
+    }
+    
+    /* total force */
+    f[0] = 0.0;
+    f[1] = 0.0;
+    for (i=0; i<3; i++) for (j=0; j<3; j++) 
+    {
+        f[0] += fscale*fx[i][j];
+        f[1] += fscale*fy[i][j];
+        torque += fscale*m[i][j];
+    }
+    
+    return(torque);
+}
+
+int compute_particle_interaction(int i, int k, double force[2], double *torque, t_particle* particle, 
+                                 double distance, double krepel, double ca, double sa, double ca_rel, double sa_rel)
+/* compute repelling force and torque of particle #k on particle #i */
+/* returns 1 if distance between particles is smaller than NBH_DIST_FACTOR*MU */
+{
+    double x1, y1, x2, y2, r, f, angle, aniso, fx, fy, ff[2], dist_scaled, spin_f, ck, sk, ck_rel, sk_rel;
+    static double dxhalf = 0.5*(BCXMAX - BCXMIN), dyhalf = 0.5*(BCYMAX - BCYMIN);
+    int wwrapx, wwrapy;
+    
+    x1 = particle[i].xc;
+    y1 = particle[i].yc;
+    x2 = particle[k].xc;
+    y2 = particle[k].yc;
+        
+    wwrapx = ((BOUNDARY_COND == BC_KLEIN)||(BOUNDARY_COND == BC_BOY))&&(vabs(x2 - x1) > dxhalf);
+    wwrapy = (BOUNDARY_COND == BC_BOY)&&(vabs(y2 - y1) > dyhalf);
+        
+    switch (particle[k].interaction) {
+        case (I_COULOMB):
+        {
+            f = -krepel/(1.0e-8 + distance*distance);
+            force[0] = f*ca;
+            force[1] = f*sa; 
+            break;
+        }
+        case (I_LENNARD_JONES):
+        {
+            f = krepel*lennard_jones_force(distance, particle[k]);
+            force[0] = f*ca;
+            force[1] = f*sa;   
+            break;
+        }
+        case (I_LJ_DIRECTIONAL):
+        {
+            aniso_lj_force(distance, ca, sa, ca_rel, sa_rel, ff, particle[k]);
+            force[0] = krepel*ff[0];
+            force[1] = krepel*ff[1];
+            break;
+        }
+        case (I_LJ_PENTA):
+        {
+            penta_lj_force(distance, ca, sa, ca_rel, sa_rel, ff, particle[k]);
+            force[0] = krepel*ff[0];
+            force[1] = krepel*ff[1];
+            break;
+        }
+        case (I_GOLDENRATIO):
+        {
+            f = krepel*golden_ratio_force(distance, particle[k]);
+            force[0] = f*ca;
+            force[1] = f*sa;   
+            break;
+        }
+        case (I_LJ_DIPOLE):
+        {
+            dipole_lj_force(distance, ca, sa, ca_rel, sa_rel, ff, particle[k]);
+            force[0] = krepel*ff[0];
+            force[1] = krepel*ff[1];
+            break;
+        }
+        case (I_LJ_QUADRUPOLE):
+        {
+            quadrupole_lj_force(distance, ca, sa, ca_rel, sa_rel, ff, particle[k]);
+            force[0] = krepel*ff[0];
+            force[1] = krepel*ff[1];
+            break;
+        }
+        case (I_LJ_WATER):
+        {
+            f = krepel*lennard_jones_force(distance, particle[k]);
+            force[0] = f*ca;
+            force[1] = f*sa;   
+            break;
+        }
+    }
+
+    if (ROTATION) 
+    {   
+        dist_scaled = distance/(particle[i].spin_range*particle[i].radius);
+        switch (particle[k].interaction) {
+            case (I_LJ_WATER):
+            {
+                ck = cos(particle[k].angle);
+                sk = sin(particle[k].angle);
+                ck_rel = ca*ck + sa*sk;
+                sk_rel = sa*ck - ca*sk;
+//                 *torque = (-3.0*ca_rel*sk_rel + 2.0*sa_rel*ck_rel)/(1.0e-12 + dist_scaled*dist_scaled*dist_scaled);
+//                 *torque = water_torque(distance, ca, sa, ca_rel, sa_rel, ck_rel, sk_rel);
+//                 *torque = (0.5*sin(angle) + 0.5*sin(2.0*angle) - 0.45*sin(3.0*angle))/(1.0e-12 + dist_scaled*dist_scaled*dist_scaled);
+                
+                *torque = water_force(distance, ca, sa, ca_rel, sa_rel, ck_rel, sk_rel, ff);
+                force[0] += ff[0];
+                force[1] += ff[1];
+//                 printf("force = (%.3lg, %.3lg)\n", ff[0], ff[1]);
+                break;
+            }
+            default: 
+            {
+                spin_f = particle[i].spin_freq;
+                if (wwrapx||wwrapy) *torque = sin(spin_f*(-particle[k].angle - particle[i].angle))/(1.0e-8 + dist_scaled*dist_scaled);
+                else 
+                *torque = sin(spin_f*(particle[k].angle - particle[i].angle))/(1.0e-8 + dist_scaled*dist_scaled);
+            }
+        }
+        
+        if (particle[i].type == particle[k].type) 
+        {
+            if (particle[i].type == 0) *torque *= KTORQUE;
+            else *torque *= KTORQUE_B;
+        }
+        else *torque *= KTORQUE_DIFF;
+    }
+    else *torque = 0.0;
+
+    if ((distance < NBH_DIST_FACTOR*particle[i].radius)&&(k != i)) return(1);
+//     if ((distance < NBH_DIST_FACTOR*particle[i].radius)) return(1);
+    else return(0);
+}
+
+
+int compute_repelling_force(int i, int j, double force[2], double *torque, t_particle* particle, double krepel)
+/* compute repelling force of neighbour #j on particle #i */
+/* returns 1 if distance between particles is smaller than NBH_DIST_FACTOR*MU */
+{
+    double distance, ca, sa, cj, sj, ca_rel, sa_rel, f[2], ff[2], torque1, ck, sk, ck_rel, sk_rel;
+    static double distmin = 10.0*((XMAX - XMIN)/HASHX + (YMAX - YMIN)/HASHY);
+    int interact, k;
+    
+    k = particle[i].hashneighbour[j];
+        
+    distance = module2(particle[i].deltax[j], particle[i].deltay[j]);
+    
+    /* for monitoring purposes */
+    if (distance > distmin) 
+    {
+        printf("i = %i, hashcell %i, j = %i, hashcell %i\n", i, particle[i].hashcell, k, particle[k].hashcell);
+        printf("X = (%.3lg, %.3lg)\n", particle[i].xc, particle[i].yc);
+        printf("Y = (%.3lg, %.3lg) d = %.3lg\n", particle[k].xc, particle[k].yc, distance);
+    }
+        
+    if ((distance == 0.0)||(i == k))
+    {
+        force[0] = 0.0;
+        force[1] = 0.0;
+        *torque = 0.0;
+        return(1);
+    }
+    else if (distance > REPEL_RADIUS*particle[i].radius) 
+    {
+        force[0] = 0.0;
+        force[1] = 0.0;
+        *torque = 0.0;
+        return(0);
+    }
+    else
+    {
+        /* to avoid numerical problems, assign minimal value to distance */
+        if (distance < 0.1*particle[i].radius) distance = 0.1*particle[i].radius;
+            
+        ca = (particle[i].deltax[j])/distance;
+        sa = (particle[i].deltay[j])/distance;
+        
+        /* compute relative angle in case particles can rotate */
+        if (ROTATION)
+        {
+            cj = cos(particle[j].angle);
+            sj = sin(particle[j].angle);
+            ca_rel = ca*cj + sa*sj;
+            sa_rel = sa*cj - ca*sj;
+        }
+        else
+        {
+            ca_rel = ca;
+            sa_rel = sa;
+        }
+    
+        interact = compute_particle_interaction(i, k, f, torque, particle, distance, krepel, ca, sa, ca_rel, sa_rel);
+        
+        if (SYMMETRIZE_FORCE)
+        {
+            torque1 = *torque;
+//             compute_particle_interaction(k, i, ff, torque, particle, distance, krepel, ca, sa, ca_rel, sa_rel);
+            ck = cos(particle[j].angle);
+            sk = sin(particle[j].angle);
+            ck_rel = ca*ck + sa*sk;
+            sk_rel = sa*ck - ca*sk;
+            compute_particle_interaction(k, i, ff, torque, particle, distance, krepel, -ca, -sa, -ck_rel, -sk_rel);
+            force[0] = 0.5*(f[0] - ff[0]);
+            force[1] = 0.5*(f[1] - ff[1]);
+            *torque = 0.5*(torque1 - *torque);
+//             *torque = 0.5*(*torque + torque1);
+        }
+        else
+        {
+            force[0] = f[0];
+            force[1] = f[1];
+        }
+        
+//         printf("force = (%.3lg, %.3lg), torque = %.3lg\n", f[0], f[1], *torque);
+        return(interact);
+    }
+}
+
+
+int resample_particle(int n, int maxtrials, t_particle particle[NMAXCIRCLES])
+/* resample y coordinate of particle n, returns 1 if no collision is created */
+{
+    double x, y, dist, dmin = 10.0;
+    int i, j, closeby = 0, success = 0, trials = 0; 
+    
+    while ((!success)&&(trials < maxtrials)) 
+    {
+        success = 1;
+        x = particle[n].xc - MU*(double)rand()/RAND_MAX;
+        y = 0.9*(BCYMIN + (BCYMAX - BCYMIN)*(double)rand()/RAND_MAX);
+        i = 0;
+        while ((success)&&(i<ncircles)) 
+        {
+            if ((i!=n)&&(particle[i].active))
+            {
+//             dist = module2(x - particle[i].xc, y - particle[i].yc);
+                for (j=-1; j<2; j++)
+                {
+                    dist = module2(x - particle[i].xc - (double)j*(BCXMAX - BCXMIN), y - particle[i].yc);
+                    if (dist < dmin) dmin = dist;
+                }
+                if (dmin < SAFETY_FACTOR*MU) success = 0;
+            }
+            i++;
+        }
+        trials++;
+//         printf("Trial no %i - (%.3lg, %.3lg)\t", trials, x, y);
+    }
+    
+    if (success)
+    {
+        printf("\nTrial %i succesful\n", trials);
+        printf("Moving particle %i from (%.3lg, %.3lg) to (%.3lg, %.3lg)\n\n", n, particle[n].xc, particle[n].yc, x, y);
+        particle[n].xc = x;
+        particle[n].yc = y;
+        particle[n].vx = V_INITIAL*gaussian();
+        particle[n].vy = V_INITIAL*gaussian();
+//         particle[n].vy = V_INITIAL*(double)rand()/RAND_MAX;
+        return(1);
+    }
+    else  
+    {
+        printf("\nCannot move particle %i\n\n", n);
+        return(0);
+    }
+    
+}
+
+int add_particle(double x, double y, double vx, double vy, double mass, short int type, t_particle particle[NMAXCIRCLES])
+{
+    int i, closeby = 0;
+    double dist;
+    
+    /* test distance to other particles */
+    for (i=0; i<ncircles; i++)
+    {
+        dist = module2(x - particle[i].xc, y - particle[i].yc);
+        if ((particle[i].active)&&(dist < SAFETY_FACTOR*MU)) closeby = 1;
+    }
+    
+    if ((closeby)||(ncircles >= NMAXCIRCLES)) 
+    {
+        printf("Cannot add particle at (%.3lg, %.3lg)\n", x, y);
+        return(0);
+    }
+    else
+    {
+        i = ncircles;
+        
+        particle[i].type = type;
+        
+        particle[i].xc = x;
+        particle[i].yc = y;
+        particle[i].radius = MU*sqrt(mass);
+        particle[i].active = 1;
+        particle[i].neighb = 0;
+        particle[i].thermostat = 1;
+
+        particle[i].energy = 0.0;
+
+        if (RANDOM_RADIUS) particle[i].radius = particle[i].radius*(0.75 + 0.5*((double)rand()/RAND_MAX));
+        
+        particle[i].mass_inv = 1.0/mass;
+        if (particle[i].type == 0) particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
+        else particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
+                
+        particle[i].vx = vx;
+        particle[i].vy = vy;
+        particle[i].energy = (particle[i].vx*particle[i].vx + particle[i].vy*particle[i].vy)*particle[i].mass_inv;
+        
+        particle[i].angle = DPI*(double)rand()/RAND_MAX;
+        particle[i].omega = 0.0;
+        
+        if (particle[i].type == 1)
+        {
+            particle[i].interaction = INTERACTION_B;
+            particle[i].eq_dist = EQUILIBRIUM_DIST_B;
+            particle[i].spin_range = SPIN_RANGE_B;
+            particle[i].spin_freq = SPIN_INTER_FREQUENCY_B;            
+        }
+    
+        ncircles++;
+        
+        printf("Added particle at (%.3lg, %.3lg)\n", x, y);
+        printf("Number of particles: %i\n", ncircles);
+
+        return(1);
+    }
+}
+
+double neighbour_color(int nnbg)
+{
+    if (nnbg > 7) nnbg = 7;
+    switch(nnbg){
+        case (7): return(340.0);
+        case (6): return(310.0);
+        case (5): return(260.0);
+        case (4): return(200.0);
+        case (3): return(140.0);
+        case (2): return(100.0);
+        case (1): return(70.0);
+        default:  return(30.0);
+    }   
+}
+
+
+void compute_entropy(t_particle particle[NMAXCIRCLES], double entropy[2])
+{
+    int i, nleft1 = 0, nleft2 = 0;
+    double p1, p2;
+    static int first = 1, ntot1 = 0, ntot2 = 0;
+    static double log2;
+    
+    if (first)
+    {
+        log2 = log(2.0);
+        for (i=0; i<ncircles; i++) if (particle[i].type == 0) ntot1++;
+        else ntot2++;
+        first = 0;
+    }
+    
+    for (i=0; i<ncircles; i++)
+    {
+        if (particle[i].type == 0) 
+        {
+            if (particle[i].xc < 0.0) nleft1++;
+        }
+        else
+        {
+            if (particle[i].xc < 0.0) nleft2++;
+        }            
+    }
+    p1 = (double)nleft1/(double)ntot1;
+    p2 = (double)nleft2/(double)ntot2;
+    printf("Type 1: nleft = %i, ntot = %i, p = %.3lg\n", nleft1, ntot1, p1);
+    printf("Type 2: nleft = %i, ntot = %i, p = %.3lg\n", nleft2, ntot2, p2);
+    if ((p1==0.0)||(p1==1.0)) entropy[0] = 0.0;
+    else entropy[0] = -(p1*log(p1) + (1.0-p1)*log(1.0-p1)/log2);
+    if ((p2==0.0)||(p2==1.0)) entropy[1] = 0.0;
+    else entropy[1] = -(p2*log(p2) + (1.0-p2)*log(1.0-p2)/log2);
+}
+
+
+void draw_one_particle(t_particle particle, double xc, double yc, double radius, double angle, int nsides, double width, double rgb[3])
+/* draw one of the particles */ 
+{
+    double ca, sa, x1, x2, y1, y2, xc1, wangle;
+    int wsign;
+    
+    if (CENTER_VIEW_ON_OBSTACLE) xc1 = xc - xshift;
+    else xc1 = xc;
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)) 
+        draw_colored_rhombus(xc1, yc, radius, angle + APOLY*PID, rgb);
+    else draw_colored_polygon(xc1, yc, radius, nsides, angle + APOLY*PID, rgb);
+        
+    /* draw crosses on particles of second type */
+    if ((TWO_TYPES)&&(DRAW_CROSS))
+        if (particle.type == 1)
+        {
+            if (ROTATION) angle = angle + APOLY*PID;
+            else angle = APOLY*PID;
+            ca = cos(angle);
+            sa = sin(angle);
+            glLineWidth(3);
+            glColor3f(0.0, 0.0, 0.0);
+            x1 = xc1 - MU_B*ca;
+            y1 = yc - MU_B*sa;
+            x2 = xc1 + MU_B*ca;
+            y2 = yc + MU_B*sa;
+            draw_line(x1, y1, x2, y2);
+            x1 = xc1 - MU_B*sa;
+            y1 = yc + MU_B*ca;
+            x2 = xc1 + MU_B*sa;
+            y2 = yc - MU_B*ca;
+            draw_line(x1, y1, x2, y2);
+        }
+        
+    glLineWidth(width);
+    glColor3f(1.0, 1.0, 1.0);
+    if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)) 
+        draw_rhombus(xc1, yc, radius, angle + APOLY*PID);
+    else draw_polygon(xc1, yc, radius, nsides, angle + APOLY*PID); 
+    
+    if (particle.interaction == I_LJ_WATER) for (wsign = -1; wsign <= 1; wsign+=2)
+    {
+        wangle = particle.angle + (double)wsign*DPI/3.0;
+        x1 = xc1 + particle.radius*cos(wangle);
+        y1 = yc + particle.radius*sin(wangle);
+        draw_colored_polygon(x1, y1, 0.5*radius, nsides, angle + APOLY*PID, rgb);
+        glColor3f(1.0, 1.0, 1.0);
+        draw_polygon(x1, y1, 0.5*radius, nsides, angle + APOLY*PID);
+    }
+}
+
+
+void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH], int traj_position, int traj_length)
+/* draw tracer particle trajectory */
+{
+    int i, time;
+    double x1, x2, y1, y2, rgb[3], lum;
+    
+    blank();
+    glLineWidth(TRAJECTORY_WIDTH);
+    hsl_to_rgb(70.0, 0.9, 0.5, rgb);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    
+    if (traj_length < TRAJECTORY_LENGTH)
+        for (i=0; i < traj_length-1; i++)
+        {
+            x1 = trajectory[i].xc;
+            x2 = trajectory[i+1].xc;
+            y1 = trajectory[i].yc;
+            y2 = trajectory[i+1].yc;
+        
+            time = traj_length - i;
+            lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
+            glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+        
+            if (module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+        }
+    else
+    {
+        for (i = traj_position + 1; i < traj_length-1; i++)
+        {
+            x1 = trajectory[i].xc;
+            x2 = trajectory[i+1].xc;
+            y1 = trajectory[i].yc;
+            y2 = trajectory[i+1].yc;
+        
+            time = traj_position + traj_length - i;
+            lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
+            glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+        
+            if (module2(x2 - x1, y2 - y1) < 0.1*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+        }
+        for (i=0; i < traj_position-1; i++)
+        {
+            x1 = trajectory[i].xc;
+            x2 = trajectory[i+1].xc;
+            y1 = trajectory[i].yc;
+            y2 = trajectory[i+1].yc;
+        
+            time = traj_position - i;
+            lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
+            glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+        
+            if (module2(x2 - x1, y2 - y1) < 0.1*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+        }
+    }
+}
+    
+
+void draw_particles(t_particle particle[NMAXCIRCLES], int plot)
+{
+    int i, j, k, m, width, nnbg, nsides;
+    double ej, hue, huex, huey, rgb[3], rgbx[3], rgby[3], radius, x1, y1, x2, y2, angle, ca, sa, length, linkcolor, sign = 1.0, angle1, signy = 1.0;
+    char message[100];
+    
+    if (!TRACER_PARTICLE) blank();
+    glColor3f(1.0, 1.0, 1.0);
+    
+    /* draw the bonds first */
+    if (plot == P_BONDS)
+    {
+        glLineWidth(LINK_WIDTH);
+        for (j=0; j<ncircles; j++) if (particle[j].active)
+        {
+//             radius = particle[j].radius;
+            for (k = 0; k < particle[j].hash_nneighb; k++)
+            {
+                x1 = particle[j].xc;
+                y1 = particle[j].yc;
+                x2 = x1 + particle[j].deltax[k];
+                y2 = y1 + particle[j].deltay[k];
+                
+                length = module2(particle[j].deltax[k], particle[j].deltay[k])/particle[j].radius;
+                
+                if (COLOR_BONDS)
+                {
+                    if (length < 1.5) linkcolor = 1.0;
+                    else linkcolor = 1.0 - 0.75*(length - 1.5)/(NBH_DIST_FACTOR - 1.5);
+                    glColor3f(linkcolor, linkcolor, linkcolor);
+                }
+                
+                if (length < 1.0*NBH_DIST_FACTOR) 
+                    draw_line(x1, y1, x2, y2);
+            }
+            
+//             sprintf(message, "%i - %i", particle[j].hash_nneighb, particle[j].hashcell);
+//             write_text(particle[j].xc, particle[j].yc, message);
+        }
+    }
+                
+    /* determine particle color and size */
+    for (j=0; j<ncircles; j++) if (particle[j].active)
+    {
+        switch (plot) {
+            case (P_KINETIC): 
+            {
+                ej = particle[j].energy;
+                if (ej > 0.0) 
+                {
+                    hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*ej/PARTICLE_EMAX;
+                    if (hue > ENERGY_HUE_MIN) hue = ENERGY_HUE_MIN;
+                    if (hue < ENERGY_HUE_MAX) hue = ENERGY_HUE_MAX;
+                }
+                radius = particle[j].radius;
+                width = BOUNDARY_WIDTH;
+                break;
+            }
+            case (P_NEIGHBOURS): 
+            {
+                hue = neighbour_color(particle[j].neighb);
+                radius = particle[j].radius;
+                width = BOUNDARY_WIDTH;
+                break;
+            }
+            case (P_BONDS):
+            {
+//                 if (particle[j].type == 1) hue = 70.0;        /* to make second particle type more visible */
+//                 if (particle[j].type == 1) hue = neighbour_color(7 - particle[j].neighb);
+//                 else 
+                hue = neighbour_color(particle[j].neighb);
+                radius = particle[j].radius;
+                width = 1;
+                break;
+            }
+            case (P_ANGLE):
+            {
+                angle = particle[j].angle;
+                hue = angle*particle[j].spin_freq/DPI;
+                hue -= (double)((int)hue);
+                huex = (DPI - angle)*particle[j].spin_freq/DPI;
+                huex -= (double)((int)huex);
+                angle = PI - angle;
+                if (angle < 0.0) angle += DPI;
+                huey = angle*particle[j].spin_freq/DPI;
+                huey -= (double)((int)huey);
+                hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*hue;
+                huex = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*huex;
+                huey = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*huey;
+                radius = particle[j].radius;
+                width = BOUNDARY_WIDTH;
+                break;
+            }
+            case (P_TYPE):
+            {
+//                 if (particle[j].type == 0) hue = 310.0;
+//                 else hue = 70.0;
+                if (particle[j].type == 0) hue = HUE_TYPE0;
+                else hue = HUE_TYPE1;
+                radius = particle[j].radius;
+                width = BOUNDARY_WIDTH;
+                break;
+            }
+            case (P_DIRECTION): 
+            {
+                hue = argument(particle[j].vx, particle[j].vy);
+                if (hue > DPI) hue -= DPI;
+                if (hue < 0.0) hue += DPI;
+                hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*hue/DPI;
+                radius = particle[j].radius;
+                width = BOUNDARY_WIDTH;
+                break;
+            }
+            case (P_ANGULAR_SPEED): 
+            {
+                hue = 160.0*(1.0 + tanh(SLOPE*particle[j].omega));
+//                 printf("omega = %.3lg, hue = %.3lg\n", particle[j].omega, hue);
+                radius = particle[j].radius;
+                width = BOUNDARY_WIDTH;
+                break;
+            }
+        }
+
+        switch (particle[j].interaction) {
+            case (I_LJ_DIRECTIONAL): 
+            {   
+                nsides = 4;
+                break;
+            }
+            case (I_LJ_PENTA): 
+            {
+                nsides = 5;
+                break;
+            }
+            case (I_LJ_QUADRUPOLE):
+            {
+                nsides = 4;
+                break;
+            }
+            case (I_LJ_WATER):
+            {
+                nsides = NSEG;
+                radius *= 0.75;
+                break;
+            }
+            default: nsides = NSEG;
+        }
+
+        switch (plot) {
+            case (P_KINETIC):  
+            {
+                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgbx);
+                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgby);
+                break;
+            }
+            case (P_BONDS):  
+            {
+                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgbx);
+                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgby);
+                break;
+            }
+            case (P_DIRECTION): 
+            {
+                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgb);
+                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgbx);
+                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgby);
+                break;
+            }
+            default: 
+            {
+                hsl_to_rgb(hue, 0.9, 0.5, rgb);
+                hsl_to_rgb(hue, 0.9, 0.5, rgbx);
+                hsl_to_rgb(hue, 0.9, 0.5, rgby);
+            }
+        }
+        angle = particle[j].angle + APOLY*DPI;
+        
+        draw_one_particle(particle[j], particle[j].xc, particle[j].yc, radius, angle, nsides, width, rgb);
+                
+        /* in case of periodic b.c., draw translates of particles */
+        if (PERIODIC_BC)
+        {
+            x1 = particle[j].xc;
+            y1 = particle[j].yc;
+            
+            for (i=-2; i<3; i++)
+                for (k=-1; k<2; k++)
+                    draw_one_particle(particle[j], x1 + (double)i*(BCXMAX - BCXMIN), y1 + (double)k*(BCYMAX - BCYMIN), radius,          angle, nsides, width, rgb);
+        }
+        else if (BOUNDARY_COND == BC_KLEIN)
+        {
+            x1 = particle[j].xc;
+            y1 = particle[j].yc;
+            
+            for (i=-2; i<3; i++)
+            {
+                if (vabs(i) == 1) sign = -1.0;
+                else sign = 1.0;
+                angle1 = angle*sign;
+                for (k=-1; k<2; k++)
+                    draw_one_particle(particle[j], x1 + (double)i*(BCXMAX - BCXMIN), sign*(y1 + (double)k*(BCYMAX - BCYMIN)), 
+                                      radius, angle1, nsides, width, rgb);
+            }
+        }
+        else if (BOUNDARY_COND == BC_BOY)
+        {
+            x1 = particle[j].xc;
+            y1 = particle[j].yc;
+            
+            for (i=-1; i<2; i++) for (k=-1; k<2; k++)
+            {
+                if (vabs(i) == 1) sign = -1.0;
+                else sign = 1.0;
+                if (vabs(k) == 1) signy = -1.0;
+                else signy = 1.0;
+                if (signy == 1.0) angle1 = angle*sign;
+                else angle1 = PI - angle;
+                if (sign == -1.0) draw_one_particle(particle[j], signy*(x1 + (double)i*(BCXMAX - BCXMIN)), 
+                    sign*(y1 + (double)k*(BCYMAX - BCYMIN)), radius, angle1, nsides, width, rgbx);
+                else if (signy == -1.0) draw_one_particle(particle[j], signy*(x1 + (double)i*(BCXMAX - BCXMIN)), 
+                    sign*(y1 + (double)k*(BCYMAX - BCYMIN)), radius, angle1, nsides, width, rgby);
+                else draw_one_particle(particle[j], signy*(x1 + (double)i*(BCXMAX - BCXMIN)), 
+                    sign*(y1 + (double)k*(BCYMAX - BCYMIN)), radius, angle1, nsides, width, rgb);
+            }
+        }
+    }
+    
+//     /* draw spin vectors */
+    if ((DRAW_SPIN)||(DRAW_SPIN_B))
+    {
+        glLineWidth(width);
+        for (j=0; j<ncircles; j++) 
+            if ((particle[j].active)&&(((DRAW_SPIN)&&(particle[j].type == 0))||((DRAW_SPIN_B)&&(particle[j].type == 1))))
+        {
+//             x1 = particle[j].xc - 2.0*MU*cos(particle[j].angle);
+//             y1 = particle[j].yc - 2.0*MU*sin(particle[j].angle);
+            x1 = particle[j].xc;
+//             if (CENTER_VIEW_ON_OBSTACLE) x1 -= xshift;
+            y1 = particle[j].yc;
+            x2 = particle[j].xc + 2.0*MU*cos(particle[j].angle);
+//             if (CENTER_VIEW_ON_OBSTACLE) x2 -= xshift;
+            y2 = particle[j].yc + 2.0*MU*sin(particle[j].angle);
+            draw_line(x1, y1, x2, y2);
+        }
+    }
+}
+
+
+void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES])
+/* draw the container, for certain boundary conditions */
+{
+    int i, j;
+    double rgb[3], x, phi, angle, dx, dy, ybin, x1, x2, h;
+    char message[100];
+    
+    switch (BOUNDARY_COND) {
+        case (BC_SCREEN): 
+        {
+            /* do nothing */
+            break;
+        }
+        case (BC_RECTANGLE): 
+        {
+            glColor3f(1.0, 1.0, 1.0);
+            glLineWidth(CONTAINER_WIDTH);
+            
+            draw_line(INITXMIN, INITYMIN, INITXMAX, INITYMIN);
+            draw_line(INITXMIN, INITYMAX, INITXMAX, INITYMAX);
+            
+            if (!SYMMETRIC_DECREASE) draw_line(INITXMAX, INITYMIN,  INITXMAX, INITYMAX);
+
+            draw_line(xmin, INITYMIN, xmin, INITYMAX);
+            draw_line(XMIN, 0.5*(INITYMIN + INITYMAX), xmin, 0.5*(INITYMIN + INITYMAX));
+            
+            if (SYMMETRIC_DECREASE)
+            {
+                draw_line(xmax, INITYMIN, xmax, INITYMAX);
+                draw_line(XMAX, 0.5*(INITYMIN + INITYMAX), xmax, 0.5*(INITYMIN + INITYMAX));
+            }
+            
+            break;
+        }
+        case (BC_CIRCLE):
+        {
+            glLineWidth(CONTAINER_WIDTH);
+            hsl_to_rgb(300.0, 0.1, 0.5, rgb);
+            for (i=-1; i<2; i++)
+            {
+                if (CENTER_VIEW_ON_OBSTACLE) x = 0.0;
+                else x = xmin + (double)i*(OBSXMAX - OBSXMIN);
+                
+                draw_colored_circle(x, 0.0, OBSTACLE_RADIUS, NSEG, rgb);
+                glColor3f(1.0, 1.0, 1.0);
+                draw_circle(x, 0.0, OBSTACLE_RADIUS, NSEG);
+                
+                glColor3f(0.0, 0.0, 0.0);
+                sprintf(message, "Mach %.3f", xspeed/20.0);
+//                 sprintf(message, "Speed %.2f", xspeed);
+                write_text(x-0.17, -0.025, message); 
+            }
+            break;
+        }
+        case (BC_PERIODIC_CIRCLE):
+        {
+            glLineWidth(CONTAINER_WIDTH);
+            hsl_to_rgb(300.0, 0.1, 0.5, rgb);
+            for (i=-1; i<2; i++)
+            {
+                if (CENTER_VIEW_ON_OBSTACLE) x = 0.0;
+                else x = xmin + (double)i*(OBSXMAX - OBSXMIN);
+                
+                draw_colored_circle(x, 0.0, OBSTACLE_RADIUS, NSEG, rgb);
+                glColor3f(1.0, 1.0, 1.0);
+                draw_circle(x, 0.0, OBSTACLE_RADIUS, NSEG);
+                
+                glColor3f(0.0, 0.0, 0.0);
+                sprintf(message, "Mach %.2f", xspeed/20.0);
+//                 sprintf(message, "Speed %.2f", xspeed);
+                write_text(x-0.17, -0.025, message); 
+            }
+            break;
+        }
+        case (BC_PERIODIC_TRIANGLE):
+        {
+            glLineWidth(CONTAINER_WIDTH);
+            hsl_to_rgb(300.0, 0.1, 0.5, rgb);
+            for (i=-1; i<2; i++)
+            {
+                if (CENTER_VIEW_ON_OBSTACLE) x = 0.0;
+                else x = xmin + (double)i*(OBSXMAX - OBSXMIN);
+                
+                x1 = x + OBSTACLE_RADIUS;
+                x2 = x - OBSTACLE_RADIUS;
+                h = 2.0*OBSTACLE_RADIUS*tan(APOLY*PID);
+                draw_colored_triangle(x1, 0.0, x2, h, x2, -h, rgb);
+                glColor3f(1.0, 1.0, 1.0);
+                draw_triangle(x1, 0.0, x2, h, x2, -h);
+                
+                glColor3f(0.0, 0.0, 0.0);
+                sprintf(message, "Mach %.2f", xspeed/20.0);
+                write_text(x-0.18, -0.025, message); 
+            }
+            break;
+        }
+        case (BC_PERIODIC_FUNNEL):
+        {
+            glLineWidth(CONTAINER_WIDTH);
+            hsl_to_rgb(300.0, 0.1, 0.5, rgb);
+            for (i=-1; i<2; i++)
+            {
+                if (CENTER_VIEW_ON_OBSTACLE) x = 0.0;
+                else x = xmin + (double)i*(OBSXMAX - OBSXMIN);
+                
+                for (j=-1; j<2; j+=2)
+                {
+                    draw_colored_circle(x, (double)j*(FUNNEL_WIDTH + OBSTACLE_RADIUS), OBSTACLE_RADIUS, NSEG, rgb);
+                    glColor3f(1.0, 1.0, 1.0);
+                    draw_circle(x, (double)j*(FUNNEL_WIDTH + OBSTACLE_RADIUS), OBSTACLE_RADIUS, NSEG);
+                }
+                
+                glColor3f(0.0, 0.0, 0.0);
+                sprintf(message, "Mach %.2f", xspeed/20.0);
+                write_text(x-0.17, 0.75, message); 
+            }
+            break;
+        }
+        case (BC_RECTANGLE_LID): 
+        {
+            glColor3f(1.0, 1.0, 1.0);
+            glLineWidth(CONTAINER_WIDTH);
+            
+            draw_line(BCXMIN, BCYMIN, BCXMAX, BCYMIN);
+            draw_line(BCXMIN, BCYMIN, BCXMIN, BCYMAX);
+            draw_line(BCXMAX, BCYMIN, BCXMAX, BCYMAX);
+            
+            hsl_to_rgb(300.0, 0.1, 0.5, rgb);
+            draw_colored_rectangle(BCXMIN + 0.05, ylid, BCXMAX - 0.05, ylid + LID_WIDTH, rgb);
+            glColor3f(1.0, 1.0, 1.0);
+            draw_rectangle(BCXMIN + 0.05, ylid, BCXMAX - 0.05, ylid + LID_WIDTH);
+            
+            break;
+        }
+        case (BC_EHRENFEST):
+        {
+            glLineWidth(CONTAINER_WIDTH);
+            glColor3f(1.0, 1.0, 1.0);
+            phi = asin(EHRENFEST_WIDTH/EHRENFEST_RADIUS);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NSEG; i++)
+            {
+                angle = -PI + phi + (double)i*2.0*(PI - phi)/(double)NSEG;
+                glVertex2d(1.0 + EHRENFEST_RADIUS*cos(angle), EHRENFEST_RADIUS*sin(angle));
+            }
+            for (i=0; i<=NSEG; i++)
+            {
+                angle = phi + (double)i*2.0*(PI - phi)/(double)NSEG;
+                glVertex2d(-1.0 + EHRENFEST_RADIUS*cos(angle), EHRENFEST_RADIUS*sin(angle));
+            }
+            glEnd();
+            break;
+        }
+        case (BC_SCREEN_BINS): 
+        {
+            glLineWidth(CONTAINER_WIDTH);
+            glColor3f(1.0, 1.0, 1.0);
+            dy = (YMAX - YMIN)/((double)NGRIDX + 3);
+            dx = dy/cos(PI/6.0);
+            ybin = 2.75*dy;
+
+            for (i=-1; i<=NGRIDX; i++) 
+            {
+                x = ((double)i - 0.5*(double)NGRIDX + 0.5)*dx;
+                draw_line(x, YMIN, x, YMIN + ybin);
+            }
+            break;
+        }
+
+    }
+    
+    /* draw fixed obstacles */
+    if (ADD_FIXED_OBSTACLES)
+    {
+        glLineWidth(CONTAINER_WIDTH);
+        glColor3f(1.0, 1.0, 1.0);
+        for (i = 0; i < nobstacles; i++)
+            draw_circle(obstacle[i].xc, obstacle[i].yc, obstacle[i].radius, NSEG);
+    }
+}
+
+void print_parameters(double beta, double temperature, double krepel, double lengthcontainer, double boundary_force, 
+                      short int left, double pressure[N_PRESSURES])
+{
+    char message[100];
+    int i, j, k;
+    double density, hue, rgb[3], logratio, x, y, meanpress[N_PRESSURES], phi, sphi, dphi, pprint, mean_temp;
+    static double xbox, xtext, xmid, xmidtext, xxbox, xxtext, pressures[N_P_AVERAGE], meanpressure = 0.0, maxpressure = 0.0;
+    static double press[N_PRESSURES][N_P_AVERAGE], temp[N_T_AVERAGE];
+    static int first = 1, i_pressure, i_temp;
+    
+    if (first)
+    {
+        if (left)
+        {
+            xbox = XMIN + 0.4;
+            xtext = XMIN + 0.08;
+            xxbox = XMAX - 0.39;
+            xxtext = XMAX - 0.73;
+       }
+        else
+        {
+            xbox = XMAX - 0.41;
+            xtext = XMAX - 0.73;
+            xxbox = XMIN + 0.4;
+            xxtext = XMIN + 0.08;
+        }
+        xmid = 0.5*(XMIN + XMAX) - 0.1;
+        xmidtext = xmid - 0.24;
+        for (i=0; i<N_P_AVERAGE; i++) pressures[i] = 0.0;
+        if (RECORD_PRESSURES) for (j=0; j<N_PRESSURES; j++) 
+        {
+            meanpress[j] = 0.0;
+            for (i=0; i<N_P_AVERAGE; i++) press[j][i] = 0.0;
+        }
+        i_pressure = 0;
+        i_temp = 0;
+        for (i=0; i<N_T_AVERAGE; i++) temp[i] = 0.0;
+        
+        first = 0;
+    }
+    
+    /* table of pressures */
+    pressures[i_pressure] = boundary_force/(lengthcontainer + INITYMAX - INITYMIN);
+    if (RECORD_PRESSURES) 
+    {
+        for (j=0; j<N_PRESSURES; j++) press[j][i_pressure] = pressure[j];
+    }
+    i_pressure++;
+    if (i_pressure == N_P_AVERAGE) i_pressure = 0;
+    
+    for (i=0; i<N_P_AVERAGE; i++) meanpressure += pressures[i];
+    meanpressure = meanpressure/(double)N_P_AVERAGE;
+    
+    if (RECORD_PRESSURES) for (j=0; j<N_PRESSURES; j++) 
+    {
+        meanpress[j] = 0.0;
+        for (i=0; i<N_P_AVERAGE; i++) meanpress[j] += press[j][i];
+        meanpress[j] = meanpress[j]/(double)N_P_AVERAGE;
+    }
+    
+    
+//     if (RECORD_PRESSURES) 
+//         for (j=0; j<N_PRESSURES; j++) meanpress[j] = 
+//     
+//     for (j=0; j<N_PRESSURES; j++) printf("Mean pressure[%i] = %.5lg\n", j, meanpress[j]);
+
+    if (RECORD_PRESSURES) 
+    {
+        for (j=0; j<N_PRESSURES; j++) if (meanpress[j] > maxpressure) maxpressure = meanpress[j];
+        printf("Max pressure = %.5lg\n\n", maxpressure);
+    }
+    
+    y = YMAX - 0.1;
+    if (INCREASE_BETA)  /* print temperature */
+    {
+        logratio = log(beta/BETA)/log(0.5*BETA_FACTOR);
+        if (logratio > 1.0) logratio = 1.0;
+        if (BETA_FACTOR > 1.0) hue = PARTICLE_HUE_MAX - (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*logratio;
+        else hue = PARTICLE_HUE_MIN - (PARTICLE_HUE_MIN - PARTICLE_HUE_MAX)*logratio;
+        erase_area_hsl_turbo(xbox, y + 0.025, 0.37, 0.05, hue, 0.9, 0.5);
+//         erase_area_hsl_turbo(xmid + 0.1, y + 0.025, 0.4, 0.05, hue, 0.9, 0.5);
+        if ((hue < 90)||(hue > 270)) glColor3f(1.0, 1.0, 1.0);
+        else glColor3f(0.0, 0.0, 0.0);
+        sprintf(message, "Temperature %.2f", 1.0/beta);
+        write_text(xtext, y, message);
+//         write_text(xmidtext, y, message);
+//         y -= 0.1;
+        
+//         erase_area_hsl(xxbox, y + 0.025, 0.37, 0.05, 0.0, 0.9, 0.0);
+//         glColor3f(1.0, 1.0, 1.0);
+//         sprintf(message, "Pressure %.3f", meanpressure);
+//         write_text(xxtext, y, message);
+    }
+    if (DECREASE_CONTAINER_SIZE)  /* print density */
+    {
+        density = (double)ncircles/((lengthcontainer)*(INITYMAX - INITYMIN));
+        erase_area_hsl(xbox, y + 0.025, 0.37, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Density %.3f", density);
+        write_text(xtext, y, message);
+        
+        erase_area_hsl(xmid, y + 0.025, 0.37, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Temperature %.2f", temperature);
+        write_text(xmidtext, y, message);
+
+        erase_area_hsl(xxbox, y + 0.025, 0.37, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Pressure %.3f", meanpressure);
+        write_text(xxtext, y, message);
+
+    }   
+    else if (INCREASE_KREPEL)  /* print force constant */
+    {
+        erase_area_hsl(xbox, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Force %.0f", krepel);
+        write_text(xtext + 0.28, y, message);
+    }   
+    
+    if (RECORD_PRESSURES) 
+    {
+        y = FUNNEL_WIDTH + OBSTACLE_RADIUS;
+        for (i=0; i<N_PRESSURES; i++)
+        {
+            phi = DPI*(double)i/(double)N_PRESSURES;
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*meanpress[i]/MAX_PRESSURE;
+            if (hue > PARTICLE_HUE_MIN) hue = PARTICLE_HUE_MIN;
+            if (hue < PARTICLE_HUE_MAX) hue = PARTICLE_HUE_MAX;
+            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+        
+            dphi = DPI/(double)N_PRESSURES;
+//         x = 0.95*OBSTACLE_RADIUS*cos(phi);
+            sphi = sin(phi);
+            if (sphi < 0.0) draw_colored_sector(0.0, y, 0.95*OBSTACLE_RADIUS, OBSTACLE_RADIUS, phi, phi + dphi, rgb, 10);
+            else draw_colored_sector(0.0, -y, 0.95*OBSTACLE_RADIUS, OBSTACLE_RADIUS, phi, phi + dphi, rgb, 10);
+        }
+    
+        glColor3f(1.0, 1.0, 1.0);
+        for (i=-1; i<2; i++) 
+        {
+            k = N_PRESSURES/4 + i*N_PRESSURES/9;
+            phi = DPI*(double)k/(double)N_PRESSURES;
+            pprint = 0.0;
+            for (j=-2; j<3; j++) pprint += meanpress[k + j];
+            sprintf(message, "p = %.0f", pprint*200.0/MAX_PRESSURE);
+            write_text(0.85*OBSTACLE_RADIUS*cos(phi) - 0.1, -y + 0.85*OBSTACLE_RADIUS*sin(phi), message);
+        }
+    }
+    
+    if (PARTIAL_THERMO_COUPLING)
+    {
+        printf("Temperature %i in average: %.3lg\n", i_temp, temperature);
+        temp[i_temp] = temperature;
+        i_temp++;
+        if (i_temp >= N_T_AVERAGE) i_temp = 0;
+        
+        mean_temp = 0.0;
+        for (i=0; i<N_T_AVERAGE; i++) mean_temp += temp[i];
+        mean_temp = mean_temp/N_T_AVERAGE;
+        
+        hue = PARTICLE_HUE_MIN + 0.5*(PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*mean_temp/PARTICLE_EMAX;
+        if (hue < PARTICLE_HUE_MAX) hue = PARTICLE_HUE_MAX;
+        erase_area_hsl_turbo(xbox, y + 0.025, 0.37, 0.05, hue, 0.9, 0.5);
+        if ((hue < 90)||(hue > 270)) glColor3f(1.0, 1.0, 1.0);
+        else glColor3f(0.0, 0.0, 0.0);
+        sprintf(message, "Temperature %.2f", mean_temp);
+        write_text(xtext, y, message);
+        
+    }
+}
+
+
+void print_ehrenfest_parameters(t_particle particle[NMAXCIRCLES], double pleft, double pright)
+{
+    char message[100];
+    int i, j, nleft1 = 0, nleft2 = 0, nright1 = 0, nright2 = 0;
+    double density, hue, rgb[3], logratio, y, shiftx = 0.3;
+    static double xleftbox, xlefttext, xmidbox, xmidtext, xrightbox, xrighttext, pressures[500][2], meanpressure[2];
+    static int first = 1, i_pressure, naverage = 500;
+    
+    if (first)
+    {
+        xleftbox = -1.0;
+        xlefttext = xleftbox - 0.5;
+        xrightbox = 1.0;
+        xrighttext = xrightbox - 0.45;
+//         xmid = 0.5*(XMIN + XMAX) - 0.1;
+//         xmidtext = xmid - 0.24;
+        
+        meanpressure[0] = 0.0;
+        meanpressure[1] = 0.0;
+        for (i=0; i<naverage; i++) 
+        {
+            pressures[i][0] = 0.0;
+            pressures[i][1] = 0.0;
+        }
+        i_pressure = 0;
+        first = 0;
+    }
+    
+     /* table of pressures */
+    pressures[i_pressure][0] = pleft;
+    pressures[i_pressure][1] = pright;
+    i_pressure++;
+    if (i_pressure == naverage) i_pressure = 0;
+    
+    for (i=0; i<naverage; i++) 
+        for (j=0; j<2; j++)
+            meanpressure[j] += pressures[i][j];
+    for (j=0; j<2; j++) meanpressure[j] = meanpressure[j]/(double)naverage;
+    
+    for (i = 0; i < ncircles; i++) if (particle[i].active)
+    {
+        if (particle[i].xc < -1.0 + EHRENFEST_RADIUS)
+        {
+            if (particle[i].type == 0) nleft1++;
+            else nleft2++;
+        }
+        else if (particle[i].xc > 1.0 - EHRENFEST_RADIUS) 
+        {
+            if (particle[i].type == 0) nright1++;
+            else nright2++;
+        }
+    }
+    
+    y = YMIN + 0.1;
+    
+    erase_area_hsl(xleftbox - shiftx, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+    hsl_to_rgb(310.0, 0.9, 0.5, rgb);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    sprintf(message, "%i particles", nleft1);
+    write_text(xlefttext + 0.28 - shiftx, y, message);
+    
+    erase_area_hsl(xleftbox + shiftx, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+    hsl_to_rgb(70.0, 0.9, 0.5, rgb);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    sprintf(message, "%i particles", nleft2);
+    write_text(xlefttext + 0.28 + shiftx, y, message);
+    
+    erase_area_hsl(xrightbox - shiftx, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+    hsl_to_rgb(310.0, 0.9, 0.5, rgb);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    sprintf(message, "%i particles", nright1);
+    write_text(xrighttext + 0.28 - shiftx, y, message);
+    
+    erase_area_hsl(xrightbox + shiftx, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+    hsl_to_rgb(70.0, 0.9, 0.5, rgb);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    sprintf(message, "%i particles", nright2);
+    write_text(xrighttext + 0.28 + shiftx, y, message);
+    y = YMAX - 0.1;
+    
+    erase_area_hsl(xleftbox - 0.1, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+    glColor3f(1.0, 1.0, 1.0);
+    sprintf(message, "Pressure %.2f", 0.001*meanpressure[0]/(double)ncircles);
+    write_text(xlefttext + 0.25, y, message);
+    
+    erase_area_hsl(xrightbox - 0.1, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+    glColor3f(1.0, 1.0, 1.0);
+    sprintf(message, "Pressure %.2f", 0.001*meanpressure[1]/(double)ncircles);
+    write_text(xrighttext + 0.2, y, message);
+
+}
+
+void print_particle_number(int npart)
+{
+    char message[100];
+    double y = YMAX - 0.1;
+    static double xleftbox, xlefttext;
+    static int first = 1;
+    
+    if (first)
+    {
+        xleftbox = XMIN + 0.5;
+        xlefttext = xleftbox - 0.5;
+        first = 0;
+    }
+    
+    erase_area_hsl(xleftbox, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+    glColor3f(1.0, 1.0, 1.0);
+    if (npart > 1) sprintf(message, "%i particles", npart);
+    else sprintf(message, "%i particle", npart);
+    write_text(xlefttext + 0.28, y, message);
+}
+
+void print_entropy(double entropy[2])
+{
+    char message[100];
+    double y = YMAX - 0.1, rgb[3];
+    static double xleftbox, xlefttext, xrightbox, xrighttext;
+    static int first = 1;
+    
+    if (first)
+    {
+        xleftbox = XMIN + 0.5;
+        xlefttext = xleftbox - 0.55;
+        xrightbox = XMAX - 0.39;
+        xrighttext = xrightbox - 0.55;
+       first = 0;
+    }
+    
+    erase_area_hsl(xleftbox, y + 0.025, 0.35, 0.05, 0.0, 0.9, 0.0);
+    hsl_to_rgb_turbo(HUE_TYPE1, 0.9, 0.5, rgb);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    sprintf(message, "Entropy = %.4f", entropy[1]);
+    write_text(xlefttext + 0.28, y, message);
+
+    erase_area_hsl(xrightbox, y + 0.025, 0.35, 0.05, 0.0, 0.9, 0.0);
+    hsl_to_rgb_turbo(HUE_TYPE0, 0.9, 0.5, rgb);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    sprintf(message, "Entropy = %.4f", entropy[0]);
+    write_text(xrighttext + 0.28, y, message);
+
+}
+
+
+double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES], 
+                              double xleft, double xright, double *pleft, double *pright, double pressure[N_PRESSURES])
+{
+    int i, k;
+    double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, 
+        f, fperp = 0.0, x, y, xtube, distance, dx, dy, width, ybin, angle, x1, x2, h, ytop, norm, dleft, dplus, dminus;
+    
+    /* compute force from fixed obstacles */
+    if (ADD_FIXED_OBSTACLES) for (i=0; i<nobstacles; i++)
+    {
+        x = particle[j].xc - obstacle[i].xc;
+        y = particle[j].yc - obstacle[i].yc;
+        distance = module2(x, y);
+        if (distance < 1.0e-7) distance = 1.0e-7;
+        cphi = x/distance;
+        sphi = y/distance;
+        r2 = obstacle[i].radius + particle[j].radius;
+        
+        if (distance < r2)
+        {
+            f = KSPRING_OBSTACLE*(r2 - distance);
+            particle[j].fx += f*cphi;
+            particle[j].fy += f*sphi;
+        }
+    }
+
+    switch(BOUNDARY_COND){
+        case (BC_SCREEN):
+        {
+            /* add harmonic force outside screen */
+            if (particle[j].xc > BCXMAX) particle[j].fx -= KSPRING_BOUNDARY*(particle[j].xc - BCXMAX);
+            else if (particle[j].xc < BCXMIN) particle[j].fx += KSPRING_BOUNDARY*(BCXMIN - particle[j].xc);
+            if (particle[j].yc > BCYMAX) particle[j].fy -= KSPRING_BOUNDARY*(particle[j].yc - BCYMAX);
+            else if (particle[j].yc < BCYMIN) particle[j].fy += KSPRING_BOUNDARY*(BCYMIN - particle[j].yc);
+            return(fperp);
+        }
+        case (BC_RECTANGLE):
+        {
+            /* add harmonic force outside rectangular box */
+            padding = MU + 0.01;
+            xmin = xleft + padding;
+            xmax = xright - padding;
+            ymin = BCYMIN + padding;
+            ymax = BCYMAX - padding;
+            
+            if (particle[j].xc > xmax) 
+            {
+                fperp = KSPRING_BOUNDARY*(particle[j].xc - xmax);
+                particle[j].fx -= fperp;
+            }
+            else if (particle[j].xc < xmin) 
+            {
+                fperp = KSPRING_BOUNDARY*(xmin - particle[j].xc);
+                particle[j].fx += fperp;
+            }
+            if (particle[j].yc > ymax) 
+            {
+                fperp = KSPRING_BOUNDARY*(particle[j].yc - ymax);
+                particle[j].fy -= fperp;
+            }
+            else if (particle[j].yc < ymin) 
+            {
+                fperp = KSPRING_BOUNDARY*(ymin - particle[j].yc);
+                particle[j].fy += fperp;
+            }
+//             if (particle[j].xc > xmax) particle[j].fx -= KSPRING_BOUNDARY*(particle[j].xc - xmax);
+//             else if (particle[j].xc < xmin) particle[j].fx += KSPRING_BOUNDARY*(xmin - particle[j].xc);
+//             if (particle[j].yc > ymax) particle[j].fy -= KSPRING_BOUNDARY*(particle[j].yc - ymax);
+//             else if (particle[j].yc < ymin) particle[j].fy += KSPRING_BOUNDARY*(ymin - particle[j].yc);
+            
+            return(fperp);
+        }
+        case (BC_CIRCLE):
+        {
+            /* add harmonic force outside screen */
+            if (particle[j].xc > BCXMAX) particle[j].fx -= KSPRING_BOUNDARY*(particle[j].xc - BCXMAX);
+            else if (particle[j].xc < BCXMIN) particle[j].fx += KSPRING_BOUNDARY*(BCXMIN - particle[j].xc);
+            if (particle[j].yc > BCYMAX) particle[j].fy -= KSPRING_BOUNDARY*(particle[j].yc - BCYMAX);
+            else if (particle[j].yc < BCYMIN) particle[j].fy += KSPRING_BOUNDARY*(BCYMIN - particle[j].yc);
+            
+            /* add harmonic force from obstacle */
+            for (i=-2; i<2; i++) 
+            {
+                x = xleft + (double)i*(OBSXMAX - OBSXMIN);
+                if (vabs(particle[j].xc - x) < 1.1*OBSTACLE_RADIUS)
+                {
+                    r = module2(particle[j].xc - x, particle[j].yc);
+                    if (r < 1.0e-5) r = 1.0e-05;
+                    cphi = (particle[j].xc - x)/r;
+                    sphi = particle[j].yc/r;
+                    padding = MU + 0.03;
+                    if (r < OBSTACLE_RADIUS + padding)
+                    {
+                        f = KSPRING_OBSTACLE*(OBSTACLE_RADIUS + padding - r);
+                        particle[j].fx += f*cphi;
+                        particle[j].fy += f*sphi;
+                    }
+                }
+            }
+            return(fperp);
+        }
+        case (BC_PERIODIC_CIRCLE):
+        {
+            x = xleft;
+            if (vabs(particle[j].xc - x) < 1.1*OBSTACLE_RADIUS)
+            {
+                r = module2(particle[j].xc - x, particle[j].yc);
+                if (r < 1.0e-5) r = 1.0e-05;
+                cphi = (particle[j].xc - x)/r;
+                sphi = particle[j].yc/r;
+                padding = MU + 0.03;
+                if (r < OBSTACLE_RADIUS + padding)
+                {
+                    f = KSPRING_OBSTACLE*(OBSTACLE_RADIUS + padding - r);
+                    particle[j].fx += f*cphi;
+                    particle[j].fy += f*sphi;
+                }
+            }
+            return(f);
+        }
+        case (BC_PERIODIC_TRIANGLE):
+        {
+            x = xleft;
+            x1 = x + OBSTACLE_RADIUS;
+            x2 = x - OBSTACLE_RADIUS;
+            h = 2.0*OBSTACLE_RADIUS*tanh(APOLY*PID);
+            padding = MU + 0.03;
+//             ytop = 0.5*h*(1.0 - (particle[j].xc - x)/OBSTACLE_RADIUS);
+            if ((vabs(particle[j].xc - x) < OBSTACLE_RADIUS + padding)&&(vabs(particle[j].yc < h + padding)))
+            {
+                /* signed distances to side of triangle */
+                dleft = x2 - particle[j].xc;
+                norm = module2(h, 2.0*OBSTACLE_RADIUS);
+                
+                if (particle[j].yc >= 0.0)
+                {
+                    dplus = (h*particle[j].xc + 2.0*OBSTACLE_RADIUS*particle[j].yc - h*(x+OBSTACLE_RADIUS))/norm;
+                    if ((dleft < padding)&&(dleft > dplus))     /* left side is closer */
+                    {
+                        f = KSPRING_OBSTACLE*(padding - dleft);
+                        particle[j].fx -= f;
+                    }
+                    else if (dplus < padding)   /* top side is closer */
+                    {
+                        f = KSPRING_OBSTACLE*(padding - dplus);
+                        particle[j].fx += f*h/norm;
+                        particle[j].fy += 2.0*f*OBSTACLE_RADIUS/norm;
+                    }
+                }
+                else   
+                {
+                    dminus = (h*particle[j].xc - 2.0*OBSTACLE_RADIUS*particle[j].yc - h*(x+OBSTACLE_RADIUS))/norm;
+                    if ((dleft < padding)&&(dleft > dminus))     /* left side is closer */
+                    {
+                        f = KSPRING_OBSTACLE*(padding - dleft);
+                        particle[j].fx -= f;
+                    }
+                    else if (dminus < padding)   /* bottom side is closer */
+                    {
+                        f = KSPRING_OBSTACLE*(padding - dminus);
+                        particle[j].fx += f*h/norm;
+                        particle[j].fy += -2.0*f*OBSTACLE_RADIUS/norm;
+                    }
+                }
+                /* force from tip of triangle */
+                r = module2(particle[j].xc - x1, particle[j].yc);
+                if (r < padding)
+                {   
+                    if (r < 1.0e-5) r = 1.0e-05;
+                    cphi = (particle[j].xc - x1)/r;
+                    sphi = particle[j].yc/r;
+                    f = KSPRING_OBSTACLE*(padding - r);
+                    particle[j].fx += f*cphi;
+                    particle[j].fy += f*sphi;
+                }
+            }
+            return(f);
+        }
+        case (BC_PERIODIC_FUNNEL):
+        {
+            x = xleft;
+            padding = MU + 0.02;
+            if (vabs(particle[j].yc) > FUNNEL_WIDTH - padding) for (i=-1; i<2; i+=2)
+            {
+                r = module2(particle[j].xc - x, particle[j].yc - (double)i*(FUNNEL_WIDTH + OBSTACLE_RADIUS));
+                if (r < 1.0e-5) r = 1.0e-05;
+                cphi = (particle[j].xc - x)/r;
+                sphi = (particle[j].yc - (double)i*(FUNNEL_WIDTH + OBSTACLE_RADIUS))/r;
+                if (r < OBSTACLE_RADIUS + padding)
+                {
+                    f = KSPRING_OBSTACLE*(OBSTACLE_RADIUS + padding - r);
+                    particle[j].fx += f*cphi;
+                    particle[j].fy += f*sphi;
+                    if (RECORD_PRESSURES) 
+                    {
+                        angle = argument(cphi, sphi);
+                        if (angle < 0.0) angle += DPI;
+                        k = (int)((double)N_PRESSURES*angle/DPI);
+                        if (k >= N_PRESSURES) k = N_PRESSURES - 1;
+                        pressure[k] += f;
+                    }
+                }
+            }
+            return(f);
+        }
+        case (BC_RECTANGLE_LID):
+        {
+            r = particle[j].radius;
+            
+            if (particle[j].yc < BCYMIN + r) particle[j].fy += KSPRING_BOUNDARY*(BCYMIN + r - particle[j].yc);
+            else if (particle[j].yc > ylid - r) 
+            {
+                fperp = KSPRING_BOUNDARY*(particle[j].yc - ylid + r);
+                particle[j].fy -= fperp;
+            }
+            if (particle[j].yc < BCYMAX + r)
+            {
+                if (particle[j].xc > BCXMAX - r) particle[j].fx -= KSPRING_BOUNDARY*(particle[j].xc - BCXMAX + r);
+                else if (particle[j].xc < BCXMIN + r) particle[j].fx += KSPRING_BOUNDARY*(BCXMIN + r - particle[j].xc);
+            }
+            return(fperp);
+        }
+        case (BC_EHRENFEST):
+        {
+            rp = particle[j].radius;
+            xtube = 1.0 - sqrt(EHRENFEST_RADIUS*EHRENFEST_RADIUS - EHRENFEST_WIDTH*EHRENFEST_WIDTH);
+            distance = 0.0;
+            /* middle tube */
+            if (vabs(particle[j].xc) <= xtube) 
+            {
+                if (particle[j].yc > EHRENFEST_WIDTH - rp) 
+                {
+                    distance = particle[j].yc - EHRENFEST_WIDTH;
+                    particle[j].fy -= KSPRING_BOUNDARY*(distance + rp);
+                }
+                else if (particle[j].yc < -EHRENFEST_WIDTH + rp) 
+                {
+                    distance = - EHRENFEST_WIDTH - particle[j].yc;
+                    particle[j].fy += KSPRING_BOUNDARY*(distance + rp);
+                }
+            }
+            /* right container */
+            else if (particle[j].xc > 0.0)
+            {
+                r = module2(particle[j].xc - 1.0, particle[j].yc);
+                if ((r > EHRENFEST_RADIUS - rp)&&((particle[j].xc > 1.0)||(vabs(particle[j].yc) > EHRENFEST_WIDTH)))
+                {
+                    cphi = (particle[j].xc - 1.0)/r;
+                    sphi = particle[j].yc/r;
+                    f = KSPRING_BOUNDARY*(EHRENFEST_RADIUS - r - rp);
+                    particle[j].fx += f*cphi;
+                    particle[j].fy += f*sphi;
+                    *pright -= f;
+                }
+            }
+            /* left container */
+            else 
+            {
+                r = module2(particle[j].xc + 1.0, particle[j].yc);
+                if ((r > EHRENFEST_RADIUS - rp)&&((particle[j].xc < -1.0)||(vabs(particle[j].yc) > EHRENFEST_WIDTH)))
+                {
+                    cphi = (particle[j].xc + 1.0)/r;
+                    sphi = particle[j].yc/r;
+                    f = KSPRING_BOUNDARY*(EHRENFEST_RADIUS - r - rp);
+                    particle[j].fx += f*cphi;
+                    particle[j].fy += f*sphi;
+                    *pleft -= f;
+                }
+            }
+            
+            /* add force from "corners" */
+            if ((vabs(particle[j].xc) - xtube < rp)&&(vabs(particle[j].yc) - EHRENFEST_WIDTH < rp))
+            {
+                for (i=-1; i<=1; i+=2)
+                    for (k=-1; k<=1; k+=2)
+                    {
+                        distance = module2(particle[j].xc - (double)i*xtube, particle[j].yc - (double)k*EHRENFEST_WIDTH);
+                        if (distance < rp)
+                        {
+                            cphi = (particle[j].xc - (double)i*xtube)/distance;
+                            sphi = (particle[j].yc - (double)k*EHRENFEST_WIDTH)/distance;
+                            f = KSPRING_BOUNDARY*(rp - distance);
+                            particle[j].fx += f*cphi;
+                            particle[j].fy += f*sphi;
+                        }
+                    }
+            }
+            return(fperp);
+        }
+        case (BC_SCREEN_BINS):
+        {
+            /* add harmonic force outside screen */
+            if (particle[j].xc > XMAX) particle[j].fx -= KSPRING_BOUNDARY*(particle[j].xc - XMAX);
+            else if (particle[j].xc < XMIN) particle[j].fx += KSPRING_BOUNDARY*(XMIN - particle[j].xc);
+            if (particle[j].yc > YMAX + 10.0*MU) particle[j].fy -= KSPRING_BOUNDARY*(particle[j].yc - YMAX - 10.0*MU);
+            else if (particle[j].yc < YMIN) particle[j].fy += KSPRING_BOUNDARY*(YMIN - particle[j].yc);
+                        
+            /* force from the bins */
+            dy = (YMAX - YMIN)/((double)NGRIDX + 3);
+            dx = dy/cos(PI/6.0);
+            rp = particle[j].radius;
+            width = rp + 0.05*dx;
+            ybin = 2.75*dy;
+            
+            if (particle[j].yc < YMIN + ybin) for (i=-1; i<=NGRIDX; i++) 
+            {
+                x = ((double)i - 0.5*(double)NGRIDX + 0.5)*dx;
+                distance = vabs(particle[j].xc - x);
+                if (distance < width)
+                {
+                    if (particle[j].xc > x) particle[j].fx += KSPRING_BOUNDARY*(width - distance);
+                    else particle[j].fx -= KSPRING_BOUNDARY*(width - distance);
+                }
+            }
+            else if (particle[j].yc < YMIN + ybin + particle[j].radius) for (i=-1; i<=NGRIDX; i++) 
+            {
+                x = ((double)i - 0.5*(double)NGRIDX + 0.5)*dx;
+                distance = module2(particle[j].xc - x, particle[j].yc - YMIN - ybin);
+                if (distance < rp)
+                {
+                    if (distance < 1.0e-8) distance = 1.0e-8;
+                    cphi = (particle[j].xc - x)/distance;
+                    sphi = (particle[j].yc - YMIN - ybin)/distance;
+                    f = KSPRING_BOUNDARY*(rp - distance);
+                    particle[j].fx += f*cphi;
+                    particle[j].fy += f*sphi;
+                }
+            }
+            return(fperp);
+        }
+    }
+}
+
+
+void compute_particle_force(int j, double krepel, t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY])
+/* compute force from other particles on particle j */
+{
+    int i0, j0, m0, k, m, q, close;
+    double fx = 0.0, fy = 0.0, force[2], torque = 0.0, torque_ij, x, y;
+    
+    particle[j].neighb = 0;
+
+    for (k=0; k<particle[j].hash_nneighb; k++)
+    {
+        close = compute_repelling_force(j, k, force, &torque_ij, particle, krepel);
+        fx += force[0];
+        fy += force[1];
+        torque += torque_ij;
+        if (close) particle[j].neighb++;
+    }
+                
+    particle[j].fx += fx;
+    particle[j].fy += fy;
+    particle[j].torque += torque;
+}
+
+
+int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY], 
+                             t_obstacle obstacle[NMAXOBSTACLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES])
+/* initialize all particles, obstacles, and the hashgrid */
+{
+    int i, j, k, n, tracer_n, nactive = 0;
+    double x, y, h;
+    
+    for (i=0; i < ncircles; i++) 
+    {
+        /* set particle type */
+        particle[i].type = 0;
+        if ((TWO_TYPES)&&((double)rand()/RAND_MAX > TPYE_PROPORTION)) 
+        {
+            particle[i].type = 1;
+            particle[i].radius = MU_B;
+        }
+        
+        particle[i].neighb = 0;
+        particle[i].thermostat = 1;
+
+//         particle[i].energy = 0.0;
+//         y = particle[i].yc;
+//         if (y >= YMAX) y -= particle[i].radius;
+//         if (y <= YMIN) y += particle[i].radius;
+
+        if (RANDOM_RADIUS) particle[i].radius = particle[i].radius*(0.75 + 0.5*((double)rand()/RAND_MAX));
+        
+        if (particle[i].type == 0)
+        {
+            particle[i].interaction = INTERACTION;
+            particle[i].eq_dist = EQUILIBRIUM_DIST;
+            particle[i].spin_range = SPIN_RANGE;
+            particle[i].spin_freq = SPIN_INTER_FREQUENCY;
+            particle[i].mass_inv = 1.0/PARTICLE_MASS;
+            particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
+        }
+        else 
+        {
+            particle[i].interaction = INTERACTION_B;
+            particle[i].eq_dist = EQUILIBRIUM_DIST_B;
+            particle[i].spin_range = SPIN_RANGE_B;
+            particle[i].spin_freq = SPIN_INTER_FREQUENCY_B;
+            particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
+            particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT_B;
+        }
+                
+        particle[i].vx = V_INITIAL*gaussian();
+        particle[i].vy = V_INITIAL*gaussian();
+        particle[i].energy = (particle[i].vx*particle[i].vx + particle[i].vy*particle[i].vy)*particle[i].mass_inv;
+        
+        px[i] = particle[i].vx;
+        py[i] = particle[i].vy;
+        
+        if (ROTATION) 
+        {
+            particle[i].angle = DPI*(double)rand()/RAND_MAX;
+            particle[i].omega = OMEGA_INITIAL*gaussian();
+            if (COUPLE_ANGLE_TO_THERMOSTAT) 
+                particle[i].energy += particle[i].omega*particle[i].omega*particle[i].inertia_moment_inv;
+        }
+        else 
+        {
+            particle[i].angle = 0.0;
+            particle[i].omega = 0.0;
+        }
+        pangle[i] = particle[i].omega;
+    }
+    /* initialize dummy values in case particles are added */
+    for (i=ncircles; i < NMAXCIRCLES; i++) 
+    {
+        particle[i].type = 0;
+        particle[i].active = 0;
+        particle[i].neighb = 0;
+        particle[i].thermostat = 0;
+        particle[i].energy = 0.0;
+        particle[i].mass_inv = 1.0/PARTICLE_MASS;
+        particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
+        particle[i].vx = 0.0;
+        particle[i].vy = 0.0;
+        px[i] = 0.0;
+        py[i] = 0.0;        
+        particle[i].angle = DPI*(double)rand()/RAND_MAX;
+        particle[i].omega = 0.0;
+        pangle[i] = 0.0;
+        particle[i].interaction = INTERACTION;
+        particle[i].eq_dist = EQUILIBRIUM_DIST;
+        particle[i].spin_range = SPIN_RANGE;
+        particle[i].spin_freq = SPIN_INTER_FREQUENCY;
+   }
+    
+    /* add particles at the bottom as seed */
+    if (PART_AT_BOTTOM) for (i=0; i<=NPART_BOTTOM; i++)
+    {   
+        x = XMIN + (double)i*(XMAX - XMIN)/(double)NPART_BOTTOM;
+        y = YMIN + 2.0*MU;
+        add_particle(x, y, 0.0, 0.0, MASS_PART_BOTTOM, 0, particle);
+    }
+    if (PART_AT_BOTTOM) for (i=0; i<=NPART_BOTTOM; i++)
+    {   
+        x = XMIN + (double)i*(XMAX - XMIN)/(double)NPART_BOTTOM;
+        y = YMIN + 4.0*MU;
+        add_particle(x, y, 0.0, 0.0, MASS_PART_BOTTOM, 0, particle);
+    }
+    
+    /* add larger copies of particles (for Ehrenfest model)*/
+    if (EHRENFEST_COPY)
+    {
+        for (i=0; i < ncircles; i++) 
+        {
+            n = ncircles + i;
+            particle[n].xc = -particle[i].xc;
+            particle[n].yc = particle[i].yc;
+            particle[n].vx = -0.5*particle[i].vx;
+            particle[n].vy = 0.5*particle[i].vy;
+            px[n] = -0.5*px[i];
+            py[n] = 0.5*py[i];        
+            particle[n].energy = particle[i].energy;
+            particle[n].radius = 2.0*particle[i].radius;
+            particle[n].type = 2;
+            particle[n].mass_inv = 1.25*particle[i].mass_inv;
+            particle[n].thermostat = 1;
+            particle[n].interaction = particle[i].interaction;
+            particle[n].eq_dist = 0.45*particle[i].eq_dist;
+            
+            if ((double)rand()/RAND_MAX > 0.6) particle[n].active = 1;
+        }
+        ncircles *= 2;
+    }
+    
+    /* change type of tracer particle */
+    if (TRACER_PARTICLE)
+    {
+        i = 0;
+        while ((!particle[i].active)||(module2(particle[i].xc, particle[i].yc) > 0.5)) i++;
+        tracer_n = i;
+        particle[tracer_n].type = 2;
+        particle[tracer_n].radius *= 1.5;
+        particle[tracer_n].mass_inv *= 1.0/TRACER_PARTICLE_MASS;
+        particle[tracer_n].vx *= 0.1;
+        particle[tracer_n].vy *= 0.1;
+        particle[tracer_n].thermostat = 0;
+        px[tracer_n] *= 0.1;
+        py[tracer_n] *= 0.1;
+    }
+    
+    /* position-dependent particle type */
+    if (POSITION_DEPENDENT_TYPE) for (i=0; i<ncircles; i++)
+        if (particle[i].xc < 0) 
+        {
+            particle[i].type = 2;
+            particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
+            particle[i].radius = MU_B;
+        }
+    
+    /* inactivate particles in obstacle */
+    printf("Inactivating particles inside obstacles\n");
+    if ((BOUNDARY_COND == BC_CIRCLE)||(BOUNDARY_COND == BC_PERIODIC_CIRCLE))
+    {
+        for (i=0; i< ncircles; i++)
+            if ((module2(particle[i].xc - OBSTACLE_XMIN, particle[i].yc) < 1.2*OBSTACLE_RADIUS)) 
+                particle[i].active = 0;
+    }
+    else if (BOUNDARY_COND == BC_PERIODIC_FUNNEL)
+    {
+        for (i=0; i< ncircles; i++)
+            for (k=-1; k<2; k+=2)
+                if ((module2(particle[i].xc, particle[i].yc - (double)k*(FUNNEL_WIDTH + OBSTACLE_RADIUS)) < OBSTACLE_RADIUS + 2.0*MU)) 
+                {
+                    printf("Inactivating particle at (%.3lg, %.3lg)\n", particle[i].xc, particle[i].yc);
+                    particle[i].active = 0;
+                }
+    }
+    else if (BOUNDARY_COND == BC_PERIODIC_TRIANGLE)
+    {
+        h = 2.0*OBSTACLE_RADIUS*tan(APOLY*PID);
+        for (i=0; i< ncircles; i++)
+            if ((vabs(particle[i].xc) < OBSTACLE_RADIUS + 2.0*MU)
+                &&(2.0*OBSTACLE_RADIUS*vabs(particle[i].yc) < h*(OBSTACLE_RADIUS + 2.0*MU - particle[i].xc)))
+                {
+                    printf("Inactivating particle at (%.3lg, %.3lg)\n", particle[i].xc, particle[i].yc);
+                    particle[i].active = 0;
+                }            
+    }
+    else if (BOUNDARY_COND == BC_EHRENFEST)
+    {
+        for (i=0; i< ncircles; i++)
+            if (module2(vabs(particle[i].xc) -1.0, particle[i].yc) > EHRENFEST_RADIUS) 
+                particle[i].active = 0;
+    }
+    if (ADD_FIXED_OBSTACLES)
+    {
+        for (i=0; i< ncircles; i++) for (j=0; j < nobstacles; j++)
+            if (module2(particle[i].xc - obstacle[j].xc, particle[i].yc - obstacle[j].yc) < OBSTACLE_RADIUS + particle[i].radius)
+                particle[i].active = 0;
+    }
+            
+    /* count number of active particles */
+    for (i=0; i< ncircles; i++) nactive += particle[i].active;
+    printf("%i active particles\n", nactive);   
+    
+    return(nactive);
+}
+
+
+int add_particles(t_particle particle[NMAXCIRCLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], int nadd_particle)
+/* add several particles to the system */
+{
+//             add_particle(XMIN + 0.1, 0.0, 50.0, 0.0, 3.0, 0, particle);
+//             px[ncircles - 1] = particle[ncircles - 1].vx;
+//             py[ncircles - 1] = particle[ncircles - 1].vy;
+//             particle[ncircles - 1].radius = 1.5*MU;
+//             j = 0;
+//             while (module2(particle[j].xc,particle[j].yc) > 0.7) j = rand()%ncircles;
+//             x =  particle[j].xc + 2.5*MU;
+//             y =  particle[j].yc;
+            
+//             x =  XMIN + (XMAX - XMIN)*rand()/RAND_MAX;
+//             y =  YMAX + 0.01*rand()/RAND_MAX;
+//             add_particle(x, y, 0.0, 0.0, 1.0, 0, particle);
+
+//             x =  XMIN + 0.25*(XMAX - XMIN);
+//             y =  YMAX + 0.01;
+//             prop = 1.0 - (double)nadd_particle/5.0;
+//             vx = 100.0*prop;
+//             add_particle(x, y, vx, -10.0, 5.0*prop, 0, particle);
+//             particle[ncircles - 1].radius = 10.0*MU*prop;
+//             particle[ncircles - 1].eq_dist = 2.0;
+//             particle[ncircles - 1].thermostat = 0;
+//             px[ncircles - 1] = particle[ncircles - 1].vx;
+//             py[ncircles - 1] = particle[ncircles - 1].vy;
+            
+    printf("Adding a particle\n\n");
+    add_particle(MU*(2.0*rand()/RAND_MAX - 1.0), YMAX + 2.0*MU, 0.0, 0.0, PARTICLE_MASS, 0, particle);
+    
+    particle[ncircles - 1].radius = MU;
+    particle[ncircles - 1].eq_dist = EQUILIBRIUM_DIST;
+    particle[ncircles - 1].thermostat = 0;
+    px[ncircles - 1] = particle[ncircles - 1].vx;
+    py[ncircles - 1] = particle[ncircles - 1].vy;
+    return (nadd_particle + 1);
+}
+
+
+void center_momentum(double p[NMAXCIRCLES])
+{
+    int i;
+    double ptot = 0.0, pmean;
+    
+    for (i=0; i<ncircles; i++) ptot += p[i];
+    pmean = ptot/(double)ncircles;
+    for (i=0; i<ncircles; i++) p[i] -= pmean;
+}
+
+
+int floor_momentum(double p[NMAXCIRCLES])
+{
+    int i, floor = 0;
+    double ptot = 0.0, pmean;
+    
+    for (i=0; i<ncircles; i++) 
+    {
+        if (p[i] > PMAX) 
+        {
+            p[i] = PMAX;
+            floor = 1;
+        }
+        else if (p[i] < -PMAX) 
+        {
+            p[i] = -PMAX;
+            floor = 1;
+        }
+    }
+    if (floor) printf("Flooring momentum\n");
+    return (floor); 
+}
+
+int partial_thermostat_coupling(t_particle particle[NMAXCIRCLES], double xmin)
+/* only couple particles with x > xmin to thermostat */
+{
+    int i, nthermo = 0;
+    
+    for (i=0; i<ncircles; i++) 
+    {
+        if (particle[i].xc > xmin) 
+        {
+            particle[i].thermostat = 1;
+            nthermo++;
+        }
+        else particle[i].thermostat = 0;
+    }
+    return(nthermo);
+}
+
+double compute_mean_energy(t_particle particle[NMAXCIRCLES])
+{
+    int i, nactive = 0;
+    double total_energy = 0.0;
+    
+    for (i=0; i<ncircles; i++) if (particle[i].active)
+    {
+        total_energy += particle[i].energy;
+        nactive++;
+    }    
+    return(total_energy/(double)nactive);
+}

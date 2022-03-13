@@ -13,6 +13,7 @@
 
 #define NMAXCIRCLES 20000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define MAXNEIGH 20         /* max number of neighbours kept in memory */
+#define NMAXOBSTACLES 100   /* max number of obstacles */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -32,6 +33,10 @@
 #define C_TWO 98            /* two concentric circles of different type */
 #define C_NOTHING 99        /* no circle at all, for comparisons */
 
+/* pattern of additional obstacles */
+#define O_CORNERS 0         /* obstacles in the corners (for Boy b.c.) */
+#define O_GALTON_BOARD 1    /* Galton board pattern */
+
 /* particle interaction */
 
 #define I_COULOMB 0         /* Coulomb force */
@@ -41,6 +46,7 @@
 #define I_GOLDENRATIO 4     /* Lennard-Jones type with equilibria related by golden ratio */
 #define I_LJ_DIPOLE 5       /* Lennard-Jones with a dipolar angle dependence */
 #define I_LJ_QUADRUPOLE 6   /* Lennard-Jones with a quadropolar angle dependence */
+#define I_LJ_WATER 7        /* model for water molecule */
 
 /* Boundary conditions */
 
@@ -50,7 +56,12 @@
 #define BC_PERIODIC 3       /* periodic boundary conditions */
 #define BC_PERIODIC_CIRCLE 4  /* periodic boundary conditions and harmonic b.c. outside moving circle */
 #define BC_EHRENFEST 5      /* Ehrenfest urn-type configuration */
+#define BC_PERIODIC_FUNNEL 6    /* funnel with periodic boundary conditions */
+#define BC_RECTANGLE_LID 7  /* rectangular container with moving lid */
+#define BC_PERIODIC_TRIANGLE 8  /* periodic boundary conditions and harmonic b.c. outside moving triangle */
 #define BC_KLEIN 11         /* Klein bottle (periodic with twisted vertical parts) */
+#define BC_SCREEN_BINS 12   /* harmonic boundary conditions outside screen area plus "bins" (for Galton board) */
+#define BC_BOY 13           /* Boy surface/projective plane (periodic with twisted horizontal and vertical parts) */
 
 /* Plot types */
 
@@ -61,6 +72,7 @@
 #define P_ANGLE 4         /* colors represent angle/spin of particle */
 #define P_TYPE 5          /* colors represent type of particle */
 #define P_DIRECTION 6     /* colors represent direction of velocity */
+#define P_ANGULAR_SPEED 7 /* colors represent angular speed */
 
 /* Color schemes */
 
@@ -104,11 +116,12 @@ typedef struct
     double fy;                  /* y component of force on particle */
     double torque;              /* torque on particle */
     short int thermostat;       /* whether particle is coupled to thermostat */
-    int hashx;                  /* hash grid positions of particles */
-    int hashy;                  /* hash grid positions of particles */
-    int neighb;                 /* number of neighbours */
-    int neighbours[MAXNEIGH];   /* coordinates of neighbours */
-    double nghangle[MAXNEIGH];  /* angles of neighbours */
+    int hashcell;               /* hash cell in which particle is located */
+    int neighb;                 /* number of neighbours within given distance */
+    int hash_nneighb;           /* number of neighbours in hashgrid */
+    int hashneighbour[9*HASHMAX];   /* particle numbers of neighbours in hashgrid */
+    double deltax[9*HASHMAX];   /* relative position of neighbours */
+    double deltay[9*HASHMAX];   /* relative position of neighbours */
     short int type;             /* type of particle, for mixture simulations */
     short int interaction;      /* type of interaction */
     double eq_dist;             /* equilibrium distance */
@@ -120,6 +133,8 @@ typedef struct
 {
     int number;                 /* total number of particles in cell */
     int particles[HASHMAX];     /* numbers of particles in cell */
+    int nneighb;                /* number of neighbouring cells */
+    int neighbour[9];           /* numbers of neighbouring cells */
 } t_hashgrid;
 
 typedef struct
@@ -135,12 +150,22 @@ typedef struct
     int hashx;                  /* hash grid positions of particles */
     int hashy;                  /* hash grid positions of particles */
     int neighb;                 /* number of neighbours */
-    int health;                 /* 0 = sane, 1 = infected, 2 = recovered */
+    int health;                 /* 0 = healthy, 1 = infected, 2 = recovered */
     double infected_time;       /* time since infected */
     int protected;              /* 0 = not protected, 1 = protected */
 } t_person;
 
+typedef struct
+{
+    double xc, yc, radius;      /* center and radius of circle */
+    short int active;           /* circle is active */
+} t_obstacle;
+
+typedef struct
+{
+    double xc, yc;              /* center of circle */
+} t_tracer;
 
 
-int ncircles, counter = 0;
+int ncircles, nobstacles, counter = 0;
 
