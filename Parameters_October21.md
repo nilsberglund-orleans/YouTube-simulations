@@ -819,6 +819,8 @@ updated gradually.
     compute_trajectories_ellipse(x, y, configs, trajectory, traj_length);    ```
 
 ```
+
+```
 #define MOVIE 1         /* set to 1 to generate movie */
 
 #define WINWIDTH 	1280  /* window width */
