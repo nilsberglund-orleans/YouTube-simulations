@@ -6,7 +6,7 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
 Parameter values used in specific simulations will be gradually added to file `Parameters.md`, `Parameters_June21.md` and so on.
 
-There are three groups of 5 files, 11 files and 3 files. 
+There are three groups of 6 files, 11 files and 4 files. 
 In addition the following files handling color schemes have been included:
 
 1. `hsluv.c`and `hsluv.h` from https://github.com/adammaj1/hsluv-color-gradient 
@@ -17,9 +17,10 @@ In addition the following files handling color schemes have been included:
 
 1. *global_particles.c*:    global variables and parameters
 2. *sub_part_billiard.c*:   drawing/computation routines common to `particle_billiard` and `drop_billiard`
-3. *particle_billiard.c*:   simulation of a collection of non-interacting particles in a billiard
-4. *drop_billiard.c*:       simulation of an expanding front of particles
-5. *particle_pinball.c*:    variant of `particle_billiard` with some extra statistics plots 
+3. *sub_part_pinball.c*:    additional drawing/computation routines for `particle_pinball`
+4. *particle_billiard.c*:   simulation of a collection of non-interacting particles in a billiard
+5. *drop_billiard.c*:       simulation of an expanding front of particles
+6. *particle_pinball.c*:    variant of `particle_billiard` with some extra statistics plots 
 
 - Create subfolders `tif_part`, `tif_drop`
 - Customize constants at beginning of .c file
@@ -78,8 +79,9 @@ in the shell before running the program
 ### Molecular dynamics simulations.
 
 1. *global_ljones.c*:     global variables and parameters
-2. *sub_lj.c*:            some drawing and initialization routines
-3. *lennardjones.c*:      simulation of molecular dynamics
+2. *sub_lj.c*:            drawing and initialization routines
+3. *sub_hashgrid.c*:      hashgrid manipulation routines
+4. *lennardjones.c*:      simulation of molecular dynamics
 
 - Create subfolder `tif_ljones`
 - Customize constants at beginning of .c file
