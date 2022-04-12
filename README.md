@@ -6,7 +6,7 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
 Parameter values used in specific simulations will be gradually added to file `Parameters.md`, `Parameters_June21.md` and so on.
 
-There are three groups of 6 files, 11 files and 4 files. 
+There are three groups of 6 files, 14 files and 4 files. 
 In addition the following files handling color schemes have been included:
 
 1. `hsluv.c`and `hsluv.h` from https://github.com/adammaj1/hsluv-color-gradient 
@@ -42,17 +42,20 @@ in the shell before running the program
 
 ### Simulations of wave equation, heat equation and Schrodinger equation.
 
-1. *global_pdes.c*:     global variables and parameters
-2. *sub_wave.c*:        drawing/computation routines common to `wave_billiard`, `heat` and `schrodinger`
-3. *sub_wave_comp.c*:   some modified functions needed by `wave_comparison`
-4. *common_wave.c*:     common functions of `wave_billiard` and `wave_comparison`
-5. *colors_waves.c*:    colormaps used by wave simulations
-6. *wave_billiard.c*:   simulation of the (linear) wave equation
-7. *wave_comparison.c*: comparison of the wave equation in two different domains
-8. *wave_energy.c*:     a version of `wave_billiard` plotting the energy profile of the wave
-9. *mangrove.c*:        a version of `wave_billiard` with additional features to animate mangroves
-10. *heat.c*:           simulation of the heat equation, with optional drawing of gradient field lines
-11. *schrodinger.c*:    simulation of the Schrodinger equation
+1. *global_pdes.c*:      global variables and parameters
+2. *global_3d.c*:        additional global variables for 3d version
+3. *sub_wave.c*:         drawing/computation routines common to `wave_billiard`, `heat` and `schrodinger`
+4. *sub_wave_comp.c*:    some modified functions needed by `wave_comparison`
+5. *sub_wave_3d.c*:      additional functions for 3d version
+6. *common_wave.c*:      common functions of `wave_billiard` and `wave_comparison`
+7. *colors_waves.c*:     colormaps used by wave simulations
+8. *wave_billiard.c*:    simulation of the (linear) wave equation
+9. *wave_3d.c*:          3d renderiing of wave equation
+10. *wave_comparison.c*: comparison of the wave equation in two different domains
+11. *wave_energy.c*:     a version of `wave_billiard` plotting the energy profile of the wave
+12. *mangrove.c*:        a version of `wave_billiard` with additional features to animate mangroves
+13. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
+14. *schrodinger.c*:     simulation of the Schrodinger equation
 
 - Create subfolders `tif_wave`, `tif_heat`, `tif_schrod`
 - Customize constants at beginning of .c file
