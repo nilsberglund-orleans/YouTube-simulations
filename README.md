@@ -50,7 +50,7 @@ in the shell before running the program
 6. *common_wave.c*:      common functions of `wave_billiard` and `wave_comparison`
 7. *colors_waves.c*:     colormaps used by wave simulations
 8. *wave_billiard.c*:    simulation of the (linear) wave equation
-9. *wave_3d.c*:          3d renderiing of wave equation
+9. *wave_3d.c*:          3d rendering of wave equation
 10. *wave_comparison.c*: comparison of the wave equation in two different domains
 11. *wave_energy.c*:     a version of `wave_billiard` plotting the energy profile of the wave
 12. *mangrove.c*:        a version of `wave_billiard` with additional features to animate mangroves
