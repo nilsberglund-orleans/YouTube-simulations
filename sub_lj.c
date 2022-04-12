@@ -4,8 +4,9 @@
 
 #include "colors_waves.c"
 
-#define HUE_TYPE0 300.0     /* hue of particles of type 0 */
-#define HUE_TYPE1 90.0      /* hue of particles of type 1 */
+// #define HUE_TYPE0 260.0     /* hue of particles of type 0 */
+// #define HUE_TYPE0 300.0     /* hue of particles of type 0 */
+// #define HUE_TYPE1 90.0      /* hue of particles of type 1 */
 
 int writetiff(char *filename, char *description, int x, int y, int width, int height, int compression)
 {
@@ -874,6 +875,21 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
             nobstacles = n;
             break;
         }
+        case (O_GENUS_TWO):
+        {
+            n = 0;
+            for (i = 0; i < 3; i++)
+                for (j = 0; j < 3; j++)
+                {
+                    obstacle[n].xc = BCXMIN + 0.5*((double)i)*(BCXMAX - BCXMIN);
+                    obstacle[n].yc = BCYMIN + 0.5*((double)j)*(BCYMAX - BCYMIN);
+                    obstacle[n].radius = OBSTACLE_RADIUS;
+                    obstacle[n].active = 1;
+                    n++;
+                }
+            nobstacles = n;
+            break;
+        }
         default: 
         {
             printf("Function init_obstacle_config not defined for this pattern \n");
@@ -1341,13 +1357,19 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
     static double dxhalf = 0.5*(BCXMAX - BCXMIN), dyhalf = 0.5*(BCYMAX - BCYMIN);
     int wwrapx, wwrapy;
     
+    if (BOUNDARY_COND == BC_GENUS_TWO)
+    {
+        dxhalf *= 0.75;
+        dyhalf *= 0.75;
+    }
+    
     x1 = particle[i].xc;
     y1 = particle[i].yc;
     x2 = particle[k].xc;
     y2 = particle[k].yc;
         
-    wwrapx = ((BOUNDARY_COND == BC_KLEIN)||(BOUNDARY_COND == BC_BOY))&&(vabs(x2 - x1) > dxhalf);
-    wwrapy = (BOUNDARY_COND == BC_BOY)&&(vabs(y2 - y1) > dyhalf);
+    wwrapx = ((BOUNDARY_COND == BC_KLEIN)||(BOUNDARY_COND == BC_BOY)||(BOUNDARY_COND == BC_GENUS_TWO))&&(vabs(x2 - x1) > dxhalf);
+    wwrapy = ((BOUNDARY_COND == BC_BOY)||(BOUNDARY_COND == BC_GENUS_TWO))&&(vabs(y2 - y1) > dyhalf);
         
     switch (particle[k].interaction) {
         case (I_COULOMB):
@@ -1460,6 +1482,8 @@ int compute_repelling_force(int i, int j, double force[2], double *torque, t_par
     static double distmin = 10.0*((XMAX - XMIN)/HASHX + (YMAX - YMIN)/HASHY);
     int interact, k;
     
+    if (BOUNDARY_COND == BC_GENUS_TWO) distmin *= 2.0;
+    
     k = particle[i].hashneighbour[j];
         
     distance = module2(particle[i].deltax[j], particle[i].deltay[j]);
@@ -1546,7 +1570,7 @@ int resample_particle(int n, int maxtrials, t_particle particle[NMAXCIRCLES])
     {
         success = 1;
         x = particle[n].xc - MU*(double)rand()/RAND_MAX;
-        y = 0.9*(BCYMIN + (BCYMAX - BCYMIN)*(double)rand()/RAND_MAX);
+        y = 0.95*(BCYMIN + (BCYMAX - BCYMIN)*(double)rand()/RAND_MAX);
         i = 0;
         while ((success)&&(i<ncircles)) 
         {
@@ -1666,7 +1690,7 @@ double neighbour_color(int nnbg)
 void compute_entropy(t_particle particle[NMAXCIRCLES], double entropy[2])
 {
     int i, nleft1 = 0, nleft2 = 0;
-    double p1, p2;
+    double p1, p2, x;
     static int first = 1, ntot1 = 0, ntot2 = 0;
     static double log2;
     
@@ -1680,13 +1704,15 @@ void compute_entropy(t_particle particle[NMAXCIRCLES], double entropy[2])
     
     for (i=0; i<ncircles; i++)
     {
+        if (POSITION_Y_DEPENDENCE) x = particle[i].yc;
+        else x = particle[i].xc;
         if (particle[i].type == 0) 
         {
-            if (particle[i].xc < 0.0) nleft1++;
+            if (x < 0.0) nleft1++;
         }
         else
         {
-            if (particle[i].xc < 0.0) nleft2++;
+            if (x < 0.0) nleft2++;
         }            
     }
     p1 = (double)nleft1/(double)ntot1;
@@ -1699,6 +1725,127 @@ void compute_entropy(t_particle particle[NMAXCIRCLES], double entropy[2])
     else entropy[1] = -(p2*log(p2) + (1.0-p2)*log(1.0-p2)/log2);
 }
 
+void draw_one_particle_links(t_particle particle)
+/* draw links of one particle */
+{
+    int i, j, k;
+    double x1, x2, y1, y2, length, linkcolor,periodx, periody, xt1, yt1, xt2, yt2;
+
+    glLineWidth(LINK_WIDTH);
+//     if (particle.active)
+//     {
+//             radius = particle[j].radius;
+    for (k = 0; k < particle.hash_nneighb; k++)
+    {
+        x1 = particle.xc;
+        if (CENTER_VIEW_ON_OBSTACLE) x1 -= xshift;
+        y1 = particle.yc;
+        x2 = x1 + particle.deltax[k];
+        y2 = y1 + particle.deltay[k];
+                
+        length = module2(particle.deltax[k], particle.deltay[k])/particle.radius;
+                
+        if (COLOR_BONDS)
+        {
+            if (length < 1.5) linkcolor = 1.0;
+            else linkcolor = 1.0 - 0.75*(length - 1.5)/(NBH_DIST_FACTOR - 1.5);
+            glColor3f(linkcolor, linkcolor, linkcolor);
+        }
+                
+        if (length < 1.0*NBH_DIST_FACTOR) draw_line(x1, y1, x2, y2);
+    }
+//         {
+//             draw_line(x1, y1, x2, y2);
+        
+            /* in case of periodic b.c., draw translates of particles */
+//             if (PERIODIC_BC)
+//             {
+//                 for (i=-1; i<2; i++)
+//                     for (j=-1; j<2; j++)
+//                         draw_line(x1 + (double)i*(BCXMAX - BCXMIN), y1 + (double)j*(BCYMAX - BCYMIN), x2 + (double)i*(BCXMAX - BCXMIN), y2 + (double)j*(BCYMAX - BCYMIN));
+//             }
+//         else if (BOUNDARY_COND == BC_KLEIN)
+//         {
+//             x1 = particle[j].xc;
+//             y1 = particle[j].yc;
+//             
+//             for (i=-2; i<3; i++)
+//             {
+//                 if (vabs(i) == 1) sign = -1.0;
+//                 else sign = 1.0;
+//                 angle1 = angle*sign;
+//                 for (k=-1; k<2; k++)
+//                     draw_one_particle(particle[j], x1 + (double)i*(BCXMAX - BCXMIN), sign*(y1 + (double)k*(BCYMAX - BCYMIN)), 
+//                                       radius, angle1, nsides, width, rgb);
+//             }
+//         }
+//         else if (BOUNDARY_COND == BC_BOY)
+//         {
+//             x1 = particle[j].xc;
+//             y1 = particle[j].yc;
+//             
+//             for (i=-1; i<2; i++) for (k=-1; k<2; k++)
+//             {
+//                 if (vabs(i) == 1) sign = -1.0;
+//                 else sign = 1.0;
+//                 if (vabs(k) == 1) signy = -1.0;
+//                 else signy = 1.0;
+//                 if (signy == 1.0) angle1 = angle*sign;
+//                 else angle1 = PI - angle;
+//                 if (sign == -1.0) draw_one_particle(particle[j], signy*(x1 + (double)i*(BCXMAX - BCXMIN)), 
+//                     sign*(y1 + (double)k*(BCYMAX - BCYMIN)), radius, angle1, nsides, width, rgbx);
+//                 else if (signy == -1.0) draw_one_particle(particle[j], signy*(x1 + (double)i*(BCXMAX - BCXMIN)), 
+//                     sign*(y1 + (double)k*(BCYMAX - BCYMIN)), radius, angle1, nsides, width, rgby);
+//                 else draw_one_particle(particle[j], signy*(x1 + (double)i*(BCXMAX - BCXMIN)), 
+//                     sign*(y1 + (double)k*(BCYMAX - BCYMIN)), radius, angle1, nsides, width, rgb);
+//             }
+//         }
+//             else if (BOUNDARY_COND == BC_GENUS_TWO)
+//             {
+//                 if (x1 < 0.0) periody = BCYMAX - BCYMIN;
+//                 else periody = 0.5*(BCYMAX - BCYMIN);
+//             
+//                 if (y1 < 0.0) periodx = BCXMAX - BCXMIN;
+//                 else periodx = 0.5*(BCXMAX - BCXMIN);
+            
+//                 if ((x1 < 0.0)&&(y1 < 0.0))
+//                     for (i=-1; i<2; i++)
+//                         for (j=-1; j<2; j++)
+//                         {
+//                             xt1 = x1 + (double)i*periodx;
+//                             yt1 = y1 + (double)j*periody;
+//                             xt2 = x2 + (double)i*periodx;
+//                             yt2 = y2 + (double)j*periody;
+//                             draw_line(xt1, yt1, xt2, yt2);
+//                         }
+//                 else if ((x1 < 0.0)&&(y1 >= 0.0))
+//                     for (i=-1; i<2; i++)
+//                         for (j=-1; j<2; j++)
+//                         {
+//                             xt1 = x1 + (double)i*periodx;
+//                             yt1 = y1 + (double)j*periody;
+//                             xt2 = x2 + (double)i*periodx;
+//                             yt2 = y2 + (double)j*periody;
+//                             draw_line(xt1, yt1, xt2, yt2);
+//                         }
+//                 else if ((x1 >= 0.0)&&(y1 < 0.0))
+//                     for (i=-1; i<2; i++)
+//                         for (j=-1; j<2; j++)
+//                         {
+//                             xt1 = x1 + (double)i*periodx;
+//                             yt1 = y1 + (double)j*periody;
+//                             xt2 = x2 + (double)i*periodx;
+//                             yt2 = y2 + (double)j*periody;
+//                             draw_line(xt1, yt1, xt2, yt2);
+//                         }
+//             }
+//         }
+//     }
+            
+//             sprintf(message, "%i - %i", particle[j].hash_nneighb, particle[j].hashcell);
+//             write_text(particle[j].xc, particle[j].yc, message);
+//     }
+}
 
 void draw_one_particle(t_particle particle, double xc, double yc, double radius, double angle, int nsides, double width, double rgb[3])
 /* draw one of the particles */ 
@@ -1753,58 +1900,67 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
 }
 
 
-void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH], int traj_position, int traj_length)
+void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], int traj_position, int traj_length)
 /* draw tracer particle trajectory */
 {
-    int i, time;
+    int i, j, time;
     double x1, x2, y1, y2, rgb[3], lum;
     
     blank();
     glLineWidth(TRAJECTORY_WIDTH);
-    hsl_to_rgb(70.0, 0.9, 0.5, rgb);
-    glColor3f(rgb[0], rgb[1], rgb[2]);
+    printf("drawing trajectory\n");
     
-    if (traj_length < TRAJECTORY_LENGTH)
-        for (i=0; i < traj_length-1; i++)
-        {
-            x1 = trajectory[i].xc;
-            x2 = trajectory[i+1].xc;
-            y1 = trajectory[i].yc;
-            y2 = trajectory[i+1].yc;
-        
-            time = traj_length - i;
-            lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
-            glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
-        
-            if (module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
-        }
-    else
+    for (j=0; j<N_TRACER_PARTICLES; j++)
     {
-        for (i = traj_position + 1; i < traj_length-1; i++)
+        if (j == 0) hsl_to_rgb(HUE_TYPE1, 0.9, 0.5, rgb);
+        else if (j == 1) hsl_to_rgb(HUE_TYPE2, 0.9, 0.5, rgb);
+        else hsl_to_rgb(HUE_TYPE3, 0.9, 0.5, rgb);
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+    
+        if (traj_length < TRAJECTORY_LENGTH) 
+            for (i=0; i < traj_length-1; i++)
+            {
+                x1 = trajectory[j*TRAJECTORY_LENGTH + i].xc;
+                x2 = trajectory[j*TRAJECTORY_LENGTH + i+1].xc;
+                y1 = trajectory[j*TRAJECTORY_LENGTH + i].yc;
+                y2 = trajectory[j*TRAJECTORY_LENGTH + i+1].yc;
+            
+                time = traj_length - i;
+                lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
+                glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+        
+                if (module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+            
+//             printf("(x1, y1) = (%.3lg, %.3lg), (x2, y2) = (%.3lg, %.3lg)\n", x1, y1, x2, y2);
+            }
+        else 
         {
-            x1 = trajectory[i].xc;
-            x2 = trajectory[i+1].xc;
-            y1 = trajectory[i].yc;
-            y2 = trajectory[i+1].yc;
+            for (i = traj_position + 1; i < traj_length-1; i++)
+            {
+                x1 = trajectory[j*TRAJECTORY_LENGTH + i].xc;
+                x2 = trajectory[j*TRAJECTORY_LENGTH + i+1].xc;
+                y1 = trajectory[j*TRAJECTORY_LENGTH + i].yc;
+                y2 = trajectory[j*TRAJECTORY_LENGTH + i+1].yc;
         
-            time = traj_position + traj_length - i;
-            lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
-            glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+                time = traj_position + traj_length - i;
+                lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
+                glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
         
-            if (module2(x2 - x1, y2 - y1) < 0.1*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
-        }
-        for (i=0; i < traj_position-1; i++)
-        {
-            x1 = trajectory[i].xc;
-            x2 = trajectory[i+1].xc;
-            y1 = trajectory[i].yc;
-            y2 = trajectory[i+1].yc;
+                if (module2(x2 - x1, y2 - y1) < 0.1*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+            }
+            for (i=0; i < traj_position-1; i++)
+            {
+                x1 = trajectory[j*TRAJECTORY_LENGTH + i].xc;
+                x2 = trajectory[j*TRAJECTORY_LENGTH + i+1].xc;
+                y1 = trajectory[j*TRAJECTORY_LENGTH + i].yc;
+                y2 = trajectory[j*TRAJECTORY_LENGTH + i+1].yc;
         
-            time = traj_position - i;
-            lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
-            glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+                time = traj_position - i;
+                lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
+                glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
         
-            if (module2(x2 - x1, y2 - y1) < 0.1*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+                if (module2(x2 - x1, y2 - y1) < 0.1*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+            }
         }
     }
 }
@@ -1813,7 +1969,7 @@ void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH], int traj_position, 
 void draw_particles(t_particle particle[NMAXCIRCLES], int plot)
 {
     int i, j, k, m, width, nnbg, nsides;
-    double ej, hue, huex, huey, rgb[3], rgbx[3], rgby[3], radius, x1, y1, x2, y2, angle, ca, sa, length, linkcolor, sign = 1.0, angle1, signy = 1.0;
+    double ej, hue, huex, huey, rgb[3], rgbx[3], rgby[3], radius, x1, y1, x2, y2, angle, ca, sa, length, linkcolor, sign = 1.0, angle1, signy = 1.0, periodx, periody, x, y;
     char message[100];
     
     if (!TRACER_PARTICLE) blank();
@@ -1823,32 +1979,33 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot)
     if (plot == P_BONDS)
     {
         glLineWidth(LINK_WIDTH);
-        for (j=0; j<ncircles; j++) if (particle[j].active)
-        {
-//             radius = particle[j].radius;
-            for (k = 0; k < particle[j].hash_nneighb; k++)
-            {
-                x1 = particle[j].xc;
-                y1 = particle[j].yc;
-                x2 = x1 + particle[j].deltax[k];
-                y2 = y1 + particle[j].deltay[k];
-                
-                length = module2(particle[j].deltax[k], particle[j].deltay[k])/particle[j].radius;
-                
-                if (COLOR_BONDS)
-                {
-                    if (length < 1.5) linkcolor = 1.0;
-                    else linkcolor = 1.0 - 0.75*(length - 1.5)/(NBH_DIST_FACTOR - 1.5);
-                    glColor3f(linkcolor, linkcolor, linkcolor);
-                }
-                
-                if (length < 1.0*NBH_DIST_FACTOR) 
-                    draw_line(x1, y1, x2, y2);
-            }
-            
-//             sprintf(message, "%i - %i", particle[j].hash_nneighb, particle[j].hashcell);
-//             write_text(particle[j].xc, particle[j].yc, message);
-        }
+        for (j=0; j<ncircles; j++) if (particle[j].active) draw_one_particle_links(particle[j]);
+//         if (0) {
+// //             radius = particle[j].radius;
+//             for (k = 0; k < particle[j].hash_nneighb; k++)
+//             {
+//                 x1 = particle[j].xc;
+//                 if (CENTER_VIEW_ON_OBSTACLE) x1 -= xshift;
+//                 y1 = particle[j].yc;
+//                 x2 = x1 + particle[j].deltax[k];
+//                 y2 = y1 + particle[j].deltay[k];
+//                 
+//                 length = module2(particle[j].deltax[k], particle[j].deltay[k])/particle[j].radius;
+//                 
+// //                 if (COLOR_BONDS)
+// //                 {
+// //                     if (length < 1.5) linkcolor = 1.0;
+// //                     else linkcolor = 1.0 - 0.75*(length - 1.5)/(NBH_DIST_FACTOR - 1.5);
+// //                     glColor3f(linkcolor, linkcolor, linkcolor);
+// //                 }
+//                 
+//                 if (length < 2.0*NBH_DIST_FACTOR) 
+//                     draw_line(x1, y1, x2, y2);
+//             }
+//             
+// //             sprintf(message, "%i - %i", particle[j].hash_nneighb, particle[j].hashcell);
+// //             write_text(particle[j].xc, particle[j].yc, message);
+//         }
     }
                 
     /* determine particle color and size */
@@ -1907,8 +2064,10 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot)
             {
 //                 if (particle[j].type == 0) hue = 310.0;
 //                 else hue = 70.0;
-                if (particle[j].type == 0) hue = HUE_TYPE0;
-                else hue = HUE_TYPE1;
+                if (particle[j].type <= 1) hue = HUE_TYPE0;
+                else if (particle[j].type == 2) hue = HUE_TYPE1;
+                else if (particle[j].type == 3) hue = HUE_TYPE2;
+                else hue = HUE_TYPE3;
                 radius = particle[j].radius;
                 width = BOUNDARY_WIDTH;
                 break;
@@ -2037,6 +2196,44 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot)
                     sign*(y1 + (double)k*(BCYMAX - BCYMIN)), radius, angle1, nsides, width, rgb);
             }
         }
+        else if (BOUNDARY_COND == BC_GENUS_TWO)
+        {
+            x1 = particle[j].xc;
+            y1 = particle[j].yc;
+            
+            if (x1 < 0.0) periody = BCYMAX - BCYMIN;
+            else periody = 0.5*(BCYMAX - BCYMIN);
+            
+            if (y1 < 0.0) periodx = BCXMAX - BCXMIN;
+            else periodx = 0.5*(BCXMAX - BCXMIN);
+            
+            if ((x1 < 0.0)&&(y1 < 0.0))
+                for (i=-1; i<2; i++)
+                    for (k=-1; k<2; k++)
+                    {
+                        x = x1 + (double)i*periodx;
+                        y = y1 + (double)k*periody;
+                        draw_one_particle(particle[j], x, y, radius, angle, nsides, width, rgb);
+                    }
+            else if ((x1 < 0.0)&&(y1 >= 0.0))
+                for (i=-1; i<2; i++)
+                    for (k=-1; k<2; k++)
+                    {
+                        x = x1 + (double)i*periodx;
+                        y = y1 + (double)k*periody;
+                        if (x < 1.2*particle[j].radius)
+                            draw_one_particle(particle[j], x, y, radius, angle, nsides, width, rgb);
+                    }
+            else if ((x1 >= 0.0)&&(y1 < 0.0))
+                for (i=-1; i<2; i++)
+                    for (k=-1; k<2; k++)
+                    {
+                        x = x1 + (double)i*periodx;
+                        y = y1 + (double)k*periody;
+                         if (y < 1.2*particle[j].radius)
+                            draw_one_particle(particle[j], x, y, radius, angle, nsides, width, rgb);
+                    }
+        }
     }
     
 //     /* draw spin vectors */
@@ -2060,13 +2257,25 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot)
 }
 
 
-void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES])
+void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES], int wall)
 /* draw the container, for certain boundary conditions */
 {
     int i, j;
     double rgb[3], x, phi, angle, dx, dy, ybin, x1, x2, h;
     char message[100];
     
+    /* draw fixed obstacles */
+    if (ADD_FIXED_OBSTACLES)
+    {
+        glLineWidth(CONTAINER_WIDTH);
+        hsl_to_rgb(300.0, 0.1, 0.5, rgb);
+        for (i = 0; i < nobstacles; i++)
+            draw_colored_circle(obstacle[i].xc, obstacle[i].yc, obstacle[i].radius, NSEG, rgb);
+        glColor3f(1.0, 1.0, 1.0);
+        for (i = 0; i < nobstacles; i++)
+            draw_circle(obstacle[i].xc, obstacle[i].yc, obstacle[i].radius, NSEG);
+    }
+
     switch (BOUNDARY_COND) {
         case (BC_SCREEN): 
         {
@@ -2078,18 +2287,18 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
             glColor3f(1.0, 1.0, 1.0);
             glLineWidth(CONTAINER_WIDTH);
             
-            draw_line(INITXMIN, INITYMIN, INITXMAX, INITYMIN);
-            draw_line(INITXMIN, INITYMAX, INITXMAX, INITYMAX);
+            draw_line(BCXMIN, BCYMIN, BCXMAX, BCYMIN);
+            draw_line(BCXMIN, BCYMAX, BCXMAX, BCYMAX);
             
-            if (!SYMMETRIC_DECREASE) draw_line(INITXMAX, INITYMIN,  INITXMAX, INITYMAX);
+            if (!SYMMETRIC_DECREASE) draw_line(BCXMAX, BCYMIN,  BCXMAX, BCYMAX);
 
-            draw_line(xmin, INITYMIN, xmin, INITYMAX);
-            draw_line(XMIN, 0.5*(INITYMIN + INITYMAX), xmin, 0.5*(INITYMIN + INITYMAX));
+            draw_line(xmin, BCYMIN, xmin, BCYMAX);
+//             draw_line(XMIN, 0.5*(BCYMIN + BCYMAX), xmin, 0.5*(BCYMIN + BCYMAX));
             
             if (SYMMETRIC_DECREASE)
             {
-                draw_line(xmax, INITYMIN, xmax, INITYMAX);
-                draw_line(XMAX, 0.5*(INITYMIN + INITYMAX), xmax, 0.5*(INITYMIN + INITYMAX));
+                draw_line(xmax, BCYMIN, xmax, BCYMAX);
+                draw_line(XMAX, 0.5*(BCYMIN + BCYMAX), xmax, 0.5*(BCYMIN + BCYMAX));
             }
             
             break;
@@ -2151,8 +2360,8 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
                 draw_triangle(x1, 0.0, x2, h, x2, -h);
                 
                 glColor3f(0.0, 0.0, 0.0);
-                sprintf(message, "Mach %.2f", xspeed/20.0);
-                write_text(x-0.18, -0.025, message); 
+                sprintf(message, "Mach %.2f", xspeed*3.0/40.0);
+                write_text(x-0.25, -0.025, message); 
             }
             break;
         }
@@ -2194,6 +2403,26 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
             
             break;
         }
+        case (BC_RECTANGLE_WALL): 
+        {
+            glColor3f(1.0, 1.0, 1.0);
+            glLineWidth(CONTAINER_WIDTH);
+            
+            draw_rectangle(BCXMIN, BCYMIN, BCXMAX, BCYMAX);
+            
+            draw_line(0.5*(BCXMIN+BCXMAX), BCYMAX, 0.5*(BCXMIN+BCXMAX), BCYMAX + 0.5*WALL_WIDTH);
+            draw_line(0.5*(BCXMIN+BCXMAX), BCYMIN, 0.5*(BCXMIN+BCXMAX), BCYMIN - 0.5*WALL_WIDTH);
+            
+            if (wall)
+            {
+                hsl_to_rgb(300.0, 0.1, 0.5, rgb);
+                draw_colored_rectangle(xwall - 0.5*WALL_WIDTH, BCYMIN + 0.025, xwall + 0.5*WALL_WIDTH, BCYMAX - 0.025, rgb);
+                glColor3f(1.0, 1.0, 1.0);
+                draw_rectangle(xwall - 0.5*WALL_WIDTH, BCYMIN + 0.025, xwall + 0.5*WALL_WIDTH, BCYMAX - 0.025);
+            }
+            
+            break;
+        }
         case (BC_EHRENFEST):
         {
             glLineWidth(CONTAINER_WIDTH);
@@ -2228,21 +2457,29 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
             }
             break;
         }
+        case (BC_GENUS_TWO):
+        {
+            hsl_to_rgb(300.0, 0.1, 0.5, rgb);
+            draw_colored_rectangle(0.0, 0.0, BCXMAX, BCYMAX, rgb);
+        }
 
     }
     
-    /* draw fixed obstacles */
-    if (ADD_FIXED_OBSTACLES)
-    {
-        glLineWidth(CONTAINER_WIDTH);
-        glColor3f(1.0, 1.0, 1.0);
-        for (i = 0; i < nobstacles; i++)
-            draw_circle(obstacle[i].xc, obstacle[i].yc, obstacle[i].radius, NSEG);
-    }
+//     /* draw fixed obstacles */
+//     if (ADD_FIXED_OBSTACLES)
+//     {
+//         glLineWidth(CONTAINER_WIDTH);
+//         hsl_to_rgb(300.0, 0.1, 0.5, rgb);
+//         for (i = 0; i < nobstacles; i++)
+//             draw_colored_circle(obstacle[i].xc, obstacle[i].yc, obstacle[i].radius, NSEG, rgb);
+//         glColor3f(1.0, 1.0, 1.0);
+//         for (i = 0; i < nobstacles; i++)
+//             draw_circle(obstacle[i].xc, obstacle[i].yc, obstacle[i].radius, NSEG);
+//     }
 }
 
 void print_parameters(double beta, double temperature, double krepel, double lengthcontainer, double boundary_force, 
-                      short int left, double pressure[N_PRESSURES])
+                      short int left, double pressure[N_PRESSURES], double gravity)
 {
     char message[100];
     int i, j, k;
@@ -2409,8 +2646,15 @@ void print_parameters(double beta, double temperature, double krepel, double len
         else glColor3f(0.0, 0.0, 0.0);
         sprintf(message, "Temperature %.2f", mean_temp);
         write_text(xtext, y, message);
-        
     }
+    
+    if (INCREASE_GRAVITY)
+    {
+        erase_area_hsl(xmid, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Gravity %.2f", gravity/GRAVITY);
+        write_text(xmidtext + 0.1, y, message);
+    }   
 }
 
 
@@ -2418,13 +2662,13 @@ void print_ehrenfest_parameters(t_particle particle[NMAXCIRCLES], double pleft, 
 {
     char message[100];
     int i, j, nleft1 = 0, nleft2 = 0, nright1 = 0, nright2 = 0;
-    double density, hue, rgb[3], logratio, y, shiftx = 0.3;
+    double density, hue, rgb[3], logratio, y, shiftx = 0.3, xmidplus, xmidminus;
     static double xleftbox, xlefttext, xmidbox, xmidtext, xrightbox, xrighttext, pressures[500][2], meanpressure[2];
-    static int first = 1, i_pressure, naverage = 500;
+    static int first = 1, i_pressure, naverage = 500, n_pressure;
     
     if (first)
     {
-        xleftbox = -1.0;
+        xleftbox = -0.85;
         xlefttext = xleftbox - 0.5;
         xrightbox = 1.0;
         xrighttext = xrightbox - 0.45;
@@ -2439,7 +2683,19 @@ void print_ehrenfest_parameters(t_particle particle[NMAXCIRCLES], double pleft, 
             pressures[i][1] = 0.0;
         }
         i_pressure = 0;
+        n_pressure = 0;
         first = 0;
+    }
+    
+    if (BOUNDARY_COND == BC_EHRENFEST)
+    {
+        xmidplus = 1.0 - EHRENFEST_RADIUS;
+        xmidminus = -1.0 + EHRENFEST_RADIUS;
+    }
+    else 
+    {
+        xmidplus = xwall;
+        xmidminus = xwall;
     }
     
      /* table of pressures */
@@ -2447,60 +2703,64 @@ void print_ehrenfest_parameters(t_particle particle[NMAXCIRCLES], double pleft, 
     pressures[i_pressure][1] = pright;
     i_pressure++;
     if (i_pressure == naverage) i_pressure = 0;
+    if (n_pressure < naverage - 1) n_pressure++;
     
-    for (i=0; i<naverage; i++) 
+    for (i=0; i<n_pressure; i++) 
         for (j=0; j<2; j++)
             meanpressure[j] += pressures[i][j];
-    for (j=0; j<2; j++) meanpressure[j] = meanpressure[j]/(double)naverage;
+    for (j=0; j<2; j++) meanpressure[j] = meanpressure[j]/(double)n_pressure;
+    
     
     for (i = 0; i < ncircles; i++) if (particle[i].active)
     {
-        if (particle[i].xc < -1.0 + EHRENFEST_RADIUS)
+        if (particle[i].xc < xmidminus)
         {
             if (particle[i].type == 0) nleft1++;
             else nleft2++;
         }
-        else if (particle[i].xc > 1.0 - EHRENFEST_RADIUS) 
+        else if (particle[i].xc > xmidplus) 
         {
             if (particle[i].type == 0) nright1++;
             else nright2++;
         }
     }
     
-    y = YMIN + 0.1;
+    y = YMIN + 0.05;
     
     erase_area_hsl(xleftbox - shiftx, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
-    hsl_to_rgb(310.0, 0.9, 0.5, rgb);
+    hsl_to_rgb(HUE_TYPE0, 0.9, 0.5, rgb);
     glColor3f(rgb[0], rgb[1], rgb[2]);
     sprintf(message, "%i particles", nleft1);
     write_text(xlefttext + 0.28 - shiftx, y, message);
     
     erase_area_hsl(xleftbox + shiftx, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
-    hsl_to_rgb(70.0, 0.9, 0.5, rgb);
+    hsl_to_rgb(HUE_TYPE1, 0.9, 0.5, rgb);
     glColor3f(rgb[0], rgb[1], rgb[2]);
     sprintf(message, "%i particles", nleft2);
     write_text(xlefttext + 0.28 + shiftx, y, message);
     
     erase_area_hsl(xrightbox - shiftx, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
-    hsl_to_rgb(310.0, 0.9, 0.5, rgb);
+    hsl_to_rgb(HUE_TYPE0, 0.9, 0.5, rgb);
     glColor3f(rgb[0], rgb[1], rgb[2]);
     sprintf(message, "%i particles", nright1);
     write_text(xrighttext + 0.28 - shiftx, y, message);
     
     erase_area_hsl(xrightbox + shiftx, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
-    hsl_to_rgb(70.0, 0.9, 0.5, rgb);
+    hsl_to_rgb(HUE_TYPE1, 0.9, 0.5, rgb);
     glColor3f(rgb[0], rgb[1], rgb[2]);
     sprintf(message, "%i particles", nright2);
     write_text(xrighttext + 0.28 + shiftx, y, message);
     y = YMAX - 0.1;
     
     erase_area_hsl(xleftbox - 0.1, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
-    glColor3f(1.0, 1.0, 1.0);
+    hsl_to_rgb_turbo(HUE_TYPE1, 0.9, 0.5, rgb);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
     sprintf(message, "Pressure %.2f", 0.001*meanpressure[0]/(double)ncircles);
     write_text(xlefttext + 0.25, y, message);
     
     erase_area_hsl(xrightbox - 0.1, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
-    glColor3f(1.0, 1.0, 1.0);
+    hsl_to_rgb_turbo(HUE_TYPE0, 0.9, 0.5, rgb);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
     sprintf(message, "Pressure %.2f", 0.001*meanpressure[1]/(double)ncircles);
     write_text(xrighttext + 0.2, y, message);
 
@@ -2530,24 +2790,35 @@ void print_particle_number(int npart)
 void print_entropy(double entropy[2])
 {
     char message[100];
-    double y = YMAX - 0.1, rgb[3];
-    static double xleftbox, xlefttext, xrightbox, xrighttext;
+    double rgb[3];
+    static double xleftbox, xlefttext, xrightbox, xrighttext, y = YMAX - 0.1, ymin = YMIN + 0.05;
     static int first = 1;
     
     if (first)
     {
-        xleftbox = XMIN + 0.5;
+        xleftbox = XMIN + 0.4;
         xlefttext = xleftbox - 0.55;
         xrightbox = XMAX - 0.39;
         xrighttext = xrightbox - 0.55;
        first = 0;
     }
     
-    erase_area_hsl(xleftbox, y + 0.025, 0.35, 0.05, 0.0, 0.9, 0.0);
-    hsl_to_rgb_turbo(HUE_TYPE1, 0.9, 0.5, rgb);
-    glColor3f(rgb[0], rgb[1], rgb[2]);
-    sprintf(message, "Entropy = %.4f", entropy[1]);
-    write_text(xlefttext + 0.28, y, message);
+    if (POSITION_Y_DEPENDENCE)
+    {
+        erase_area_hsl(xrightbox, ymin + 0.025, 0.35, 0.05, 0.0, 0.9, 0.0);
+        hsl_to_rgb_turbo(HUE_TYPE1, 0.9, 0.5, rgb);
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+        sprintf(message, "Entropy = %.4f", entropy[1]);
+        write_text(xrighttext + 0.28, ymin, message);
+    }
+    else
+    {
+        erase_area_hsl(xleftbox, y + 0.025, 0.35, 0.05, 0.0, 0.9, 0.0);
+        hsl_to_rgb_turbo(HUE_TYPE1, 0.9, 0.5, rgb);
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+        sprintf(message, "Entropy = %.4f", entropy[1]);
+        write_text(xlefttext + 0.28, y, message);
+    }
 
     erase_area_hsl(xrightbox, y + 0.025, 0.35, 0.05, 0.0, 0.9, 0.0);
     hsl_to_rgb_turbo(HUE_TYPE0, 0.9, 0.5, rgb);
@@ -2559,11 +2830,11 @@ void print_entropy(double entropy[2])
 
 
 double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES], 
-                              double xleft, double xright, double *pleft, double *pright, double pressure[N_PRESSURES])
+                              double xleft, double xright, double *pleft, double *pright, double pressure[N_PRESSURES], int wall)
 {
     int i, k;
-    double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, 
-        f, fperp = 0.0, x, y, xtube, distance, dx, dy, width, ybin, angle, x1, x2, h, ytop, norm, dleft, dplus, dminus;
+    double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, f, fperp = 0.0, x, y, xtube, distance, dx, dy, 
+        width, ybin, angle, x1, x2, h, ytop, norm, dleft, dplus, dminus, tmp_pleft = 0.0, tmp_pright = 0.0;
     
     /* compute force from fixed obstacles */
     if (ADD_FIXED_OBSTACLES) for (i=0; i<nobstacles; i++)
@@ -2724,12 +2995,12 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                 }
                 /* force from tip of triangle */
                 r = module2(particle[j].xc - x1, particle[j].yc);
-                if (r < padding)
+                if (r < 0.5*padding)
                 {   
                     if (r < 1.0e-5) r = 1.0e-05;
                     cphi = (particle[j].xc - x1)/r;
                     sphi = particle[j].yc/r;
-                    f = KSPRING_OBSTACLE*(padding - r);
+                    f = KSPRING_OBSTACLE*(0.5*padding - r);
                     particle[j].fx += f*cphi;
                     particle[j].fy += f*sphi;
                 }
@@ -2779,6 +3050,71 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                 else if (particle[j].xc < BCXMIN + r) particle[j].fx += KSPRING_BOUNDARY*(BCXMIN + r - particle[j].xc);
             }
             return(fperp);
+        }
+        case (BC_RECTANGLE_WALL):
+        {
+            padding = particle[j].radius + 0.01;
+            xmin = BCXMIN + padding;
+            xmax = BCXMAX - padding;
+            ymin = BCYMIN + padding;
+            ymax = BCYMAX - padding;
+            
+            if (particle[j].xc > xmax) 
+            {
+                fperp = KSPRING_BOUNDARY*(particle[j].xc - xmax);
+                particle[j].fx -= fperp;
+                tmp_pright += fperp;
+            }
+            else if (particle[j].xc < xmin) 
+            {
+                fperp = KSPRING_BOUNDARY*(xmin - particle[j].xc);
+                particle[j].fx += fperp;
+                tmp_pleft += fperp;
+            }
+            if (particle[j].yc > ymax) 
+            {
+                fperp = KSPRING_BOUNDARY*(particle[j].yc - ymax);
+                particle[j].fy -= fperp;
+                if (particle[j].xc > xwall) tmp_pright += fperp;
+                else tmp_pleft += fperp;
+            }
+            else if (particle[j].yc < ymin) 
+            {
+                fperp = KSPRING_BOUNDARY*(ymin - particle[j].yc);
+                particle[j].fy += fperp;
+                if (particle[j].xc > xwall) tmp_pright += fperp;
+                else tmp_pleft += fperp;
+            }
+            
+            if (wall)
+            {
+                *pleft += tmp_pleft/(2.0*(BCYMAX - BCYMIN) + 2.0*(xwall - BCXMIN));
+                *pright += tmp_pright/(2.0*(BCYMAX - BCYMIN) + 2.0*(BCXMAX - xwall));
+            }
+            else 
+            {
+                *pleft += tmp_pleft/(2.0*(BCYMAX - BCYMIN + BCXMAX - BCXMIN));
+                *pright += tmp_pright/(2.0*(BCYMAX - BCYMIN + BCXMAX - BCXMIN));
+            }
+            
+            if ((wall)&&(vabs(particle[j].xc - xwall) < 0.5*WALL_WIDTH + padding))
+            {
+                if (particle[j].xc > xwall)
+                {
+                    fperp = -KSPRING_BOUNDARY*(xwall + 0.5*WALL_WIDTH + padding - particle[j].xc);
+                    particle[j].fx -= fperp;
+                    *pright -= fperp/(BCYMAX - BCYMIN);
+                }
+                else
+                {
+                    fperp = KSPRING_BOUNDARY*(particle[j].xc - xwall + 0.5*WALL_WIDTH + padding);
+                    particle[j].fx -= fperp;
+                    *pleft += fperp/(BCYMAX - BCYMIN);
+                }
+                return(fperp);
+            }
+            
+            return(0.0);
         }
         case (BC_EHRENFEST):
         {
@@ -2916,11 +3252,11 @@ void compute_particle_force(int j, double krepel, t_particle particle[NMAXCIRCLE
 
 
 int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY], 
-                             t_obstacle obstacle[NMAXOBSTACLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES])
+                             t_obstacle obstacle[NMAXOBSTACLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES], int tracer_n[N_TRACER_PARTICLES])
 /* initialize all particles, obstacles, and the hashgrid */
 {
-    int i, j, k, n, tracer_n, nactive = 0;
-    double x, y, h;
+    int i, j, k, n, nactive = 0;
+    double x, y, h, xx, yy;
     
     for (i=0; i < ncircles; i++) 
     {
@@ -3045,24 +3381,32 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
     }
     
     /* change type of tracer particle */
-    if (TRACER_PARTICLE)
+    if (TRACER_PARTICLE) for (j=0; j<N_TRACER_PARTICLES; j++)
     {
         i = 0;
-        while ((!particle[i].active)||(module2(particle[i].xc, particle[i].yc) > 0.5)) i++;
-        tracer_n = i;
-        particle[tracer_n].type = 2;
-        particle[tracer_n].radius *= 1.5;
-        particle[tracer_n].mass_inv *= 1.0/TRACER_PARTICLE_MASS;
-        particle[tracer_n].vx *= 0.1;
-        particle[tracer_n].vy *= 0.1;
-        particle[tracer_n].thermostat = 0;
-        px[tracer_n] *= 0.1;
-        py[tracer_n] *= 0.1;
+        if (j%2==0) xx = 1.0;
+        else xx = -1.0;
+        
+        if (j/2 == 0) yy = -0.5;
+        else yy = 0.5;
+        
+//         if (j%2 == 1) yy = -yy;
+//         while ((!particle[i].active)||(module2(particle[i].xc, particle[i].yc) > 0.5)) i++;
+        while ((!particle[i].active)||(module2(particle[i].xc + xx, particle[i].yc - yy) > 0.4)) i++;
+        tracer_n[j] = i;
+        particle[i].type = 2 + j;
+        particle[i].radius *= 1.5;
+        particle[i].mass_inv *= 1.0/TRACER_PARTICLE_MASS;
+        particle[i].vx *= 0.1;
+        particle[i].vy *= 0.1;
+        particle[i].thermostat = 0;
+        px[i] *= 0.1;
+        py[i] *= 0.1;
     }
     
     /* position-dependent particle type */
     if (POSITION_DEPENDENT_TYPE) for (i=0; i<ncircles; i++)
-        if (particle[i].xc < 0) 
+        if (((!POSITION_Y_DEPENDENCE)&&(particle[i].xc < 0))||((POSITION_Y_DEPENDENCE)&&(particle[i].yc < 0))) 
         {
             particle[i].type = 2;
             particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
@@ -3091,7 +3435,7 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
     {
         h = 2.0*OBSTACLE_RADIUS*tan(APOLY*PID);
         for (i=0; i< ncircles; i++)
-            if ((vabs(particle[i].xc) < OBSTACLE_RADIUS + 2.0*MU)
+            if ((vabs(particle[i].xc) < 1.1*OBSTACLE_RADIUS + 2.0*MU)
                 &&(2.0*OBSTACLE_RADIUS*vabs(particle[i].yc) < h*(OBSTACLE_RADIUS + 2.0*MU - particle[i].xc)))
                 {
                     printf("Inactivating particle at (%.3lg, %.3lg)\n", particle[i].xc, particle[i].yc);
@@ -3104,6 +3448,21 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
             if (module2(vabs(particle[i].xc) -1.0, particle[i].yc) > EHRENFEST_RADIUS) 
                 particle[i].active = 0;
     }
+    else if (BOUNDARY_COND == BC_RECTANGLE_WALL)
+    {
+        for (i=0; i< ncircles; i++)
+            if (vabs(particle[i].xc - xwall) < WALL_WIDTH) 
+                particle[i].active = 0;
+    }
+    else if (BOUNDARY_COND == BC_GENUS_TWO)
+    {
+        for (i=0; i< ncircles; i++)
+            if ((particle[i].xc > 0.0)&&(particle[i].yc > 0.0)) 
+                particle[i].active = 0;
+    }
+    
+    
+    
     if (ADD_FIXED_OBSTACLES)
     {
         for (i=0; i< ncircles; i++) for (j=0; j < nobstacles; j++)

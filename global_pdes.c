@@ -180,6 +180,6 @@ t_circle circles[NMAXCIRCLES];      /* circular scatterers */
 t_polygon polygons[NMAXCIRCLES];    /* polygonal scatterers */
 t_vertex polyline[NMAXPOLY];        /* vertices of polygonal line */
 
-double julia_x = -0.5, julia_y = 0.5;    /* parameters for Julia sets */
+// double julia_x = -0.5, julia_y = 0.5;    /* parameters for Julia sets */
 // double julia_x = 0.33267, julia_y = 0.06395;    /* parameters for Julia sets */
-// double julia_x = 0.37468, julia_y = 0.21115;    /* parameters for Julia sets */
+double julia_x = 0.37468, julia_y = 0.21115;    /* parameters for Julia sets */

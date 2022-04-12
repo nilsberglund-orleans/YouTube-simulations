@@ -3,7 +3,7 @@
 /* when referencing other hashgrid cells or particles */ 
 
 int bc_grouped(int bc)
-/* regroup boundary conditions by type: rectangular = 0, periodic = 1, Klein = 2, Boy = 3, ... */
+/* regroup boundary conditions by type: rectangular = 0, periodic = 1, Klein = 2, Boy = 3, L shape = 4, ... */
 {
     switch (bc) {
         case (BC_SCREEN): return(0);
@@ -14,11 +14,17 @@ int bc_grouped(int bc)
         case (BC_EHRENFEST): return(0);
         case (BC_PERIODIC_FUNNEL): return(1);
         case (BC_RECTANGLE_LID): return(0);
+        case (BC_RECTANGLE_WALL): return(0);
         case (BC_PERIODIC_TRIANGLE): return(1);
         case (BC_KLEIN): return(2);
         case (BC_SCREEN_BINS): return(0);
         case (BC_BOY): return(3);
-        default: return(-1);
+        case (BC_GENUS_TWO): return(4);
+        default: 
+        {
+            printf("Warning: Hashgrid will not be properly initialised, update bc_grouped()\n\n");
+            return(-1);
+        }
     }
 }
 
@@ -236,20 +242,130 @@ void init_hashgrid(t_hashgrid hashgrid[HASHX*HASHY])
             break;
         }
         
+        case(4): /* genus 2 (L-shape) b.c. */
+        {
+            if ((HASHX%2 == 1)||(HASHY%2 == 1))
+            {
+                printf("Error: HASHX and HASHY must be even for this boundary condition\n");
+                exit(0);
+            }
+            
+            /* dummy value for unused cells */
+            for (i=HASHX/2; i<HASHX; i++) for (j=HASHY/2; j<HASHY; j++) hashgrid[mhash(i, j)].nneighb = 0;
+            
+            /* left boundary */
+            for (j=0; j<HASHY; j++) 
+            {
+                hashgrid[mhash(0, j)].nneighb = 9;
+                
+                for (p=-1; p<2; p++) for (q=-1; q<2; q++)
+                {
+                    j1 = (j+q+HASHY)%HASHY;
+                    if (j1 < HASHY/2) i1 = (p+HASHX)%HASHX;
+                    else i1 = (p+HASHX/2)%(HASHX/2);
+                    hashgrid[mhash(0, j)].neighbour[3*(p+1)+q+1] = mhash(i1, j1);
+                }
+            }
+            
+            /* right boundary */
+            for (j=0; j<HASHY; j++) 
+            {
+                if (j < HASHY/2)
+                {
+                    hashgrid[mhash(HASHX-1, j)].nneighb = 9;
+                
+                    for (p=-1; p<2; p++) for (q=-1; q<2; q++)
+                    {
+                        j1 = (j+q+HASHY)%HASHY;
+                        if (j1 < HASHY/2) i1 = (HASHX-1+p)%HASHX;
+                        else i1 = (HASHX/2-1+p)%(HASHX/2);
+                        hashgrid[mhash(HASHX-1,j)].neighbour[3*(p+1)+q+1] = mhash(i1, j1);
+                    }
+                }
+                else 
+                {
+                    hashgrid[mhash(HASHX/2-1, j)].nneighb = 9;
+//                     hashgrid[mhash(HASHX-1, j)].nneighb = 0;        /* dummy value for unused boundary */
+                
+                    for (p=-1; p<2; p++) for (q=-1; q<2; q++)
+                    {
+                        j1 = (j+q+HASHY)%HASHY;
+                        if (j1 < HASHY/2) i1 = (HASHX-1+p)%HASHX;
+                        else i1 = (HASHX/2-1+p)%(HASHX/2);
+                        hashgrid[mhash(HASHX/2-1, j)].neighbour[3*(p+1)+q+1] = mhash(i1, j1);
+                    }
+                }
+                
+            }
+            
+            /* bottom boundary */
+            for (i=1; i<HASHX-1; i++) 
+            {
+                hashgrid[mhash(i, 0)].nneighb = 9;
+                
+                for (p=-1; p<2; p++) for (q=-1; q<2; q++)
+                {
+                    i1 = (i+p+HASHX)%HASHX;
+                    if (i1 < HASHX/2) j1 = (q+HASHY)%HASHY;
+                    else j1 = (q+HASHY/2)%(HASHY/2);
+                    hashgrid[mhash(i,0)].neighbour[3*(p+1)+q+1] = mhash(i1, j1);
+                }
+            }
+            
+            /* top boundary */
+            for (i=1; i<HASHX-1; i++) 
+            {
+                if (i < HASHX/2)
+                {
+                    hashgrid[mhash(i, HASHY-1)].nneighb = 9;
+                
+                    for (p=-1; p<2; p++) for (q=-1; q<2; q++)
+                    {
+                        i1 = (i+p+HASHX/2)%(HASHX/2);
+                        if (i1 < HASHX/2) j1 = (HASHY-1+q)%HASHY;
+                        else j1 = (HASHY/2-1+q)%(HASHY/2);
+                        hashgrid[mhash(i, HASHY-1)].neighbour[3*(p+1)+q+1] = mhash(i1, j1);
+                    }
+                }
+                else
+                {
+                    hashgrid[mhash(i, HASHY/2-1)].nneighb = 9;
+//                     hashgrid[mhash(i, HASHY-1)].nneighb = 0;    /* dummy value for unused boundary */
+                
+                    for (p=-1; p<2; p++) for (q=-1; q<2; q++)
+                    {
+                        i1 = (i+p+HASHX)%HASHX;
+                        if (i1 < HASHX/2) j1 = (HASHY-1+q)%HASHY;
+                        else j1 = (HASHY/2-1+q)%(HASHY/2);
+                        hashgrid[mhash(i, HASHY/2-1)].neighbour[3*(p+1)+q+1] = mhash(i1, j1);
+                    }
+                }                    
+            }
+            
+            /* TO DO : add more cells for "corners" ? */
+            break;
+        }
+        
         default: /* do nothing */;
     }
     
-//     for (i=0; i<HASHX; i++) for (j=0; j<HASHY; j++)
-//     {
-//         for (k=0; k<hashgrid[mhash(i,j)].nneighb; k++)
-//         {
-//             m = hashgrid[mhash(i,j)].neighbour[k];
-//             p = m/HASHY;
-//             q = m%HASHY;
-//             printf("Grid cell (%i, %i) - neighbour %i = %i = (%i, %i)\n", i, j, k, m, p, q);
-//         }
+    for (i=0; i<HASHX; i++) 
+    {
+        for (j=0; j<HASHY; j++)
+        {
+            for (k=0; k<hashgrid[mhash(i,j)].nneighb; k++)
+            {
+                m = hashgrid[mhash(i,j)].neighbour[k];
+                p = m/HASHY;
+                q = m%HASHY;
+                if (vabs((double)(p-i)) + vabs((double)(q-j)) > 2.0)
+                printf("Grid cell (%i, %i) - neighbour %i = %i = (%i, %i)\n", i, j, k, m, p, q);
+            }
 //         sleep(1);
-//     }
+        }
+//         sleep(1);
+    }
+    sleep(1);
 }
 
 void update_hashgrid(t_particle* particle, t_hashgrid* hashgrid, int verbose)
@@ -428,6 +544,66 @@ int wrap_particle(t_particle* particle, double *px, double *py)
             return(move);
             break;
         }
+        case (4): /* genus two (L-shaped domain) b.c. */
+        {
+            if ((x > 0.0)&&(y > 0.0)) 
+            {
+                if (x > y) y1 -= 0.5*(BCYMAX - BCYMIN);
+                else x1 -= 0.5*(BCXMAX - BCXMIN);
+                move++;
+            }
+            
+            else
+            {
+            
+                if (x < BCXMIN) 
+                {
+                    if (y < 0.0) x1 += BCXMAX - BCXMIN;
+                    else x1 += 0.5*(BCXMAX - BCXMIN);
+                    move++;
+                }
+                else 
+                {
+                    if ((y < 0.0)&&(x > BCXMAX)) 
+                    {
+                        x1 += BCXMIN - BCXMAX;
+                        move++;
+                    }
+                    else if ((y >= 0.0)&&(x > 0.0)&&(x < OBSTACLE_RADIUS)) 
+                    {
+                        x1 += 0.5*(BCXMIN - BCXMAX);
+                        move++;
+                    }
+                }
+            
+                if (y < BCYMIN) 
+                {
+                    if (x1 < 0.0) y1 += BCYMAX - BCYMIN;
+                    else y1 += 0.5*(BCYMAX - BCYMIN);
+                    move++;
+                }
+                else 
+                {
+                    if ((x1 < 0.0)&&(y > BCYMAX)) 
+                    {
+                        y1 += BCYMIN - BCYMAX;
+                        move++;
+                    }
+                    else if ((x1 >= 0.0)&&(y > 0.0)&&(y < OBSTACLE_RADIUS)) 
+                    {
+                        y1 += 0.5*(BCYMIN - BCYMAX);
+                        move++;
+                    }
+                }
+            }
+            
+//             if (move > 0) printf("Moved particle from (%.3lg, %.3lg) to (%.3lg, %.3lg)\n", x, y, x1, y1);
+            
+            particle->xc = x1;
+            particle->yc = y1;
+            return(move);
+            break;
+        }
         default:
         {
             /* do nothing */
@@ -536,6 +712,36 @@ int verbose = 0;
                 *x2 = x4;
                 *y2 = y4;
             }
+            break;
+        }
+        case (4): /* genus 2 (L-shaped) b.c. */
+        {
+            x3 = *x2;
+            y3 = *y2;
+            if ((x1 < 0.0)&&(y1 < 0.0))
+            {
+                if (dx > dxhalf) *x2 -= (BCXMAX - BCXMIN);
+                if (dy > dyhalf) *y2 -= (BCYMAX - BCYMIN);
+            }
+            else if ((x1 >= 0.0)&&(y1 < 0.0))
+            {
+                if (dx < -dxhalf) *x2 += (BCXMAX - BCXMIN);
+                if (dy > 0.5*dyhalf) *y2 -= 0.5*(BCYMAX - BCYMIN);
+                else if (dy < -0.5*dyhalf) *y2 += 0.5*(BCYMAX - BCYMIN);
+            }
+            else if ((x1 < 0.0)&&(y1 >= 0.0))
+            {
+                if (dy < -dyhalf) *y2 += BCYMAX - BCYMIN;
+                if (dx > 0.5*dxhalf) *x2 -= 0.5*(BCXMAX - BCXMIN);
+                else if (dx < -0.5*dxhalf) *x2 += 0.5*(BCXMAX - BCXMIN);
+            }
+            if ((verbose)&&(module2(*x2 - x1, *y2 - y1) > dyhalf))
+            {
+                printf("(x1,y1) = (%.3lg, %.3lg)\n", x1, y1);
+                printf("(x2,y2) = (%.3lg, %.3lg) ", x3, y3);
+                printf("-> (%.3lg, %.3lg)\n", *x2, *y2);
+            }
+//             printf("(x2,y2) = (%.3lg, %.3lg)\n", *x2, *y2);
             break;
         }
     }

@@ -172,6 +172,8 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 10.0        /* sensitivity of color on wave amplitude */
+#define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
+#define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define E_SCALE 500.0     /* scaling factor for energy representation */
 #define LOG_SCALE 1.5     /* scaling factor for energy log representation */

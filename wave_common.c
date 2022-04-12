@@ -62,6 +62,8 @@ void init_circular_wave(double x, double y, double *phi[NX], double *psi[NX], sh
 
     printf("Initializing wave\n"); 
     for (i=0; i<NX; i++)
+    {
+        if (i%100 == 0) printf("Initializing column %i of %i\n", i, NX);
         for (j=0; j<NY; j++)
         {
             ij_to_xy(i, j, xy);
@@ -73,6 +75,7 @@ void init_circular_wave(double x, double y, double *phi[NX], double *psi[NX], sh
             else phi[i][j] = 0.0;
             psi[i][j] = 0.0;
         }
+    }
 }
 
 void init_wave_plus(double x, double y, double *phi[NX], double *psi[NX], short int * xy_in[NX])
@@ -266,7 +269,7 @@ double compute_energy(double *phi[NX], double *psi[NX], short int *xy_in[NX], in
         + (phi[i][j] - phi[i][jminus])*(phi[i][j] - phi[i][jminus]);
     if (xy_in[i][j]) return(E_SCALE*E_SCALE*(velocity*velocity + 0.5*COURANT*COURANT*(gradientx2+gradienty2)));
     else if (TWOSPEEDS) return(E_SCALE*E_SCALE*(velocity*velocity + 0.5*COURANTB*COURANTB*(gradientx2+gradienty2)));
-    else return(0);
+    else return(0.0);
 }
 
 
@@ -844,4 +847,113 @@ void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], doubl
     glEnd ();
 }
 
+/* modified function for "flattened" wave tables */
+
+void init_circular_wave_mod(double x, double y, double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY])
+/* initialise field with drop at (x,y) - phi is wave height, psi is phi at time t-1 */
+{
+    int i, j;
+    double xy[2], dist2;
+
+    printf("Initializing wave\n"); 
+    #pragma omp parallel for private(i,j,xy,dist2)
+    for (i=0; i<NX; i++)
+    {
+        if (i%100 == 0) printf("Initializing column %i of %i\n", i, NX);
+        for (j=0; j<NY; j++)
+        {
+//             printf("i*NY+j = %i\n", i*NY+j);
+            ij_to_xy(i, j, xy);
+            dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+	    if ((xy_in[i*NY+j])||(TWOSPEEDS)) 
+                phi[i*NY+j] = INITIAL_AMP*exp(-dist2/INITIAL_VARIANCE)*cos(-sqrt(dist2)/INITIAL_WAVELENGTH);
+            else phi[i*NY+j] = 0.0;
+            psi[i*NY+j] = 0.0;
+        }
+    }
+}
+
+void add_circular_wave_mod(double factor, double x, double y, double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY])
+/* add drop at (x,y) to the field with given prefactor */
+{
+    int i, j;
+    double xy[2], dist2;
+
+    #pragma omp parallel for private(i,j,xy,dist2)
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+            if ((xy_in[i*NY+j])||(TWOSPEEDS)) 
+                phi[i*NY+j] += INITIAL_AMP*factor*exp(-dist2/INITIAL_VARIANCE)*cos(-sqrt(dist2)/INITIAL_WAVELENGTH);
+        }
+}
+
+double compute_variance_mod(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY])
+/* compute the variance of the field, to adjust color scheme */
+{
+    int i, j, n = 0;
+    double variance = 0.0;
+
+    #pragma omp parallel for private(i,j,variance)
+    for (i=1; i<NX; i++)
+        for (j=1; j<NY; j++)
+        {
+            if (xy_in[i*NY+j])
+            {
+                n++;
+                variance += phi[i*NY+j]*phi[i*NY+j];
+            }
+        }
+    if (n==0) n=1;
+    return(variance/(double)n);
+}
+
+double compute_energy_mod(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], int i, int j)
+{
+    double velocity, energy, gradientx2, gradienty2;
+    int iplus, iminus, jplus, jminus;
+    
+    velocity = (phi[i*NY+j] - psi[i*NY+j]);
+                    
+    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+    iminus = (i-1);  if (iminus == -1) iminus = 0;
+    jplus = (j+1);   if (jplus == NY) jplus = NY-1;
+    jminus = (j-1);  if (jminus == -1) jminus = 0;
+                        
+    gradientx2 = (phi[iplus*NY+j]-phi[i*NY+j])*(phi[iplus*NY+j]-phi[i*NY+j]) 
+        + (phi[i*NY+j] - phi[iminus*NY+j])*(phi[i*NY+j] - phi[iminus*NY+j]);
+    gradienty2 = (phi[i*NY+jplus]-phi[i*NY+j])*(phi[i*NY+jplus]-phi[i*NY+j]) 
+        + (phi[i*NY+j] - phi[i*NY+jminus])*(phi[i*NY+j] - phi[i*NY+jminus]);
+    if (xy_in[i*NY+j]) return(E_SCALE*E_SCALE*(velocity*velocity + 0.5*COURANT*COURANT*(gradientx2+gradienty2)));
+    else if (TWOSPEEDS) return(E_SCALE*E_SCALE*(velocity*velocity + 0.5*COURANTB*COURANTB*(gradientx2+gradienty2)));
+    else return(0.0);
+}
+
+double compute_phase(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], int i, int j)
+{
+    double velocity, angle;
+    
+    velocity = (phi[i*NY+j] - psi[i*NY+j]);
+            
+    if (module2(phi[i*NY+j], velocity) < 1.0e-10) return(0.0); 
+    else if (xy_in[i*NY+j]) 
+    {
+        angle = argument(phi[i*NY+j], PHASE_FACTOR*velocity/COURANT);
+        if (angle < 0.0) angle += DPI;
+        
+        if ((i==NY/2)&&(j==NY/2)) printf("Phase = %.3lg Pi\n", angle/PI);
+        return(angle);
+    }
+    else if (TWOSPEEDS) 
+    {
+        angle = argument(phi[i*NY+j], PHASE_FACTOR*velocity/COURANTB);
+        if (angle < 0.0) angle += DPI;
+        return(angle);
+    }
+    else return(0.0);
+}
 

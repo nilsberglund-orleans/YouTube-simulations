@@ -4,6 +4,8 @@
 #define BOUNDARY_SHIFT 100000.0    /* shift of boundary parametrisation for circles in domain */
 #define DUMMY_SIDE_ABS -10000      /* dummy value of returned side for absorbing circles */
 
+#define PENROSE_RATIO 0.2    /* parameter controlling the shape of small ellipses in Penrose room */
+
 long int global_time = 0;    /* counter to keep track of global time of simulation */
 int nparticles=NPART; 
 
@@ -1024,7 +1026,7 @@ void draw_billiard()      /* draws the billiard boundary */
                 for (i=0; i<=NSEG; i++)
                 {
                     phi = (double)i*dphi;
-                    x = cc - 0.5*MU*sin(phi);
+                    x = cc - 0.5*PENROSE_RATIO*MU*sin(phi);
                     y = MU*cos(phi);
                     glVertex2d(x, y);
                 }
@@ -1035,7 +1037,7 @@ void draw_billiard()      /* draws the billiard boundary */
                 for (i=0; i<=NSEG; i++)
                 {
                     phi = (double)i*dphi;
-                    x = -cc + 0.5*MU*sin(phi);
+                    x = -cc + 0.5*PENROSE_RATIO*MU*sin(phi);
                     y = MU*cos(phi);
                     glVertex2d(x, y);
                 }
@@ -1107,7 +1109,7 @@ void draw_billiard()      /* draws the billiard boundary */
             for (i=0; i<=NSEG; i++)
             {
                 phi = (double)i*dphi;
-                x = -cc + 0.5*MU*sin(phi);
+                x = -cc + 0.5*MU*PENROSE_RATIO*sin(phi);
                 y = MU*cos(phi);
                 glVertex2d(x, y);
             }
@@ -1135,7 +1137,7 @@ void draw_billiard()      /* draws the billiard boundary */
             for (i=0; i<=NSEG; i++)
             {
                 phi = (double)i*dphi;
-                x = cc - 0.5*MU*sin(phi);
+                x = cc - 0.5*MU*PENROSE_RATIO*sin(phi);
                 y = -MU*cos(phi);
                 glVertex2d(x, y);
             }
@@ -3532,9 +3534,9 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         else if (s < sval[5])     /* left ellipse/mushroom head */
         {
             s1 = s - sval[4];
-            pos[0] = -cc + 0.5*MU*sin(s1);
+            pos[0] = -cc + 0.5*PENROSE_RATIO*MU*sin(s1);
             pos[1] = MU*cos(s1);
-            phi = argument(0.5*MU*cos(s1), -MU*sin(s1));
+            phi = argument(0.5*PENROSE_RATIO*MU*cos(s1), -MU*sin(s1));
             *alpha = phi + theta;
             return(4);
         }
@@ -3599,9 +3601,9 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         else if (s < sval[13])     /* right ellipse/mushroom head */
         {
             s1 = s - sval[12];
-            pos[0] = cc - 0.5*MU*sin(s1);
+            pos[0] = cc - 0.5*PENROSE_RATIO*MU*sin(s1);
             pos[1] = -MU*cos(s1);
-            phi = argument(-0.5*MU*cos(s1), MU*sin(s1));
+            phi = argument(-0.5*PENROSE_RATIO*MU*cos(s1), MU*sin(s1));
             *alpha = phi + theta;
             return(12);
         }
@@ -3713,9 +3715,9 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         }
         
         /* intersection with right ellipse */
-        a = 4.0*ca*ca + sa*sa;
-        b = 4.0*(pos[0] - cc)*ca + pos[1]*sa;
-        d = 4.0*(pos[0] - cc)*(pos[0] - cc) + pos[1]*pos[1] - MU*MU;
+        a = 4.0*ca*ca + sa*sa*PENROSE_RATIO*PENROSE_RATIO;
+        b = 4.0*(pos[0] - cc)*ca + pos[1]*sa*PENROSE_RATIO*PENROSE_RATIO;
+        d = 4.0*(pos[0] - cc)*(pos[0] - cc) + (pos[1]*pos[1] - MU*MU)*PENROSE_RATIO*PENROSE_RATIO;
         
         if (b*b > a*d)
         {
@@ -3729,8 +3731,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 tval[nt] = t;
                 x1[nt] = x;
                 y1[nt] = y;
-                tempconf[nt][0] = sval[12] + argument(-y/MU, 2.0*(cc-x)/MU);
-                tempconf[nt][1] = argument(0.5*y, 2.0*(cc-x)) - alpha;      
+                tempconf[nt][0] = sval[12] + argument(-y/MU, 2.0*(cc-x)/(MU*PENROSE_RATIO));
+                tempconf[nt][1] = argument(0.5*PENROSE_RATIO*y, 2.0*(cc-x)/PENROSE_RATIO) - alpha;      
                 nt++;
             }
             
@@ -3744,16 +3746,16 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 tval[nt] = t;
                 x1[nt] = x;
                 y1[nt] = y;
-                tempconf[nt][0] = sval[12] + argument(-y/MU, 2.0*(cc-x)/MU);
-                tempconf[nt][1] = argument(0.5*y, 2.0*(cc-x)) - alpha;      
+                tempconf[nt][0] = sval[12] + argument(-y/MU, 2.0*(cc-x)/(MU*PENROSE_RATIO));
+                tempconf[nt][1] = argument(0.5*PENROSE_RATIO*y, 2.0*(cc-x)/PENROSE_RATIO) - alpha;      
                 nt++;
             }
             
         }
         
         /* intersection with left ellipse */
-        b = 4.0*(pos[0] + cc)*ca + pos[1]*sa;
-        d = 4.0*(pos[0] + cc)*(pos[0] + cc) + pos[1]*pos[1] - MU*MU;
+        b = 4.0*(pos[0] + cc)*ca + pos[1]*sa*PENROSE_RATIO*PENROSE_RATIO;
+        d = 4.0*(pos[0] + cc)*(pos[0] + cc) + (pos[1]*pos[1] - MU*MU)*PENROSE_RATIO*PENROSE_RATIO;
         
         if (b*b > a*d)
         {
@@ -3767,8 +3769,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 tval[nt] = t;
                 x1[nt] = x;
                 y1[nt] = y;
-                tempconf[nt][0] = sval[4] + argument(y/MU, 2.0*(cc+x)/MU);
-                tempconf[nt][1] = argument(0.5*y, -2.0*(cc+x)) - alpha;      
+                tempconf[nt][0] = sval[4] + argument(y/MU, 2.0*(cc+x)/(MU*PENROSE_RATIO));
+                tempconf[nt][1] = argument(0.5*PENROSE_RATIO*y, -2.0*(cc+x)/PENROSE_RATIO) - alpha;      
                 nt++;
             }
             
@@ -3782,8 +3784,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
                 tval[nt] = t;
                 x1[nt] = x;
                 y1[nt] = y;
-                tempconf[nt][0] = sval[4] + argument(y/MU, 2.0*(cc+x)/MU);
-                tempconf[nt][1] = argument(0.5*y, -2.0*(cc+x)) - alpha;      
+                tempconf[nt][0] = sval[4] + argument(y/MU, 2.0*(cc+x)/(MU*PENROSE_RATIO));
+                tempconf[nt][1] = argument(0.5*PENROSE_RATIO*y, -2.0*(cc+x)/PENROSE_RATIO) - alpha;      
                 nt++;
             }
             
@@ -5280,7 +5282,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             /* upper and lower ellipse */
             else if ((vabs(y) >= MU)&&(x*x/(LAMBDA*LAMBDA) + (y1-MU)*(y1-MU)/((1.0-MU)*(1.0-MU)) >= 1.0)) return(0);
             /* small ellipses */
-            else if ((vabs(x) <= c)&&(4.0*(x1-c)*(x1-c)/(MU*MU) + y*y/(MU*MU) <= 1.0)) return(0);
+            else if ((vabs(x) <= c)&&(4.0*(x1-c)*(x1-c)/(MU*MU*PENROSE_RATIO*PENROSE_RATIO) + y*y/(MU*MU) <= 1.0)) return(0);
             /* straight parts */
             else if ((vabs(x) >= c)&&(vabs(y) <= width)) return(0);
             else return(1);

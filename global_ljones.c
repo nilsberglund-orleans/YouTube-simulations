@@ -36,6 +36,7 @@
 /* pattern of additional obstacles */
 #define O_CORNERS 0         /* obstacles in the corners (for Boy b.c.) */
 #define O_GALTON_BOARD 1    /* Galton board pattern */
+#define O_GENUS_TWO 2       /* obstacles in corners of L-shape domeain (for genus 2 b.c.) */
 
 /* particle interaction */
 
@@ -59,9 +60,11 @@
 #define BC_PERIODIC_FUNNEL 6    /* funnel with periodic boundary conditions */
 #define BC_RECTANGLE_LID 7  /* rectangular container with moving lid */
 #define BC_PERIODIC_TRIANGLE 8  /* periodic boundary conditions and harmonic b.c. outside moving triangle */
+#define BC_RECTANGLE_WALL 9 /* rectangular container with vertical movable wall */
 #define BC_KLEIN 11         /* Klein bottle (periodic with twisted vertical parts) */
 #define BC_SCREEN_BINS 12   /* harmonic boundary conditions outside screen area plus "bins" (for Galton board) */
 #define BC_BOY 13           /* Boy surface/projective plane (periodic with twisted horizontal and vertical parts) */
+#define BC_GENUS_TWO 14     /* surface of genus 2, obtained by identifying opposite sides of an L shape */
 
 /* Plot types */
 
