@@ -11,6 +11,7 @@
 
 /* shape of domain */
 
+#define D_NOTHING 999   /* no boundaries */
 #define D_RECTANGLE 0   /* rectangular domain */
 #define D_ELLIPSE 1     /* elliptical domain */
 #define D_STADIUM 2     /* stadium-shaped domain */
@@ -94,6 +95,9 @@
 #define D_MANDELBROT_CIRCLE 26     /* Mandelbrot set with circular conductor */
 #define D_VONKOCH_HEATED 27 /* von Koch snowflake in larger circle */
 
+/* Variable index of refraction */
+#define IOR_MANDELBROT 1    /* index of refraction depends on escape time in Mandelbrot set */
+
 /* Boundary conditions */
 
 #define BC_DIRICHLET 0   /* Dirichlet boundary conditions */
@@ -114,7 +118,7 @@
 #define P_ENERGY 1       /* plot energy of wave */
 #define P_MIXED 2        /* plot amplitude in upper half, energy in lower half */
 #define P_MEAN_ENERGY 3  /* energy averaged over time */
-#define P_LOG_ENERGY 4  /* log of energy averaged over time */
+#define P_LOG_ENERGY 4   /* log of energy averaged over time */
 #define P_LOG_MEAN_ENERGY 5  /* log of energy averaged over time */
 
 /* For Schrodinger equation */

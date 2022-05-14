@@ -349,22 +349,22 @@ void init_hashgrid(t_hashgrid hashgrid[HASHX*HASHY])
         default: /* do nothing */;
     }
     
-    for (i=0; i<HASHX; i++) 
-    {
-        for (j=0; j<HASHY; j++)
-        {
-            for (k=0; k<hashgrid[mhash(i,j)].nneighb; k++)
-            {
-                m = hashgrid[mhash(i,j)].neighbour[k];
-                p = m/HASHY;
-                q = m%HASHY;
-                if (vabs((double)(p-i)) + vabs((double)(q-j)) > 2.0)
-                printf("Grid cell (%i, %i) - neighbour %i = %i = (%i, %i)\n", i, j, k, m, p, q);
-            }
-//         sleep(1);
-        }
-//         sleep(1);
-    }
+//     for (i=0; i<HASHX; i++) 
+//     {
+//         for (j=0; j<HASHY; j++)
+//         {
+//             for (k=0; k<hashgrid[mhash(i,j)].nneighb; k++)
+//             {
+//                 m = hashgrid[mhash(i,j)].neighbour[k];
+//                 p = m/HASHY;
+//                 q = m%HASHY;
+//                 if (vabs((double)(p-i)) + vabs((double)(q-j)) > 2.0)
+//                 printf("Grid cell (%i, %i) - neighbour %i = %i = (%i, %i)\n", i, j, k, m, p, q);
+//             }
+// //         sleep(1);
+//         }
+// //         sleep(1);
+//     }
     sleep(1);
 }
 

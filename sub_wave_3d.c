@@ -132,6 +132,22 @@ void tvertex_lineto_3d(t_vertex z)
     draw_vertex_x_y_z(z.x, z.y, 0.0);
 }
 
+void draw_tpolygon_3d(t_polygon polygon)
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI/(double)polygon.nsides;
+    
+    glBegin(GL_LINE_LOOP);
+    for (i=0; i<=polygon.nsides; i++)
+    {
+        alpha = PID*polygon.angle + (double)i*dalpha;
+        draw_vertex_x_y_z(polygon.xc + polygon.radius*cos(alpha), polygon.yc + polygon.radius*sin(alpha), 0.0);
+    }
+    glEnd();
+}
+
 
 void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard boundary */
 {
@@ -200,28 +216,62 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
             glEnd();
             break;
         }
+        case (D_SINAI):
+        {
+            draw_circle_3d(0.0, 0.0, LAMBDA, NSEG);
+            break;
+        }
         case (D_YOUNG):
         {
-            glBegin(GL_LINE_STRIP);
-            draw_vertex_x_y_z(-MU, YMIN, 0.0);
-            draw_vertex_x_y_z(-MU, -LAMBDA-MU, 0.0);
-            draw_vertex_x_y_z(MU, -LAMBDA-MU, 0.0);
-            draw_vertex_x_y_z(MU, YMIN, 0.0);
-            glEnd();
+//             if (FILL_BILLIARD_COMPLEMENT)
+//             {
+//                 if (fade) glColor3f(0.5*fade_value, 0.5*fade_value, 0.5*fade_value);
+//                 else glColor3f(0.5, 0.5, 0.5);
+//                 
+//                 glBegin(GL_TRIANGLE_FAN);
+//                 draw_vertex_x_y_z(-MU, YMIN, 0.0);
+//                 draw_vertex_x_y_z(-MU, -LAMBDA-MU, 0.0);
+//                 draw_vertex_x_y_z(MU, -LAMBDA-MU, 0.0);
+//                 draw_vertex_x_y_z(MU, YMIN, 0.0);
+//                 glEnd();
+//             
+//                 glBegin(GL_TRIANGLE_FAN);
+//                 draw_vertex_x_y_z(-MU, YMAX, 0.0);
+//                 draw_vertex_x_y_z(-MU, LAMBDA+MU, 0.0);
+//                 draw_vertex_x_y_z(MU, LAMBDA+MU, 0.0);
+//                 draw_vertex_x_y_z(MU, YMAX, 0.0);
+//                 glEnd();
+// 
+//                 glBegin(GL_TRIANGLE_FAN);
+//                 draw_vertex_x_y_z(-MU, -LAMBDA+MU, 0.0);
+//                 draw_vertex_x_y_z(-MU, LAMBDA-MU, 0.0);
+//                 draw_vertex_x_y_z(MU, LAMBDA-MU, 0.0);
+//                 draw_vertex_x_y_z(MU, -LAMBDA+MU, 0.0);
+//                 glEnd();
+//             }
+//             else
+            {
+                glBegin(GL_LINE_STRIP);
+                draw_vertex_x_y_z(-MU, YMIN, 0.0);
+                draw_vertex_x_y_z(-MU, -LAMBDA-MU, 0.0);
+                draw_vertex_x_y_z(MU, -LAMBDA-MU, 0.0);
+                draw_vertex_x_y_z(MU, YMIN, 0.0);
+                glEnd();
             
-            glBegin(GL_LINE_STRIP);
-            draw_vertex_x_y_z(-MU, YMAX, 0.0);
-            draw_vertex_x_y_z(-MU, LAMBDA+MU, 0.0);
-            draw_vertex_x_y_z(MU, LAMBDA+MU, 0.0);
-            draw_vertex_x_y_z(MU, YMAX, 0.0);
-            glEnd();
+                glBegin(GL_LINE_STRIP);
+                draw_vertex_x_y_z(-MU, YMAX, 0.0);
+                draw_vertex_x_y_z(-MU, LAMBDA+MU, 0.0);
+                draw_vertex_x_y_z(MU, LAMBDA+MU, 0.0);
+                draw_vertex_x_y_z(MU, YMAX, 0.0);
+                glEnd();
 
-            glBegin(GL_LINE_LOOP);
-            draw_vertex_x_y_z(-MU, -LAMBDA+MU, 0.0);
-            draw_vertex_x_y_z(-MU, LAMBDA-MU, 0.0);
-            draw_vertex_x_y_z(MU, LAMBDA-MU, 0.0);
-            draw_vertex_x_y_z(MU, -LAMBDA+MU, 0.0);
-            glEnd();
+                glBegin(GL_LINE_LOOP);
+                draw_vertex_x_y_z(-MU, -LAMBDA+MU, 0.0);
+                draw_vertex_x_y_z(-MU, LAMBDA-MU, 0.0);
+                draw_vertex_x_y_z(MU, LAMBDA-MU, 0.0);
+                draw_vertex_x_y_z(MU, -LAMBDA+MU, 0.0);
+                glEnd();
+            }
             break;
         }
         case (D_GRATING):
@@ -445,37 +495,39 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
             glEnd();
             
             /* inner lines */ 
-//             glLineWidth(BOUNDARY_WIDTH/2);
-            glLineWidth(1);
-            glColor3f(0.75, 0.75, 0.75);
-            glBegin(GL_LINE_STRIP);
-            tvertex_lineto_3d(polyline[0]);
-            tvertex_lineto_3d(polyline[1]);
-            tvertex_lineto_3d(polyline[2]);
-            tvertex_lineto_3d(polyline[0]);
-            tvertex_lineto_3d(polyline[3]);
-            tvertex_lineto_3d(polyline[4]);
-            glEnd();
-            
-            glBegin(GL_LINE_STRIP);
-            tvertex_lineto_3d(polyline[0]);
-            tvertex_lineto_3d(polyline[44]);
-            tvertex_lineto_3d(polyline[45]);
-            tvertex_lineto_3d(polyline[0]);
-            tvertex_lineto_3d(polyline[46]);
-            tvertex_lineto_3d(polyline[45]);
-            glEnd();
-            
-            for (i=3; i<43; i++)
+            if (DRAW_CONSTRUCTION_LINES)
             {
+                glLineWidth(1);
+                glColor3f(0.75, 0.75, 0.75);
                 glBegin(GL_LINE_STRIP);
-                tvertex_lineto_3d(polyline[i]);
-                tvertex_lineto_3d(polyline[43]);
+                tvertex_lineto_3d(polyline[0]);
+                tvertex_lineto_3d(polyline[1]);
+                tvertex_lineto_3d(polyline[2]);
+                tvertex_lineto_3d(polyline[0]);
+                tvertex_lineto_3d(polyline[3]);
+                tvertex_lineto_3d(polyline[4]);
                 glEnd();
+            
                 glBegin(GL_LINE_STRIP);
-                tvertex_lineto_3d(polyline[i+42]);
-                tvertex_lineto_3d(polyline[85]);
+                tvertex_lineto_3d(polyline[0]);
+                tvertex_lineto_3d(polyline[44]);
+                tvertex_lineto_3d(polyline[45]);
+                tvertex_lineto_3d(polyline[0]);
+                tvertex_lineto_3d(polyline[46]);
+                tvertex_lineto_3d(polyline[45]);
                 glEnd();
+            
+                for (i=3; i<43; i++)
+                {
+                    glBegin(GL_LINE_STRIP);
+                    tvertex_lineto_3d(polyline[i]);
+                    tvertex_lineto_3d(polyline[43]);
+                    glEnd();
+                    glBegin(GL_LINE_STRIP);
+                    tvertex_lineto_3d(polyline[i+42]);
+                    tvertex_lineto_3d(polyline[85]);
+                    glEnd();
+                }
             }
             
             break;
@@ -496,17 +548,20 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
             glEnd();
             
             /* inner lines */
-            glBegin(GL_LINE_LOOP);
-            tvertex_lineto_3d(polyline[0]);
-            tvertex_lineto_3d(polyline[1]);
-            tvertex_lineto_3d(polyline[2]);
-            tvertex_lineto_3d(polyline[0]);
-            tvertex_lineto_3d(polyline[3]);
-            tvertex_lineto_3d(polyline[2]);
-            tvertex_lineto_3d(polyline[5]);
-            tvertex_lineto_3d(polyline[1]);
-            tvertex_lineto_3d(polyline[4]);
-            glEnd();
+            if (DRAW_CONSTRUCTION_LINES)
+            {
+                glBegin(GL_LINE_LOOP);
+                tvertex_lineto_3d(polyline[0]);
+                tvertex_lineto_3d(polyline[1]);
+                tvertex_lineto_3d(polyline[2]);
+                tvertex_lineto_3d(polyline[0]);
+                tvertex_lineto_3d(polyline[3]);
+                tvertex_lineto_3d(polyline[2]);
+                tvertex_lineto_3d(polyline[5]);
+                tvertex_lineto_3d(polyline[1]);
+                tvertex_lineto_3d(polyline[4]);
+                glEnd();
+            }
             
             /* 2nd triangle */
             glBegin(GL_LINE_LOOP);
@@ -522,17 +577,20 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
             glEnd();
             
             /* inner lines */
-            glBegin(GL_LINE_LOOP);
-            tvertex_lineto_3d( polyline[9]);
-            tvertex_lineto_3d(polyline[10]);
-            tvertex_lineto_3d(polyline[11]);
-            tvertex_lineto_3d( polyline[9]);
-            tvertex_lineto_3d(polyline[13]);
-            tvertex_lineto_3d(polyline[10]);
-            tvertex_lineto_3d(polyline[14]);
-            tvertex_lineto_3d(polyline[11]);
-            tvertex_lineto_3d(polyline[12]);
-            glEnd();
+            if (DRAW_CONSTRUCTION_LINES)
+            {
+                glBegin(GL_LINE_LOOP);
+                tvertex_lineto_3d( polyline[9]);
+                tvertex_lineto_3d(polyline[10]);
+                tvertex_lineto_3d(polyline[11]);
+                tvertex_lineto_3d( polyline[9]);
+                tvertex_lineto_3d(polyline[13]);
+                tvertex_lineto_3d(polyline[10]);
+                tvertex_lineto_3d(polyline[14]);
+                tvertex_lineto_3d(polyline[11]);
+                tvertex_lineto_3d(polyline[12]);
+                glEnd();
+            }
             break;
         }
         case (D_HOMOPHONIC):
@@ -557,29 +615,32 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
             glEnd();
             
             /* inner lines */
-            glLineWidth(BOUNDARY_WIDTH/2);
-            glBegin(GL_LINE_STRIP);
-            tvertex_lineto_3d(polyline[9]);
-            tvertex_lineto_3d(polyline[1]);
-            tvertex_lineto_3d(polyline[2]);
-            tvertex_lineto_3d(polyline[5]);
-            tvertex_lineto_3d(polyline[7]);
-            tvertex_lineto_3d(polyline[2]);
-            tvertex_lineto_3d(polyline[8]);
-            tvertex_lineto_3d(polyline[21]);
-            tvertex_lineto_3d(polyline[10]);
-            tvertex_lineto_3d(polyline[2]);
-            tvertex_lineto_3d(polyline[21]);
-            tvertex_lineto_3d(polyline[11]);
-            tvertex_lineto_3d(polyline[13]);
-            tvertex_lineto_3d(polyline[21]);
-            tvertex_lineto_3d(polyline[14]);
-            tvertex_lineto_3d(polyline[20]);
-            tvertex_lineto_3d(polyline[15]);
-            tvertex_lineto_3d(polyline[19]);
-            tvertex_lineto_3d(polyline[16]);
-            tvertex_lineto_3d(polyline[18]);
-            glEnd();
+           if (DRAW_CONSTRUCTION_LINES)
+            {
+                glLineWidth(BOUNDARY_WIDTH/2);
+                glBegin(GL_LINE_STRIP);
+                tvertex_lineto_3d(polyline[9]);
+                tvertex_lineto_3d(polyline[1]);
+                tvertex_lineto_3d(polyline[2]);
+                tvertex_lineto_3d(polyline[5]);
+                tvertex_lineto_3d(polyline[7]);
+                tvertex_lineto_3d(polyline[2]);
+                tvertex_lineto_3d(polyline[8]);
+                tvertex_lineto_3d(polyline[21]);
+                tvertex_lineto_3d(polyline[10]);
+                tvertex_lineto_3d(polyline[2]);
+                tvertex_lineto_3d(polyline[21]);
+                tvertex_lineto_3d(polyline[11]);
+                tvertex_lineto_3d(polyline[13]);
+                tvertex_lineto_3d(polyline[21]);
+                tvertex_lineto_3d(polyline[14]);
+                tvertex_lineto_3d(polyline[20]);
+                tvertex_lineto_3d(polyline[15]);
+                tvertex_lineto_3d(polyline[19]);
+                tvertex_lineto_3d(polyline[16]);
+                tvertex_lineto_3d(polyline[18]);
+                glEnd();
+            }
             
             /* 2nd triangle */
             glLineWidth(BOUNDARY_WIDTH);
@@ -602,29 +663,32 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
             glEnd();
             
             /* inner lines */
-            glLineWidth(BOUNDARY_WIDTH/2);
-            glBegin(GL_LINE_STRIP);
-            tvertex_lineto_3d(polyline[22+2]);
-            tvertex_lineto_3d(polyline[22+6]);
-            tvertex_lineto_3d(polyline[22+8]);
-            tvertex_lineto_3d(polyline[22+2]);
-            tvertex_lineto_3d(polyline[22+5]);
-            tvertex_lineto_3d(polyline[22+3]);
-            tvertex_lineto_3d(polyline[22+2]);
-            tvertex_lineto_3d(polyline[22+1]);
-            tvertex_lineto_3d(polyline[22+0]);
-            tvertex_lineto_3d(polyline[22+21]);
-            tvertex_lineto_3d(polyline[22+18]);
-            tvertex_lineto_3d(polyline[22+16]);
-            tvertex_lineto_3d(polyline[22+13]);
-            tvertex_lineto_3d(polyline[22+21]);
-            tvertex_lineto_3d(polyline[22+10]);
-            tvertex_lineto_3d(polyline[22+12]);
-            tvertex_lineto_3d(polyline[22+21]);
-            tvertex_lineto_3d(polyline[22+14]);
-            tvertex_lineto_3d(polyline[22+20]);
-            tvertex_lineto_3d(polyline[22+15]);
-            glEnd();
+            if (DRAW_CONSTRUCTION_LINES)
+            {
+                glLineWidth(BOUNDARY_WIDTH/2);
+                glBegin(GL_LINE_STRIP);
+                tvertex_lineto_3d(polyline[22+2]);
+                tvertex_lineto_3d(polyline[22+6]);
+                tvertex_lineto_3d(polyline[22+8]);
+                tvertex_lineto_3d(polyline[22+2]);
+                tvertex_lineto_3d(polyline[22+5]);
+                tvertex_lineto_3d(polyline[22+3]);
+                tvertex_lineto_3d(polyline[22+2]);
+                tvertex_lineto_3d(polyline[22+1]);
+                tvertex_lineto_3d(polyline[22+0]);
+                tvertex_lineto_3d(polyline[22+21]);
+                tvertex_lineto_3d(polyline[22+18]);
+                tvertex_lineto_3d(polyline[22+16]);
+                tvertex_lineto_3d(polyline[22+13]);
+                tvertex_lineto_3d(polyline[22+21]);
+                tvertex_lineto_3d(polyline[22+10]);
+                tvertex_lineto_3d(polyline[22+12]);
+                tvertex_lineto_3d(polyline[22+21]);
+                tvertex_lineto_3d(polyline[22+14]);
+                tvertex_lineto_3d(polyline[22+20]);
+                tvertex_lineto_3d(polyline[22+15]);
+                glEnd();
+            }
             break;
         }
         case (D_STAR):
@@ -635,12 +699,57 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
             glEnd();
             break;
         }
+        case (D_NOISEPANEL):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<npolyline; i++) tvertex_lineto_3d(polyline[i]);
+            glEnd();
+            break;
+        }
+        case (D_POLYGONS):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            for (i = 0; i < ncircles; i++) 
+                if (polygons[i].active) draw_tpolygon_3d(polygons[i]);
+            break;
+        }
         default:
         {
             break;
         }   
     }
 }
+
+void draw_polyline_visible(int j, int k, double margin)
+/* hack to draw the billiard boundary in front of the wave */
+/* only parts of the boundary having a small enough angle with the observer vector are drawn */
+{
+    double x, y, x1, y1, length, length1;
+    static int first = 1;
+    static double olength;
+    
+    if (first)
+    {
+        olength = module2(observer[0], observer[1]);
+        first = 0;
+    }
+    
+    x = polyline[j].x;
+    y = polyline[j].y;
+    x1 = polyline[k].x;
+    y1 = polyline[k].y;
+    length = module2(x,y);
+    length1 = module2(x1,y1);
+    if ((x*observer[0] + y*observer[1] > margin*length*olength)&&(x1*observer[0] + y1*observer[1] > margin*length1*olength))
+    {
+        glBegin(GL_LINE_STRIP);
+        tvertex_lineto_3d(polyline[j]);
+        tvertex_lineto_3d(polyline[k]);
+        glEnd();
+    }
+}
+            
 
 void draw_billiard_3d_front(int fade, double fade_value)      
 /* hack to draw the billiard boundary in front of the wave */
@@ -672,27 +781,51 @@ void draw_billiard_3d_front(int fade, double fade_value)
     glEnable(GL_LINE_SMOOTH);
 
     switch (B_DOMAIN) {
+        case (D_YOUNG):
+        {
+            glBegin(GL_LINE_STRIP);
+            draw_vertex_x_y_z(-MU, YMIN, 0.0);
+            draw_vertex_x_y_z(-MU, -LAMBDA-MU, 0.0);
+//             draw_vertex_x_y_z(MU, -LAMBDA-MU, 0.0);
+//             draw_vertex_x_y_z(MU, YMIN, 0.0);
+            glEnd();
+            
+            glBegin(GL_LINE_STRIP);
+            draw_vertex_x_y_z(-MU, YMAX, 0.0);
+            draw_vertex_x_y_z(-MU, LAMBDA+MU, 0.0);
+//             draw_vertex_x_y_z(MU, LAMBDA+MU, 0.0);
+//             draw_vertex_x_y_z(MU, YMAX, 0.0);
+            glEnd();
+
+            glBegin(GL_LINE_LOOP);
+            draw_vertex_x_y_z(-MU, -LAMBDA+MU, 0.0);
+            draw_vertex_x_y_z(-MU, LAMBDA-MU, 0.0);
+//             draw_vertex_x_y_z(MU, LAMBDA-MU, 0.0);
+//             draw_vertex_x_y_z(MU, -LAMBDA+MU, 0.0);
+            glEnd();
+            break;
+        }
+        case (D_TOKA_PRIME):
+        {
+            draw_polyline_visible(0, 4, 0.2);
+            for (i=4; i<41; i++) draw_polyline_visible(i, i+1, -0.1);
+//             draw_polyline_visible(42, 3, 0.2);
+            for (i=84; i>46; i--) draw_polyline_visible(i, i-1, -0.1);
+            draw_polyline_visible(46, 0, 0.2);
+            break;
+        }
         case (D_STAR):
         {
             glLineWidth(BOUNDARY_WIDTH);
-            for (i=0; i<npolyline; i++) 
-            {
-                j = i%npolyline;
-                k = (i+1)%npolyline;
-                x = polyline[j].x;
-                y = polyline[j].y;
-                x1 = polyline[k].x;
-                y1 = polyline[k].y;
-                length = module2(x,y);
-                length1 = module2(x1,y1);
-                if ((x*observer[0] + y*observer[1] > 0.2*length*olength)&&(x1*observer[0] + y1*observer[1] > 0.2*length1*olength))
-                {
-                    glBegin(GL_LINE_STRIP);
-                    tvertex_lineto_3d(polyline[j]);
-                    tvertex_lineto_3d(polyline[k]);
-                    glEnd();
-                }
-            }
+            for (i=0; i<npolyline; i++)
+                draw_polyline_visible(i%npolyline, (i+1)%npolyline, 0.2);
+            break;
+        }
+        case (D_NOISEPANEL):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            for (i=0; i<npolyline; i++)
+                draw_polyline_visible(i%npolyline, (i+1)%npolyline, -0.5);
             break;
         }
         default:
@@ -706,19 +839,70 @@ void compute_energy_field(double phi[NX*NY], double psi[NX*NY], short int xy_in[
 /* computes cosine of angle between normal vector and vector light */
 {
     int i, j;
+    static int first = 1;
+    double energy, logenergy;
+    
+//     printf("computing energy field\n");
+//     printf("COMPUTE_MEAN_ENERGY = %i\n", COMPUTE_MEAN_ENERGY);
     
     #pragma omp parallel for private(i,j)
     for (i=0; i<NX; i++)
-        for (j=0; j<NY; j++)
+        for (j=0; j<NY; j++) 
         {
-            if ((TWOSPEEDS)||(xy_in[i*NY+j])) wave[i*NY+j].energy = PLOT_SCALE_ENERGY*compute_energy_mod(phi, psi, xy_in, i, j);
-            else wave[i*NY+j].energy = 0.0;
+            if ((TWOSPEEDS)||(xy_in[i*NY+j])) 
+            {
+                energy = PLOT_SCALE_ENERGY*compute_energy_mod(phi, psi, xy_in, i, j);
+                if (energy < 1.0e-100) energy = 0.0;
+                wave[i*NY+j].energy = PLOT_SCALE_ENERGY*compute_energy_mod(phi, psi, xy_in, i, j);
+                if (COMPUTE_TOTAL_ENERGY)
+                {
+                    if (first) wave[i*NY+j].total_energy = energy;
+                    else wave[i*NY+j].total_energy += energy;
+                }
+            
+                if (COMPUTE_LOG_ENERGY)
+                {
+                    logenergy = log(wave[i*NY+j].energy);
+                    if (logenergy > LOG_ENERGY_FLOOR) wave[i*NY+j].log_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*logenergy;
+                    else wave[i*NY+j].log_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*LOG_ENERGY_FLOOR;
+                }
+                
+                if (COMPUTE_LOG_TOTAL_ENERGY)
+                {
+                    logenergy = log(wave[i*NY+j].total_energy);
+                    if (logenergy > LOG_ENERGY_FLOOR) wave[i*NY+j].log_total_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*logenergy;
+                    else wave[i*NY+j].log_total_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*LOG_ENERGY_FLOOR;
+                }
+                
+                if (COMPUTE_MEAN_ENERGY)
+                {
+                    wave[i*NY+j].mean_energy = wave[i*NY+j].total_energy/((double)(global_time+1));
+                }
+            
+                if (COMPUTE_LOG_MEAN_ENERGY)
+                {
+                    logenergy = log(wave[i*NY+j].mean_energy) + LOG_MEAN_ENERGY_SHIFT;
+                    if (logenergy > LOG_ENERGY_FLOOR) wave[i*NY+j].log_mean_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*logenergy;
+                    else wave[i*NY+j].mean_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*LOG_ENERGY_FLOOR;
+                }
+            }
+            else if (first)
+            {
+                wave[i*NY+j].energy = 0.0;
+                wave[i*NY+j].total_energy = 0.0;
+                wave[i*NY+j].log_total_energy = LOG_ENERGY_FLOOR;
+                wave[i*NY+j].mean_energy = 0.0;
+                wave[i*NY+j].log_mean_energy = LOG_ENERGY_FLOOR;
+            }
         }
+        
+    first = 0;
 }
 
 
 void compute_log_energy_field(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], t_wave wave[NX*NY])
 /* computes cosine of angle between normal vector and vector light */
+/* TO DO: include into compute_energy_field */
 {
     int i, j;
     double value;
@@ -729,13 +913,14 @@ void compute_log_energy_field(double phi[NX*NY], double psi[NX*NY], short int xy
         {
             if ((TWOSPEEDS)||(xy_in[i*NY+j])) 
             {
-                value = compute_energy_mod(phi, psi, xy_in, i, j);
-                if (value > 1.0e-100) wave[i*NY+j].log_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*log(value);
-                else wave[i*NY+j].log_energy = LOG_SHIFT + log(1.0e-100)*PLOT_SCALE_LOG_ENERGY;
+                value = log(compute_energy_mod(phi, psi, xy_in, i, j));
+                if (value > LOG_ENERGY_FLOOR) wave[i*NY+j].log_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*value;
+                else wave[i*NY+j].log_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*LOG_ENERGY_FLOOR;
             }
             else wave[i*NY+j].log_energy = 0.0;
         }
 }
+
 
 
 void compute_phase_field(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], t_wave wave[NX*NY])
@@ -759,7 +944,7 @@ void compute_phase_field(double phi[NX*NY], double psi[NX*NY], short int xy_in[N
         }
 }
 
-void compute_light_angle(short int xy_in[NX*NY], t_wave wave[NX*NY])
+void compute_light_angle(short int xy_in[NX*NY], t_wave wave[NX*NY], int movie)
 /* computes cosine of angle between normal vector and vector light */
 {
     int i, j;
@@ -780,8 +965,8 @@ void compute_light_angle(short int xy_in[NX*NY], t_wave wave[NX*NY])
         {
             if ((TWOSPEEDS)||(xy_in[i*NY+j]))
             {
-                gradx = (*wave[(i+1)*NY+j].p_zfield - *wave[(i-1)*NY+j].p_zfield)/dx;
-                grady = (*wave[i*NY+j+1].p_zfield - *wave[i*NY+j-1].p_zfield)/dy;
+                gradx = (*wave[(i+1)*NY+j].p_zfield[movie] - *wave[(i-1)*NY+j].p_zfield[movie])/dx;
+                grady = (*wave[i*NY+j+1].p_zfield[movie] - *wave[i*NY+j-1].p_zfield[movie])/dy;
                 norm = sqrt(1.0 + gradx*gradx + grady*grady);
                 pscal = -gradx*light[0] - grady*light[1] + 1.0;
                 
@@ -789,25 +974,6 @@ void compute_light_angle(short int xy_in[NX*NY], t_wave wave[NX*NY])
             }
         }
 }
-
-
-// void energy_color_scheme(int palette, double energy, double rgb[3])
-// {
-//     if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, energy, 1.0, 0, rgb);
-//     else color_scheme_palette(COLOR_SCHEME, palette, energy, 1.0, 0, rgb);
-// }
-// 
-// void log_energy_color_scheme(int palette, double log_energy, double rgb[3])
-// {
-//     color_scheme_palette(COLOR_SCHEME, palette, LOG_SHIFT + LOG_SCALE*log_energy, 1.0, 0, rgb);
-// //     if (energy > 1.0e-8) printf("energy = %.3lg, log energy = %.3lg\n", energy, LOG_SHIFT + LOG_SCALE*log(energy));
-// }
-// 
-// void phase_color_scheme(int palette, double phase, double rgb[3])
-// {
-// //     color_scheme_palette(C_ONEDIM_LINEAR, palette, phase/DPI, 1.0, 0, rgb);
-//     amp_to_rgb_palette(phase, rgb, palette);
-// }
 
 
 void compute_field_color(double value, int cplot, int palette, double rgb[3])
@@ -821,20 +987,39 @@ void compute_field_color(double value, int cplot, int palette, double rgb[3])
         }
         case (P_3D_ENERGY):
         {
-//             energy_color_scheme(palette, VSCALE_ENERGY*value, rgb);
             if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
             else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
             break;
         }
         case (P_3D_LOG_ENERGY):
         {
-//             log_energy_color_scheme(palette, value, rgb);
+            color_scheme_palette(COLOR_SCHEME, palette, LOG_SHIFT + LOG_SCALE*value, 1.0, 0, rgb);
+            break;
+        }
+        case (P_3D_TOTAL_ENERGY):
+        {
+            if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            break;
+        }
+        case (P_3D_LOG_TOTAL_ENERGY):
+        {
+            color_scheme_palette(COLOR_SCHEME, palette, LOG_SHIFT + LOG_SCALE*value, 1.0, 0, rgb);
+            break;
+        }
+        case (P_3D_MEAN_ENERGY):
+        {
+            if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            break;
+        }
+        case (P_3D_LOG_MEAN_ENERGY):
+        {
             color_scheme_palette(COLOR_SCHEME, palette, LOG_SHIFT + LOG_SCALE*value, 1.0, 0, rgb);
             break;
         }
         case (P_3D_PHASE):
         {
-//             phase_color_scheme(palette, value, rgb);
             amp_to_rgb_palette(value, rgb, palette);
             break;
         }
@@ -842,25 +1027,25 @@ void compute_field_color(double value, int cplot, int palette, double rgb[3])
 }
 
 
-double compute_interpolated_colors_wave(int i, int j, t_wave wave[NX*NY], double palette, int cplot, 
+double compute_interpolated_colors_wave(int i, int j, short int xy_in[NX*NY], t_wave wave[NX*NY], double palette, int cplot, 
                                  double rgb_e[3], double rgb_w[3], double rgb_n[3], double rgb_s[3],
-                                 int fade, double fade_value)
+                                 int fade, double fade_value, int movie)
 {
     int k;
     double cw, ce, cn, cs, c_sw, c_se, c_nw, c_ne, c_mid, ca, z_mid;
     double *z_sw, *z_se, *z_nw, *z_ne;
     
-    z_sw = wave[i*NY+j].p_zfield;
-    z_se = wave[(i+1)*NY+j].p_zfield;
-    z_nw = wave[i*NY+j+1].p_zfield;
-    z_ne = wave[(i+1)*NY+j+1].p_zfield;
+    z_sw = wave[i*NY+j].p_zfield[movie];
+    z_se = wave[(i+1)*NY+j].p_zfield[movie];
+    z_nw = wave[i*NY+j+1].p_zfield[movie];
+    z_ne = wave[(i+1)*NY+j+1].p_zfield[movie];
                             
     z_mid = 0.25*(*z_sw + *z_se + *z_nw + *z_ne);
     
-    c_sw = *wave[i*NY+j].p_cfield;
-    c_se = *wave[(i+1)*NY+j].p_cfield;
-    c_nw = *wave[i*NY+j+1].p_cfield;
-    c_ne = *wave[(i+1)*NY+j+1].p_cfield;
+    c_sw = *wave[i*NY+j].p_cfield[movie];
+    c_se = *wave[(i+1)*NY+j].p_cfield[movie];
+    c_nw = *wave[i*NY+j+1].p_cfield[movie];
+    c_ne = *wave[(i+1)*NY+j+1].p_cfield[movie];
     
     c_mid = 0.25*(c_sw + c_se + c_nw + c_ne);
                                 
@@ -878,6 +1063,8 @@ double compute_interpolated_colors_wave(int i, int j, t_wave wave[NX*NY], double
     {
         ca = wave[i*NY+j].cos_angle;
         ca = (ca + 1.0)*0.4 + 0.2;
+//         if ((FADE_IN_OBSTACLE)&&(!xy_in[i*NY+j])) ca *= 1.6;
+        if ((FADE_IN_OBSTACLE)&&(!xy_in[i*NY+j])) ca = (ca + 0.1)*1.6;
         for (k=0; k<3; k++) 
         {
             rgb_e[k] *= ca;
@@ -904,11 +1091,11 @@ void compute_wave_fields(double phi[NX*NY], double psi[NX*NY], short int xy_in[N
 {
     int i, j;
     
-    if ((zplot == P_3D_ENERGY)||(cplot == P_3D_ENERGY))
+    if (COMPUTE_ENERGY)
         compute_energy_field(phi, psi, xy_in, wave);
     
-    if ((zplot == P_3D_LOG_ENERGY)||(cplot == P_3D_LOG_ENERGY))
-        compute_log_energy_field(phi, psi, xy_in, wave);
+//     if ((zplot == P_3D_LOG_ENERGY)||(cplot == P_3D_LOG_ENERGY))
+//         compute_log_energy_field(phi, psi, xy_in, wave);
     
     if ((zplot == P_3D_PHASE)||(cplot == P_3D_PHASE))
         compute_phase_field(phi, psi, xy_in, wave);
@@ -916,7 +1103,90 @@ void compute_wave_fields(double phi[NX*NY], double psi[NX*NY], short int xy_in[N
 }
 
 
-void compute_zfield(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], int zplot, t_wave wave[NX*NY])
+void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY])
+/* initialise fields for wave speed and dissipation */
+{
+    int i, j, k;
+    double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB;
+    double u, v, u1, x, y, xy[2], norm2, speed;
+    
+    if (VARIABLE_IOR)
+    {
+        switch (IOR) {
+            case (IOR_MANDELBROT):
+            {
+                #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        u = 0.0;
+                        v = 0.0;
+                        k = 0;
+                        while ((k<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+                        {
+                            u1 = u*u - v*v + x;
+                            v = 2.0*u*v + y;
+                            u = u1;
+                            k++;
+                        }
+                        norm2 = u*u + v*v;
+                        if (norm2 < MANDELLIMIT)
+                        {
+                            tc[i*NY+j] = COURANT;
+                            tcc[i*NY+j] = courant2;
+                            tgamma[i*NY+j] = GAMMA;
+                        }
+                        else 
+                        {
+                            speed = 1.0 + MANDEL_IOR_SCALE*log(1.0 + norm2/MANDELLIMIT);
+                            if (speed < 0.01) speed = 0.01;
+                            tcc[i*NY+j] = courant2*speed;
+                            tc[i*NY+j] = COURANT*sqrt(speed);
+                            tgamma[i*NY+j] = GAMMA;
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        tc[i*NY+j] = COURANT;
+                        tcc[i*NY+j] = COURANT;
+                        tgamma[i*NY+j] = GAMMA;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        #pragma omp parallel for private(i,j)
+        for (i=0; i<NX; i++){
+            for (j=0; j<NY; j++){
+                if (xy_in[i*NY+j] != 0)
+                {
+                    tc[i*NY+j] = COURANT;
+                    tcc[i*NY+j] = courant2;
+                    if (xy_in[i*NY+j] == 1) tgamma[i*NY+j] = GAMMA;
+                    else tgamma[i*NY+j] = GAMMAB;
+                }
+                else if (TWOSPEEDS)
+                {
+                    tc[i*NY+j] = COURANTB;
+                    tcc[i*NY+j] = courantb2;
+                    tgamma[i*NY+j] = GAMMAB;
+                }
+            }
+        }
+    }
+}
+
+
+void init_zfield(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], int zplot, t_wave wave[NX*NY], int movie)
 /* compute the necessary fields for the z coordinate */
 {
     int i, j;
@@ -925,72 +1195,128 @@ void compute_zfield(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY]
         case (P_3D_AMP_ANGLE):
         {
             #pragma omp parallel for private(i,j)
-            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield = &phi[i*NY+j];
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &phi[i*NY+j];
             break;
         }
         case (P_3D_ENERGY):
         {
             #pragma omp parallel for private(i,j)
-            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield = &wave[i*NY+j].energy;
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &wave[i*NY+j].energy;
             break;
         }
         case (P_3D_LOG_ENERGY):
         {
             #pragma omp parallel for private(i,j)
-            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield = &wave[i*NY+j].log_energy;
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &wave[i*NY+j].log_energy;
+            break;
+        }
+        case (P_3D_TOTAL_ENERGY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &wave[i*NY+j].total_energy;
+            break;
+        }
+        case (P_3D_LOG_TOTAL_ENERGY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &wave[i*NY+j].log_total_energy;
+            break;
+        }
+        case (P_3D_MEAN_ENERGY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &wave[i*NY+j].mean_energy;
+            break;
+        }
+        case (P_3D_LOG_MEAN_ENERGY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &wave[i*NY+j].log_mean_energy;
             break;
         }
         case (P_3D_PHASE):
         {
             #pragma omp parallel for private(i,j)
-            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield = &wave[i*NY+j].phase;
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &wave[i*NY+j].phase;
             break;
         }
     }
 }
 
-void compute_cfield(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], int cplot, int palette, t_wave wave[NX*NY], int fade, double fade_value)
+void init_cfield(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], int cplot, t_wave wave[NX*NY], int movie)
 /* compute the colors */
 {
     int i, j, k;
-    double ca;
     
     switch(cplot) {
         case (P_3D_AMP_ANGLE):
         {
             #pragma omp parallel for private(i,j)
-            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield = &phi[i*NY+j];
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield[movie] = &phi[i*NY+j];
             break;
         }
         case (P_3D_ENERGY):
         {
             #pragma omp parallel for private(i,j)
-            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield = &wave[i*NY+j].energy;
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield[movie] = &wave[i*NY+j].energy;
             break;
         }
         case (P_3D_LOG_ENERGY):
         {
             #pragma omp parallel for private(i,j)
-            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield = &wave[i*NY+j].log_energy;
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield[movie] = &wave[i*NY+j].log_energy;
+            break;
+        }
+        case (P_3D_TOTAL_ENERGY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield[movie] = &wave[i*NY+j].total_energy;
+            break;
+        }
+        case (P_3D_LOG_TOTAL_ENERGY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield[movie] = &wave[i*NY+j].log_total_energy;
+            break;
+        }
+        case (P_3D_MEAN_ENERGY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield[movie] = &wave[i*NY+j].mean_energy;
+            break;
+        }
+        case (P_3D_LOG_MEAN_ENERGY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield[movie] = &wave[i*NY+j].log_mean_energy;
             break;
         }
         case (P_3D_PHASE):
         {
             #pragma omp parallel for private(i,j)
-            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield = &wave[i*NY+j].phase;
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield[movie] = &wave[i*NY+j].phase;
             break;
         }
     }
-    
+}
+
+
+void compute_cfield(short int xy_in[NX*NY], int cplot, int palette, t_wave wave[NX*NY], int fade, double fade_value, int movie)
+/* compute the colors */
+{
+    int i, j, k;
+    double ca;
+       
     #pragma omp parallel for private(i,j,ca)
     for (i=0; i<NX; i++) for (j=0; j<NY; j++)
     {
-        compute_field_color(*wave[i*NY+j].p_cfield, cplot, palette, wave[i*NY+j].rgb);
+        compute_field_color(*wave[i*NY+j].p_cfield[movie], cplot, palette, wave[i*NY+j].rgb);
         if (SHADE_3D)
         {
             ca = wave[i*NY+j].cos_angle;
             ca = (ca + 1.0)*0.4 + 0.2;
-            if ((FADE_IN_OBSTACLE)&&(!xy_in[i*NY+j])) ca *= 1.6;
+//             if ((FADE_IN_OBSTACLE)&&(!xy_in[i*NY+j])) ca *= 1.6;
+            if ((FADE_IN_OBSTACLE)&&(!xy_in[i*NY+j])) ca = (ca + 0.1)*1.6;
             for (k=0; k<3; k++) wave[i*NY+j].rgb[k] *= ca;
         }
         if (fade) for (k=0; k<3; k++) wave[i*NY+j].rgb[k] *= fade_value;
@@ -998,22 +1324,24 @@ void compute_cfield(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY]
 }
 
 
-void draw_wave_3d(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], t_wave wave[NX*NY], 
-                  int zplot, int cplot, int palette, int fade, double fade_value)
+void draw_wave_3d(int movie, double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], t_wave wave[NX*NY], 
+                  int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
 {
     int i, j, k, l, draw = 1;
-    double xy[2], xy_screen[2], rgb[3], pos[2], ca, rgb_e[3], rgb_w[3], rgb_n[3], rgb_s[3]; 
+    double xy[2], xy2[2], xy_screen[2], rgb[3], pos[2], ca, rgb_e[3], rgb_w[3], rgb_n[3], rgb_s[3]; 
     double z_sw, z_se, z_nw, z_ne, z_mid, zw, ze, zn, zs, min = 1000.0, max = 0.0;
     double xy_sw[2], xy_se[2], xy_nw[2], xy_ne[2], xy_mid[2];
-    double energy;
+    double energy, zfloor = -10.0;
     
     blank();
     if (DRAW_BILLIARD) draw_billiard_3d(fade, fade_value);
             
-    compute_wave_fields(phi, psi, xy_in, zplot, cplot, wave);
-    compute_zfield(phi, psi, xy_in, zplot, wave);
-    if (SHADE_3D) compute_light_angle(xy_in, wave);
-    compute_cfield(phi, psi, xy_in, cplot, palette, wave, fade, fade_value);
+    if (refresh)
+    {
+        compute_wave_fields(phi, psi, xy_in, zplot, cplot, wave);
+        if (SHADE_3D) compute_light_angle(xy_in, wave, movie);
+        compute_cfield(xy_in, cplot, palette, wave, fade, fade_value, movie);
+    }
     
     for (i=0; i<NX-2; i++)
         for (j=0; j<NY-2; j++)
@@ -1022,12 +1350,15 @@ void draw_wave_3d(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], 
                 draw = (xy_in[i*NY+j])&&(xy_in[(i+1)*NY+j])&&(xy_in[i*NY+j+1])&&(xy_in[(i+1)*NY+j+1]);
             else draw = (TWOSPEEDS)||(xy_in[i*NY+j]);
             
+            if (FLOOR_ZCOORD) 
+                draw = (draw)&&(*wave[i*NY+j].p_zfield[movie] > zfloor)&&(*wave[(i+1)*NY+j].p_zfield[movie] > zfloor)&&(*wave[i*NY+j+1].p_zfield[movie] > zfloor)&&(*wave[(i+1)*NY+j+1].p_zfield[movie] > zfloor);
+            
             if (draw)
             {
                 if (AMPLITUDE_HIGH_RES > 0)
                 {
-                    z_mid = compute_interpolated_colors_wave(i, j, wave, palette, cplot, 
-                                                             rgb_e, rgb_w, rgb_n, rgb_s, fade, fade_value);
+                    z_mid = compute_interpolated_colors_wave(i, j, xy_in, wave, palette, cplot, 
+                                                             rgb_e, rgb_w, rgb_n, rgb_s, fade, fade_value, movie);
                     
                     ij_to_xy(i, j, xy_sw);
                     ij_to_xy(i+1, j, xy_se);
@@ -1041,17 +1372,17 @@ void draw_wave_3d(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], 
                         glBegin(GL_TRIANGLE_FAN);
                         glColor3f(rgb_w[0], rgb_w[1], rgb_w[2]);
                         draw_vertex_xyz(xy_mid, z_mid);
-                        draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield);
-                        draw_vertex_xyz(xy_sw, *wave[i*NY+j].p_zfield);
+                        draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield[movie]);
+                        draw_vertex_xyz(xy_sw, *wave[i*NY+j].p_zfield[movie]);
                     
                         glColor3f(rgb_s[0], rgb_s[1], rgb_s[2]);
-                        draw_vertex_xyz(xy_se, *wave[(i+1)*NY+j].p_zfield);
+                        draw_vertex_xyz(xy_se, *wave[(i+1)*NY+j].p_zfield[movie]);
                     
                         glColor3f(rgb_e[0], rgb_e[1], rgb_e[2]);
-                        draw_vertex_xyz(xy_ne, *wave[(i+1)*NY+j+1].p_zfield);
+                        draw_vertex_xyz(xy_ne, *wave[(i+1)*NY+j+1].p_zfield[movie]);
                     
                         glColor3f(rgb_n[0], rgb_n[1], rgb_n[2]);
-                        draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield);
+                        draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield[movie]);
                         glEnd ();
                     }
                     else /* experimental */
@@ -1059,29 +1390,29 @@ void draw_wave_3d(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], 
                         glColor3f(rgb_w[0], rgb_w[1], rgb_w[2]);
                         glBegin(GL_TRIANGLE_STRIP);
                         draw_vertex_xyz(xy_mid, z_mid);
-                        draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield);
-                        draw_vertex_xyz(xy_sw, *wave[i*NY+j].p_zfield);
+                        draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield[movie]);
+                        draw_vertex_xyz(xy_sw, *wave[i*NY+j].p_zfield[movie]);
                         glEnd ();
                     
                         glColor3f(rgb_s[0], rgb_s[1], rgb_s[2]);
                         glBegin(GL_TRIANGLE_STRIP);
                         draw_vertex_xyz(xy_mid, z_mid);
-                        draw_vertex_xyz(xy_sw, *wave[i*NY+j].p_zfield);
-                        draw_vertex_xyz(xy_se, *wave[(i+1)*NY+j].p_zfield);
+                        draw_vertex_xyz(xy_sw, *wave[i*NY+j].p_zfield[movie]);
+                        draw_vertex_xyz(xy_se, *wave[(i+1)*NY+j].p_zfield[movie]);
                         glEnd ();
                     
                         glColor3f(rgb_e[0], rgb_e[1], rgb_e[2]);
                         glBegin(GL_TRIANGLE_STRIP);
                         draw_vertex_xyz(xy_mid, z_mid);
-                        draw_vertex_xyz(xy_se, *wave[(i+1)*NY+j].p_zfield);
-                        draw_vertex_xyz(xy_ne, *wave[(i+1)*NY+j+1].p_zfield);
+                        draw_vertex_xyz(xy_se, *wave[(i+1)*NY+j].p_zfield[movie]);
+                        draw_vertex_xyz(xy_ne, *wave[(i+1)*NY+j+1].p_zfield[movie]);
                         glEnd ();
                     
                         glColor3f(rgb_n[0], rgb_n[1], rgb_n[2]);
                         glBegin(GL_TRIANGLE_STRIP);
                         draw_vertex_xyz(xy_mid, z_mid);
-                        draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield);
-                        draw_vertex_xyz(xy_ne, *wave[(i+1)*NY+j+1].p_zfield);
+                        draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield[movie]);
+                        draw_vertex_xyz(xy_ne, *wave[(i+1)*NY+j+1].p_zfield[movie]);
                         glEnd ();
                     }
                 }
@@ -1091,22 +1422,38 @@ void draw_wave_3d(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], 
     
                     glBegin(GL_TRIANGLE_FAN);
                     ij_to_xy(i, j, xy);
-                    draw_vertex_xyz(xy, *wave[i*NY+j].p_zfield);
+                    draw_vertex_xyz(xy, *wave[i*NY+j].p_zfield[movie]);
                     ij_to_xy(i+1, j, xy);
-                    draw_vertex_xyz(xy, *wave[(i+1)*NY+j].p_zfield);
+                    draw_vertex_xyz(xy, *wave[(i+1)*NY+j].p_zfield[movie]);
                     ij_to_xy(i+1, j+1, xy);
-                    draw_vertex_xyz(xy, *wave[(i+1)*NY+j+1].p_zfield);
+                    draw_vertex_xyz(xy, *wave[(i+1)*NY+j+1].p_zfield[movie]);
                     ij_to_xy(i, j+1, xy);
-                    draw_vertex_xyz(xy, *wave[i*NY+j+1].p_zfield);
+                    draw_vertex_xyz(xy, *wave[i*NY+j+1].p_zfield[movie]);
                     glEnd ();
                 }
+            }
+            
+            if ((DRAW_OUTSIDE_GRAY)&&((!xy_in[i*NY+j])))
+            {
+                glColor3f(0.5, 0.5, 0.5);
+                glBegin(GL_TRIANGLE_FAN);
+                ij_to_xy(i, j, xy);
+                draw_vertex_xyz(xy, 0.0);
+                ij_to_xy(i+1, j, xy);
+                draw_vertex_xyz(xy, 0.0);
+                ij_to_xy(i+1, j+1, xy);
+                draw_vertex_xyz(xy, 0.0);
+                ij_to_xy(i, j+1, xy);
+                draw_vertex_xyz(xy, 0.0);
+                glEnd ();
             }
         }
         
     if (DRAW_BILLIARD_FRONT) draw_billiard_3d_front(fade, fade_value);
 }
 
-void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, int plot, double min, double max, int palette)
+void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, int plot, double min, double max, 
+                                  int palette, int fade, double fade_value)
 {
     int j, k, ij_botleft[2], ij_topright[2], imin, imax, jmin, jmax;
     double y, dy, dy_e, dy_phase, rgb[3], value, lum, amp;
@@ -1168,19 +1515,44 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
             }
             case (P_3D_LOG_ENERGY):
             {
-//                 value = LOG_SHIFT + LOG_SCALE*dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                value = LOG_SCALE*dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_TOTAL_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_LOG_TOTAL_ENERGY):
+            {
+                value = LOG_SCALE*dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_MEAN_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_LOG_MEAN_ENERGY):
+            {
                 value = LOG_SCALE*dy_e*(double)(j - jmin)*100.0/E_SCALE;
                 color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
                 break;
             }
             case (P_3D_PHASE):
             {
-//                 value = min + 1.0*dy*(double)(j - jmin);
                 value = dy_phase*(double)(j - jmin);
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
                 break;
             }
         }
+        if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
         glColor3f(rgb[0], rgb[1], rgb[2]);
         if (ROTATE_COLOR_SCHEME)
         {
@@ -1199,7 +1571,8 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
     }
     glEnd ();
     
-    glColor3f(1.0, 1.0, 1.0);
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
     glLineWidth(BOUNDARY_WIDTH);
     draw_rectangle_noscale(x1, y1, x2, y2);
 }

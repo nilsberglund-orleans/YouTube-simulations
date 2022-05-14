@@ -856,7 +856,7 @@ void init_circular_wave_mod(double x, double y, double phi[NX*NY], double psi[NX
     double xy[2], dist2;
 
     printf("Initializing wave\n"); 
-    #pragma omp parallel for private(i,j,xy,dist2)
+//     #pragma omp parallel for private(i,j,xy,dist2)
     for (i=0; i<NX; i++)
     {
         if (i%100 == 0) printf("Initializing column %i of %i\n", i, NX);
@@ -891,6 +891,26 @@ void add_circular_wave_mod(double factor, double x, double y, double phi[NX*NY],
                 phi[i*NY+j] += INITIAL_AMP*factor*exp(-dist2/INITIAL_VARIANCE)*cos(-sqrt(dist2)/INITIAL_WAVELENGTH);
         }
 }
+
+void init_wave_flat_mod(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY])
+/* initialise flat field - phi is wave height, psi is phi at time t-1 */
+{
+    int i, j;
+    double xy[2];
+
+    #pragma omp parallel for private(i,j,xy)
+    for (i=0; i<NX; i++) {
+        if (i%100 == 0) printf("Wave and table xy_in - Initialising column %i of %i\n", i, NX);
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+	    phi[i*NY+j] = 0.0;
+            psi[i*NY+j] = 0.0;
+        }
+    }
+}
+
 
 double compute_variance_mod(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY])
 /* compute the variance of the field, to adjust color scheme */

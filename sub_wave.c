@@ -1434,10 +1434,14 @@ int compute_noisepanel_coordinates(t_vertex polyline[NMAXPOLY])
         if (even) y = YMIN + 0.1;
         else y = YMIN + 0.1 + MU;
         
-        polyline[i].x = x;
+        x1 = x;
+        if (x1 > XMAX) x1 = XMAX;
+        else if (x1 < XMIN) x1 = XMIN;
+        
+        polyline[i].x = x1;
         polyline[i].y = y;
         
-        xy_to_pos(x, y, pos);        
+        xy_to_pos(x1, y, pos);        
         polyline[i].posi = pos[0];
         polyline[i].posj = pos[1];
         
@@ -1612,6 +1616,11 @@ int xy_in_billiard(double x, double y)
     static int first = 1, nsides;
 
     switch (B_DOMAIN) {
+        case (D_NOTHING):
+        {
+            return(1);
+            break;
+        }
         case (D_RECTANGLE):
         {
             if ((vabs(x) <LAMBDA)&&(vabs(y) < 1.0)) return(1);

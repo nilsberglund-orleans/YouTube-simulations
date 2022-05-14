@@ -14,6 +14,7 @@
 #define NMAXCIRCLES 20000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define MAXNEIGH 20         /* max number of neighbours kept in memory */
 #define NMAXOBSTACLES 100   /* max number of obstacles */
+#define NMAXSEGMENTS 100    /* max number of repelling segments */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -37,6 +38,14 @@
 #define O_CORNERS 0         /* obstacles in the corners (for Boy b.c.) */
 #define O_GALTON_BOARD 1    /* Galton board pattern */
 #define O_GENUS_TWO 2       /* obstacles in corners of L-shape domeain (for genus 2 b.c.) */
+
+/* pattern of additional repelling segments */
+#define S_RECTANGLE 0       /* segments forming a rectangle */
+#define S_CUP 1             /* segments forming a cup (for increasing gravity) */
+#define S_HOURGLASS 2       /* segments forming an hour glass */
+#define S_PENTA 3           /* segments forming a pentagon with 3 angles of 120° and 2 right angles */
+#define S_CENTRIFUGE 4      /* segments forming "centrifuge" (polygon with radial segments) */
+#define S_POLY_ELLIPSE 5    /* segments forming a polygonal approximation of an ellipse */
 
 /* particle interaction */
 
@@ -66,6 +75,11 @@
 #define BC_BOY 13           /* Boy surface/projective plane (periodic with twisted horizontal and vertical parts) */
 #define BC_GENUS_TWO 14     /* surface of genus 2, obtained by identifying opposite sides of an L shape */
 
+/* Regions for partial thermostat couplings */
+
+#define TH_VERTICAL 0       /* only particles at the right of x = PARTIAL_THERMO_SHIFT are coupled */
+#define TH_INSEGMENT 1      /* only particles in region defined by segments are coupled */
+
 /* Plot types */
 
 #define P_KINETIC 0       /* colors represent kinetic energy of particles */
@@ -76,13 +90,15 @@
 #define P_TYPE 5          /* colors represent type of particle */
 #define P_DIRECTION 6     /* colors represent direction of velocity */
 #define P_ANGULAR_SPEED 7 /* colors represent angular speed */
+#define P_DIRECT_ENERGY 8 /* hues represent direction, luminosity represents energy */
+#define P_DIFF_NEIGHB 9   /* colors represent number of neighbours of different type */
 
 /* Color schemes */
 
 #define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
 #define C_HUE 1          /* color scheme modifies hue */
 #define C_PHASE 2        /* color scheme shows phase */
-#define C_ONEDIM 3       /* use preset 1d color scheme (for Turbo, Viridis, Magma, Inferno, Plasma) */
+#define C_ONEDIM 3       /* use preset 1d color scheme (for Turbo, Viridis, Magma, Inferno, Plasma, Twilight) */
 #define C_ONEDIM_LINEAR 4   /* use preset 1d color scheme with linear scale */
 
 /* Color palettes */
@@ -121,6 +137,7 @@ typedef struct
     short int thermostat;       /* whether particle is coupled to thermostat */
     int hashcell;               /* hash cell in which particle is located */
     int neighb;                 /* number of neighbours within given distance */
+    int diff_neighb;            /* number of neighbours of different type */
     int hash_nneighb;           /* number of neighbours in hashgrid */
     int hashneighbour[9*HASHMAX];   /* particle numbers of neighbours in hashgrid */
     double deltax[9*HASHMAX];   /* relative position of neighbours */
@@ -166,9 +183,24 @@ typedef struct
 
 typedef struct
 {
+    double x1, x2, y1, y2;      /* extremities of segment */
+    double nx, ny;              /* normal vector */
+    double c;                   /* constant term in cartesian eq nx*x + ny*y = c */
+    double length;              /* length of segment */
+    short int concave;          /* corner is concave, to add extra repelling force */
+    double angle1, angle2;      /* angles in which concave corners repel */
+    short int active;           /* segment is active */
+    double x01, x02, y01, y02;  /* initial values of extremities, in case of rotation/translation */
+    double nx0, ny0;            /* initial normal vector */
+    double angle01, angle02;    /* initial values of angles in which concave corners repel */
+    double fx, fy;              /* x and y-components of force on segment */
+} t_segment;
+
+typedef struct
+{
     double xc, yc;              /* center of circle */
 } t_tracer;
 
 
-int ncircles, nobstacles, counter = 0;
+int ncircles, nobstacles, nsegments, counter = 0;
 
