@@ -6,7 +6,7 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
 Parameter values used in specific simulations will be gradually added to file `Parameters.md`, `Parameters_June21.md` and so on.
 
-There are three groups of 6 files, 14 files and 4 files. 
+There are three groups of 6 files, 17 files and 4 files. 
 In addition the following files handling color schemes have been included:
 
 1. `hsluv.c`and `hsluv.h` from https://github.com/adammaj1/hsluv-color-gradient 
@@ -41,7 +41,7 @@ in the shell before running the program
 
 `ffmpeg -i part.%05d.tif -vcodec libx264 part.mp4`
 
-### Simulations of wave equation, heat equation and Schrodinger equation.
+### Simulations of wave equation and reaction-diffusion equations, including the Schrodinger equation.
 
 1. *wave_billiard.c*:    simulation of the (linear) wave equation
 2. *wave_3d.c*:          3d rendering of wave equation
