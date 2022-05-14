@@ -15,12 +15,13 @@ In addition the following files handling color schemes have been included:
 
 ### Simulations of classical particles in billiards.
 
-1. *global_particles.c*:    global variables and parameters
-2. *sub_part_billiard.c*:   drawing/computation routines common to `particle_billiard` and `drop_billiard`
-3. *sub_part_pinball.c*:    additional drawing/computation routines for `particle_pinball`
-4. *particle_billiard.c*:   simulation of a collection of non-interacting particles in a billiard
-5. *drop_billiard.c*:       simulation of an expanding front of particles
-6. *particle_pinball.c*:    variant of `particle_billiard` with some extra statistics plots 
+1. *particle_billiard.c*:   simulation of a collection of non-interacting particles in a billiard
+2. *drop_billiard.c*:       simulation of an expanding front of particles
+3. *particle_pinball.c*:    variant of `particle_billiard` with some extra statistics plots 
+4. *global_particles.c*:    global variables and parameters
+5. *sub_part_billiard.c*:   drawing/computation routines common to `particle_billiard` and `drop_billiard`
+6. *sub_part_pinball.c*:    additional drawing/computation routines for `particle_pinball`
+
 
 - Create subfolders `tif_part`, `tif_drop`
 - Customize constants at beginning of .c file
@@ -42,20 +43,23 @@ in the shell before running the program
 
 ### Simulations of wave equation, heat equation and Schrodinger equation.
 
-1. *global_pdes.c*:      global variables and parameters
-2. *global_3d.c*:        additional global variables for 3d version
-3. *sub_wave.c*:         drawing/computation routines common to `wave_billiard`, `heat` and `schrodinger`
-4. *sub_wave_comp.c*:    some modified functions needed by `wave_comparison`
-5. *sub_wave_3d.c*:      additional functions for 3d version
-6. *common_wave.c*:      common functions of `wave_billiard` and `wave_comparison`
-7. *colors_waves.c*:     colormaps used by wave simulations
-8. *wave_billiard.c*:    simulation of the (linear) wave equation
-9. *wave_3d.c*:          3d rendering of wave equation
-10. *wave_comparison.c*: comparison of the wave equation in two different domains
-11. *wave_energy.c*:     a version of `wave_billiard` plotting the energy profile of the wave
-12. *mangrove.c*:        a version of `wave_billiard` with additional features to animate mangroves
-13. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
-14. *schrodinger.c*:     simulation of the Schrodinger equation
+1. *wave_billiard.c*:    simulation of the (linear) wave equation
+2. *wave_3d.c*:          3d rendering of wave equation
+3. *wave_comparison.c*: comparison of the wave equation in two different domains
+4. *wave_energy.c*:     a version of `wave_billiard` plotting the energy profile of the wave
+5. *mangrove.c*:        a version of `wave_billiard` with additional features to animate mangroves
+6. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
+7. *rde.c*:             simulation of reaction-diffusion equations, plots in 2D and 3D (including Schödinger equation)
+8. *schrodinger.c*:     simulation of the Schrodinger equation in 2D (old version)
+9. *global_pdes.c*:      global variables and parameters
+10. *global_3d.c*:        additional global variables for 3d version
+11. *sub_wave.c*:         drawing/computation routines common to `wave_billiard`, `heat` and `schrodinger`
+12. *sub_wave_comp.c*:    some modified functions needed by `wave_comparison`
+13. *sub_wave_3d.c*:      additional functions for 3d version
+14. *common_wave.c*:      common functions of `wave_billiard` and `wave_comparison`
+15. *colors_waves.c*:     colormaps used by wave simulations
+16. *sub_rde.c*:          additional routines for rde.c
+17. *sub_wave_rde_3d.c*:  additional 3d drawing routines for rde.c
 
 - Create subfolders `tif_wave`, `tif_heat`, `tif_schrod`
 - Customize constants at beginning of .c file
@@ -81,10 +85,10 @@ in the shell before running the program
 
 ### Molecular dynamics simulations.
 
-1. *global_ljones.c*:     global variables and parameters
-2. *sub_lj.c*:            drawing and initialization routines
-3. *sub_hashgrid.c*:      hashgrid manipulation routines
-4. *lennardjones.c*:      simulation of molecular dynamics
+1. *lennardjones.c*:      simulation of molecular dynamics
+2. *global_ljones.c*:     global variables and parameters
+3. *sub_lj.c*:            drawing and initialization routines
+4. *sub_hashgrid.c*:      hashgrid manipulation routines
 
 - Create subfolder `tif_ljones`
 - Customize constants at beginning of .c file
