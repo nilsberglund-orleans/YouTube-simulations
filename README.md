@@ -61,7 +61,7 @@ in the shell before running the program
 16. *sub_rde.c*:          additional routines for rde.c
 17. *sub_wave_rde_3d.c*:  additional 3d drawing routines for rde.c
 
-- Create subfolders `tif_wave`, `tif_heat`, `tif_schrod`
+- Create subfolders `tif_wave`, `tif_heat`, `tif_bz`, `tif_schrod`
 - Customize constants at beginning of .c file
 - Compile with 
 
