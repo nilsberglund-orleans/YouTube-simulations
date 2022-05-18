@@ -783,7 +783,7 @@ void animation()
             thermostat_on = thermostat_schedule(i);
             printf("Termostat: %i\n", thermostat_on);
         }
-        if ((DEACTIVATE_SEGMENT)&&(i > INITIAL_TIME + SEGMENT_DEACTIVATION_TIME))
+        if ((ADD_FIXED_SEGMENTS)&&(DEACTIVATE_SEGMENT)&&(i > INITIAL_TIME + SEGMENT_DEACTIVATION_TIME))
             segment[nsegments-1].active = 0;
         
         blank();
