@@ -14,7 +14,7 @@
 #define NMAXCIRCLES 20000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define MAXNEIGH 20         /* max number of neighbours kept in memory */
 #define NMAXOBSTACLES 100   /* max number of obstacles */
-#define NMAXSEGMENTS 100    /* max number of repelling segments */
+#define NMAXSEGMENTS 1000    /* max number of repelling segments */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -30,6 +30,8 @@
 #define C_GOLDEN_SPIRAL 11  /* spiral pattern based on golden mean */
 #define C_SQUARE_HEX 12     /* alternating between square and hexagonal/triangular */
 
+#define C_POOL_TABLE 20     /* pool table initial position */
+
 #define C_ONE 97            /* one single circle, as for Sinai */
 #define C_TWO 98            /* two concentric circles of different type */
 #define C_NOTHING 99        /* no circle at all, for comparisons */
@@ -38,6 +40,7 @@
 #define O_CORNERS 0         /* obstacles in the corners (for Boy b.c.) */
 #define O_GALTON_BOARD 1    /* Galton board pattern */
 #define O_GENUS_TWO 2       /* obstacles in corners of L-shape domeain (for genus 2 b.c.) */
+#define O_POOL_TABLE 3      /* obstacles around pockets of pool table */
 
 /* pattern of additional repelling segments */
 #define S_RECTANGLE 0       /* segments forming a rectangle */
@@ -46,6 +49,9 @@
 #define S_PENTA 3           /* segments forming a pentagon with 3 angles of 120° and 2 right angles */
 #define S_CENTRIFUGE 4      /* segments forming "centrifuge" (polygon with radial segments) */
 #define S_POLY_ELLIPSE 5    /* segments forming a polygonal approximation of an ellipse */
+#define S_POOL_TABLE 6      /* pool table with pockets */
+#define S_CENTRIFUGE_RND 7  /* segments forming centrifuge with more rounded bins */
+#define S_CENTRIFUGE_LEAKY 8  /* segments forming centrifuge with rounded bins and holes */
 
 /* particle interaction */
 
@@ -74,6 +80,7 @@
 #define BC_SCREEN_BINS 12   /* harmonic boundary conditions outside screen area plus "bins" (for Galton board) */
 #define BC_BOY 13           /* Boy surface/projective plane (periodic with twisted horizontal and vertical parts) */
 #define BC_GENUS_TWO 14     /* surface of genus 2, obtained by identifying opposite sides of an L shape */
+#define BC_ABSORBING 20     /* "no-return" boundary conditions outside screen area */
 
 /* Regions for partial thermostat couplings */
 
@@ -188,6 +195,7 @@ typedef struct
     double c;                   /* constant term in cartesian eq nx*x + ny*y = c */
     double length;              /* length of segment */
     short int concave;          /* corner is concave, to add extra repelling force */
+    short int cycle;            /* set to 1 if (x2, y2) is equal to (x1, y1) of next segment */
     double angle1, angle2;      /* angles in which concave corners repel */
     short int active;           /* segment is active */
     double x01, x02, y01, y02;  /* initial values of extremities, in case of rotation/translation */

@@ -56,13 +56,13 @@
 
 #define INITXMIN -0.7
 #define INITXMAX 0.7	/* x interval for initial condition */
-#define INITYMIN 0.1
-#define INITYMAX 0.6	/* y interval for initial condition */
+#define INITYMIN -0.5
+#define INITYMAX 0.5	/* y interval for initial condition */
 
-#define BCXMIN -0.7
-#define BCXMAX 0.7	/* x interval for boundary condition */
-#define BCYMIN -0.85
-#define BCYMAX 0.85	/* y interval for boundary condition */
+#define BCXMIN -2.0
+#define BCXMAX 5.0	/* x interval for boundary condition */
+#define BCYMIN -1.6
+#define BCYMAX 1.6	/* y interval for boundary condition */
 
 #define OBSXMIN -2.0
 #define OBSXMAX 2.0     /* x interval for motion of obstacle */
@@ -73,10 +73,10 @@
 #define OBSTACLE_PATTERN 2  /* pattern of obstacles, see list in global_ljones.c */
 
 #define ADD_FIXED_SEGMENTS 1    /* set to 1 to add fixed segments as obstacles */
-#define SEGMENT_PATTERN 2   /* pattern of repelling segments, see list in global_ljones.c */
+#define SEGMENT_PATTERN 5   /* pattern of repelling segments, see list in global_ljones.c */
 
 #define TWO_TYPES 0         /* set to 1 to have two types of particles */
-#define TPYE_PROPORTION 0.8 /* proportion of particles of first type */
+#define TPYE_PROPORTION 0.7 /* proportion of particles of first type */
 #define SYMMETRIZE_FORCE 1  /* set to 1 to symmetrize two-particle interaction, only needed if particles are not all the same */
 #define CENTER_PX 0         /* set to 1 to center horizontal momentum */
 #define CENTER_PY 0         /* set to 1 to center vertical momentum */
@@ -89,14 +89,14 @@
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 100        /* number of points for Poisson C_RAND_POISSON arrangement */
-#define PDISC_DISTANCE 2.75  /* minimal distance in Poisson disc process, controls density of particles */
+#define PDISC_DISTANCE 3.33  /* minimal distance in Poisson disc process, controls density of particles */
 #define PDISC_CANDIDATES 100 /* number of candidates in construction of Poisson disc process */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 2.0	    /* parameter controlling the dimensions of domain */
-#define MU 0.013  	    /* parameter controlling radius of particles */
-#define MU_B 0.0254         /* parameter controlling radius of particles of second type */
-#define NPOLY 3             /* number of sides of polygon */
+#define LAMBDA 0.7	    /* parameter controlling the dimensions of domain */
+#define MU 0.012  	    /* parameter controlling radius of particles */
+#define MU_B 0.018         /* parameter controlling radius of particles of second type */
+#define NPOLY 18             /* number of sides of polygon */
 #define APOLY 0.666666666   /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 4            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
@@ -115,10 +115,10 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 5500      /* number of frames of movie */
-#define NVID 650         /* number of iterations between images displayed on screen */
+#define NSTEPS 2000      /* number of frames of movie */
+#define NVID 500         /* number of iterations between images displayed on screen */
 #define NSEG 250         /* number of segments of boundary */
-#define INITIAL_TIME 10    /* time after which to start saving frames */
+#define INITIAL_TIME 50    /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 1    /* width of particle boundary */
 #define LINK_WIDTH 2        /* width of links between particles */
 #define CONTAINER_WIDTH 4   /* width of container boundary */
@@ -132,7 +132,7 @@
 
 /* Boundary conditions, see list in global_ljones.c */
 
-#define BOUNDARY_COND 0
+#define BOUNDARY_COND 3
 
 /* Plot type, see list in global_ljones.c  */
 
@@ -167,19 +167,19 @@
 #define PARTICLE_HUE_MIN 359.0      /* color of original particle */
 #define PARTICLE_HUE_MAX 0.0        /* color of saturated particle */
 #define PARTICLE_EMAX 2.0e2           /* energy of particle with hottest color */
-#define HUE_TYPE0 280.0     /* hue of particles of type 0 */
-#define HUE_TYPE1 135.0      /* hue of particles of type 1 */
-#define HUE_TYPE2 70.0      /* hue of particles of type 1 */
-#define HUE_TYPE3 210.0      /* hue of particles of type 1 */
+#define HUE_TYPE0 45.0     /* hue of particles of type 0 */
+#define HUE_TYPE1 300.0     /* hue of particles of type 1 */
+#define HUE_TYPE2 300.0      /* hue of particles of type 2 */
+#define HUE_TYPE3 300.0     /* hue of particles of type 3 */
 
 #define RANDOM_RADIUS 0     /* set to 1 for random circle radius */
-#define DT_PARTICLE 5.0e-7    /* time step for particle displacement */
+#define DT_PARTICLE 2.0e-6    /* time step for particle displacement */
 #define KREPEL 12.0          /* constant in repelling force between particles */
-#define EQUILIBRIUM_DIST 4.0    /* Lennard-Jones equilibrium distance */
-#define EQUILIBRIUM_DIST_B 5.0  /* Lennard-Jones equilibrium distance for second type of particle */
+#define EQUILIBRIUM_DIST 4.5    /* Lennard-Jones equilibrium distance */
+#define EQUILIBRIUM_DIST_B 3.5  /* Lennard-Jones equilibrium distance for second type of particle */
 #define REPEL_RADIUS 20.0    /* radius in which repelling force acts (in units of particle radius) */
-#define DAMPING 0.0     /* damping coefficient of particles */
-#define PARTICLE_MASS 1.0   /* mass of particle of radius MU */
+#define DAMPING 1.0e-1     /* damping coefficient of particles */
+#define PARTICLE_MASS 4.0   /* mass of particle of radius MU */
 #define PARTICLE_MASS_B 1.0   /* mass of particle of radius MU */
 #define PARTICLE_INERTIA_MOMENT 0.2     /* moment of inertia of particle */
 #define PARTICLE_INERTIA_MOMENT_B 0.02     /* moment of inertia of second type of particle */
@@ -189,12 +189,12 @@
 #define THERMOSTAT 1        /* set to 1 to switch on thermostat */
 #define VARY_THERMOSTAT 0   /* set to 1 for time-dependent thermostat schedule */
 #define SIGMA 5.0           /* noise intensity in thermostat */
-#define BETA 0.01           /* initial inverse temperature */
+#define BETA 0.02           /* initial inverse temperature */
 #define MU_XI 0.01           /* friction constant in thermostat */
-#define KSPRING_BOUNDARY 5.0e9    /* confining harmonic potential outside simulation region */
-#define KSPRING_OBSTACLE 5.0e9    /* harmonic potential of obstacles */
-#define NBH_DIST_FACTOR 4.5       /* radius in which to count neighbours */
-#define GRAVITY 10000.0            /* gravity acting on all particles */
+#define KSPRING_BOUNDARY 1.0e11    /* confining harmonic potential outside simulation region */
+#define KSPRING_OBSTACLE 1.0e11    /* harmonic potential of obstacles */
+#define NBH_DIST_FACTOR 4.0       /* radius in which to count neighbours */
+#define GRAVITY 0.0            /* gravity acting on all particles */
 #define INCREASE_GRAVITY 0     /* set to 1 to increase gravity during the simulation */
 #define GRAVITY_FACTOR 100.0   /* factor by which to increase gravity */
 #define GRAVITY_INITIAL_TIME 500    /* time at start of simulation with constant gravity */
@@ -213,11 +213,11 @@
 #define SPIN_RANGE_B 5.0     /* range of spin-spin interaction for second type of particle */
 #define QUADRUPOLE_RATIO 0.6  /* anisotropy in quadrupole potential */ 
 
-#define INCREASE_BETA 0  /* set to 1 to increase BETA during simulation */
-#define BETA_FACTOR 20.0   /* factor by which to change BETA during simulation */
+#define INCREASE_BETA 1  /* set to 1 to increase BETA during simulation */
+#define BETA_FACTOR 0.025   /* factor by which to change BETA during simulation */
 #define N_TOSCILLATIONS 1.5   /* number of temperature oscillations in BETA schedule */
 #define NO_OSCILLATION 1        /* set to 1 to have exponential BETA change only */
-#define FINAL_CONSTANT_PHASE 2000  /* final phase in which temperature is constant */
+#define FINAL_CONSTANT_PHASE 1000  /* final phase in which temperature is constant */
 
 #define DECREASE_CONTAINER_SIZE 0   /* set to 1 to decrease size of container */
 #define SYMMETRIC_DECREASE 0        /* set tp 1 to decrease container symmetrically */
@@ -261,7 +261,7 @@
 #define TRACER_PARTICLE_MASS 4.0    /* relative mass of tracer particle */
 #define TRAJECTORY_WIDTH 3      /* width of tracer particle trajectory */
 
-#define ROTATE_BOUNDARY 1           /* set to 1 to rotate the repelling segments */
+#define ROTATE_BOUNDARY 0           /* set to 1 to rotate the repelling segments */
 #define SMOOTH_ROTATION 1           /* set to 1 to update segments at each time step (rather than at each movie frame) */
 #define PERIOD_ROTATE_BOUNDARY 2500 /* period of rotating boundary */
 #define ROTATE_INITIAL_TIME 0       /* initial time without rotation */
@@ -269,7 +269,7 @@
 #define PRINT_OMEGA 0               /* set to 1 to print angular speed */
 #define PRINT_PARTICLE_SPEEDS 0     /* set to 1 to print average speeds/momenta of particles */
 
-#define MOVE_BOUNDARY 0        /* set to 1 to move repelling segments, due to force from particles */
+#define MOVE_BOUNDARY 1        /* set to 1 to move repelling segments, due to force from particles */
 #define SEGMENTS_MASS 100.0     /* mass of collection of segments */
 #define DEACTIVATE_SEGMENT 1    /* set to 1 to deactivate last segment after a certain time */
 #define SEGMENT_DEACTIVATION_TIME 1000   /* time at which to deactivate last segment */
@@ -283,7 +283,7 @@
 #define REACTION_PROB 0.03      /* probability controlling reaction term */ 
 
 #define PRINT_PARTICLE_NUMBER 0     /* set to 1 to print total number of particles */
-#define PRINT_LEFT 0        /* set to 1 to print certain parameters at the top left instead of right */
+#define PRINT_LEFT 1        /* set to 1 to print certain parameters at the top left instead of right */
 
 #define EHRENFEST_COPY 0    /* set to 1 to add equal number of larger particles (for Ehrenfest model) */
 
@@ -296,12 +296,12 @@
 #define WALL_TIME 500       /* time during which to keep wall */
 
 #define FLOOR_FORCE 1      /* set to 1 to limit force on particle to FMAX */
-#define FMAX 1.0e9         /* maximal force */
+#define FMAX 1.0e12         /* maximal force */
 #define FLOOR_OMEGA 1      /* set to 1 to limit particle momentum to PMAX */
 #define PMAX 1000.0        /* maximal force */
 
-#define HASHX 40   /* size of hashgrid in x direction */
-#define HASHY 20   /* size of hashgrid in y direction */
+#define HASHX 100   /* size of hashgrid in x direction */
+#define HASHY 40   /* size of hashgrid in y direction */
 #define HASHMAX 100  /* maximal number of particles per hashgrid cell */
 #define HASHGRID_PADDING 0.1    /* padding of hashgrid outside simulation window */
 
@@ -783,7 +783,7 @@ void animation()
             thermostat_on = thermostat_schedule(i);
             printf("Termostat: %i\n", thermostat_on);
         }
-        if ((ADD_FIXED_SEGMENTS)&&(DEACTIVATE_SEGMENT)&&(i > INITIAL_TIME + SEGMENT_DEACTIVATION_TIME))
+        if ((DEACTIVATE_SEGMENT)&&(i > INITIAL_TIME + SEGMENT_DEACTIVATION_TIME))
             segment[nsegments-1].active = 0;
         
         blank();

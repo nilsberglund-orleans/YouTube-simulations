@@ -20,6 +20,7 @@ int bc_grouped(int bc)
         case (BC_SCREEN_BINS): return(0);
         case (BC_BOY): return(3);
         case (BC_GENUS_TWO): return(4);
+        case (BC_ABSORBING): return(0);
         default: 
         {
             printf("Warning: Hashgrid will not be properly initialised, update bc_grouped()\n\n");
@@ -378,7 +379,7 @@ void update_hashgrid(t_particle* particle, t_hashgrid* hashgrid, int verbose)
         
     /* place each particle in hash grid */
     for (k=0; k<ncircles; k++)
-//         if (circleactive[k])
+        if (particle[k].active)
         {
 //             printf("placing circle %i\t", k);
             hashcell = hash_cell(particle[k].xc, particle[k].yc);
