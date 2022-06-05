@@ -286,7 +286,7 @@ double observer[3] = {8.0, 8.0, 8.0};    /* location of observer for REP_PROJ_3D
 #define VMAX 10.0       /* max value of wave amplitude */
 
 #define REFRESH_B (ZPLOT_B != ZPLOT)||(CPLOT_B != CPLOT)    /* to save computing time, to be improved */
-#define COMPUTE_WRAP_ANGLE ((WRAP_ANGLE)&&((cplot == Z_ANGLE_GRADIENT)||(Z_ANGLE_GRADIENTX)||(cplot == Z_ARGUMENT)||(Z_ANGLE_GRADIENTX)))
+#define COMPUTE_WRAP_ANGLE ((WRAP_ANGLE)&&((cplot == Z_ANGLE_GRADIENT)||(cplot == Z_ANGLE_GRADIENTX)||(cplot == Z_ARGUMENT)||(cplot == Z_ANGLE_GRADIENTX)))
 
 #include "global_pdes.c"
 #include "sub_wave.c"
