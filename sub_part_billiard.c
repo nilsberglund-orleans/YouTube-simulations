@@ -276,6 +276,14 @@ void erase_rectangle_outside(double h, double s, double l)
     glEnd();
 }
 
+void draw_line(double x1, double y1, double x2, double y2)
+{
+    glBegin(GL_LINE_STRIP);
+    glVertex2d(x1, y1);
+    glVertex2d(x2, y2);
+    glEnd();    
+}
+
 void draw_circle(double x, double y, double r, int nseg)
 {
     int i;
@@ -1323,21 +1331,32 @@ void draw_billiard()      /* draws the billiard boundary */
             }
             if (FOCI)
             {
-                if (POLYLINE_PATTERN == P_TOKARSKY)
-                {
-                    glLineWidth(2);
-                    rgb[0] = 1.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
-                    draw_colored_circle(-0.95, 0.0, r, NSEG, rgb);
-                    rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
-                    draw_colored_circle(0.95, 0.0, r, NSEG, rgb);
-                }
-                else if (POLYLINE_PATTERN == P_TOKA_PRIME)
-                {
-                    glLineWidth(2);
-                    rgb[0] = 1.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
-                    draw_colored_circle(-polyline[84].x1, polyline[84].y1, r, NSEG, rgb);
-                    rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
-                    draw_colored_circle(polyline[84].x1, polyline[84].y1, r, NSEG, rgb);
+                switch (POLYLINE_PATTERN) {
+                    case (P_TOKARSKY):
+                    {
+                        glLineWidth(2);
+                        rgb[0] = 1.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+                        draw_colored_circle(-0.95, 0.0, r, NSEG, rgb);
+                        rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
+                        draw_colored_circle(0.95, 0.0, r, NSEG, rgb);
+                        break;
+                    }
+                    case (P_TOKA_PRIME):
+                    {
+                        glLineWidth(2);
+                        rgb[0] = 1.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+                        draw_colored_circle(-polyline[84].x1, polyline[84].y1, r, NSEG, rgb);
+                        rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
+                        draw_colored_circle(polyline[84].x1, polyline[84].y1, r, NSEG, rgb);
+                        break;
+                    }
+                    case (P_TOKA_NONSELF):
+                    {
+                        glLineWidth(2);
+                        rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
+                        draw_colored_circle(0.0, 0.0, r, NSEG, rgb);
+                        break;
+                    }
                 }
             }
             if (ABSORBING_CIRCLES)
@@ -6083,8 +6102,53 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
                 circles[i].radius = MU;
                 circles[i].active = 1;
             }
-    
+            break;
+        }
+        case (P_TOKA_NONSELF):
+        {
+            nsides = 12;
+            ncircles = 12;
             
+            polyline[0].x1 = 0.0;    polyline[0].y1 = 2.0;       polyline[0].angle = 3.0*PID;
+            polyline[1].x1 = 0.0;    polyline[1].y1 = 1.0;       polyline[1].angle = 0.0;
+            polyline[2].x1 = 1.0;    polyline[2].y1 = 1.0;       polyline[2].angle = 3.5*PID;
+            polyline[3].x1 = 2.0;    polyline[3].y1 = 0.0;       polyline[3].angle = PI;
+            polyline[4].x1 = 1.0;    polyline[4].y1 = 0.0;       polyline[4].angle = 3.0*PID;
+            polyline[5].x1 = 1.0;    polyline[5].y1 = -1.0;      polyline[5].angle = 2.5*PID;
+            polyline[6].x1 = 0.0;    polyline[6].y1 = -2.0;      polyline[6].angle = PID;
+            polyline[7].x1 = 0.0;    polyline[7].y1 = -1.0;      polyline[7].angle = PI;
+            polyline[8].x1 = -1.0;   polyline[8].y1 = -1.0;      polyline[8].angle = 1.5*PID;
+            polyline[9].x1 = -2.0;   polyline[9].y1 = 0.0;       polyline[9].angle = 0.0;
+            polyline[10].x1 = -1.0;  polyline[10].y1 = 0.0;      polyline[10].angle = PID;
+            polyline[11].x1 = -1.0;  polyline[11].y1 = 1.0;     polyline[11].angle = 0.5*PID;
+            
+            ratio = (YMAX - YMIN)/4.5;
+            for (i=0; i<nsides; i++)
+            {
+                polyline[i].x1 = ratio*(polyline[i].x1);
+                polyline[i].y1 = ratio*(polyline[i].y1);
+            }
+                
+            for (i=0; i<nsides; i++) if (i < nsides-1) 
+            {   
+                polyline[i].x2 = polyline[i+1].x1;
+                polyline[i].y2 = polyline[i+1].y1;
+            }
+            
+            polyline[nsides-1].x2 = polyline[0].x1;
+            polyline[nsides-1].y2 = polyline[0].y1;
+            
+            for (i=0; i<nsides; i++) 
+                polyline[i].length = module2(polyline[i].x2 - polyline[i].x1, polyline[i].y2 - polyline[i].y1);
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].xc = polyline[i].x1;
+                circles[i].yc = polyline[i].y1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
+            }
+            break;
         }
     }
 }

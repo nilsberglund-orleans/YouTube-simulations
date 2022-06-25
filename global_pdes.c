@@ -53,9 +53,12 @@
 #define D_STAR 42               /* star shape */
 #define D_FRESNEL 43            /* Fresnel lens */
 #define D_NOISEPANEL 44         /* zigzag noise insulating panel */
+#define D_NOISEPANEL_RECT 441   /* comparison between zigzag noise insulating panel and flat walls */
 #define D_DOUBLE_FRESNEL 45     /* two facing Fresnel lenses */
 #define D_QRD 46                /* quadratic resonance diffuser */
+#define D_QRD_ASYM 461          /* asymmetric quadratic resonance diffuser */
 #define D_CIRCLE_SEGMENT 47     /* lens-shaped circular segment */
+#define D_GROOVE 48             /* groove array supposed to induce polaritons */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
@@ -96,7 +99,8 @@
 #define D_VONKOCH_HEATED 27 /* von Koch snowflake in larger circle */
 
 /* Variable index of refraction */
-#define IOR_MANDELBROT 1    /* index of refraction depends on escape time in Mandelbrot set */
+#define IOR_MANDELBROT 1      /* index of refraction depends on escape time in Mandelbrot set (log) */
+#define IOR_MANDELBROT_LIN 100    /* index of refraction depends on escape time in Mandelbrot set (linear) */
 
 /* Boundary conditions */
 
@@ -153,6 +157,8 @@
 #define COL_TWILIGHT_SHIFTED 18  /* Shifted twilight color palette */
 
 #define COL_TURBO_CYCLIC 101    /* TURBO color palette (by Anton Mikhailov) corrected to be cyclic, beta */
+
+#define NPWIDTH 0.02      /* width of noise panel separation */
 
 
 typedef struct

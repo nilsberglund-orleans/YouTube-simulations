@@ -52,6 +52,9 @@
 #define S_POOL_TABLE 6      /* pool table with pockets */
 #define S_CENTRIFUGE_RND 7  /* segments forming centrifuge with more rounded bins */
 #define S_CENTRIFUGE_LEAKY 8  /* segments forming centrifuge with rounded bins and holes */
+#define S_CIRCLE_EXT 9      /* segments forming a repelling cicle */
+#define S_ROCKET_NOZZLE 10  /* segments forming a rocket bell-shpaed nozzle */
+#define S_TWO_CIRCLES_EXT 11  /* segments forming two repelling cicle */
 
 /* particle interaction */
 
@@ -86,6 +89,12 @@
 
 #define TH_VERTICAL 0       /* only particles at the right of x = PARTIAL_THERMO_SHIFT are coupled */
 #define TH_INSEGMENT 1      /* only particles in region defined by segments are coupled */
+#define TH_INBOX 2          /* only particles in a given box are coupled */
+
+/* Gravity schedules */
+
+#define G_INCREASE_RELEASE 1    /* slow increase and instant release */
+#define G_INCREASE_DECREASE 2   /* slow increase an decrease */
 
 /* Plot types */
 
@@ -196,6 +205,7 @@ typedef struct
     double length;              /* length of segment */
     short int concave;          /* corner is concave, to add extra repelling force */
     short int cycle;            /* set to 1 if (x2, y2) is equal to (x1, y1) of next segment */
+    short int group;            /* group to which segment belongs (for several obstacles) */
     double angle1, angle2;      /* angles in which concave corners repel */
     short int active;           /* segment is active */
     double x01, x02, y01, y02;  /* initial values of extremities, in case of rotation/translation */

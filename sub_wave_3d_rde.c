@@ -21,7 +21,7 @@ void xyz_to_xy(double x, double y, double z, double xy_out[2])
     static double n2, m2, d, sm2, sn2, v[3], h[2], plane_ratio = 0.5;
     static int first = 1;
     
-    if ((first)&&(REPRESENTATION_3D == REP_PROJ_3D))
+    if (((first)&&(REPRESENTATION_3D == REP_PROJ_3D))||(reset_view))
     {
         m2 = observer[0]*observer[0] + observer[1]*observer[1];
         n2 = m2 + observer[2]*observer[2];
@@ -34,8 +34,9 @@ void xyz_to_xy(double x, double y, double z, double xy_out[2])
         v[1] = -observer[1]*observer[2]/(sn2*sm2);
         v[2] = m2/(sn2*sm2);
         first = 0;
-        printf("h = (%.3lg, %.3lg)\n", h[0], h[1]);
-        printf("v = (%.3lg, %.3lg, %.3lg)\n", v[0], v[1], v[2]);
+        reset_view = 0;
+//         printf("h = (%.3lg, %.3lg)\n", h[0], h[1]);
+//         printf("v = (%.3lg, %.3lg, %.3lg)\n", v[0], v[1], v[2]);
     }
     
     switch (REPRESENTATION_3D) {
@@ -154,14 +155,24 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
     glEnable(GL_LINE_SMOOTH);
 
     switch (B_DOMAIN) {
+        case (D_RECTANGLE):
+        {
+            glBegin(GL_LINE_LOOP);
+            draw_vertex_x_y_z(LAMBDA, -1.0, 0.0);
+            draw_vertex_x_y_z(LAMBDA, 1.0, 0.0);
+            draw_vertex_x_y_z(-LAMBDA, 1.0, 0.0);
+            draw_vertex_x_y_z(-LAMBDA, -1.0, 0.0);
+            glEnd();
+            break;
+        }
         case (D_ELLIPSE):
         {
             glBegin(GL_LINE_LOOP);
             for (i=0; i<=NSEG; i++)
             {
                 phi = (double)i*DPI/(double)NSEG;
-                x = LAMBDA*cos(phi);
-                y = sin(phi);
+                x = 1.05*LAMBDA*cos(phi);
+                y = 1.05*sin(phi);
                 draw_vertex_x_y_z(x, y, 0.0);
             }
             glEnd ();
@@ -203,6 +214,19 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
         case (D_SINAI):
         {
             draw_circle_3d(0.0, 0.0, LAMBDA, NSEG);
+            break;
+        }
+        case (D_POLYGON):
+        {
+            omega = DPI/((double)NPOLY);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NPOLY; i++)
+            {
+                x = 1.0075*cos(i*omega + APOLY*PID);
+                y = 1.0075*sin(i*omega + APOLY*PID);
+                draw_vertex_x_y_z(x, y, 0.0);
+            }
+            glEnd ();
             break;
         }
         case (D_YOUNG):
@@ -281,6 +305,14 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
                 y = (LAMBDA + 0.01)*sin(phi);
                 draw_vertex_x_y_z(x, y, 0.0);
             }
+            phi = PI - alpha;
+            x = 1.0 + (LAMBDA + 0.01)*cos(phi);
+            y = 0.01 + (LAMBDA + 0.01)*sin(phi);
+            draw_vertex_x_y_z(x, y, 0.0);
+            phi = alpha;
+            x = -1.0 + (LAMBDA + 0.01)*cos(phi);
+            y = 0.01 + (LAMBDA + 0.01)*sin(phi);
+            draw_vertex_x_y_z(x, y, 0.0);
             for (i=0; i<=NSEG; i++)
             {
                 phi = alpha + (double)i*dphi;
@@ -771,6 +803,15 @@ void draw_billiard_3d_front(int fade, double fade_value)
     glEnable(GL_LINE_SMOOTH);
 
     switch (B_DOMAIN) {
+        case (D_RECTANGLE):
+        {
+            glBegin(GL_LINE_STRIP);
+            draw_vertex_x_y_z(LAMBDA, -1.0, 0.0);
+            draw_vertex_x_y_z(LAMBDA, 1.0, 0.0);
+            draw_vertex_x_y_z(-LAMBDA, 1.0, 0.0);
+            glEnd();
+            break;
+        }
         case (D_STADIUM):
         {
             glBegin(GL_LINE_STRIP);
@@ -789,6 +830,19 @@ void draw_billiard_3d_front(int fade, double fade_value)
                 draw_vertex_visible(x, y, 0.0);
             }
             glEnd();
+            break;
+        }
+        case (D_POLYGON):
+        {
+            omega = DPI/((double)NPOLY);
+            glBegin(GL_LINE_STRIP);
+            for (i=0; i<=NPOLY; i++)
+            {
+                x = cos(i*omega + APOLY*PID);
+                y = sin(i*omega + APOLY*PID);
+                draw_vertex_visible(x, y, 0.0);
+            }
+            glEnd ();
             break;
         }
         case (D_YOUNG):
@@ -1399,7 +1453,14 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
             case (Z_ARGUMENT):
             {
                 value = dy_phase*(double)(j - jmin);
+//                 hsl_to_rgb_palette(value, 0.9, 0.5, rgb, palette);
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (Z_REALPART):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
                 break;
             }
        }

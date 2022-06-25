@@ -41,6 +41,7 @@
 #include <sys/types.h>
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 #include <omp.h>
+#include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
 #define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
@@ -49,17 +50,17 @@
 
 #define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1000  /* window height */
-// #define NX 1920          /* number of grid points on x axis */
-// #define NY 1000          /* number of grid points on y axis */
-#define NX 3840          /* number of grid points on x axis */
-#define NY 2000          /* number of grid points on y axis */
+#define NX 1920          /* number of grid points on x axis */
+#define NY 1000          /* number of grid points on y axis */
+// #define NX 3840          /* number of grid points on x axis */
+// #define NY 2000          /* number of grid points on y axis */
 
-#define XMIN -1.25
-#define XMAX 2.75	/* x interval  */
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval  */
 #define YMIN -1.041666667
 #define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
 
-#define HIGHRES 1        /* set to 1 if resolution of grid is double that of displayed image */
+#define HIGHRES 0        /* set to 1 if resolution of grid is double that of displayed image */
 
 // #define WINWIDTH 	1280  /* window width */
 // #define WINHEIGHT 	720   /* window height */
@@ -69,8 +70,8 @@
 // #define NX 2560          /* number of grid points on x axis */
 // #define NY 1440          /* number of grid points on y axis */
 // 
-// #define XMIN -1.25
-// #define XMAX 2.75	/* x interval  */
+// #define XMIN -2.0
+// #define XMAX 2.0	/* x interval  */
 // #define YMIN -1.125
 // #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
@@ -159,6 +160,7 @@
 #define SLEEP2  1        /* final sleeping time */
 #define MID_FRAMES 20    /* number of still frames between parts of two-part movie */
 #define END_FRAMES 100    /* number of still frames at end of movie */
+#define FADE 1           /* set to 1 to fade at end of movie */
 
 /* Parameters of initial condition */
 
@@ -169,7 +171,7 @@
 /* Plot type, see list in global_pdes.c  */
 
 #define PLOT 0
-// #define PLOT 3
+// #define PLOT 0
 // #define PLOT 1
 
 #define PLOT_B 3        /* plot type for second movie */
@@ -491,18 +493,30 @@ void draw_color_bar(int plot, double range)
 //     else draw_color_scheme(1.7, YMIN + 0.25, 1.9, YMAX - 0.25, plot, -range, range);
 }
 
-void draw_color_bar_palette(int plot, double range, int palette)
+// void draw_color_bar_palette(int plot, double range, int palette)
+// {
+//     if (ROTATE_COLOR_SCHEME) draw_color_scheme_palette(-1.0, -0.8, XMAX - 0.1, -1.0, plot, -range, range, palette);
+//     else draw_color_scheme_palette(XMAX - 0.3, YMIN + 0.1, XMAX - 0.1, YMAX - 0.1, plot, -range, range, palette);
+// }
+
+void draw_color_bar_palette(int plot, double range, int palette, int fade, double fade_value)
 {
-    if (ROTATE_COLOR_SCHEME) draw_color_scheme_palette(-1.0, -0.8, XMAX - 0.1, -1.0, plot, -range, range, palette);
-    else draw_color_scheme_palette(XMAX - 0.3, YMIN + 0.1, XMAX - 0.1, YMAX - 0.1, plot, -range, range, palette);
+    double width = 0.14;
+//     double width = 0.2;
+    
+    if (ROTATE_COLOR_SCHEME) 
+        draw_color_scheme_palette_fade(-1.0, -0.8, XMAX - 0.1, -1.0, plot, -range, range, palette, fade, fade_value);
+    else 
+        draw_color_scheme_palette_fade(XMAX - 1.5*width, YMIN + 0.1, XMAX - 0.5*width, YMAX - 0.1, plot, -range, range, palette, fade, fade_value);
 }
+
 
 void animation()
 {
-    double time, scale, ratio, startleft[2], startright[2], sign, r2, xy[2]; 
+    double time, scale, ratio, startleft[2], startright[2], sign, r2, xy[2], fade_value; 
     double *phi[NX], *psi[NX], *phi_tmp[NX], *psi_tmp[NX], *total_energy[NX], *color_scale[NX];
     short int *xy_in[NX];
-    int i, j, s, sample_left[2], sample_right[2], period = 0;
+    int i, j, s, sample_left[2], sample_right[2], period = 0, fade;
     static int counter = 0;
     long int wave_value;
     
@@ -569,6 +583,9 @@ void animation()
 //     printf("xleft = (%.3f, %.3f) xright = (%.3f, %.3f)\n", xin_left, yin_left, xin_right, yin_right);
     
     init_wave_flat(phi, psi, xy_in);
+
+//     init_circular_wave(sqrt(LAMBDA*LAMBDA - 1.0), 0.0, phi, psi, xy_in);
+//     init_circular_wave(0.0, 0.0, phi, psi, xy_in);
     
 //     init_wave_plus(LAMBDA - 0.3*MU, 0.5*MU, phi, psi, xy_in);
 //     init_wave(LAMBDA - 0.3*MU, 0.5*MU, phi, psi, xy_in);
@@ -607,12 +624,12 @@ void animation()
     glColor3f(0.0, 0.0, 0.0);
 //     draw_wave(phi, psi, xy_in, 1.0, 0, PLOT);
     if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, 1.0, 0, PLOT, COLOR_PALETTE);
-    else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, 1.0, 0, PLOT, COLOR_PALETTE);
+    else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, 1.0, 0, PLOT, COLOR_PALETTE, 0, 1.0);
 
-    draw_billiard();
+    draw_billiard(0, 1.0);
     
     
-    if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE);
+    if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, fade, fade_value);
 
     glutSwapBuffers();
 
@@ -634,7 +651,7 @@ void animation()
 
 //         draw_wave(phi, psi, xy_in, scale, i, PLOT);
         if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, i, PLOT, COLOR_PALETTE);
-        else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, i, PLOT, COLOR_PALETTE);
+        else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, i, PLOT, COLOR_PALETTE, 0, 1.0);
         for (j=0; j<NVID; j++) 
         {
             evolve_wave(phi, psi, phi_tmp, psi_tmp, xy_in);
@@ -650,9 +667,9 @@ void animation()
 //             if (i % 10 == 9) oscillate_linear_wave(0.2*scale, 0.15*(double)(i*NVID + j), -1.5, YMIN, -1.5, YMAX, phi, psi);
         }
         
-        draw_billiard();
+        draw_billiard(0, 1.0);
         
-        if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE); 
+        if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, fade, fade_value); 
         
         /* add oscillating waves */
         if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == OSCILLATING_SOURCE_PERIOD - 1))
@@ -673,9 +690,9 @@ void animation()
             {
 //                 draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
                 if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, i, PLOT_B, COLOR_PALETTE_B);
-                else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, i, PLOT_B, COLOR_PALETTE_B);
-                draw_billiard();
-                if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B);  
+                else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, i, PLOT_B, COLOR_PALETTE_B, 0, 1.0);
+                draw_billiard(0, 1.0);
+                if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 0, 1.0);  
                 glutSwapBuffers();
                 save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter);
 //                 save_frame_counter(NSTEPS + 21 + counter);
@@ -700,22 +717,42 @@ void animation()
         {
 //             draw_wave(phi, psi, xy_in, scale, i, PLOT);
             if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE);
-            else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE);
-            draw_billiard();
-            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE);   
+            else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE, 0, 1.0);
+            draw_billiard(0, 1.0);
+            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, 0, 1.0);   
             glutSwapBuffers();
         }
-        for (i=0; i<MID_FRAMES; i++) save_frame();
+        if (!FADE) for (i=0; i<MID_FRAMES; i++) save_frame();
+        else for (i=0; i<MID_FRAMES; i++) 
+        {
+            fade_value = 1.0 - (double)i/(double)MID_FRAMES;
+            if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE);
+            else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE, 1, fade_value);
+            draw_billiard(1, fade_value);
+            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, 1, fade_value);   
+            glutSwapBuffers();
+            save_frame_counter(NSTEPS + i + 1);
+        }
         if (DOUBLE_MOVIE) 
         {
 //             draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
             if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B);
-            else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B);
-            draw_billiard();
-            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B); 
+            else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B, 0, 1.0);
+            draw_billiard(0, 1.0);
+            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 0, 1.0); 
             glutSwapBuffers();
         }
-        for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
+        if (!FADE) for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
+        else for (i=0; i<END_FRAMES; i++) 
+        {
+            fade_value = 1.0 - (double)i/(double)END_FRAMES;
+            if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B);
+            else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B, 1, fade_value);
+            draw_billiard(1, fade_value);
+            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 1, fade_value);   
+            glutSwapBuffers();
+            save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
+        }
         
         s = system("mv wave*.tif tif_wave/");
     }
@@ -742,6 +779,12 @@ void animation()
 
 void display(void)
 {
+    time_t rawtime;
+    struct tm * timeinfo;
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    
     glPushMatrix();
 
     blank();
@@ -755,7 +798,11 @@ void display(void)
     glPopMatrix();
 
     glutDestroyWindow(glutGetWindow());
-
+    
+    printf("Start local time and date: %s", asctime(timeinfo));
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    printf("Current local time and date: %s", asctime(timeinfo));
 }
 
 

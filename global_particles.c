@@ -77,6 +77,7 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define P_POLYGON 5       /* regular polygon, alternative for D_POLYGON */
 #define P_TOKA_PRIME 6    /* Tokarsky room made of 86 triangles */
 #define P_TREE 7          /* pine tree */
+#define P_TOKA_NONSELF 8  /* Tokarsky non-self-unilluminable room */
 
 /* Color palettes */
 

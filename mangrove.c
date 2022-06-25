@@ -949,7 +949,7 @@ void animation()
     blank();
     glColor3f(0.0, 0.0, 0.0);
     draw_wave(phi, psi, xy_in, 1.0, 0, PLOT);
-    draw_billiard();
+    draw_billiard(0, 1.0);
 
     glutSwapBuffers();
 
@@ -1220,7 +1220,7 @@ void animation()
 
         
         printf("Drawing billiard\n");
-        draw_billiard();
+        draw_billiard(0, 1.0);
 
 	glutSwapBuffers();
 

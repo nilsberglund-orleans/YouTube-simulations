@@ -29,14 +29,15 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
+#include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
 
-#define WINWIDTH 	1280  /* window width */
+#define WINWIDTH 	720  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
+#define XMIN -1.125
+#define XMAX 1.125	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
@@ -47,22 +48,20 @@
 #define B_DOMAIN 30     /* choice of domain shape */
 
 #define CIRCLE_PATTERN 1    /* pattern of circles */
-#define POLYLINE_PATTERN 6  /* pattern of polyline */
+#define POLYLINE_PATTERN 8  /* pattern of polyline */
 
 #define ABSORBING_CIRCLES 1 /* set to 1 for circular scatterers to be absorbing */
 
 #define NMAXCIRCLES 100000     /* total number of circles (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 100000        /* total number of sides of polygonal line */   
-// #define NCX 10            /* number of circles in x direction */
-// #define NCY 10            /* number of circles in y direction */
 #define NCX 30            /* number of circles in x direction */
 #define NCY 20            /* number of circles in y direction */
 #define NPOISSON 500        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define NGOLDENSPIRAL 2000  /* max number of points for C_GOLDEN_SPIRAL arrandement */
 #define SDEPTH 1            /* Sierpinski gastket depth */
 
-#define LAMBDA 0.8	/* parameter controlling shape of domain */
-#define MU 0.015        /* second parameter controlling shape of billiard */
+#define LAMBDA 1.5	/* parameter controlling shape of domain */
+#define MU 0.01          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
@@ -80,16 +79,17 @@
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
-#define SHOWTRAILS 1    /* set to 1 to keep trails of the particles */
+#define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
 #define SHOWZOOM 1      /* set to 1 to show zoom on specific area */
 #define PRINT_PARTICLE_NUMBER 1 /* set to 1 to print number of particles */
 #define PRINT_COLLISION_NUMBER 0 /* set to 1 to print number of collisions */
 #define TEST_ACTIVE 1   /* set to 1 to test whether particle is in billiard */
 
-#define NSTEPS 5000      /* number of frames of movie */
-#define TIME 1500         /* time between movie frames, for fluidity of real-time simulation */ 
-#define DPHI 0.00001    /* integration step */
-#define NVID 150         /* number of iterations between images displayed on screen */
+#define NSTEPS 1000      /* number of frames of movie */
+#define TIME 2500         /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.00001     /* integration step */
+#define NVID 100         /* number of iterations between images displayed on screen */
+#define END_FRAMES 25    /* number of still frames at the end of the movie */
 
 /* Decreasing TIME accelerates the animation and the movie                               */
 /* For constant speed of movie, TIME*DPHI should be kept constant                        */
@@ -99,14 +99,14 @@
 
 /* Colors and other graphical parameters */
 
-#define COLOR_PALETTE 11     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 17     /* Color palette, see list in global_pdes.c  */
 
-#define NCOLORS 32       /* number of colors */
+#define NCOLORS 64       /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
 #define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
-#define LENGTH 0.05       /* length of velocity vectors */
+#define LENGTH 0.03       /* length of velocity vectors */
 #define BILLIARD_WIDTH 2    /* width of billiard */
 #define PARTICLE_WIDTH 3    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
@@ -120,7 +120,7 @@
 #define PAUSE 200       /* number of frames after which to pause */
 #define PSLEEP 2         /* sleep time during pause */
 #define SLEEP1  1        /* initial sleeping time */
-#define SLEEP2  1000      /* final sleeping time */
+#define SLEEP2  1       /* final sleeping time */
 
 
 #include "global_particles.c"
@@ -437,10 +437,18 @@ void draw_config_showtrails(int color[NPARTMAX], double *configs[NPARTMAX], int 
     }
     if (DRAW_BILLIARD) draw_billiard();    
     
-    if (SHOWZOOM) 
-    {
-        draw_zoom(color, configs, active, x_target, y_target, 0.1, 1.65, 0.75, 0.3, 0);
-        draw_zoom(color, configs, active, x_shooter, y_shooter, 0.1, -1.65, 0.75, 0.3, 1);    
+    if (SHOWZOOM) switch (POLYLINE_PATTERN) {
+        case (P_TOKA_PRIME):
+        {
+            draw_zoom(color, configs, active, x_target, y_target, 0.1, 1.65, 0.75, 0.3, 0);
+            draw_zoom(color, configs, active, x_shooter, y_shooter, 0.1, -1.65, 0.75, 0.3, 1);
+            break;
+        }
+        case (P_TOKA_NONSELF):
+        {
+            draw_zoom(color, configs, active, 0.0, 0.0, 0.1, 1.65, 0.75, 0.3, 0);
+            break;
+        }
     }
 //     if (SHOWZOOM) draw_zoom(color, configs, active, 0.95, 0.0, 0.1);
 }
@@ -547,10 +555,18 @@ void draw_config(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPAR
     }
     if (DRAW_BILLIARD) draw_billiard();    
     
-    if (SHOWZOOM) 
-    {
-        draw_zoom(color, configs, active, x_target, y_target, 0.1, 1.65, 0.75, 0.3, 0);
-        draw_zoom(color, configs, active, x_shooter, y_shooter, 0.1, -1.65, 0.75, 0.3, 1);     
+    if (SHOWZOOM) switch (POLYLINE_PATTERN) {
+        case (P_TOKA_PRIME):
+        {
+            draw_zoom(color, configs, active, x_target, y_target, 0.1, 1.65, 0.75, 0.3, 0);
+            draw_zoom(color, configs, active, x_shooter, y_shooter, 0.1, -1.65, 0.75, 0.3, 1);
+            break;
+        }
+        case (P_TOKA_NONSELF):
+        {
+            draw_zoom(color, configs, active, 0.0, 0.0, 0.1, 0.82, 0.82, 0.25, 0);
+            break;
+        }
     }
 //     if (SHOWZOOM) draw_zoom(color, configs, active, 0.95, 0.0, 0.1);
 }
@@ -668,7 +684,7 @@ void animation()
     
 //     init_drop_config(-1.0 + 0.3*sqrt(2.0), -1.0 + 0.5*sqrt(2.0), 0.0, DPI, configs);
 
-    init_line_config(0.0, 0.3, 0.0, 0.9, 0.0, configs);   
+//     init_line_config(0.0, 0.0, 0.0, 0.9, 0.0, configs);   
 //     init_drop_config(-0.95, 0.0, -0.103 + DPI/15.0, -0.1 + DPI/15.0, configs);
     
     /* find long trajectory */
@@ -697,7 +713,9 @@ void animation()
 //     init_drop_config(x_shooter, y_shooter, alphamax, alphamax + DPI, configs);
     
     
-//     init_drop_config(-0.95, 0.0, 1.0, 1.0 + DPI, configs);    
+//     init_drop_config(-0.5, 0.0, 0.2, 0.4, configs);    
+    init_drop_config(0.0, 0.0, 0.0, DPI, configs);    
+    
 //     init_drop_config(-1.3, -0.1, 0.0, DPI, configs);    
 //     init_drop_config(1.4, 0.1, 0.0, DPI, configs);    
 //     init_drop_config(0.5, 0.5, -1.0, 1.0, configs);    
@@ -759,8 +777,8 @@ void animation()
     
     /* initialize drops in different colors */
 //     init_partial_drop_config(0.0, 0.0, 0.0, DPI, 0, 2*NPART/5, 0, configs, color, newcolor);
-//     init_partial_drop_config(0.0, 0.8, 0.0, DPI, 2*NPART/5, 4*NPART/5, 10, configs, color, newcolor);
-//     init_partial_drop_config(1.2, 0.1, 0.0, DPI, 4*NPART/5, NPART, 36, configs, color, newcolor);
+//     init_partial_drop_config(0.0, 0.8, 0.0, DPI, 2*NPART/5, 4*NPART/5, 30, configs, color, newcolor);
+//     init_partial_drop_config(LAMBDA - 0.05, 0.1, 0.0, DPI, 4*NPART/5, NPART, 60, configs, color, newcolor);
   
     for (i=0; i<=NSTEPS; i++)
     {
@@ -798,7 +816,7 @@ void animation()
  
     if (MOVIE) 
     {
-        for (i=0; i<20; i++) save_frame();
+        for (i=0; i<END_FRAMES; i++) save_frame();
         s = system("mv part*.tif tif_part/");
     }
     
@@ -811,6 +829,12 @@ void animation()
 
 void display(void)
 {
+    time_t rawtime;
+    struct tm * timeinfo;
+
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    
     glPushMatrix();
 
     blank();
@@ -827,6 +851,13 @@ void display(void)
     sleep(SLEEP2); 
 
     glPopMatrix();
+    
+    glutDestroyWindow(glutGetWindow());
+
+    printf("Start local time and date: %s", asctime(timeinfo));
+    time(&rawtime);
+    timeinfo = localtime(&rawtime);
+    printf("Current local time and date: %s", asctime(timeinfo));
 }
 
 
@@ -847,5 +878,4 @@ int main(int argc, char** argv)
   
     return 0;
 }
-
 

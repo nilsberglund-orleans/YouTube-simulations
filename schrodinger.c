@@ -638,7 +638,7 @@ void animation()
         
         for (j=0; j<NVID; j++) evolve_wave(phi, psi, phi_tmp, psi_tmp, xy_in);
         
-        draw_billiard();
+        draw_billiard(0, 1.0);
         
         if (DRAW_COLOR_SCHEME) draw_color_bar(PLOT, COLORBAR_RANGE); 
         

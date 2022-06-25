@@ -35,7 +35,7 @@
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 #include <omp.h>
 
-#define MOVIE 0         /* set to 1 to generate movie */
+#define MOVIE 1         /* set to 1 to generate movie */
 
 /* General geometrical parameters */
 
@@ -671,7 +671,7 @@ void animation()
     glutSwapBuffers();
     
     draw_wave(phi, xy_in, 1.0, 0);
-    if (DRAW_BILLIARD) draw_billiard();
+    if (DRAW_BILLIARD) draw_billiard(0, 1.0);
 //     print_Julia_parameters(i);
     
 //     print_level(MDEPTH);
@@ -698,7 +698,7 @@ void animation()
         
         for (j=0; j<NVID; j++) evolve_wave(phi, phi_tmp, xy_in);
 
-        if (DRAW_BILLIARD) draw_billiard();
+        if (DRAW_BILLIARD) draw_billiard(0, 1.0);
         
 //         print_level(MDEPTH);
 //         print_Julia_parameters(i);

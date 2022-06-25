@@ -27,6 +27,9 @@
 /* Choice of potential */
 
 #define POT_HARMONIC 1      /* harmonic oscillator */
+#define POT_COULOMB 2       /* Coulomb (1/r) potential */
+#define POT_PERIODIC 3      /* periodic potential */
+#define POT_DOUBLE_COULOMB 4      /* sum of Coulomb potentials located at focal points of ellipse */
 
 /* plot types used by rde */
 
@@ -39,10 +42,12 @@
 #define Z_ANGLE_GRADIENTX 231   /* direction of gradient of u */
 #define Z_NORM_GRADIENT_INTENSITY 24  /* gradient and intensity of polar angle */
 #define Z_VORTICITY 25  /* curl of polar angle */
+#define Z_VORTICITY_ABS 251  /* absolute value of curl of polar angle */
 
 /* for Schrodinger equation */
 #define Z_MODULE 30       /* module squared of first two fields */
 #define Z_ARGUMENT 31     /* argument of first two fields, with luminosity depending on module */
+#define Z_REALPART 32     /* first field, with luminosity depending on module */
 
 /* for RPSLZ equation */
 #define Z_MAXTYPE_RPSLZ 40      /* color of type with maximal density */
@@ -51,8 +56,8 @@
 
 /* macros to avoid unnecessary computations in 3D plots */
 
-#define COMPUTE_THETA ((cplot == Z_POLAR)||(cplot == Z_NORM_GRADIENT)||(cplot == Z_ANGLE_GRADIENT)||(cplot == Z_NORM_GRADIENT_INTENSITY)||(cplot == Z_VORTICITY))
-#define COMPUTE_THETAZ ((zplot == Z_POLAR)||(zplot == Z_NORM_GRADIENT)||(zplot == Z_ANGLE_GRADIENT)||(zplot == Z_NORM_GRADIENT_INTENSITY)||(zplot == Z_VORTICITY))
+#define COMPUTE_THETA ((cplot == Z_POLAR)||(cplot == Z_NORM_GRADIENT)||(cplot == Z_ANGLE_GRADIENT)||(cplot == Z_NORM_GRADIENT_INTENSITY)||(cplot == Z_VORTICITY)||(cplot == Z_VORTICITY_ABS))
+#define COMPUTE_THETAZ ((zplot == Z_POLAR)||(zplot == Z_NORM_GRADIENT)||(zplot == Z_ANGLE_GRADIENT)||(zplot == Z_NORM_GRADIENT_INTENSITY)||(zplot == Z_VORTICITY)||(zplot == Z_VORTICITY_ABS))
 
 #define COMPUTE_ENERGY ((zplot == P_3D_ENERGY)||(cplot == P_3D_ENERGY)||(zplot == P_3D_LOG_ENERGY)||(cplot == P_3D_LOG_ENERGY)||(zplot == P_3D_TOTAL_ENERGY)||(cplot == P_3D_TOTAL_ENERGY)||(zplot == P_3D_LOG_TOTAL_ENERGY)||(cplot == P_3D_LOG_TOTAL_ENERGY)||(zplot == P_3D_MEAN_ENERGY)||(cplot == P_3D_MEAN_ENERGY)||(zplot == P_3D_LOG_MEAN_ENERGY)||(cplot == P_3D_LOG_MEAN_ENERGY))
 

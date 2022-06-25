@@ -683,10 +683,10 @@ void draw_wave_highres_diss(int size, double *phi[NX], double *psi[NX], double *
 
 
 void draw_wave_epalette(double *phi[NX], double *psi[NX], double *total_energy[NX], double *color_scale[NX], short int *xy_in[NX], 
-                        double scale, int time, int plot, int palette)
+                        double scale, int time, int plot, int palette, int fade, double fade_value)
 /* same as draw_wave_e, but with color scheme specification */
 {
-    int i, j, iplus, iminus, jplus, jminus;
+    int i, j, k, iplus, iminus, jplus, jminus;
     double rgb[3], xy[2], x1, y1, x2, y2, velocity, field_value, energy, gradientx2, gradienty2, r2;
     static double dtinverse = ((double)NX)/(COURANT*(XMAX-XMIN)), dx = (XMAX-XMIN)/((double)NX);
 
@@ -756,6 +756,7 @@ void draw_wave_epalette(double *phi[NX], double *psi[NX], double *total_energy[N
                         break;
                     }
                 }
+                if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
                 glColor3f(rgb[0], rgb[1], rgb[2]);
 
                 glVertex2i(i, j);

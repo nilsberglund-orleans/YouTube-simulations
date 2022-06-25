@@ -1461,6 +1461,56 @@ int compute_noisepanel_coordinates(t_vertex polyline[NMAXPOLY])
     return(2*n);
 }
 
+int compute_noisepanel_rect_coordinates(t_vertex polyline[NMAXPOLY])
+/* compute positions of vertices of noise panel */
+{
+    int i, n, even;
+    double ymax, dy, x, y, x1, pos[2];
+    
+    /* find the leftmost point */
+    x = -NPWIDTH;
+    n = 0;
+    while (x > XMIN) 
+    {
+        x -= LAMBDA;
+        n++;
+    }
+    if (n%2 == 0) even = 1;
+    else even = 0;
+    
+    i = 0;
+    while (x <= 0.0)
+    {
+        if (even) y = YMIN + 0.1;
+        else y = YMIN + 0.1 + MU;
+        
+        x1 = x;
+        if (x1 > XMAX) x1 = XMAX;
+        else if (x1 < XMIN) x1 = XMIN;
+        
+        polyline[i].x = x1;
+        polyline[i].y = y;
+        
+        xy_to_pos(x1, y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+        
+        x += LAMBDA;
+        even = 1 - even;
+        i++;
+    }
+    n = i;
+    for (i=0; i<n; i++)
+    {
+        polyline[n+i].x = polyline[n-i-1].x;
+        polyline[n+i].y = -polyline[n-i-1].y;
+        polyline[n+i].posi = polyline[n-i-1].posi;
+        polyline[n+i].posj = NY - polyline[n-i-1].posj;
+    }
+        
+    return(2*n);
+}
+
 int compute_qrd_coordinates(t_vertex polyline[NMAXPOLY])
 /* compute positions of quadratic noise diffuser */
 {
@@ -1549,6 +1599,10 @@ int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
         {
             return(compute_noisepanel_coordinates(polyline));
         }
+        case (D_NOISEPANEL_RECT):
+        {
+            return(compute_noisepanel_rect_coordinates(polyline));
+        }
         case (D_QRD):
         {
             return(compute_qrd_coordinates(polyline));
@@ -1611,7 +1665,7 @@ int xy_in_billiard(double x, double y)
 /* returns 1 if (x,y) represents a point in the billiard */
 // double x, y;
 {
-    double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, alpha;
+    double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, alpha, s, a;
     int i, j, k, k1, k2, condition = 0, m;
     static int first = 1, nsides;
 
@@ -2047,6 +2101,22 @@ int xy_in_billiard(double x, double y)
             else y1 = 0.1 + 2.0*MU - MU*x1/LAMBDA;
             return((y > YMIN + y1)&&(y < YMAX - y1));
         }
+        case (D_NOISEPANEL_RECT):
+        {
+            x1 = -x;
+            if (x1 > NPWIDTH)
+            {
+                while (x1 > 2.0*LAMBDA) x1 -= 2.0*LAMBDA;
+                if (x1 <= LAMBDA) y1 = 0.1 + MU*x1/LAMBDA;
+                else y1 = 0.1 + 2.0*MU - MU*x1/LAMBDA;
+                return((y > YMIN + y1)&&(y < YMAX - y1)&&(x > XMIN + 0.1));
+            }
+            else if (x > NPWIDTH)
+            {
+                return((vabs(y) < YMAX - 0.1)&&(x < XMAX - 0.1));
+            }
+            else return(0);
+        }
         case (D_QRD):
         {
             x1 = vabs(x)/LAMBDA;
@@ -2054,6 +2124,25 @@ int xy_in_billiard(double x, double y)
             k1 = (k*k) % 13;
             y1 = (MU/13.0)*(14.0 - (double)k1);
             return ((y > YMIN + y1)&&(y < YMAX - y1));
+        }
+        case (D_QRD_ASYM):
+        {
+            if (y > 0.0)
+            {   
+                x1 = vabs(x)/LAMBDA;
+                k = (int)(x1 + 0.5);
+                k1 = (k*k) % 13;
+                y1 = (MU/13.0)*(14.0 - (double)k1);
+                return (y < YMAX - y1);
+            }
+            else
+            {   
+                x1 = vabs(x + 1.0)/LAMBDA;
+                k = (int)(x1 + 0.5);
+                k1 = (k*k) % 17;
+                y1 = (MU/17.0)*(18.0 - (double)k1);
+                return (y > YMIN + y1);
+            }
         }
         case (D_CIRCLE_SEGMENT):
         {
@@ -2075,6 +2164,14 @@ int xy_in_billiard(double x, double y)
                 if (x > -x1) return(0);
                 else return(1);                
             }
+        }
+        case (D_GROOVE):
+        {
+            s = 0.85*LAMBDA;
+            a = 0.5*LAMBDA;
+            x1 = x - XMIN - (double)((int)((x - XMIN)/LAMBDA))*LAMBDA;
+            if (x1 < a) return (y > YMIN + LAMBDA);
+            else return (y > YMIN + LAMBDA + s);
         }
         case (D_MENGER):       
         {
@@ -2255,14 +2352,22 @@ void tvertex_lineto(t_vertex z)
 }
 
 
-void draw_billiard()      /* draws the billiard boundary */
+void draw_billiard(int fade, double fade_value)      /* draws the billiard boundary */
 {
     double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax;
     int i, j, k, k1, k2, mr2;
     static int first = 1, nsides;
 
-    if (BLACK) glColor3f(1.0, 1.0, 1.0);
-    else glColor3f(0.0, 0.0, 0.0);
+    if (fade)
+    {
+        if (BLACK) glColor3f(fade_value, fade_value, fade_value);
+        else glColor3f(1.0 - fade_value, 1.0 - fade_value, 1.0 - fade_value);        
+    }
+    else
+    {
+        if (BLACK) glColor3f(1.0, 1.0, 1.0);
+        else glColor3f(0.0, 0.0, 0.0);
+    }
     glLineWidth(BOUNDARY_WIDTH);
 
     glEnable(GL_LINE_SMOOTH);
@@ -2298,7 +2403,8 @@ void draw_billiard()      /* draws the billiard boundary */
             /* draw foci */
             if (FOCI)
             {
-                glColor3f(0.3, 0.3, 0.3);
+                if (fade) glColor3f(0.3*fade_value, 0.3*fade_value, 0.3*fade_value);
+                else glColor3f(0.3, 0.3, 0.3);
                 x0 = sqrt(LAMBDA*LAMBDA-1.0);
 
                 glLineWidth(2);
@@ -3041,6 +3147,14 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd();
             break;
         }
+        case (D_NOISEPANEL_RECT):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            glBegin(GL_LINE_STRIP);
+            for (i=0; i<npolyline; i++) tvertex_lineto(polyline[i]);
+            glEnd();
+            break;
+        }
         case (D_QRD):
         {
             glLineWidth(BOUNDARY_WIDTH);
@@ -3325,7 +3439,11 @@ void draw_billiard()      /* draws the billiard boundary */
             glEnd();
             break;
         }
-       default:
+        case (D_NOTHING):
+        {
+            break;
+        }   
+        default:
         {
             printf("Function draw_billiard not defined for this billiard \n");
         }
@@ -3544,4 +3662,111 @@ void draw_color_scheme_palette(double x1, double y1, double x2, double y2, int p
     draw_rectangle(x1, y1, x2, y2);
 }
 
+void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, int plot, double min, double max, int palette, int fade, double fade_value)
+{
+    int j, k, ij_botleft[2], ij_topright[2], imin, imax, jmin, jmax;
+    double y, dy, dy_e, rgb[3], value, lum, amp;
+    
+    xy_to_ij(x1, y1, ij_botleft);
+    xy_to_ij(x2, y2, ij_topright);
+    
+    rgb[0] = 0.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+    erase_area_rgb(0.5*(x1 + x2), x2 - x1, 0.5*(y1 + y2), y2 - y1, rgb);
+
+    if (ROTATE_COLOR_SCHEME)
+    {
+        jmin = ij_botleft[0];
+        jmax = ij_topright[0];
+        imin = ij_botleft[1];
+        imax = ij_topright[1];    
+    }
+    else
+    {
+        imin = ij_botleft[0];
+        imax = ij_topright[0];
+        jmin = ij_botleft[1];
+        jmax = ij_topright[1];    
+    }
+        
+        
+    glBegin(GL_QUADS);
+    dy = (max - min)/((double)(jmax - jmin));
+    dy_e = max/((double)(jmax - jmin));
+    
+    for (j = jmin; j < jmax; j++)
+    {
+        switch (plot) {
+            case (P_AMPLITUDE):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_MEAN_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_LOG_ENERGY):
+            {
+                value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+//                 if (value <= 0.0) value = 0.0;
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_LOG_MEAN_ENERGY):
+            {
+                value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+//                 if (value <= 0.0) value = 0.0;
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_PHASE):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+//                 lum = (color_amplitude(value, 1.0, 1))*0.5;
+//                 if (lum < 0.0) lum = 0.0;
+//                 hsl_to_rgb(value*360.0, 0.9, 0.5, rgb);
+//                 color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
+//                 amp = color_amplitude_linear(value, 1.0, 1);
+                amp = 0.5*color_amplitude_linear(value, 1.0, 1);
+                while (amp > 1.0) amp -= 2.0;
+                while (amp < -1.0) amp += 2.0;
+                amp_to_rgb(0.5*(1.0 + amp), rgb);
+                break;
+            }
+        }
+        if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+        if (ROTATE_COLOR_SCHEME)
+        {
+            glVertex2i(j, imin);
+            glVertex2i(j, imax);
+            glVertex2i(j+1, imax);
+            glVertex2i(j+1, imin);            
+        }
+        else
+        {
+            glVertex2i(imin, j);
+            glVertex2i(imax, j);
+            glVertex2i(imax, j+1);
+            glVertex2i(imin, j+1);
+        }
+    }
+    glEnd ();
+    
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    glLineWidth(BOUNDARY_WIDTH);
+    draw_rectangle(x1, y1, x2, y2);
+}
 

@@ -399,13 +399,29 @@ void compute_field_argument(double *phi[NFIELDS], t_rde rde[NX*NY])
         for (j=0; j<NY; j++)
         {
             arg = argument(phi[0][i*NY+j], phi[1][i*NY+j]) + COLOR_PHASE_SHIFT*PI;
-            if (arg < 0.0) arg += DPI;
-            if (arg >= DPI) arg -= DPI;
+            while (arg < 0.0) arg += DPI;
+            while (arg >= DPI) arg -= DPI;
             rde[i*NY+j].field_arg = arg;
         }
 }
 
-
+void compute_probabilities(t_rde rde[NX*NY], short int xy_in[NX*NY], double probas[2])
+/* compute probabilities for Ehrenfest urns */
+{
+    int i, j;
+    double pleft = 0.0, pright = 0.0, sum;
+    
+    #pragma omp parallel for private(j)
+    for (j=0; j<NY; j++)
+    {
+        for (i=0; i<NX/2; i++) if (xy_in[i*NY+j]) pleft += rde[i*NY+j].field_norm;
+        for (i=NX/2; i<NX; i++) if (xy_in[i*NY+j]) pright += rde[i*NY+j].field_norm;
+    }
+        
+    sum = pleft + pright;
+    probas[0] = pleft/sum;
+    probas[1] = pright/sum;
+}
 
 // void compute_field_norm(double phi_x[NX*NY], double phi_y[NX*NY], double phi_norm[NX*NY], double factor)
 // /* compute the norm of (phi_x, phi_y) */
@@ -487,7 +503,7 @@ void compute_laplacian(double phi_in[NX*NY], double phi_out[NX*NY], short int xy
     }
 }
 
-void compute_light_angle_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], int movie)
+void compute_light_angle_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], int movie)
 /* computes cosine of angle between normal vector and vector light */
 {
     int i, j;
@@ -510,6 +526,14 @@ void compute_light_angle_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], int movie
             {
                 gradx = (*rde[(i+1)*NY+j].p_zfield[movie] - *rde[(i-1)*NY+j].p_zfield[movie])/dx;
                 grady = (*rde[i*NY+j+1].p_zfield[movie] - *rde[i*NY+j-1].p_zfield[movie])/dy;
+                
+                /* case where the potential is added to the z coordinate */
+                if ((ADD_POTENTIAL)&&(ADD_POTENTIAL_TO_Z))
+                {
+                    gradx += ADD_POT_CONSTANT*(potential[(i+1)*NY+j] - potential[(i-1)*NY+j])/dx;
+                    grady += ADD_POT_CONSTANT*(potential[i*NY+j+1] - potential[i*NY+j-1])/dx;
+                }
+                
                 norm = sqrt(1.0 + gradx*gradx + grady*grady);
                 pscal = -gradx*light[0] - grady*light[1] + 1.0;
                 
@@ -603,7 +627,8 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
         }
         case (Z_NORM_GRADIENT): 
         {
-            color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+//             color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
             break;
         }
         case (Z_ANGLE_GRADIENT): 
@@ -631,6 +656,11 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
             hsl_to_rgb_palette(180.0*(1.0 - color_amplitude(value, 1.0, 0)), 0.9, 0.5, rgb, palette);
             break;
         }
+        case (Z_VORTICITY_ABS): 
+        {
+            hsl_to_rgb_palette(360.0*(1.0 - vabs(color_amplitude(value, 1.0, 0))), 0.9, 0.5, rgb, palette);
+            break;
+        }
         case (Z_MAXTYPE_RPSLZ): 
         {
             hsl_to_rgb_palette(value, 0.9, 0.5, rgb, palette);
@@ -653,25 +683,47 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
         }
         case (Z_ARGUMENT): 
         {
-            color_scheme_palette(C_ONEDIM_LINEAR, palette, value/DPI, 1.0, 1, rgb);
+//             color_scheme_palette(C_ONEDIM_LINEAR, palette, value/DPI, 1.0, 1, rgb);
+            hsl_to_rgb_palette(360.0*value/DPI, 0.9, 0.5, rgb, palette);
+            break;
+        }
+        case (Z_REALPART): 
+        {
+            color_scheme_palette(COLOR_SCHEME, palette, VSCALE_AMPLITUDE*value, 1.0, 0, rgb);
             break;
         }
     }
 }
 
+double adjust_field(double z, double pot)
+/* add potential in case of option ADD_POTENTIAL_TO_Z */
+{
+    if ((ADD_POTENTIAL)&&(ADD_POTENTIAL_TO_Z)) return (z + ADD_POT_CONSTANT*pot);
+    else return(z);
+}  
 
-double compute_interpolated_colors_rde(int i, int j, t_rde rde[NX*NY], double palette, int cplot, 
+
+double compute_interpolated_colors_rde(int i, int j, t_rde rde[NX*NY], double potential[NX*NY], double palette, int cplot, 
                                  double rgb_e[3], double rgb_w[3], double rgb_n[3], double rgb_s[3],
+                                 double *z_sw, double *z_se, double *z_nw, double *z_ne, 
                                  int fade, double fade_value, int movie)
 {
     int k;
     double cw, ce, cn, cs, c_sw, c_se, c_nw, c_ne, c_mid, ca, z_mid;
-    double *z_sw, *z_se, *z_nw, *z_ne, lum;
+    double lum;
     
-    z_sw = rde[i*NY+j].p_zfield[movie];
-    z_se = rde[(i+1)*NY+j].p_zfield[movie];
-    z_nw = rde[i*NY+j+1].p_zfield[movie];
-    z_ne = rde[(i+1)*NY+j+1].p_zfield[movie];
+    *z_sw = *rde[i*NY+j].p_zfield[movie];
+    *z_se = *rde[(i+1)*NY+j].p_zfield[movie];
+    *z_nw = *rde[i*NY+j+1].p_zfield[movie];
+    *z_ne = *rde[(i+1)*NY+j+1].p_zfield[movie];
+    
+    if ((ADD_POTENTIAL)&&(ADD_POTENTIAL_TO_Z))
+    {
+        *z_sw += ADD_POT_CONSTANT*potential[i*NY+j];
+        *z_se += ADD_POT_CONSTANT*potential[(i+1)*NY+j];
+        *z_nw += ADD_POT_CONSTANT*potential[i*NY+j+1];
+        *z_ne += ADD_POT_CONSTANT*potential[(i+1)*NY+j+1];
+    }
                             
     z_mid = 0.25*(*z_sw + *z_se + *z_nw + *z_ne);
     
@@ -707,9 +759,10 @@ double compute_interpolated_colors_rde(int i, int j, t_rde rde[NX*NY], double pa
     compute_field_color_rde(cn, cplot, palette, rgb_n);
     compute_field_color_rde(cs, cplot, palette, rgb_s);
     
+//     if ((cplot == Z_ARGUMENT)||(cplot == Z_REALPART))
     if (cplot == Z_ARGUMENT)
     {
-        lum = tanh(SLOPE_SCHROD_LUM*rde[i*NY+j].field_norm);
+        lum = tanh(SLOPE_SCHROD_LUM*rde[i*NY+j].field_norm) + MIN_SCHROD_LUM;
         for (k=0; k<3; k++) 
         {
             rgb_e[k] *= lum;
@@ -767,7 +820,7 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
                 compute_gradient_polar(rde, 0.03);
             }
     
-            if ((zplot == Z_VORTICITY)||(cplot == Z_VORTICITY))
+            if ((zplot == Z_VORTICITY)||(cplot == Z_VORTICITY)||(zplot == Z_VORTICITY_ABS)||(cplot == Z_VORTICITY_ABS))
             {
                 compute_gradient_theta(rde);
                 compute_curl(rde);
@@ -851,6 +904,12 @@ void init_zfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].curl;
             break;
         }
+        case (Z_VORTICITY_ABS):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].curl;
+            break;
+        }
         case (Z_MAXTYPE_RPSLZ):
         {
             #pragma omp parallel for private(i,j)
@@ -879,6 +938,12 @@ void init_zfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, t_
         {
             #pragma omp parallel for private(i,j)
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].field_arg;
+            break;
+        }
+        case (Z_REALPART):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &phi[0][i*NY+j];
             break;
         }
     }
@@ -938,6 +1003,12 @@ void init_cfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int cplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].curl;
             break;
         }
+        case (Z_VORTICITY_ABS):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].curl;
+            break;
+        }
         case (Z_MAXTYPE_RPSLZ):
         {
             #pragma omp parallel for private(i,j)
@@ -968,6 +1039,12 @@ void init_cfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int cplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].field_arg;
             break;
         }
+        case (Z_REALPART):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &phi[0][i*NY+j];
+            break;
+        }
     }
 }
 
@@ -981,6 +1058,7 @@ void compute_cfield_rde(short int xy_in[NX*NY], int cplot, int palette, t_rde rd
     for (i=0; i<NX; i++) for (j=0; j<NY; j++)
     {
         compute_field_color_rde(*rde[i*NY+j].p_cfield[movie], cplot, palette, rde[i*NY+j].rgb);
+//         if ((cplot == Z_ARGUMENT)||(cplot == Z_REALPART))
         if (cplot == Z_ARGUMENT)
         {
             lum = tanh(SLOPE_SCHROD_LUM*rde[i*NY+j].field_norm);
@@ -1019,86 +1097,130 @@ void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY])
             }
         }
     glEnd ();
-    if (DRAW_BILLIARD) draw_billiard();
+    if (DRAW_BILLIARD) draw_billiard(0, 1.0);
+}
+
+
+void draw_wave_3d_ij_rde(int i, int j, int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], 
+                         double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
+{
+    int k, l, draw = 1;
+    double xy[2], xy_screen[2], rgb[3], pos[2], ca, rgb_e[3], rgb_w[3], rgb_n[3], rgb_s[3]; 
+    double z, z_sw, z_se, z_nw, z_ne, z_mid, zw, ze, zn, zs, min = 1000.0, max = 0.0;
+    double xy_sw[2], xy_se[2], xy_nw[2], xy_ne[2], xy_mid[2];
+    double energy;
+    
+
+    if (NON_DIRICHLET_BC) 
+        draw = (xy_in[i*NY+j])&&(xy_in[(i+1)*NY+j])&&(xy_in[i*NY+j+1])&&(xy_in[(i+1)*NY+j+1]);
+    else draw = (TWOSPEEDS)||(xy_in[i*NY+j]);
+            
+    if (draw)
+    {
+        if (AMPLITUDE_HIGH_RES > 0)
+        {
+            z_mid = compute_interpolated_colors_rde(i, j, rde, potential, palette, cplot, 
+                                                        rgb_e, rgb_w, rgb_n, rgb_s, &z_sw, &z_se, &z_nw, &z_ne, 
+                                                        fade, fade_value, movie);
+            ij_to_xy(i, j, xy_sw);
+            ij_to_xy(i+1, j, xy_se);
+            ij_to_xy(i, j+1, xy_nw);
+            ij_to_xy(i+1, j+1, xy_ne);
+                    
+            for (k=0; k<2; k++) xy_mid[k] = 0.25*(xy_sw[k] + xy_se[k] + xy_nw[k] + xy_ne[k]);
+                       
+            if (AMPLITUDE_HIGH_RES == 1)
+            {                        
+                glBegin(GL_TRIANGLE_FAN);
+                glColor3f(rgb_w[0], rgb_w[1], rgb_w[2]);
+                draw_vertex_xyz(xy_mid, z_mid);
+                draw_vertex_xyz(xy_nw, z_nw);
+                draw_vertex_xyz(xy_sw, z_sw);
+                    
+                glColor3f(rgb_s[0], rgb_s[1], rgb_s[2]);
+                draw_vertex_xyz(xy_se, z_se);
+                    
+                glColor3f(rgb_e[0], rgb_e[1], rgb_e[2]);
+                draw_vertex_xyz(xy_ne, z_ne);
+                    
+                glColor3f(rgb_n[0], rgb_n[1], rgb_n[2]);
+                draw_vertex_xyz(xy_nw, z_nw);
+                glEnd ();
+            }
+        }
+        else
+        {
+            glColor3f(rde[i*NY+j].rgb[0], rde[i*NY+j].rgb[1], rde[i*NY+j].rgb[2]);
+            
+            glBegin(GL_TRIANGLE_FAN);
+            ij_to_xy(i, j, xy);
+            draw_vertex_xyz(xy, adjust_field(*rde[i*NY+j].p_zfield[movie], potential[i*NY+j]));
+            ij_to_xy(i+1, j, xy);
+            draw_vertex_xyz(xy, adjust_field(*rde[(i+1)*NY+j].p_zfield[movie], potential[(i+1)*NY+j]));
+            ij_to_xy(i+1, j+1, xy);
+            draw_vertex_xyz(xy, adjust_field(*rde[(i+1)*NY+j+1].p_zfield[movie], potential[(i+1)*NY+j+1]));
+            ij_to_xy(i, j+1, xy);
+            draw_vertex_xyz(xy, adjust_field(*rde[i*NY+j+1].p_zfield[movie], potential[i*NY+j+1]));
+            glEnd ();
+        }
+    }
 }
 
 
 
-void draw_wave_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], 
+void draw_wave_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], 
                   int zplot, int cplot, int palette, int fade, double fade_value)
 {
-    int i, j, k, l, draw = 1;
-    double xy[2], xy_screen[2], rgb[3], pos[2], ca, rgb_e[3], rgb_w[3], rgb_n[3], rgb_s[3]; 
-    double z_sw, z_se, z_nw, z_ne, z_mid, zw, ze, zn, zs, min = 1000.0, max = 0.0;
-    double xy_sw[2], xy_se[2], xy_nw[2], xy_ne[2], xy_mid[2];
-    double energy;
+    int i, j;
+    double observer_angle;
     
     blank();
     if (DRAW_BILLIARD) draw_billiard_3d(fade, fade_value);
-            
-    for (i=0; i<NX-2; i++)
-        for (j=0; j<NY-2; j++)
-        {
-            if (NON_DIRICHLET_BC) 
-                draw = (xy_in[i*NY+j])&&(xy_in[(i+1)*NY+j])&&(xy_in[i*NY+j+1])&&(xy_in[(i+1)*NY+j+1]);
-            else draw = (TWOSPEEDS)||(xy_in[i*NY+j]);
-            
-            if (draw)
-            {
-                if (AMPLITUDE_HIGH_RES > 0)
-                {
-                    z_mid = compute_interpolated_colors_rde(i, j, rde, palette, cplot, 
-                                                             rgb_e, rgb_w, rgb_n, rgb_s, fade, fade_value, movie);
-                    
-                    ij_to_xy(i, j, xy_sw);
-                    ij_to_xy(i+1, j, xy_se);
-                    ij_to_xy(i, j+1, xy_nw);
-                    ij_to_xy(i+1, j+1, xy_ne);
-                    
-                    for (k=0; k<2; k++) xy_mid[k] = 0.25*(xy_sw[k] + xy_se[k] + xy_nw[k] + xy_ne[k]);
-                       
-                    if (AMPLITUDE_HIGH_RES == 1)
-                    {
-                        glBegin(GL_TRIANGLE_FAN);
-                        glColor3f(rgb_w[0], rgb_w[1], rgb_w[2]);
-                        draw_vertex_xyz(xy_mid, z_mid);
-                        draw_vertex_xyz(xy_nw, *rde[i*NY+j+1].p_zfield[movie]);
-                        draw_vertex_xyz(xy_sw, *rde[i*NY+j].p_zfield[movie]);
-                    
-                        glColor3f(rgb_s[0], rgb_s[1], rgb_s[2]);
-                        draw_vertex_xyz(xy_se, *rde[(i+1)*NY+j].p_zfield[movie]);
-                    
-                        glColor3f(rgb_e[0], rgb_e[1], rgb_e[2]);
-                        draw_vertex_xyz(xy_ne, *rde[(i+1)*NY+j+1].p_zfield[movie]);
-                    
-                        glColor3f(rgb_n[0], rgb_n[1], rgb_n[2]);
-                        draw_vertex_xyz(xy_nw, *rde[i*NY+j+1].p_zfield[movie]);
-                        glEnd ();
-                    }
-                }
-                else
-                {
-                    glColor3f(rde[i*NY+j].rgb[0], rde[i*NY+j].rgb[1], rde[i*NY+j].rgb[2]);
     
-                    glBegin(GL_TRIANGLE_FAN);
-                    ij_to_xy(i, j, xy);
-                    draw_vertex_xyz(xy, *rde[i*NY+j].p_zfield[movie]);
-                    ij_to_xy(i+1, j, xy);
-                    draw_vertex_xyz(xy, *rde[(i+1)*NY+j].p_zfield[movie]);
-                    ij_to_xy(i+1, j+1, xy);
-                    draw_vertex_xyz(xy, *rde[(i+1)*NY+j+1].p_zfield[movie]);
-                    ij_to_xy(i, j+1, xy);
-                    draw_vertex_xyz(xy, *rde[i*NY+j+1].p_zfield[movie]);
-                    glEnd ();
-                }
-            }
-        }
+    if (!ROTATE_VIEW)
+    {
+        for (i=0; i<NX-2; i++)
+            for (j=0; j<NY-2; j++)
+                draw_wave_3d_ij_rde(i, j, movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
+    }
+    else    /* draw facets in an order depending on the position of the observer */
+    {
+        observer_angle = argument(observer[0], observer[1]);
+        observer_angle -= 0.5*PID;
+        if (observer_angle < 0.0) observer_angle += DPI;
+        printf("Observer_angle = %.3lg\n", observer_angle*360.0/DPI); 
         
+        if ((observer_angle > 0.0)&&(observer_angle < PID))
+        {
+            for (j=0; j<NY-2; j++)
+                for (i=0; i<NX-2; i++)
+                    draw_wave_3d_ij_rde(i, j, movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
+        }
+        else if (observer_angle < PI)
+        {
+            for (i=NX-3; i>0; i--)
+                for (j=0; j<NY-2; j++)
+                    draw_wave_3d_ij_rde(i, j, movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
+        }
+        else if (observer_angle < 1.5*PI)
+        {
+             for (j=NY-3; j>0; j--)
+                for (i=0; i<NX-2; i++)
+                    draw_wave_3d_ij_rde(i, j, movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);   
+        }
+        else
+        {
+            for (i=0; i<NX-2; i++)
+                for (j=0; j<NY-2; j++)
+                    draw_wave_3d_ij_rde(i, j, movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
+        }
+    }
+            
     if (DRAW_BILLIARD_FRONT) draw_billiard_3d_front(fade, fade_value);
 }
 
 
-void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], 
+void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], 
                    int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
 {
     int i, j, k, l, draw = 1;
@@ -1112,11 +1234,11 @@ void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rd
 //         printf("Computing fields\n");
         compute_rde_fields(phi, xy_in, zplot, cplot, rde);      
 //         printf("Computed fields\n");
-        if ((PLOT_3D)&&(SHADE_3D)) compute_light_angle_rde(xy_in, rde, movie);       
+        if ((PLOT_3D)&&(SHADE_3D)) compute_light_angle_rde(xy_in, rde, potential, movie);       
     }
     compute_cfield_rde(xy_in, cplot, palette, rde, fade, fade_value, movie);
     
-    if (PLOT_3D) draw_wave_3d_rde(movie, phi, xy_in, rde, zplot, cplot, palette, fade, fade_value);
+    if (PLOT_3D) draw_wave_3d_rde(movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
     else draw_wave_2d_rde(xy_in, rde);
 }
 

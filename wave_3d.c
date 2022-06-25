@@ -50,15 +50,11 @@
 
 // #define WINWIDTH 	1920  /* window width */
 // #define WINHEIGHT 	1000  /* window height */
-// // #define NX 900          /* number of grid points on x axis */
-// // #define NY 450         /* number of grid points on y axis */
 // #define NX 1800          /* number of grid points on x axis */
 // #define NY 900          /* number of grid points on y axis */
-// // #define NX 1920          /* number of grid points on x axis */
-// // #define NY 1000          /* number of grid points on y axis */
 // 
-// // #define XMIN -2.0
-// // #define XMAX 2.0	/* x interval  */
+// #define XMIN -2.2
+// #define XMAX 1.8	/* x interval  */
 // #define YMIN -1.041666667
 // #define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
 
@@ -66,13 +62,10 @@
 
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
-
+ 
 #define NX 1280          /* number of grid points on x axis */
 #define NY 720          /* number of grid points on y axis */
 
-// #define NX 640          /* number of grid points on x axis */
-// #define NY 360          /* number of grid points on y axis */
- 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval  */
 #define YMIN -1.125
@@ -82,20 +75,20 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 44       /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 24       /* choice of domain shape, see list in global_pdes.c */
 
-#define CIRCLE_PATTERN 202   /* pattern of circles or polygons, see list in global_pdes.c */
+#define CIRCLE_PATTERN 202    /* pattern of circles or polygons, see list in global_pdes.c */
 
-#define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
+#define VARIABLE_IOR 1      /* set to 1 for a variable index of refraction */
 #define IOR 1               /* choice of index of refraction, see list in global_pdes.c */
-#define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependece of IoR on Mandelbrot escape speed */
+#define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 0.2	    /* parameter controlling the dimensions of domain */
-#define MU 0.5             /* parameter controlling the dimensions of domain */
+#define LAMBDA 2.0	    /* parameter controlling the dimensions of domain */
+#define MU 0.5              /* parameter controlling the dimensions of domain */
 #define NPOLY 3             /* number of sides of polygon */
 #define APOLY 2.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 3            /* depth of computation of Menger gasket */
@@ -128,11 +121,11 @@
 #define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
 
 #define OMEGA 0.017         /* frequency of periodic excitation */
-#define AMPLITUDE 0.9      /* amplitude of periodic excitation */ 
-#define COURANT 0.1        /* Courant number */
-#define COURANTB 0.05      /* Courant number in medium B */
-#define GAMMA 0.0          /* damping factor in wave equation */
-#define GAMMAB 2.0e-5           /* damping factor in wave equation */
+#define AMPLITUDE 0.9       /* amplitude of periodic excitation */ 
+#define COURANT 0.08        /* Courant number */
+#define COURANTB 0.025      /* Courant number in medium B */
+#define GAMMA 0.0           /* damping factor in wave equation */
+#define GAMMAB 1.0e-6           /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
 #define GAMMA_TOPBOT 1.0e-7     /* damping factor on boundary */
 #define KAPPA 0.0           /* "elasticity" term enforcing oscillations */
@@ -152,8 +145,8 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 1500        /* number of frames of movie */
-#define NVID 8            /* number of iterations between images displayed on screen */
+#define NSTEPS 2100        /* number of frames of movie */
+#define NVID 6            /* number of iterations between images displayed on screen */
 #define NSEG 1000         /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 1    /* width of billiard boundary */
@@ -165,6 +158,7 @@
 #define MID_FRAMES 100    /* number of still frames between parts of two-part movie */
 #define END_FRAMES 100   /* number of still frames at end of movie */
 #define FADE 1           /* set to 1 to fade at end of movie */
+#define ROTATE_VIEW_WHILE_FADE 0    /* set to 1 to keep rotating viewpoint during fade */
 
 /* Parameters of initial condition */
 
@@ -174,18 +168,17 @@
 
 /* Plot type, see list in global_pdes.c  */
 
-#define ZPLOT 108     /* wave height */
-#define CPLOT 108     /* color scheme */
+#define ZPLOT 103     /* wave height */
+#define CPLOT 103     /* color scheme */
 
-#define ZPLOT_B 109        
+#define ZPLOT_B 109 
 #define CPLOT_B 109        /* plot type for second movie */
-
 
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of plot */
 #define SHADE_3D 1              /* set to 1 to change luminosity according to normal vector */
 #define NON_DIRICHLET_BC 0      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
-#define FLOOR_ZCOORD 1          /* set to 1 to draw only facets with z not too negative */
-#define DRAW_BILLIARD 1         /* set to 1 to draw boundary */
+#define FLOOR_ZCOORD 0          /* set to 1 to draw only facets with z not too negative */
+#define DRAW_BILLIARD 0         /* set to 1 to draw boundary */
 #define DRAW_BILLIARD_FRONT 0   /* set to 1 to draw front of boundary after drawing wave */
 #define DRAW_CONSTRUCTION_LINES 0   /* set to 1 to draw construction lines of certain domains */
 #define FADE_IN_OBSTACLE 1      /* set to 1 to fade color inside obstacles */
@@ -201,25 +194,28 @@
 #define REP_AXO_3D 0        /* linear projection (axonometry) */
 #define REP_PROJ_3D 1       /* projection on plane orthogonal to observer line of sight */
 
+#define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
+#define ROTATE_ANGLE 540.0  /* total angle of rotation during simulation */
+
 /* Color schemes */
 
-#define COLOR_PALETTE 14      /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 11     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 11      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 13    /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
 #define COLOR_SCHEME 3   /* choice of color scheme, see list in global_pdes.c  */
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
-#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
-#define VSCALE_AMPLITUDE 1.0   /* additional scaling factor for color scheme P_3D_AMPLITUDE */
-#define VSCALE_ENERGY 10.0     /* additional scaling factor for color scheme P_3D_ENERGY */
+#define SLOPE 2.0        /* sensitivity of color on wave amplitude */
+#define VSCALE_AMPLITUDE 0.2   /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSCALE_ENERGY 7.0     /* additional scaling factor for color scheme P_3D_ENERGY */
 #define PHASE_FACTOR 20.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
-#define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+#define ATTENUATION 0.0    /* exponential attenuation coefficient of contrast with time */
 #define E_SCALE 1000.0     /* scaling factor for energy representation */
-#define LOG_SCALE 0.25    /* scaling factor for energy log representation */
-#define LOG_SHIFT 0.0    /* shift of colors on log scale */
+#define LOG_SCALE 0.2      /* scaling factor for energy log representation */
+#define LOG_SHIFT -0.5     /* shift of colors on log scale */
 #define LOG_ENERGY_FLOOR -1000.0    /* floor value for log of (total) energy */
 #define LOG_MEAN_ENERGY_SHIFT 5.0   /* additional shift for log of mean energy */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
@@ -229,12 +225,12 @@
 #define LUMMEAN 0.5      /* amplitude of luminosity variation for scheme C_LUM */
 #define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
 #define HUEMEAN 240.0    /* mean value of hue for color scheme C_HUE */
-#define HUEAMP -200.0      /* amplitude of variation of hue for color scheme C_HUE */
+#define HUEAMP -200.0    /* amplitude of variation of hue for color scheme C_HUE */
 
-#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 20.0      /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 100.0    /* scale of color scheme bar for 2nd part */
-#define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
+#define DRAW_COLOR_SCHEME 1       /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 2.5      /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 50.0    /* scale of color scheme bar for 2nd part */
+#define ROTATE_COLOR_SCHEME 0     /* set to 1 to draw color scheme horizontally */
 
 #define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
 
@@ -248,13 +244,14 @@ double u_3d[2] = {0.75, -0.45};     /* projections of basis vectors for REP_AXO_
 double v_3d[2] = {-0.75, -0.45};
 double w_3d[2] = {0.0, 0.015};
 double light[3] = {0.816496581, -0.40824829, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
-double observer[3] = {6.0, 8.0, 6.0};    /* location of observer for REP_PROJ_3D representation */ 
+double observer[3] = {8.0, 8.0, 8.0};    /* location of observer for REP_PROJ_3D representation */ 
+int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
-#define Z_SCALING_FACTOR 0.05     /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define XY_SCALING_FACTOR 2.0    /* overall scaling factor for on-screen (x,y) coordinates after projection */
-#define ZMAX_FACTOR 1.0           /* max value of z coordinate for REP_PROJ_3D representation */
-#define XSHIFT_3D -0.1           /* overall x shift for REP_PROJ_3D representation */
-#define YSHIFT_3D 0.15           /* overall y shift for REP_PROJ_3D representation */
+#define Z_SCALING_FACTOR 0.05   /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define XY_SCALING_FACTOR 2.2   /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define ZMAX_FACTOR 1.0         /* max value of z coordinate for REP_PROJ_3D representation */
+#define XSHIFT_3D -0.1          /* overall x shift for REP_PROJ_3D representation */
+#define YSHIFT_3D 0.0           /* overall y shift for REP_PROJ_3D representation */
 
 
 #include "global_pdes.c"        /* constants and global variables */
@@ -519,6 +516,28 @@ void draw_color_bar_palette(int plot, double range, int palette, int fade, doubl
         draw_color_scheme_palette_3d(XMAX - 1.5*width, YMIN + 0.1, XMAX - 0.5*width, YMAX - 0.1, plot, -range, range, palette, fade, fade_value);
 }
 
+void viewpoint_schedule(int i)
+/* change position of observer */
+{
+    int j;
+    double angle, ca, sa;
+    static double observer_initial[3];
+    static int first = 1;
+    
+    if (first)
+    {
+        for (j=0; j<3; j++) observer_initial[j] = observer[j];
+        first = 0;
+    }
+    
+    angle = (ROTATE_ANGLE*DPI/360.0)*(double)i/(double)NSTEPS;
+    ca = cos(angle);
+    sa = sin(angle);
+    observer[0] = ca*observer_initial[0] - sa*observer_initial[1];
+    observer[1] = sa*observer_initial[0] + ca*observer_initial[1];
+    printf("Angle %.3lg, Observer position (%.3lg, %.3lg, %.3lg)\n", angle, observer[0], observer[1], observer[2]);
+}
+
 
 void animation()
 {
@@ -589,7 +608,8 @@ void animation()
 
 //     init_circular_wave_mod(polyline[85].x, polyline[85].y, phi, psi, xy_in);
     init_circular_wave_mod(0.0, 0.0, phi, psi, xy_in);
-//     add_circular_wave(-1.0, -0.2, -0.4, phi, psi, xy_in);
+//     init_wave_flat_mod(phi, psi, xy_in);
+//     add_circular_wave_mod(1.0, 1.0, 0.0, phi, psi, xy_in);
 
 //     printf("Wave initialized\n");
 
@@ -633,6 +653,12 @@ void animation()
 //             printf("Scaling factor: %5lg\n", scale);
         }
         else scale = 1.0;
+        
+        if (ROTATE_VIEW) 
+        {
+            viewpoint_schedule(i - INITIAL_TIME);
+            reset_view = 1;
+        }
         
         draw_wave_3d(0, phi, psi, xy_in, wave, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
         for (j=0; j<NVID; j++) 
@@ -702,6 +728,11 @@ void animation()
             if (!FADE) for (i=0; i<MID_FRAMES; i++) save_frame();
             else for (i=0; i<MID_FRAMES; i++) 
             {
+                if ((ROTATE_VIEW)&&(ROTATE_VIEW_WHILE_FADE))
+                {
+                    viewpoint_schedule(NSTEPS - INITIAL_TIME + i);
+                    reset_view = 1;
+                }
                 fade_value = 1.0 - (double)i/(double)MID_FRAMES;
                 draw_wave_3d(0, phi, psi, xy_in, wave, ZPLOT, CPLOT, COLOR_PALETTE, 1, fade_value, 0);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, 1, fade_value);   
@@ -715,6 +746,11 @@ void animation()
             if (!FADE) for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
             else for (i=0; i<END_FRAMES; i++) 
             {
+                if ((ROTATE_VIEW)&&(ROTATE_VIEW_WHILE_FADE)) 
+                {
+                    viewpoint_schedule(NSTEPS - INITIAL_TIME + i);
+                    reset_view = 1;
+                }
                 fade_value = 1.0 - (double)i/(double)END_FRAMES;
                 draw_wave_3d(1, phi, psi, xy_in, wave, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 1, fade_value, 0);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 1, fade_value);   
