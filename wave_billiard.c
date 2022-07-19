@@ -227,7 +227,7 @@ double courant2, courantb2;  /* Courant parameters squared */
 
 
 
-void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], double *psi_out[NX], 
+void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX],
                       short int *xy_in[NX])
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
@@ -277,7 +277,6 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
 
                 /* evolve phi */
                 phi_out[i][j] = -y + 2*x + tcc[i][j]*delta - KAPPA*x - tgamma[i][j]*(x-y);
-                psi_out[i][j] = x;
             }
         }
     }
@@ -315,7 +314,6 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                     break;
                 }
             }
-            psi_out[0][j] = x;
         }
     }
     
@@ -351,7 +349,6 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                     break;
                 }
             }
-            psi_out[NX-1][j] = x;
         }
     }
     
@@ -401,7 +398,6 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                     break;
                 }
             }
-            psi_out[i][NY-1] = x;
         }
     }
     
@@ -451,7 +447,6 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                     break;
                 }
             }
-            psi_out[i][0] = x;
         }
     }
     
@@ -469,20 +464,30 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
             {
                 if (phi_out[i][j] > VMAX) phi_out[i][j] = VMAX;
                 if (phi_out[i][j] < -VMAX) phi_out[i][j] = -VMAX;
-                if (psi_out[i][j] > VMAX) psi_out[i][j] = VMAX;
-                if (psi_out[i][j] < -VMAX) psi_out[i][j] = -VMAX;
             }
         }
     }
 }
 
 
-void evolve_wave(double *phi[NX], double *psi[NX], double *phi_tmp[NX], double *psi_tmp[NX], short int *xy_in[NX])
+void evolve_wave(double *phi[NX], double *psi[NX], double *tmp[NX], short int *xy_in[NX])
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 {
-    evolve_wave_half(phi, psi, phi_tmp, psi_tmp, xy_in);
-    evolve_wave_half(phi_tmp, psi_tmp, phi, psi, xy_in);
+    // For the purpose of these comments w[t], w[t-1], w[t+1] are used to refer
+    // to phi, psi and the result respectively to avoid confusion with the
+    // passed parameter names.
+    // At the beginning w[t] is saved in phi, w[t-1] in psi and tmp is space
+    // for the next wave state w[t+1]. Take w[t] and w[t-1] to calculate the
+    // next wave state. Write this new state in temp
+    evolve_wave_half(phi, psi, tmp, xy_in);
+    // now w[t] is saved in tmp, w[t-1] in phi and the result is written to psi
+    evolve_wave_half(tmp, phi, psi, xy_in);
+    // now w[t] is saved in psi, w[t-1] in tmp and the result is written to phi
+    evolve_wave_half(psi, tmp, phi, xy_in);
+    // now w[t] is saved in phi, w[t-1] in psi and tmp is free again to take
+    // the new wave state w[t+1] in the next call to this function, thus
+    // matching the given parameter names again
 }
 
 
@@ -514,7 +519,7 @@ void draw_color_bar_palette(int plot, double range, int palette, int fade, doubl
 void animation()
 {
     double time, scale, ratio, startleft[2], startright[2], sign, r2, xy[2], fade_value; 
-    double *phi[NX], *psi[NX], *phi_tmp[NX], *psi_tmp[NX], *total_energy[NX], *color_scale[NX];
+    double *phi[NX], *psi[NX], *tmp[NX], *total_energy[NX], *color_scale[NX];
     short int *xy_in[NX];
     int i, j, s, sample_left[2], sample_right[2], period = 0, fade;
     static int counter = 0;
@@ -531,8 +536,7 @@ void animation()
     {
         phi[i] = (double *)malloc(NY*sizeof(double));
         psi[i] = (double *)malloc(NY*sizeof(double));
-        phi_tmp[i] = (double *)malloc(NY*sizeof(double));
-        psi_tmp[i] = (double *)malloc(NY*sizeof(double));
+        tmp[i] = (double *)malloc(NY*sizeof(double));
         total_energy[i] = (double *)malloc(NY*sizeof(double));
         xy_in[i] = (short int *)malloc(NY*sizeof(short int));
         color_scale[i] = (double *)malloc(NY*sizeof(double));
@@ -654,7 +658,7 @@ void animation()
         else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, i, PLOT, COLOR_PALETTE, 0, 1.0);
         for (j=0; j<NVID; j++) 
         {
-            evolve_wave(phi, psi, phi_tmp, psi_tmp, xy_in);
+            evolve_wave(phi, psi, tmp, xy_in);
             if (SAVE_TIME_SERIES)
             {
                 wave_value = (long int)(phi[sample_left[0]][sample_left[1]]*1.0e16);
@@ -760,8 +764,7 @@ void animation()
     {
         free(phi[i]);
         free(psi[i]);
-        free(phi_tmp[i]);
-        free(psi_tmp[i]);
+        free(tmp[i]);
         free(total_energy[i]);
         free(xy_in[i]);
         free(color_scale[i]);

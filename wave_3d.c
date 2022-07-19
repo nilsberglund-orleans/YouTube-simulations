@@ -266,7 +266,7 @@ FILE *time_series_left, *time_series_right;
 double courant2, courantb2;  /* Courant parameters squared */
 
 
-void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out[NX*NY], double psi_out[NX*NY], 
+void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out[NX*NY],
                       short int xy_in[NX*NY], double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY])
 // void evolve_wave_half(double *phi_in, double *psi_in, double *phi_out, double *psi_out, 
 //                       short int *xy_in[NX])
@@ -295,7 +295,6 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
 
                 /* evolve phi */
                 phi_out[i*NY+j] = -y + 2*x + tcc[i*NY+j]*delta - KAPPA*x - tgamma[i*NY+j]*(x-y);
-                psi_out[i*NY+j] = x;
             }
         }
     }
@@ -333,7 +332,6 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
                     break;
                 }
             }
-            psi_out[j] = x;
         }
     }
     
@@ -369,7 +367,6 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
                     break;
                 }
             }
-            psi_out[(NX-1)*NY+j] = x;
         }
     }
     
@@ -419,7 +416,6 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
                     break;
                 }
             }
-            psi_out[i*NY+NY-1] = x;
         }
     }
     
@@ -469,7 +465,6 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
                     break;
                 }
             }
-            psi_out[i*NY] = x;
         }
     }
     
@@ -487,21 +482,20 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
             {
                 if (phi_out[i*NY+j] > VMAX) phi_out[i*NY+j] = VMAX;
                 if (phi_out[i*NY+j] < -VMAX) phi_out[i*NY+j] = -VMAX;
-                if (psi_out[i*NY+j] > VMAX) psi_out[i*NY+j] = VMAX;
-                if (psi_out[i*NY+j] < -VMAX) psi_out[i*NY+j] = -VMAX;
             }
         }
     }
 }
 
 
-void evolve_wave(double phi[NX*NY], double psi[NX*NY], double phi_tmp[NX*NY], double psi_tmp[NX*NY], short int xy_in[NX*NY],
+void evolve_wave(double phi[NX*NY], double psi[NX*NY], double tmp[NX*NY], short int xy_in[NX*NY],
     double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY])
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 {
-    evolve_wave_half(phi, psi, phi_tmp, psi_tmp, xy_in, tc, tcc, tgamma);
-    evolve_wave_half(phi_tmp, psi_tmp, phi, psi, xy_in, tc, tcc, tgamma);
+    evolve_wave_half(phi, psi, tmp, xy_in, tc, tcc, tgamma);
+    evolve_wave_half(tmp, phi, psi, xy_in, tc, tcc, tgamma);
+    evolve_wave_half(psi, tmp, phi, xy_in, tc, tcc, tgamma);
 }
 
 
@@ -542,7 +536,7 @@ void viewpoint_schedule(int i)
 void animation()
 {
     double time, scale, ratio, startleft[2], startright[2], sign, r2, xy[2], fade_value; 
-    double *phi, *psi, *phi_tmp, *psi_tmp, *total_energy, *color_scale, *tc, *tcc, *tgamma;
+    double *phi, *psi, *phi_tmp, *tmp, *total_energy, *color_scale, *tc, *tcc, *tgamma;
     short int *xy_in;
     int i, j, s, sample_left[2], sample_right[2], period = 0, fade;
     static int counter = 0;
@@ -559,8 +553,7 @@ void animation()
     xy_in = (short int *)malloc(NX*NY*sizeof(short int));
     phi = (double *)malloc(NX*NY*sizeof(double));
     psi = (double *)malloc(NX*NY*sizeof(double));
-    phi_tmp = (double *)malloc(NX*NY*sizeof(double));
-    psi_tmp = (double *)malloc(NX*NY*sizeof(double));
+    tmp = (double *)malloc(NX*NY*sizeof(double));
     total_energy = (double *)malloc(NX*NY*sizeof(double));
     color_scale = (double *)malloc(NX*NY*sizeof(double));
     tc = (double *)malloc(NX*NY*sizeof(double));
@@ -663,7 +656,7 @@ void animation()
         draw_wave_3d(0, phi, psi, xy_in, wave, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
         for (j=0; j<NVID; j++) 
         {
-            evolve_wave(phi, psi, phi_tmp, psi_tmp, xy_in, tc, tcc, tgamma);
+            evolve_wave(phi, psi, tmp, xy_in, tc, tcc, tgamma);
             if (SAVE_TIME_SERIES)
             {
                 wave_value = (long int)(phi[sample_left[0]*NY+sample_left[1]]*1.0e16);
@@ -777,8 +770,7 @@ void animation()
     free(xy_in);
     free(phi);
     free(psi);
-    free(phi_tmp);
-    free(psi_tmp);
+    free(tmp);
     free(total_energy);
     free(color_scale);
     free(tc);
