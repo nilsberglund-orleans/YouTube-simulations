@@ -59,6 +59,8 @@
 #define D_QRD_ASYM 461          /* asymmetric quadratic resonance diffuser */
 #define D_CIRCLE_SEGMENT 47     /* lens-shaped circular segment */
 #define D_GROOVE 48             /* groove array supposed to induce polaritons */
+#define D_FABRY_PEROT 49        /* Fabry-Perrot cavity (in fact simply a vertical slab) */
+#define D_LSHAPE 50             /* L-shaped billiard (surface of genus 2) */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
@@ -101,6 +103,7 @@
 /* Variable index of refraction */
 #define IOR_MANDELBROT 1      /* index of refraction depends on escape time in Mandelbrot set (log) */
 #define IOR_MANDELBROT_LIN 100    /* index of refraction depends on escape time in Mandelbrot set (linear) */
+#define IOR_EARTH 2         /* index of refraction models speed of seismic waves */
 
 /* Boundary conditions */
 
@@ -109,7 +112,16 @@
 #define BC_ABSORBING 2   /* absorbing boundary conditions (beta version) */
 #define BC_VPER_HABS 3   /* vertically periodic and horizontally absorbing boundary conditions */
 #define BC_ABS_REFLECT 4   /* absorbing boundary conditions, except reflecting at y=0, for comparisons */
+#define BC_LSHAPE 10      /* L-shaped boundary conditions (surface of genus 2) */
 // #define BC_OSCILL_ABSORB 5  /* oscillating boundary condition on the left, absorbing on other walls */ 
+
+
+/* Oscillating boundary conditions */
+
+#define OSC_PERIODIC 0  /* periodic oscillation */
+#define OSC_SLOWING 1   /* oscillation of slowing frequency (anti-chirp) */
+#define OSC_WAVE_PACKET 2   /* Gaussian wave packet */
+#define OSC_CHIRP 3     /* chirp (linearly accelerating frequency) */
 
 /* For debugging purposes only */
 // #define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
@@ -180,15 +192,26 @@ typedef struct
     double posi, posj;     /* (i,j) coordinates of vertex */
 } t_vertex;
 
+typedef struct
+{
+    int nneighb;    /* number of neighbours to compute Laplacian */
+    double *nghb[4];    /* pointers to neighbours */ 
+} t_laplacian;
 
-// double circlex[NMAXCIRCLES], circley[NMAXCIRCLES], circlerad[NMAXCIRCLES];      /* position and radius of circular scatterers */
-// short int circleactive[NMAXCIRCLES];                                      /* tells which circular scatters are active */
+
 int ncircles = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */
 int npolyline = NMAXPOLY;           /* actual length of polyline */
 
 t_circle circles[NMAXCIRCLES];      /* circular scatterers */
 t_polygon polygons[NMAXCIRCLES];    /* polygonal scatterers */
 t_vertex polyline[NMAXPOLY];        /* vertices of polygonal line */
+
+/* the same for comparisons between different domains */
+int ncircles_b = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */
+int npolyline_b = NMAXPOLY;           /* actual length of polyline */
+t_circle circles_b[NMAXCIRCLES];      /* circular scatterers */
+t_polygon polygons_b[NMAXCIRCLES];    /* polygonal scatterers */
+t_vertex polyline_b[NMAXPOLY];        /* vertices of polygonal line */
 
 // double julia_x = -0.5, julia_y = 0.5;    /* parameters for Julia sets */
 // double julia_x = 0.33267, julia_y = 0.06395;    /* parameters for Julia sets */

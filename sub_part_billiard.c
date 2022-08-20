@@ -4,8 +4,6 @@
 #define BOUNDARY_SHIFT 100000.0    /* shift of boundary parametrisation for circles in domain */
 #define DUMMY_SIDE_ABS -10000      /* dummy value of returned side for absorbing circles */
 
-#define PENROSE_RATIO 0.2    /* parameter controlling the shape of small ellipses in Penrose room */
-
 long int global_time = 0;    /* counter to keep track of global time of simulation */
 int nparticles=NPART; 
 
@@ -6148,6 +6146,103 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
                 circles[i].radius = MU;
                 circles[i].active = 1;
             }
+            break;
+        }
+    }
+}
+
+
+void init_polyline_depth(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], int sdepth, double mu)
+/* initialise polyline with variable depth parameter (for von Koch snowflake) */
+{
+    int i, j, k, l, n, z, ii, jj, terni[SDEPTH], ternj[SDEPTH], quater[SDEPTH], cond;
+    short int vkoch[NMAXCIRCLES], turnright; 
+    double ratio, omega, angle, sw, length, dist, x, y, ta, tb, a, b;
+    
+    switch (POLYLINE_PATTERN) {
+        case (P_VONKOCH):
+        {
+            nsides = 3;
+            for (k=0; k<sdepth; k++) nsides *= 4;
+            printf("nsides = %i\n", nsides);
+            ncircles = nsides;
+            
+            if (nsides > NMAXPOLY)
+            {
+                printf("NMAXPOLY has to be increased to at least %i\n", nsides);
+                nsides = NMAXPOLY;
+            }
+
+            for (i=0; i<nsides/3; i++)
+            {
+                /* compute quaternary expansion of i */
+                ii = i;
+                for (l=0; l<sdepth; l++)
+                {
+                    quater[l] = ii%4;
+                    ii = ii - (ii%4);
+                    ii = ii/4;
+                }
+                
+                /* find first nonzero digit */
+                z = 0;
+                while ((quater[z] == 0)&&(z<sdepth)) z++;
+                
+                /* compute left/right turns */
+                if (i==0) vkoch[0] = 0;
+                else if (z != sdepth)
+                {   
+                    if (quater[z] == 2) vkoch[i] = 0;
+                    else vkoch[i] = 1;
+                }
+//                 printf("%i", vkoch[i]);
+            }
+            printf("\n");
+            
+            /* compute vertices */
+            angle = 2.0*PI/3.0;
+            x = cos(PI/6.0);
+            y = -sin(PI/6.0);
+            length = 2.0*sin(PI/3.0);
+            
+            for (k=0; k<sdepth; k++) length = length/3.0;
+            printf("Length = %.2f\n", length);
+            
+            for (i=0; i<nsides; i++)
+            {
+                polyline[i].x1 = x;
+                polyline[i].y1 = y; 
+                polyline[i].angle = angle;
+                
+                x += length*cos(angle);
+                y += length*sin(angle);
+                polyline[i].length = length;
+                                
+                turnright = vkoch[i%(nsides/3)+1];
+                if (turnright) angle -= PI/3.0;
+                else angle += 2.0*PI/3.0;
+                
+                while (angle > DPI) angle -= DPI;
+                while (angle < 0.0) angle += DPI;                
+            }
+            
+            for (i=0; i<nsides; i++)
+            {
+                polyline[i].color = 0;
+                if (i < nsides-1) polyline[i].x2 = polyline[i+1].x1;
+                else polyline[i].x2 = polyline[0].x1;
+                if (i < nsides-1) polyline[i].y2 = polyline[i+1].y1;
+                else polyline[i].y2 = polyline[0].y1;  
+            }
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].xc = polyline[i].x1;
+                circles[i].yc = polyline[i].y1;
+                circles[i].radius = mu;
+                circles[i].active = 1;
+            }
+            
             break;
         }
     }

@@ -219,6 +219,12 @@
 #define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */
 #define VMAX 5.0       /* max value of wave amplitude */
 
+/* the following constants are only used by wave_billiard and wave_3d so far */
+#define COMPARISON 0        /* set to 1 to compare two different patterns */
+#define OSCILLATION_SCHEDULE 3  /* oscillation schedule, see list in global_pdes.c */
+#define ACHIRP 0.2        /* acceleration coefficient in chirp */
+#define DAMPING 0.0        /* damping of periodic excitation */
+/* end of constants only used by wave_billiard and wave_3d */
 
 #include "global_pdes.c"        /* constants and global variables */
 #include "sub_wave.c"           /* common functions for wave_billiard, heat and schrodinger */
@@ -864,4 +870,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-

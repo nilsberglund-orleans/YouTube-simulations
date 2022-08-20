@@ -42,7 +42,7 @@
 
 /* Choice of the billiard table, see global_particles.c  */
 
-#define B_DOMAIN 15      /* choice of domain shape */
+#define B_DOMAIN 1      /* choice of domain shape */
 
 #define CIRCLE_PATTERN 0    /* pattern of circles */
 #define POLYLINE_PATTERN 1  /* pattern of polyline */
@@ -59,7 +59,7 @@
 #define NGOLDENSPIRAL 2000  /* max number of points for C_GOLDEN_SPIRAL arrandement */
 #define SDEPTH 1            /* Sierpinski gastket depth */
 
-#define LAMBDA 0.3	    /* parameter controlling the dimensions of domain */
+#define LAMBDA 1.5	    /* parameter controlling the dimensions of domain */
 // #define LAMBDA 1.124950941	/* sin(36°)/sin(31.5°) for 5-star shape with 45° angles */
 // #define LAMBDA 1.445124904	/* sin(36°)/sin(24°) for 5-star shape with 60° angles */
 // #define LAMBDA 3.75738973	/* sin(36°)/sin(9°) for 5-star shape with 90° angles */
@@ -72,13 +72,14 @@
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
 #define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
 #define PERIODIC_BC 0       /* set to 1 to enforce periodic boundary conditions when drawing particles */
+#define PENROSE_RATIO 2.5    /* parameter controlling the shape of small ellipses in Penrose room */
 
-#define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
+#define RESAMPLE 1      /* set to 1 if particles should be added when dispersion too large */
 
 #define NPART 20000	/* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 
-#define NSTEPS 5000         /* number of frames of movie */
+#define NSTEPS 5250         /* number of frames of movie */
 #define TIME 150             /* time between movie frames, for fluidity of real-time simulation */ 
 #define DPHI 0.0001         /* integration step */
 #define NVID 75             /* number of iterations between images displayed on screen */
@@ -90,25 +91,25 @@
 
 /* simulation parameters */
 
-#define LMAX 0.01       /* minimal segment length triggering resampling */ 
-#define LPERIODIC 0.1   /* lines longer than this are not drawn (useful for Sinai billiard) */
-#define LCUT 10000.0        /* controls the max size of segments not considered as being cut */
-#define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
+#define LMAX 0.1       /* minimal segment length triggering resampling */ 
+#define LPERIODIC 0.5   /* lines longer than this are not drawn (useful for Sinai billiard) */
+#define LCUT 10000000.0        /* controls the max size of segments not considered as being cut */
+#define DMIN 0.1       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 0         /* set to 1 for closed curve (start in all directions) */
-#define ORDER_COLORS 1  /* set to 1 if colors should be drawn in order */ 
+#define ORDER_COLORS 0  /* set to 1 if colors should be drawn in order */ 
 
 /* color and other graphical parameters */
 
-#define COLOR_PALETTE 1     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 14     /* Color palette, see list in global_pdes.c  */
 
-#define NCOLORS 14           /* number of colors */
+#define NCOLORS 16           /* number of colors */
 #define COLORSHIFT 3        /* hue of initial color */ 
 #define RAINBOW_COLOR 0     /* set to 1 to use different colors for all particles */
 #define NSEG 100            /* number of segments of boundary */
 #define BILLIARD_WIDTH 4    /* width of billiard */
 #define FRONT_WIDTH 4       /* width of wave front */
 
-#define BLACK 0             /* set to 1 for black background */
+#define BLACK 1             /* set to 1 for black background */
 #define COLOR_OUTSIDE 0     /* set to 1 for colored outside */ 
 #define OUTER_COLOR 300.0   /* color outside billiard */
 #define PAINT_INT 0         /* set to 1 to paint interior in other color (for polygon) */
@@ -119,7 +120,7 @@
 #define PSLEEP 1            /* sleep time during pause */
 #define SLEEP1  1           /* initial sleeping time */
 #define SLEEP2  100         /* final sleeping time */
-#define END_FRAMES 0        /* number of frames at end of movie */
+#define END_FRAMES 25       /* number of frames at end of movie */
 
 #define PI 	3.141592654
 #define DPI 	6.283185307
@@ -469,11 +470,11 @@ void animation()
     for (i=0; i<NPARTMAX; i++)
         configs[i] = (double *)malloc(8*sizeof(double));
   
-//     init_drop_config(0.1, 0.1, 0.0, DPI, configs);
-    init_partial_drop_config(0, NPART/4, LAMBDA, 0.0, 0.0, DPI, configs);
-    init_partial_drop_config(NPART/4, NPART/2, -LAMBDA, 0.0, 0.0, DPI, configs);
-    init_partial_drop_config(NPART/2, 3*NPART/4, 0.0, LAMBDA, 0.0, DPI, configs);
-    init_partial_drop_config(3*NPART/4, NPART, 0.0, -LAMBDA, 0.0, DPI, configs);
+    init_drop_config(0.0, 0.0, 0.0, DPI, configs);
+//     init_partial_drop_config(0, NPART/4, LAMBDA, 0.0, 0.0, DPI, configs);
+//     init_partial_drop_config(NPART/4, NPART/2, -LAMBDA, 0.0, 0.0, DPI, configs);
+//     init_partial_drop_config(NPART/2, 3*NPART/4, 0.0, LAMBDA, 0.0, DPI, configs);
+//     init_partial_drop_config(3*NPART/4, NPART, 0.0, -LAMBDA, 0.0, DPI, configs);
 //     init_drop_config(-1.0 + 0.3*sqrt(2.0), -1.0 + 0.5*sqrt(2.0), 0.0, DPI, configs);
 //     init_drop_config(-0.5, -0.5, 0.0, DPI, configs);
 //     init_boundary_config(1.5, 1.5, 0.0, PI, configs);

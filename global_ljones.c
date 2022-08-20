@@ -53,8 +53,13 @@
 #define S_CENTRIFUGE_RND 7  /* segments forming centrifuge with more rounded bins */
 #define S_CENTRIFUGE_LEAKY 8  /* segments forming centrifuge with rounded bins and holes */
 #define S_CIRCLE_EXT 9      /* segments forming a repelling cicle */
-#define S_ROCKET_NOZZLE 10  /* segments forming a rocket bell-shpaed nozzle */
+#define S_ROCKET_NOZZLE 10  /* segments forming a rocket with bell-shaped nozzle */
+#define S_ROCKET_NOZZLE_ROTATED 101 /* rotated version of rocket with bell-shaped nozzle */
+#define S_TWO_ROCKETS 102     /* two different rockets, with nozzles specified by NOZZLE_SHAPE and NOZZLE_SHAPE_B */
 #define S_TWO_CIRCLES_EXT 11  /* segments forming two repelling cicle */
+#define S_DAM 12              /* segments forming a dam that can break */
+#define S_DAM_WITH_HOLE 13    /* segments forming a dam in which a hole can open */
+#define S_DAM_WITH_HOLE_AND_RAMP 14    /* segments forming a dam in which a hole can open */
 
 /* particle interaction */
 
@@ -83,7 +88,8 @@
 #define BC_SCREEN_BINS 12   /* harmonic boundary conditions outside screen area plus "bins" (for Galton board) */
 #define BC_BOY 13           /* Boy surface/projective plane (periodic with twisted horizontal and vertical parts) */
 #define BC_GENUS_TWO 14     /* surface of genus 2, obtained by identifying opposite sides of an L shape */
-#define BC_ABSORBING 20     /* "no-return" boundary conditions outside screen area */
+#define BC_ABSORBING 20     /* "no-return" boundary conditions outside BC area */
+#define BC_REFLECT_ABS 21   /* reflecting on lower boundary, and "no-return" boundary conditions outside BC area */
 
 /* Regions for partial thermostat couplings */
 
@@ -95,6 +101,15 @@
 
 #define G_INCREASE_RELEASE 1    /* slow increase and instant release */
 #define G_INCREASE_DECREASE 2   /* slow increase an decrease */
+
+/* Nozzle shapes */
+
+#define NZ_STRAIGHT 0   /* straight nozzle */
+#define NZ_BELL 1       /* bell-shaped nozzle */
+#define NZ_GLAS 2       /* glas-shaped nozzle */
+#define NZ_CONE 3       /* cone-shaped nozzle */
+#define NZ_TRUMPET 4    /* trumpet-shaped nozzle */
+#define NZ_NONE 99      /* no nozzle */
 
 /* Plot types */
 
@@ -108,6 +123,8 @@
 #define P_ANGULAR_SPEED 7 /* colors represent angular speed */
 #define P_DIRECT_ENERGY 8 /* hues represent direction, luminosity represents energy */
 #define P_DIFF_NEIGHB 9   /* colors represent number of neighbours of different type */
+#define P_THERMOSTAT 10   /* colors show which particles are coupled to the thermostat */
+#define P_INITIAL_POS 11  /* colors depend on initial position of particle */
 
 /* Color schemes */
 
@@ -163,6 +180,7 @@ typedef struct
     double eq_dist;             /* equilibrium distance */
     double spin_range;          /* range of spin-spin interaction */
     double spin_freq;           /* angular frequency of spin-spin interaction */
+    double color_hue;           /* color hue of particle, for P_INITIAL_POS plot type */
 } t_particle;
 
 typedef struct
@@ -212,6 +230,7 @@ typedef struct
     double nx0, ny0;            /* initial normal vector */
     double angle01, angle02;    /* initial values of angles in which concave corners repel */
     double fx, fy;              /* x and y-components of force on segment */
+    short int inactivate;       /* set to 1 for segment to become inactive at time SEGMENT_DEACTIVATION_TIME */
 } t_segment;
 
 typedef struct

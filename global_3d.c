@@ -30,6 +30,8 @@
 #define POT_COULOMB 2       /* Coulomb (1/r) potential */
 #define POT_PERIODIC 3      /* periodic potential */
 #define POT_DOUBLE_COULOMB 4      /* sum of Coulomb potentials located at focal points of ellipse */
+#define POT_FERMIONS 5      /* two interacting 1D fermions */
+#define POT_FERMIONS_PERIODIC 6      /* two interacting 1D fermions on the circle */
 
 /* plot types used by rde */
 

@@ -90,6 +90,33 @@ void draw_vertex_x_y_z(double x, double y, double z)
     glVertex2d(xy_screen[0], xy_screen[1]);
 }
 
+void draw_segment_hsl(double x1, double y1, double x2, double y2, double h, double s, double l)
+/* draw line segment (x1,y1)-(x2,y2) in color (h,s,l) */
+{
+    double rgb[3], pos[2];
+    
+    glBegin(GL_LINE_STRIP);
+    hsl_to_rgb_palette(h, s, l, rgb, COL_JET);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    draw_vertex_x_y_z(x1, y1, 0.0);
+    draw_vertex_x_y_z(x2, y2, 0.0);
+    glEnd();
+}
+
+
+void draw_segment_rgb(double x1, double y1, double x2, double y2, double r, double g, double b)
+/* draw line segment (x1,y1)-(x2,y2) in color (h,s,l) */
+{
+    double rgb[3], pos[2];
+    
+    glBegin(GL_LINE_STRIP);
+    glColor3f(r, g, b);
+    draw_vertex_x_y_z(x1, y1, 0.0);
+    draw_vertex_x_y_z(x2, y2, 0.0);
+    glEnd();
+}
+
+
 void draw_rectangle_3d(double x1, double y1, double x2, double y2)
 {
     glBegin(GL_LINE_LOOP);
@@ -152,7 +179,7 @@ void draw_tpolygon_3d(t_polygon polygon)
 
 void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard boundary */
 {
-    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax;
+    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax, padd;
     int i, j, k, k1, k2, mr2;
     static int first = 1, nsides;
 
@@ -725,6 +752,20 @@ void draw_billiard_3d(int fade, double fade_value)      /* draws the billiard bo
                 if (polygons[i].active) draw_tpolygon_3d(polygons[i]);
             break;
         }
+        case (D_LSHAPE):
+        {
+            padd = 0.005;
+            glLineWidth(BOUNDARY_WIDTH);
+            draw_segment_hsl(-LAMBDA - padd, -1.0 - padd, 0.0, -1.0 - padd, 0.0, 1.0, 0.5*fade_value);
+            draw_segment_hsl(-LAMBDA - padd,  1.0 + padd, 0.0,  1.0 + padd, 0.0, 1.0, 0.5*fade_value);
+            draw_segment_hsl(0.0, -1.0 - padd, LAMBDA + padd, -1.0 - padd, 220.0, 1.0, 0.5*fade_value);
+            draw_segment_hsl(0.0, padd, LAMBDA + padd, padd, 220.0, 1.0, 0.5*fade_value);
+            draw_segment_hsl(-LAMBDA - padd, -1.0 - padd, -LAMBDA - padd, 0.0, 60.0, 1.0, 0.5*fade_value);
+            draw_segment_hsl( LAMBDA + padd, -1.0 - padd,  LAMBDA + padd, 0.0, 60.0, 1.0, 0.5*fade_value);
+            draw_segment_hsl(-LAMBDA - padd, 0.0, -LAMBDA - padd, 1.0 + padd, 180.0, 1.0, 0.5*fade_value);
+            draw_segment_hsl( padd, padd, padd, LAMBDA + padd, 180.0, 1.0, 0.5*fade_value);
+            break;
+        }
         case (D_NOTHING):
         {
             break;
@@ -764,13 +805,42 @@ void draw_polyline_visible(int j, int k, double margin)
         glEnd();
     }
 }
-            
+        
+void draw_segment_hsl_visible(double x1, double y1, double x2, double y2, double h, double s, double l, double margin)
+/* hack to draw the billiard boundary in front of the wave */
+/* only parts of the boundary having a small enough angle with the observer vector are drawn */
+{
+    double length, length1, olength;
+    
+    olength = module2(observer[0], observer[1]);
+    
+    length = module2(x1,y1);
+    length1 = module2(x2,y2);
+    if ((x1*observer[0] + y1*observer[1] > margin*length*olength)&&(x2*observer[0] + y2*observer[1] > margin*length1*olength))
+        draw_segment_hsl(x1, y1, x2, y2, h, s, l);
+}
+
+
+void draw_segment_rgb_visible(double x1, double y1, double x2, double y2, double r, double g, double b, double margin)
+/* hack to draw the billiard boundary in front of the wave */
+/* only parts of the boundary having a small enough angle with the observer vector are drawn */
+{
+    double length, length1, olength;
+    
+    olength = module2(observer[0], observer[1]);
+    
+    length = module2(x1,y1);
+    length1 = module2(x2,y2);
+    if ((x1*observer[0] + y1*observer[1] > margin*length*olength)&&(x2*observer[0] + y2*observer[1] > margin*length1*olength))
+        draw_segment_rgb(x1, y1, x2, y2, r, g, b);
+}
+
 
 void draw_billiard_3d_front(int fade, double fade_value)      
 /* hack to draw the billiard boundary in front of the wave */
 /* only parts of the boundary having a small enough angle with the observer vector are drawn */
 {
-    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax, length, length1;
+    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax, length, length1, padd, margin;
     int i, j, k, k1, k2, mr2;
     static int first = 1, nsides;
     static double olength;
@@ -803,6 +873,20 @@ void draw_billiard_3d_front(int fade, double fade_value)
             draw_vertex_x_y_z(LAMBDA, 1.0, 0.0);
             draw_vertex_x_y_z(-LAMBDA, 1.0, 0.0);
             glEnd();
+            break;
+        }
+        case (D_ELLIPSE):
+        {
+            glBegin(GL_LINE_LOOP);
+            dphi = DPI/(double)NSEG;
+            margin = 0.0;
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*dphi;
+                draw_segment_rgb_visible(LAMBDA*cos(phi), sin(phi), LAMBDA*cos(phi+dphi), sin(phi+dphi), fade_value, fade_value, fade_value, margin);
+                draw_vertex_x_y_z(LAMBDA*cos(phi), sin(phi), 0.0);
+            }
+            glEnd ();
             break;
         }
         case (D_YOUNG):
@@ -850,6 +934,21 @@ void draw_billiard_3d_front(int fade, double fade_value)
             glLineWidth(BOUNDARY_WIDTH);
             for (i=0; i<npolyline; i++)
                 draw_polyline_visible(i%npolyline, (i+1)%npolyline, -0.5);
+            break;
+        }
+        case (D_LSHAPE):
+        {
+            padd = 0.005;
+            margin = 0.0;
+            glLineWidth(BOUNDARY_WIDTH);
+            draw_segment_hsl_visible(-LAMBDA - padd, -1.0 - padd, 0.0, -1.0 - padd, 0.0, 1.0, 0.5*fade_value, margin);
+            draw_segment_hsl_visible(-LAMBDA - padd,  1.0 + padd, 0.0,  1.0 + padd, 0.0, 1.0, 0.5*fade_value, margin);
+            draw_segment_hsl_visible(0.0, -1.0 - padd, LAMBDA + padd, -1.0 - padd, 220.0, 1.0, 0.5*fade_value, margin);
+            draw_segment_hsl_visible(0.0, padd, LAMBDA + padd, padd, 220.0, 1.0, 0.5*fade_value, 0.2);
+            draw_segment_hsl_visible(-LAMBDA - padd, -1.0 - padd, -LAMBDA - padd, 0.0, 60.0, 1.0, 0.5*fade_value, margin);
+            draw_segment_hsl_visible( LAMBDA + padd, -1.0 - padd,  LAMBDA + padd, 0.0, 60.0, 1.0, 0.5*fade_value, margin);
+            draw_segment_hsl_visible(-LAMBDA - padd, 0.0, -LAMBDA - padd, 1.0 + padd, 180.0, 1.0, 0.5*fade_value, margin);
+            draw_segment_hsl_visible( padd, padd, padd, LAMBDA + padd, 180.0, 1.0, 0.5*fade_value, 0.6);
             break;
         }
         default:
@@ -1118,8 +1217,8 @@ void compute_wave_fields(double phi[NX*NY], double psi[NX*NY], short int xy_in[N
     if (COMPUTE_ENERGY)
         compute_energy_field(phi, psi, xy_in, wave);
     
-//     if ((zplot == P_3D_LOG_ENERGY)||(cplot == P_3D_LOG_ENERGY))
-//         compute_log_energy_field(phi, psi, xy_in, wave);
+    if ((zplot == P_3D_LOG_ENERGY)||(cplot == P_3D_LOG_ENERGY))
+        compute_log_energy_field(phi, psi, xy_in, wave);
     
     if ((zplot == P_3D_PHASE)||(cplot == P_3D_PHASE))
         compute_phase_field(phi, psi, xy_in, wave);
@@ -1132,7 +1231,7 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
 {
     int i, j, k;
     double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB;
-    double u, v, u1, x, y, xy[2], norm2, speed;
+    double u, v, u1, x, y, xy[2], norm2, speed, r2, c;
     
     if (VARIABLE_IOR)
     {
@@ -1207,6 +1306,23 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
                             tc[i*NY+j] = COURANT*sqrt(speed);
                             tgamma[i*NY+j] = GAMMA;
                         }
+                    }
+                }
+                break;
+            }
+            case (IOR_EARTH):
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        r2 = xy[0]*xy[0] + xy[1]*xy[1];
+                        if (r2 > 1.0) c = 0.0;
+                        else if (r2 < 0.25*0.25) c = 0.8*COURANT;
+                        else if (r2 < 0.58*0.58) c = COURANT*(0.68 - 0.55*r2);
+                        else c = COURANT*(1.3 - 0.9*r2);
+                        tc[i*NY+j] = c;
+                        tcc[i*NY+j] = c;
+                        tgamma[i*NY+j] = GAMMA;
                     }
                 }
                 break;
@@ -1515,8 +1631,8 @@ void draw_wave_3d(int movie, double phi[NX*NY], double psi[NX*NY], short int xy_
     
     if (!ROTATE_VIEW)
     {
-        for (i=0; i<NX-2; i++)
-            for (j=0; j<NY-2; j++)
+        for (i=1; i<NX-2; i++)
+            for (j=1; j<NY-2; j++)
                 draw_wave_3d_ij(i, j, movie, phi, psi, xy_in, wave, zplot, cplot, palette, fade, fade_value);
     }
     else    /* draw facets in an order depending on the position of the observer */
@@ -1528,26 +1644,26 @@ void draw_wave_3d(int movie, double phi[NX*NY], double psi[NX*NY], short int xy_
         
         if ((observer_angle > 0.0)&&(observer_angle < PID))
         {
-            for (j=0; j<NY-2; j++)
-                for (i=0; i<NX-2; i++)
+            for (j=1; j<NY-2; j++)
+                for (i=1; i<NX-2; i++)
                     draw_wave_3d_ij(i, j, movie, phi, psi, xy_in, wave, zplot, cplot, palette, fade, fade_value);
         }
         else if (observer_angle < PI)
         {
             for (i=NX-3; i>0; i--)
-                for (j=0; j<NY-2; j++)
+                for (j=1; j<NY-2; j++)
                     draw_wave_3d_ij(i, j, movie, phi, psi, xy_in, wave, zplot, cplot, palette, fade, fade_value);
         }
         else if (observer_angle < 1.5*PI)
         {
              for (j=NY-3; j>0; j--)
-                for (i=0; i<NX-2; i++)
+                for (i=1; i<NX-2; i++)
                     draw_wave_3d_ij(i, j, movie, phi, psi, xy_in, wave, zplot, cplot, palette, fade, fade_value);   
         }
         else
         {
-            for (i=0; i<NX-2; i++)
-                for (j=0; j<NY-2; j++)
+            for (i=1; i<NX-2; i++)
+                for (j=1; j<NY-2; j++)
                     draw_wave_3d_ij(i, j, movie, phi, psi, xy_in, wave, zplot, cplot, palette, fade, fade_value);
         }
     }
@@ -1678,5 +1794,28 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
     else glColor3f(1.0, 1.0, 1.0);
     glLineWidth(BOUNDARY_WIDTH);
     draw_rectangle_noscale(x1, y1, x2, y2);
+}
+
+
+void print_speed_3d(double speed, int fade, double fade_value)
+{
+    char message[100];
+    double y = YMAX - 0.1, pos[2];
+    static double xleftbox, xlefttext;
+    static int first = 1;
+    
+    if (first)
+    {
+        xleftbox = XMIN + 0.3;
+        xlefttext = xleftbox - 0.45;
+        first = 0;
+    }
+    
+    erase_area_hsl(xleftbox, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+//     xy_to_pos(xlefttext + 0.28, y, pos);
+    sprintf(message, "Mach %.3lg", speed);
+    write_text(xlefttext + 0.28, y, message);
 }
 

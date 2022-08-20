@@ -770,10 +770,10 @@ void draw_wave_epalette(double *phi[NX], double *psi[NX], double *total_energy[N
 }
 
 
-void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], short int *xy_in[NX], double scale, int time, int plot, int palette)
+void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], short int *xy_in[NX], double scale, int time, int plot, int palette, int fade, double fade_value)
 /* same as draw_wave_highres, but with color scheme option */
 {
-    int i, j, iplus, iminus, jplus, jminus;
+    int i, j, k, iplus, iminus, jplus, jminus;
     double rgb[3], xy[2], x1, y1, x2, y2, velocity, energy, gradientx2, gradienty2;
     static double dtinverse = ((double)NX)/(COURANT*(XMAX-XMIN)), dx = (XMAX-XMIN)/((double)NX);
 
@@ -836,8 +836,9 @@ void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], doubl
                     }
                     
                 }
+                if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
                 glColor3f(rgb[0], rgb[1], rgb[2]);
-
+                
                 glVertex2i(i, j);
                 glVertex2i(i+size, j);
                 glVertex2i(i+size, j+size);
@@ -937,14 +938,66 @@ double compute_energy_mod(double phi[NX*NY], double psi[NX*NY], short int xy_in[
 {
     double velocity, energy, gradientx2, gradienty2;
     int iplus, iminus, jplus, jminus;
+    static int i1, j1, i2, j2, i3, j3, ij[2];
+    static int first = 1;
+    
+    if (first)
+    {
+        xy_to_ij(-LAMBDA, -1.0, ij);
+        i1 = ij[0] + 1;     j1 = ij[1] + 1;
+        xy_to_ij(0.0, 0.0, ij);
+        i2 = ij[0] - 1;     j2 = ij[1] - 1;
+        xy_to_ij(LAMBDA, 1.0, ij);
+        i3 = ij[0] - 1;     j3 = ij[1] - 1;
+        first = 0;
+    }
     
     velocity = (phi[i*NY+j] - psi[i*NY+j]);
-                    
-    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
-    iminus = (i-1);  if (iminus == -1) iminus = 0;
-    jplus = (j+1);   if (jplus == NY) jplus = NY-1;
-    jminus = (j-1);  if (jminus == -1) jminus = 0;
-                        
+    
+/* avoid computing gradient across boundary of compared regions */
+    if (COMPARISON)
+    {
+        iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+        iminus = (i-1);  if (iminus == -1) iminus = 0;
+        jplus = (j+1);   if (jplus == NY) jplus = NY-1;     else if (jplus == NY/2) jplus = NY/2-1;
+        jminus = (j-1);  if (jminus == -1) jminus = 0;      else if (jminus == NY/2-1) jminus = NY/2;
+    }
+    else
+    {
+        iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+        iminus = (i-1);  if (iminus == -1) iminus = 0;
+        jplus = (j+1);   if (jplus == NY) jplus = NY-1;
+        jminus = (j-1);  if (jminus == -1) jminus = 0;
+    }
+//     else
+//     {
+//         iplus = i+1;   
+//         if ((j<j2)&&(iplus>i3-1)) iplus = i1;
+//         else if ((j>=j2)&&(iplus>i2-1)) iplus = i1;
+//         
+//         iminus = i-1;   
+//         if ((j<j2)&&(iminus<i1)) iminus = i3-1;
+//         else if ((j>=j2)&&(iminus<i1)) iminus = i2-1;
+//         
+//         jplus = j+1;
+//         if ((i<i2)&&(jplus>j3-1)) jplus = j1;
+//         else if ((i>=i2)&&(jplus>j2-1)) jplus = j1;
+//         
+//         jminus = j-1;   
+//         if ((i<i2)&&(jminus<j1)) jminus = j3-1;
+//         else if ((i>=i2)&&(jminus<j1)) jminus = j2-1;
+//         
+//         jminus = j-1;
+//     }
+                
+    if (B_COND == BC_LSHAPE)
+    {
+        if ((i<=i1)||(j<=j1)) return(0.0);
+        if ((i>=i2-1)&&(j>=j2-1)) return(0.0);
+        if ((i>=i3-1)||(j>=j3-1)) return(0.0);
+    }
+    
+    
     gradientx2 = (phi[iplus*NY+j]-phi[i*NY+j])*(phi[iplus*NY+j]-phi[i*NY+j]) 
         + (phi[i*NY+j] - phi[iminus*NY+j])*(phi[i*NY+j] - phi[iminus*NY+j]);
     gradienty2 = (phi[i*NY+jplus]-phi[i*NY+j])*(phi[i*NY+jplus]-phi[i*NY+j]) 

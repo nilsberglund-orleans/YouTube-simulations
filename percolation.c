@@ -39,7 +39,7 @@
 #include <omp.h>
 #include <time.h>
 
-#define MOVIE 0         /* set to 1 to generate movie */
+#define MOVIE 1         /* set to 1 to generate movie */
 
 /* General geometrical parameters */
 
@@ -68,25 +68,22 @@
 
 /* Boundary conditions, see list in global_pdes.c  */
 
-#define LATTICE 10
+#define LATTICE 2
 
-#define FLOOD_LEFT_BOUNDARY 1   /* set to 1 to flood cells on left boundary */
-#define FIND_ALL_CLUSTERS 0     /* set to 1 to find all open clusters */
+#define FLOOD_LEFT_BOUNDARY 0   /* set to 1 to flood cells on left boundary */
+#define FIND_ALL_CLUSTERS 1     /* set to 1 to find all open clusters */
 
-#define PLOT_CLUSTER_SIZE 1     /* set to 1 to add a plot for the size of the percolation cluster */
+#define PLOT_CLUSTER_SIZE 0     /* set to 1 to add a plot for the size of the percolation cluster */
 #define PLOT_CLUSTER_NUMBER 0   /* set to 1 to add a graph of the number of clusters */
-#define PLOT_CLUSTER_HISTOGRAM 0    /* set to 1 to add a histogram of the number of clusters */
-#define PRINT_LARGEST_CLUSTER_SIZE 0    /* set to 1 to print size of largest cluster */
+#define PLOT_CLUSTER_HISTOGRAM 1    /* set to 1 to add a histogram of the number of clusters */
+#define PRINT_LARGEST_CLUSTER_SIZE 1    /* set to 1 to print size of largest cluster */
 
 #define MAX_CLUSTER_NUMBER 6    /* vertical scale of the cluster number plot */
-#define HISTO_BINS 30           /* number of bins in histrogram */
+#define HISTO_BINS 30           /* number of bins in histogram */
 
-#define NSTEPS 1270        /* number of frames of movie */
-
-#define DEBUG 0         /* set to 1 for some debugging features */
-#define DEBUG_SLEEP_TIME 1  /* sleep time between frames when debugging */
-#define TEST_GRAPH 0   /* set to 1 to test graph connectivity matrix */
-#define TEST_START 2210    /* start position of connectivity test */
+#define NSTEPS 100        /* number of frames of movie */
+// #define NSTEPS 700        /* number of frames of movie */
+// #define NSTEPS 830        /* number of frames of movie */
 
 #define PAUSE 200       /* number of frames after which to pause */
 #define PSLEEP 2         /* sleep time during pause */
@@ -102,19 +99,19 @@
 
 #define BLACK 1          /* background */
 
-#define COLOR_CLUSTERS_BY_SIZE 0    /* set to 1 to link cluster color to their size */
+#define COLOR_CLUSTERS_BY_SIZE 1    /* set to 1 to link cluster color to their size */
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 
-#define HUE_CLOSED 330.0   /* color hue of closed cells */
+#define HUE_CLOSED 350.0   /* color hue of closed cells */
 #define HUE_OPEN 200.0     /* color hue of open (dry) cells */
 #define HUE_FLOODED 45.0   /* color hue of open flooded cells */
-#define HUE_GRAPH 150.0    /* color hue in graph of cluster size */
+#define HUE_GRAPH 250.0    /* color hue in graph of cluster size */
 
-#define CLUSTER_HUEMIN 0.0     /* minimal color hue of clusters */
-#define CLUSTER_HUEMAX 250.0    /* maximal color hue of clusters */
+#define CLUSTER_HUEMIN 60.0     /* minimal color hue of clusters */
+#define CLUSTER_HUEMAX 300.0    /* maximal color hue of clusters */
 #define N_CLUSTER_COLORS 20     /* number of different colors of clusters */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
@@ -123,6 +120,13 @@
 #define LUMAMP 0.3       /* amplitude of luminosity variation for scheme C_LUM */
 #define HUEMEAN 180.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
+
+/* debugging options */
+#define VERBOSE 0       /* set to 1 to print more messages in shell */
+#define DEBUG 0         /* set to 1 for some debugging features */
+#define DEBUG_SLEEP_TIME 1  /* sleep time between frames when debugging */
+#define TEST_GRAPH 0   /* set to 1 to test graph connectivity matrix */
+#define TEST_START 2210    /* start position of connectivity test */
 
 #define ADD_PLOT ((PLOT_CLUSTER_SIZE)||(PLOT_CLUSTER_NUMBER)||(PLOT_CLUSTER_HISTOGRAM))
 #define FIND_CLUSTER_SIZES ((COLOR_CLUSTERS_BY_SIZE)||(PLOT_CLUSTER_HISTOGRAM))
@@ -134,8 +138,9 @@
 
 void animation(int size)
 {
-    int i, j, k, s, nx, ny, ncells, nmaxcells, maxsize, nopen, nflooded, nstack, nclusters, maxclustersize = 0, maxclusterlabel;
+    int i, j, k, s, nx, ny, nmaxcells, maxsize, nopen, nflooded, nstack, nclusters, maxclustersize = 0, maxclusterlabel;
     int *plot_cluster_number, *cluster_sizes;
+    int ncells;
     double p, *plot_cluster_size;
     t_perco *cell;
     t_perco **pstack;
@@ -147,10 +152,12 @@ void animation(int size)
     cell = (t_perco *)malloc(nmaxcells*sizeof(t_perco));
     if (PLOT_CLUSTER_SIZE) plot_cluster_size = (double *)malloc(NSTEPS*sizeof(double));
     if (PLOT_CLUSTER_NUMBER) plot_cluster_number = (int *)malloc(NSTEPS*sizeof(double));
-    if (FIND_CLUSTER_SIZES) cluster_sizes = (int *)malloc(2*nmaxcells*sizeof(int));
+//     if (FIND_CLUSTER_SIZES) 
+        cluster_sizes = (int *)malloc(2*nmaxcells*sizeof(int));
     
     ncells = init_cell_lattice(cell, nx, ny);
-    printf("nx = %i, ny = %i, ncells = %i\n", nx, ny, ncells);
+    printf("nx = %i, ny = %i, ncells = %i, maxcells = %i\n", nx, ny, ncells, nmaxcells);
+    
     pstack = (t_perco* *)malloc(ncells*sizeof(struct t_perco *));
     
     if (TEST_GRAPH) test_neighbours(TEST_START, cell, nx, ny, size, ncells);
@@ -164,11 +171,17 @@ void animation(int size)
         
         init_cell_state(cell, p, ncells, (i == 0));
         
-        if (FLOOD_LEFT_BOUNDARY) nstack = init_flooded_cells(cell, nx, ny, pstack);
+        if (FLOOD_LEFT_BOUNDARY) nstack = init_flooded_cells(cell, ncells, nx, ny, pstack);
         nopen = count_open_cells(cell, ncells);
         
-        if (FLOOD_LEFT_BOUNDARY) nflooded = find_percolation_cluster(cell, ncells, pstack, nstack);
-    
+        printf("Flooded cells, %i open cells, nstack = %i\n", nopen, nstack);
+        
+        if (FLOOD_LEFT_BOUNDARY) 
+        {
+            nflooded = find_percolation_cluster(cell, ncells, pstack, nstack);
+            printf("Found percolation cluster with %i flooded cells\n", nflooded);
+        }
+
         if (FIND_ALL_CLUSTERS) 
         {
             nclusters = find_all_clusters(cell, ncells, (i == 0), &maxclusterlabel);
@@ -183,7 +196,7 @@ void animation(int size)
         
 //         print_cluster_sizes(cell, ncells, cluster_sizes);
         
-        draw_configuration(cell, cluster_sizes, nx, ny, size, ncells);
+        draw_configuration(cell, cluster_sizes, ncells, nx, ny, size, ncells);
         print_p(p);
         if (PRINT_LARGEST_CLUSTER_SIZE) print_largest_cluster_size(maxclustersize);
         
@@ -226,7 +239,8 @@ void animation(int size)
     
     if (PLOT_CLUSTER_SIZE) free(plot_cluster_size);
     if (PLOT_CLUSTER_NUMBER) free(plot_cluster_number);
-    if (FIND_CLUSTER_SIZES) free(cluster_sizes);
+//     if (FIND_CLUSTER_SIZES) 
+        free(cluster_sizes);
 }
 
 
@@ -249,12 +263,12 @@ void display(void)
 
 //     animation(128);
 //     animation(64);
-    animation(32);
-    animation(16);
-    animation(8);
+//     animation(32);
+//     animation(16);
+//     animation(8);
     animation(4);
-    animation(2);
-    animation(1);
+//     animation(2);
+//     animation(1);
     
     
     sleep(SLEEP2);

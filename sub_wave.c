@@ -520,7 +520,7 @@ void draw_tpolygon(t_polygon polygon)
 }
 
 
-void init_circle_config(t_circle circles[NMAXCIRCLES])
+int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern)
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
@@ -528,7 +528,7 @@ void init_circle_config(t_circle circles[NMAXCIRCLES])
     double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, dpoisson = 3.25*MU, xx[4], yy[4], dr, dphi;
     short int active_poisson[NMAXCIRCLES], far;
     
-    switch (CIRCLE_PATTERN) {
+    switch (circle_pattern) {
         case (C_SQUARE):
         {
             ncircles = NGRIDX*NGRIDY;
@@ -571,8 +571,8 @@ void init_circle_config(t_circle circles[NMAXCIRCLES])
                 for (j = 0; j < NGRIDY; j++)
                 {
                     n = NGRIDY*i + j;
-                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
-                    circles[n].yc = YMIN + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circles[n].yc = YMIN + 0.5 + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
                     circles[n].radius = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
                     circles[n].active = 1;
                 }
@@ -944,16 +944,23 @@ void init_circle_config(t_circle circles[NMAXCIRCLES])
             printf("Function init_circle_config not defined for this pattern \n");
         }
     }
+    return(ncircles);
 }
 
-void init_polygon_config(t_polygon polygons[NMAXCIRCLES])
+int init_circle_config(t_circle circles[NMAXCIRCLES])
+/* for backward compatibility */
+{
+    return (init_circle_config_pattern(circles, CIRCLE_PATTERN));
+}
+
+int init_polygon_config_pattern(t_polygon polygons[NMAXCIRCLES], int circle_pattern)
 /* initialise the polygon configuration, for billiard shape D_CIRCLES */
 /* uses init_circle_config, this is where C++ would be more elegant */
 {
-    int i;
+    int i, ncircles;
     t_circle circle[NMAXCIRCLES];
     
-    init_circle_config(circle);
+    ncircles = init_circle_config_pattern(circle, circle_pattern);
     for (i=0; i<NMAXCIRCLES; i++)
     {
         polygons[i].xc = circle[i].xc;
@@ -969,11 +976,19 @@ void init_polygon_config(t_polygon polygons[NMAXCIRCLES])
     }
     
     /* adjust angles for C_RINGS configuration */
-    if ((CIRCLE_PATTERN == C_RINGS)||(CIRCLE_PATTERN == C_RINGS_T)||(CIRCLE_PATTERN == C_RINGS_SPIRAL))
+    if ((circle_pattern == C_RINGS)||(circle_pattern == C_RINGS_T)||(circle_pattern == C_RINGS_SPIRAL))
         for (i=0; i<ncircles; i++) if (polygons[i].active)
             polygons[i].angle += argument(polygons[i].xc, polygons[i].yc)/PID;
+        
+    return(ncircles);
 }
     
+int init_polygon_config(t_polygon polygons[NMAXCIRCLES])
+/* for backward compatibility */
+{
+    return (init_polygon_config_pattern(polygons, CIRCLE_PATTERN));
+}
+
 int axial_symmetry(double z1[2], double z2[2], double z[2], double zprime[2])
 /* compute reflection of point z wrt axis through z1 and z2 */
 {
@@ -1661,15 +1676,14 @@ int xy_in_triangle_tvertex(double x, double y, t_vertex z1, t_vertex z2, t_verte
 }
 
 
-int xy_in_billiard(double x, double y)
+int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_circle *circles)
 /* returns 1 if (x,y) represents a point in the billiard */
-// double x, y;
 {
     double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, alpha, s, a;
     int i, j, k, k1, k2, condition = 0, m;
     static int first = 1, nsides;
 
-    switch (B_DOMAIN) {
+    switch (b_domain) {
         case (D_NOTHING):
         {
             return(1);
@@ -2000,7 +2014,7 @@ int xy_in_billiard(double x, double y)
         }
         case (D_CIRCLES):
         {
-            for (i = 0; i < ncircles; i++)
+            for (i = 0; i < ncirc; i++)
                 if (circles[i].active) 
                 {
                     x1 = circles[i].xc;
@@ -2012,7 +2026,7 @@ int xy_in_billiard(double x, double y)
         }
         case (D_CIRCLES_IN_RECT):   /* returns 2 inside circles, 0 outside rectangle */
         {
-            for (i = 0; i < ncircles; i++)
+            for (i = 0; i < ncirc; i++)
                 if (circles[i].active) 
                 {
                     x1 = circles[i].xc;
@@ -2025,7 +2039,7 @@ int xy_in_billiard(double x, double y)
         }
         case (D_POLYGONS):
         {
-            for (i = 0; i < ncircles; i++) 
+            for (i = 0; i < ncirc; i++) 
                 if ((polygons[i].active)&&(in_tpolygon(x, y, polygons[i]))) return(0);
             return(1);
         }
@@ -2172,6 +2186,17 @@ int xy_in_billiard(double x, double y)
             x1 = x - XMIN - (double)((int)((x - XMIN)/LAMBDA))*LAMBDA;
             if (x1 < a) return (y > YMIN + LAMBDA);
             else return (y > YMIN + LAMBDA + s);
+        }
+        case (D_FABRY_PEROT):
+        {
+            return(vabs(x - y*LAMBDA/YMAX) > 0.5*MU);
+        }
+        case (D_LSHAPE):
+        {
+            if (vabs(x) > LAMBDA) return(0);
+            else if (vabs(y) > 1.0) return(0);
+            else if ((x > 0.0)&&(y > 0.0)) return(0);
+            else return(1);
         }
         case (D_MENGER):       
         {
@@ -2333,6 +2358,17 @@ int xy_in_billiard(double x, double y)
             return(0);
         }
     }
+}
+
+int xy_in_billiard(double x, double y)
+/* returns 1 if (x,y) represents a point in the billiard */
+{
+    if (COMPARISON)
+    {
+        if (y > 0.0) return (xy_in_billiard_single_domain(x, y, B_DOMAIN, ncircles, circles));
+        else return (xy_in_billiard_single_domain(x, y, B_DOMAIN_B, ncircles_b, circles_b));
+    }
+    else return (xy_in_billiard_single_domain(x, y, B_DOMAIN, ncircles, circles));
 }
 
 int ij_in_billiard(int i, int j)
@@ -3166,6 +3202,13 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             glEnd();
             break;
         }
+        case (D_FABRY_PEROT):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            draw_line(-LAMBDA - 0.5*MU, YMIN, LAMBDA - 0.5*MU, YMAX);
+            draw_line(-LAMBDA + 0.5*MU, YMIN, LAMBDA + 0.5*MU, YMAX);
+            break;
+        }
         case (D_CIRCLE_SEGMENT):
         {
             glLineWidth(BOUNDARY_WIDTH);
@@ -3565,7 +3608,7 @@ void draw_color_scheme_palette(double x1, double y1, double x2, double y2, int p
     xy_to_ij(x2, y2, ij_topright);
     
     rgb[0] = 0.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
-    erase_area_rgb(0.5*(x1 + x2), x2 - x1, 0.5*(y1 + y2), y2 - y1, rgb);
+//     erase_area_rgb(0.5*(x1 + x2), x2 - x1, 0.5*(y1 + y2), y2 - y1, rgb);
 
     if (ROTATE_COLOR_SCHEME)
     {
@@ -3671,7 +3714,7 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
     xy_to_ij(x2, y2, ij_topright);
     
     rgb[0] = 0.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
-    erase_area_rgb(0.5*(x1 + x2), x2 - x1, 0.5*(y1 + y2), y2 - y1, rgb);
+//     erase_area_rgb(0.5*(x1 + x2), x2 - x1, 0.5*(y1 + y2), y2 - y1, rgb);
 
     if (ROTATE_COLOR_SCHEME)
     {
@@ -3768,5 +3811,476 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
     else glColor3f(1.0, 1.0, 1.0);
     glLineWidth(BOUNDARY_WIDTH);
     draw_rectangle(x1, y1, x2, y2);
+}
+
+
+void print_speed(double speed, int fade, double fade_value)
+{
+    char message[100];
+    double y = YMAX - 0.1, pos[2];
+    static double xleftbox, xlefttext;
+    static int first = 1;
+    
+    if (first)
+    {
+        xleftbox = XMIN + 0.3;
+        xlefttext = xleftbox - 0.45;
+        first = 0;
+    }
+    
+    erase_area_hsl(xleftbox, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    xy_to_pos(xlefttext + 0.28, y, pos);
+    sprintf(message, "Mach %.3lg", speed);
+    write_text(pos[0], pos[1], message);
+}
+
+
+void init_laplacian_coords(t_laplacian laplace[NX*NY], double phi[NX*NY])
+/* compute coordinates of neighbours to compute Laplacian */
+{
+    int i, j, iplus, iminus, i1, i2, i3, j1, j2, j3, ij[2];;
+    
+    printf("Initialising Laplacian table\n");
+    
+    /* Laplacian in the bulk */
+    #pragma omp parallel for private(i,j)
+    for (i=1; i<NX-1; i++){
+        for (j=1; j<NY-1; j++){
+            laplace[i*NY+j].nneighb = 4;
+            laplace[i*NY+j].nghb[0] = &phi[(i+1)*NY+j];
+            laplace[i*NY+j].nghb[1] = &phi[(i-1)*NY+j];
+            laplace[i*NY+j].nghb[2] = &phi[i*NY+j+1];
+            laplace[i*NY+j].nghb[3] = &phi[i*NY+j-1];
+        }
+    }
+    
+    switch (B_COND) {
+        case (BC_DIRICHLET):
+        {
+            /* left boundary */
+            #pragma omp parallel for private(j)
+            for (j=1; j<NY-1; j++)
+            {
+                laplace[j].nneighb = 3;
+                laplace[j].nghb[0] = &phi[NY+j];
+                laplace[j].nghb[1] = &phi[j+1];
+                laplace[j].nghb[2] = &phi[j-1];
+            }
+            /* right boundary */
+            #pragma omp parallel for private(j)
+            for (j=1; j<NY-1; j++)
+            {
+                laplace[(NX-1)*NY+j].nneighb = 3;
+                laplace[(NX-1)*NY+j].nghb[0] = &phi[(NX-2)*NY+j];
+                laplace[(NX-1)*NY+j].nghb[1] = &phi[(NX-1)*NY+j+1];
+                laplace[(NX-1)*NY+j].nghb[2] = &phi[(NX-1)*NY+j-1];
+            }
+            
+            /* top boundary */
+            #pragma omp parallel for private(i,iplus,iminus)
+            for (i=0; i<NX; i++)
+            {
+                iplus = i+1;   if (iplus == NX) iplus = NX-1;
+                iminus = i-1;  if (iminus == -1) iminus = 0;
+                
+                laplace[i*NY+NY-1].nneighb = 3;
+                laplace[i*NY+NY-1].nghb[0] = &phi[iplus*NY+NY-1];
+                laplace[i*NY+NY-1].nghb[1] = &phi[iminus*NY+NY-1];
+                laplace[i*NY+NY-1].nghb[2] = &phi[i*NY+NY-2];
+            }
+            
+            /* bottom boundary */
+            #pragma omp parallel for private(i,iplus,iminus)
+            for (i=0; i<NX; i++)
+            {
+                iplus = i+1;   if (iplus == NX) iplus = NX-1;
+                iminus = i-1;  if (iminus == -1) iminus = 0;
+                
+                laplace[i*NY].nneighb = 3;
+                laplace[i*NY].nghb[0] = &phi[iplus*NY];
+                laplace[i*NY].nghb[1] = &phi[iminus*NY];
+                laplace[i*NY].nghb[2] = &phi[i*NY+1];
+            }
+            break;
+        }
+        case (BC_PERIODIC):
+        {
+            /* left boundary */
+            #pragma omp parallel for private(j)
+            for (j=1; j<NY-1; j++)
+            {
+                laplace[j].nneighb = 4;
+                laplace[j].nghb[0] = &phi[NY+j];
+                laplace[j].nghb[1] = &phi[(NX-1)*NY+j];
+                laplace[j].nghb[2] = &phi[j+1];
+                laplace[j].nghb[3] = &phi[j-1];
+            }
+            
+            /* right boundary */
+            #pragma omp parallel for private(j)
+            for (j=1; j<NY-1; j++)
+            {
+                laplace[(NX-1)*NY+j].nneighb = 4;
+                laplace[(NX-1)*NY+j].nghb[0] = &phi[(NX-2)*NY+j];
+                laplace[(NX-1)*NY+j].nghb[1] = &phi[j];
+                laplace[(NX-1)*NY+j].nghb[2] = &phi[(NX-1)*NY+j+1];
+                laplace[(NX-1)*NY+j].nghb[3] = &phi[(NX-1)*NY+j-1];
+            }
+            
+            /* top boundary */
+            #pragma omp parallel for private(i,iplus,iminus)
+            for (i=0; i<NX; i++)
+            {
+                iplus = (i+1) % NX;
+                iminus = (i-1) % NX;
+                if (iminus < 0) iminus += NX;
+                    
+                laplace[i*NY+NY-1].nneighb = 4;
+                laplace[i*NY+NY-1].nghb[0] = &phi[iplus*NY+NY-1];
+                laplace[i*NY+NY-1].nghb[1] = &phi[iminus*NY+NY-1];
+                laplace[i*NY+NY-1].nghb[2] = &phi[i*NY+NY-2];
+                laplace[i*NY+NY-1].nghb[3] = &phi[i*NY];
+            }
+            
+            /* bottom boundary */
+            #pragma omp parallel for private(i,iplus,iminus)
+            for (i=0; i<NX; i++)
+            {
+                iplus = (i+1) % NX;
+                iminus = (i-1) % NX;
+                if (iminus < 0) iminus += NX;
+                    
+                laplace[i*NY].nneighb = 4;
+                laplace[i*NY].nghb[0] = &phi[iplus*NY];
+                laplace[i*NY].nghb[1] = &phi[iminus*NY];
+                laplace[i*NY].nghb[2] = &phi[i*NY+1];
+                laplace[i*NY].nghb[3] = &phi[i*NY+NY-1];
+            }
+            break;
+        }
+        case (BC_ABSORBING):
+        {
+            /* left boundary */
+            #pragma omp parallel for private(j)
+            for (j=1; j<NY-1; j++)
+            {
+                laplace[j].nneighb = 3;
+                laplace[j].nghb[0] = &phi[NY+j];
+                laplace[j].nghb[1] = &phi[j+1];
+                laplace[j].nghb[2] = &phi[j-1];
+            }
+            
+            /* right boundary */
+            #pragma omp parallel for private(j)
+            for (j=1; j<NY-1; j++)
+            {
+                laplace[(NX-1)*NY+j].nneighb = 3;
+                laplace[(NX-1)*NY+j].nghb[0] = &phi[(NX-2)*NY+j];
+                laplace[(NX-1)*NY+j].nghb[1] = &phi[(NX-1)*NY+j+1];
+                laplace[(NX-1)*NY+j].nghb[2] = &phi[(NX-1)*NY+j-1];
+            }
+            
+            /* top boundary */
+            #pragma omp parallel for private(i,iplus,iminus)
+            for (i=0; i<NX; i++)
+            {
+                iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                laplace[i*NY+NY-1].nneighb = 3;
+                laplace[i*NY+NY-1].nghb[0] = &phi[iplus*NY+NY-1];
+                laplace[i*NY+NY-1].nghb[1] = &phi[iminus*NY+NY-1];
+                laplace[i*NY+NY-1].nghb[2] = &phi[i*NY+NY-2];
+            }
+            
+            /* bottom boundary */
+            #pragma omp parallel for private(i,iplus,iminus)
+            for (i=0; i<NX; i++)
+            {
+                iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                laplace[i*NY].nneighb = 3;
+                laplace[i*NY].nghb[0] = &phi[iplus*NY];
+                laplace[i*NY].nghb[1] = &phi[iminus*NY];
+                laplace[i*NY].nghb[2] = &phi[i*NY+1];
+            }
+            break;            
+        }
+        case (BC_VPER_HABS):
+        {
+            /* left boundary */
+            #pragma omp parallel for private(j)
+            for (j=1; j<NY-1; j++)
+            {
+                laplace[j].nneighb = 3;
+                laplace[j].nghb[0] = &phi[NY+j];
+                laplace[j].nghb[1] = &phi[j+1];
+                laplace[j].nghb[2] = &phi[j-1];
+            }
+            
+            /* right boundary */
+            #pragma omp parallel for private(j)
+            for (j=1; j<NY-1; j++)
+            {
+                laplace[(NX-1)*NY+j].nneighb = 3;
+                laplace[(NX-1)*NY+j].nghb[0] = &phi[(NX-2)*NY+j];
+                laplace[(NX-1)*NY+j].nghb[1] = &phi[(NX-1)*NY+j+1];
+                laplace[(NX-1)*NY+j].nghb[2] = &phi[(NX-1)*NY+j-1];
+            }
+            
+            /* top boundary */
+            #pragma omp parallel for private(i,iplus,iminus)
+            for (i=0; i<NX; i++)
+            {
+                iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                laplace[i*NY+NY-1].nneighb = 4;
+                laplace[i*NY+NY-1].nghb[0] = &phi[iplus*NY+NY-1];
+                laplace[i*NY+NY-1].nghb[1] = &phi[iminus*NY+NY-1];
+                laplace[i*NY+NY-1].nghb[2] = &phi[i*NY+NY-2];
+                laplace[i*NY+NY-1].nghb[3] = &phi[i*NY];
+            }
+            
+            /* bottom boundary */
+            #pragma omp parallel for private(i,iplus,iminus)
+            for (i=0; i<NX; i++)
+            {
+                iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                laplace[i*NY].nneighb = 4;
+                laplace[i*NY].nghb[0] = &phi[iplus*NY];
+                laplace[i*NY].nghb[1] = &phi[iminus*NY];
+                laplace[i*NY].nghb[2] = &phi[i*NY+1];
+                laplace[i*NY].nghb[3] = &phi[i*NY+NY-1];
+            }
+            break;            
+        }
+        case (BC_LSHAPE):
+        {
+            /* boundaries */
+            xy_to_ij(-LAMBDA, -1.0, ij);
+            i1 = ij[0] + 1;     j1 = ij[1] + 1;
+            xy_to_ij(0.0, 0.0, ij);
+            i2 = ij[0] - 1;     j2 = ij[1] - 1;
+            xy_to_ij(LAMBDA, 1.0, ij);
+            i3 = ij[0] - 1;     j3 = ij[1] - 1;
+            
+            printf("L shape corners (%i,%i), (%i,%i), (%i,%i)\n", i1, j1, i2, j2, i3, j3);
+    
+            /* left boundary */
+            #pragma omp parallel for private(j)
+            for (j=j1+1; j<j2; j++)
+            {
+                laplace[i1*NY+j].nneighb = 4;
+                laplace[i1*NY+j].nghb[0] = &phi[(i1+1)*NY+j];
+                laplace[i1*NY+j].nghb[1] = &phi[(i3)*NY+j];
+                laplace[i1*NY+j].nghb[2] = &phi[i1*NY+j+1];
+                laplace[i1*NY+j].nghb[3] = &phi[i1*NY+j-1];
+            }
+            #pragma omp parallel for private(j)
+            for (j=j2; j<j3-1; j++)
+            {
+                laplace[i1*NY+j].nneighb = 4;
+                laplace[i1*NY+j].nghb[0] = &phi[(i1+1)*NY+j];
+                laplace[i1*NY+j].nghb[1] = &phi[(i2-1)*NY+j];
+                laplace[i1*NY+j].nghb[2] = &phi[i1*NY+j+1];
+                laplace[i1*NY+j].nghb[3] = &phi[i1*NY+j-1];
+            }
+            
+            /* right boundary */
+            #pragma omp parallel for private(j)
+            for (j=j1+1; j<j2; j++)
+            {
+                laplace[(i3)*NY+j].nneighb = 4;
+                laplace[(i3)*NY+j].nghb[0] = &phi[i1*NY+j];
+                laplace[(i3)*NY+j].nghb[1] = &phi[(i3-1)*NY+j];
+                laplace[(i3)*NY+j].nghb[2] = &phi[(i3)*NY+j+1];
+                laplace[(i3)*NY+j].nghb[3] = &phi[(i3)*NY+j-1];
+            }
+            #pragma omp parallel for private(j)
+            for (j=j2; j<j3-1; j++)
+            {
+                laplace[(i2)*NY+j].nneighb = 4;
+                laplace[(i2)*NY+j].nghb[0] = &phi[i1*NY+j];
+                laplace[(i2)*NY+j].nghb[1] = &phi[(i2-1)*NY+j];
+                laplace[(i2)*NY+j].nghb[2] = &phi[(i2)*NY+j+1];
+                laplace[(i2)*NY+j].nghb[3] = &phi[(i2)*NY+j-1];
+            }
+            
+            /* top boundary */
+            #pragma omp parallel for private(i)
+            for (i=i1; i<i2; i++)
+            {
+                laplace[i*NY+j3].nneighb = 4;
+                laplace[i*NY+j3].nghb[0] = &phi[(i+1)*NY+j3];
+                laplace[i*NY+j3].nghb[1] = &phi[(i-1)*NY+j3];
+                laplace[i*NY+j3].nghb[2] = &phi[i*NY+j1];
+                laplace[i*NY+j3].nghb[3] = &phi[i*NY+j3-1];
+            }
+            #pragma omp parallel for private(i)
+            for (i=i2; i<i3; i++)
+            {
+                laplace[i*NY+j2].nneighb = 4;
+                laplace[i*NY+j2].nghb[0] = &phi[(i+1)*NY+j2];
+                laplace[i*NY+j2].nghb[1] = &phi[(i-1)*NY+j2];
+                laplace[i*NY+j2].nghb[2] = &phi[i*NY+j1];
+                laplace[i*NY+j2].nghb[3] = &phi[i*NY+j2-1];
+            }
+            
+            /* bottom boundary */
+            #pragma omp parallel for private(i)
+            for (i=i1; i<i2; i++)
+            {
+                laplace[i*NY+j1].nneighb = 4;
+                laplace[i*NY+j1].nghb[0] = &phi[(i+1)*NY+j1];
+                laplace[i*NY+j1].nghb[1] = &phi[(i-1)*NY+j1];
+                laplace[i*NY+j1].nghb[2] = &phi[i*NY+j1+1];
+                laplace[i*NY+j1].nghb[3] = &phi[i*NY+j3];
+            }
+            #pragma omp parallel for private(i)
+            for (i=i2; i<i3; i++)
+            {
+                laplace[i*NY+j1].nneighb = 4;
+                laplace[i*NY+j1].nghb[0] = &phi[(i+1)*NY+j1];
+                laplace[i*NY+j1].nghb[1] = &phi[(i-1)*NY+j1];
+                laplace[i*NY+j1].nghb[2] = &phi[i*NY+j1+1];
+                laplace[i*NY+j1].nghb[3] = &phi[i*NY+j2];
+            }
+            
+            /* corners */
+            laplace[i1*NY+j1].nneighb = 4;
+            laplace[i1*NY+j1].nghb[0] = &phi[(i1+1)*NY+j1];
+            laplace[i1*NY+j1].nghb[1] = &phi[(i3-1)*NY+j1];
+            laplace[i1*NY+j1].nghb[2] = &phi[i1*NY+j1+1];
+            laplace[i1*NY+j1].nghb[3] = &phi[i1*NY+j3-1];
+
+            laplace[(i3)*NY+j1].nneighb = 4;
+            laplace[(i3)*NY+j1].nghb[0] = &phi[i1*NY+j1];
+            laplace[(i3)*NY+j1].nghb[1] = &phi[(i3-1)*NY+j1];
+            laplace[(i3)*NY+j1].nghb[2] = &phi[(i3)*NY+j1+1];
+            laplace[(i3)*NY+j1].nghb[3] = &phi[(i3)*NY+j3];
+
+            laplace[i1*NY+j3].nneighb = 4;
+            laplace[i1*NY+j3].nghb[0] = &phi[(i1+1)*NY+j3];
+            laplace[i1*NY+j3].nghb[1] = &phi[(i3)*NY+j3];
+            laplace[i1*NY+j3].nghb[2] = &phi[i1*NY+j1];
+            laplace[i1*NY+j3].nghb[3] = &phi[i1*NY+j3-1];
+
+            break;
+        }
+    }
+}
+
+
+void compute_laplacian(double phi[NX*NY], t_laplacian laplace[NX*NY], double delta[NX*NY], short int xy_in[NX*NY])
+/* compute the discretized Laplacian of phi */
+{
+    int i, j, k, n;
+    
+    /* in the bulk */
+    if (B_COND == BC_LSHAPE)
+    {
+        #pragma omp parallel for private(i,j,k)
+        for (i=1; i<NX-1; i++)
+            for (j=1; j<NY-1; j++)
+                if (xy_in[i*NY+j])
+                {
+                    delta[i*NY+j] = -4.0*phi[i*NY+j];
+                    for (k=0; k<4; k++)
+                        delta[i*NY+j] += *(laplace[i*NY+j].nghb[k]);                
+                }
+    }
+    else
+    {
+        #pragma omp parallel for private(i,j,k)
+        for (i=1; i<NX-1; i++)
+            for (j=1; j<NY-1; j++)
+                if (xy_in[i*NY+j])
+                {
+                    delta[i*NY+j] = phi[(i+1)*NY+j] + phi[(i-1)*NY+j] + phi[i*NY+j+1] + phi[i*NY+j-1] - 4.0*phi[i*NY+j];
+                }
+    }
+            
+    /* top and bottom boundaries */
+    #pragma omp parallel for private(i,k,n)
+    for (i=0; i<NX; i++)
+    {
+        if (xy_in[i*NY])
+        {
+            n = laplace[i*NY].nneighb;
+            delta[i*NY] = -(double)n*phi[i*NY];
+            for (k=0; k<n; k++)
+                delta[i*NY] += *(laplace[i*NY].nghb[k]);
+        }
+        if (xy_in[i*NY+NY-1])
+        {
+            n = laplace[i*NY+NY-1].nneighb;
+            delta[i*NY+NY-1] = -(double)n*phi[i*NY+NY-1];
+            for (k=0; k<n; k++)
+                delta[i*NY+NY-1] += *(laplace[i*NY+NY-1].nghb[k]);
+        }
+    }
+    
+    /* left and right boundaries */
+    #pragma omp parallel for private(j,k,n)
+    for (j=1; j<NY-1; j++)
+    {
+        if (xy_in[j])
+        {
+            n = laplace[j].nneighb;
+            delta[j] = -(double)n*phi[j];
+            for (k=0; k<n; k++)
+                delta[j] += *(laplace[j].nghb[k]);
+        }
+         if (xy_in[(NX-1)*NY+j])
+        {
+            n = laplace[(NX-1)*NY+j].nneighb;
+            delta[(NX-1)*NY+j] = -(double)n*phi[(NX-1)*NY+j];
+            for (k=0; k<n; k++)
+                delta[(NX-1)*NY+j] += *(laplace[(NX-1)*NY+j].nghb[k]);
+        }
+    }
+}
+
+double oscillating_bc(int time)
+{
+    double t, phase, a, envelope, omega;
+    
+    switch (OSCILLATION_SCHEDULE)
+    {
+        case (OSC_PERIODIC): 
+        {
+            return(AMPLITUDE*cos((double)time*OMEGA)*exp(-(double)time*DAMPING));
+        }
+        case (OSC_SLOWING):
+        {
+            a = 0.0025;
+            t = (double)time*OMEGA;
+            phase = t - a*t*t;
+//             if (time%1000 == 0) printf("time = %i, phase = %.4lg\n", time, phase);
+            return(AMPLITUDE*cos(phase)*exp(-phase*DAMPING));
+        }
+        case (OSC_WAVE_PACKET):
+        {
+            t = (double)time*OMEGA;
+//             a = 10.0;
+            a = 0.02/OMEGA;
+            phase = AMPLITUDE*cos(t);
+            envelope = exp(-(t-0.2)*(t-0.2)/(a*a))*sqrt(DPI/a);
+            return(phase*envelope);
+        }
+        case (OSC_CHIRP):
+        {
+//             a = 0.25;
+            t = (double)time*OMEGA;
+            phase = t + ACHIRP*t*t;
+            return(AMPLITUDE*sin(phase)*exp(-phase*DAMPING));
+        }
+    }
 }
 

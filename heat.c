@@ -177,6 +177,17 @@
 #define COLORBAR_RANGE_B 12.0    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 1   /* set to 1 to draw color scheme horizontally */
 
+/* the following constants are only used by wave_billiard and wave_3d so far */
+#define COMPARISON 0        /* set to 1 to compare two different patterns */
+#define B_DOMAIN_B 20       /* second domain shape, for comparisons */
+#define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
+#define OSCILLATION_SCHEDULE 3  /* oscillation schedule, see list in global_pdes.c */
+#define ACHIRP 0.2        /* acceleration coefficient in chirp */
+#define DAMPING 0.0        /* damping of periodic excitation */
+#define OMEGA 0.001       /* frequency of periodic excitation */
+#define AMPLITUDE 0.8      /* amplitude of periodic excitation */ 
+/* end of constants only used by wave_billiard and wave_3d */
+
 #include "global_pdes.c"
 #include "sub_wave.c"
 

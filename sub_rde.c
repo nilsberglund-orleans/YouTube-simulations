@@ -129,7 +129,157 @@ void init_coherent_state(double x, double y, double px, double py, double scalex
         }
 }
 
+void init_fermion_state(double x, double y, double px, double py, double scalex, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise field with antisymmetric coherent state of position (x,y) and momentum (px, py) */
+/* phi[0] is real part, phi[1] is imaginary part */
+{
+    int i, j;
+    double xy[2], dist2, module, phase, scale2;    
 
+    scale2 = scalex*scalex;
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+
+            if (xy_in[i*NY+j])
+            {
+                dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+                module = exp(-dist2/scale2);
+                if (module < 1.0e-15) module = 1.0e-15;
+                phase = (px*(xy[0]-x) + py*(xy[1]-y))/scalex;
+
+                phi[0][i*NY+j] = module*cos(phase);
+                phi[1][i*NY+j] = module*sin(phase);
+                
+                /* antisymmetrize wave function */
+                dist2 = (xy[1]-x)*(xy[1]-x) + (xy[0]-y)*(xy[0]-y);
+                module = exp(-dist2/scale2);
+                if (module < 1.0e-15) module = 1.0e-15;
+                phase = (px*(xy[1]-x) + py*(xy[0]-y))/scalex;
+
+                phi[0][i*NY+j] -= module*cos(phase);
+                phi[1][i*NY+j] -= module*sin(phase);
+            }
+            else
+            {
+                phi[0][i*NY+j] = 0.0;
+                phi[1][i*NY+j] = 0.0;
+            }
+        }
+}
+
+void init_boson_state(double x, double y, double px, double py, double scalex, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise field with symmetric coherent state of position (x,y) and momentum (px, py) */
+/* phi[0] is real part, phi[1] is imaginary part */
+{
+    int i, j;
+    double xy[2], dist2, module, phase, scale2;    
+
+    scale2 = scalex*scalex;
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+
+            if (xy_in[i*NY+j])
+            {
+                dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+                module = exp(-dist2/scale2);
+                if (module < 1.0e-15) module = 1.0e-15;
+                phase = (px*(xy[0]-x) + py*(xy[1]-y))/scalex;
+
+                phi[0][i*NY+j] = module*cos(phase);
+                phi[1][i*NY+j] = module*sin(phase);
+                
+                /* symmetrize wave function */
+                dist2 = (xy[1]-x)*(xy[1]-x) + (xy[0]-y)*(xy[0]-y);
+                module = exp(-dist2/scale2);
+                if (module < 1.0e-15) module = 1.0e-15;
+                phase = (px*(xy[1]-x) + py*(xy[0]-y))/scalex;
+
+                phi[0][i*NY+j] += module*cos(phase);
+                phi[1][i*NY+j] += module*sin(phase);
+            }
+            else
+            {
+                phi[0][i*NY+j] = 0.0;
+                phi[1][i*NY+j] = 0.0;
+            }
+        }
+}
+
+void init_fermion_state2(double x, double y, double px, double py, double scalex, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise field with antisymmetric coherent state of position (x,y) and momentum (px, py) */
+/* phi[0] is real part, phi[1] is imaginary part */
+{
+    int i, j;
+    double xy[2], dist2, module, phase, scale2, fx[2], fy[2], gx[2], gy[2];    
+
+    scale2 = scalex*scalex;
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+
+            if (xy_in[i*NY+j])
+            {
+                dist2 = (xy[0]-x)*(xy[0]-x);
+                module = exp(-dist2/scale2);
+                if (module < 1.0e-15) module = 1.0e-15;
+                phase = px*(xy[0]-x)/scalex;
+                fx[0] = module*cos(phase);
+                fx[1] = module*sin(phase);
+
+                dist2 = (xy[0]-y)*(xy[0]-y);
+                module = exp(-dist2/scale2);
+                if (module < 1.0e-15) module = 1.0e-15;
+                phase = px*(xy[0]-y)/scalex;
+                fy[0] = module*cos(phase);
+                fy[1] = module*sin(phase);
+
+                dist2 = (xy[1]-x)*(xy[1]-x);
+                module = exp(-dist2/scale2);
+                if (module < 1.0e-15) module = 1.0e-15;
+                phase = py*(xy[1]-x)/scalex;
+                gx[0] = module*cos(phase);
+                gx[1] = module*sin(phase);
+
+                dist2 = (xy[1]-y)*(xy[1]-y);
+                module = exp(-dist2/scale2);
+                if (module < 1.0e-15) module = 1.0e-15;
+                phase = py*(xy[1]-y)/scalex;
+                gy[0] = module*cos(phase);
+                gy[1] = module*sin(phase);
+
+                phi[0][i*NY+j] = 0.5*(fx[0]*gy[0] - gx[0]*fy[0]);
+                phi[1][i*NY+j] = 0.5*(fx[1]*gy[1] - gx[1]*fy[1]);
+            }
+            else
+            {
+                phi[0][i*NY+j] = 0.0;
+                phi[1][i*NY+j] = 0.0;
+            }
+        }
+}
+
+void antisymmetrize_wave_function(double *phi[NFIELDS], short int xy_in[NX*NY])
+/* force the wave function to be antisymmetric, for simulations of fermions */
+{
+    int i, j, k;
+    
+    #pragma omp parallel for private(i,j,k)
+    for (i=0; i<NX; i++)
+        for (j=0; j<=i; j++) if ((j<NY)&&(xy_in[i*NY+j]))
+            for (k=0; k<2; k++)
+            {
+                phi[k][i*NY+j] = 0.5*(phi[k][i*NY+j] - phi[k][j*NY+i]);
+                phi[k][j*NY+i] = -phi[k][i*NY+j];
+            }
+}
 
 /*********************/
 /* animation part    */
@@ -260,6 +410,48 @@ void compute_theta_rpslz(double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde
             }
             break;
         }
+    }
+}
+
+void compute_gradient_xy(double phi[NX*NY], double gradient[2*NX*NY])
+/* compute the gradient of the field */
+{
+    int i, j, iplus, iminus, jplus, jminus, padding = 0; 
+    double deltaphi;
+    double dx = (XMAX-XMIN)/((double)NX);
+    
+    dx = (XMAX-XMIN)/((double)NX);
+    
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,deltaphi)
+    for (i=1; i<NX-1; i++)
+        for (j=1; j<NY-1; j++)
+        {
+            deltaphi = phi[iplus*NY+j] - phi[iminus*NY+j];
+            if (vabs(deltaphi) < 1.0e9) gradient[i*NY+j] = (deltaphi)/dx;
+            else gradient[i*NY+j] = 0.0;
+            
+            deltaphi = phi[i*NY+jplus] - phi[i*NY+jminus];
+            if (vabs(deltaphi) < 1.0e9) gradient[NX*NY+i*NY+j] = (deltaphi)/dx;
+            else gradient[NX*NY+i*NY+j] = 0.0;
+        }
+        
+    /* boundaries */
+    for (i=0; i<NX; i++)
+    {
+        gradient[i*NY] = 0.0;
+        gradient[NX*NY+i*NY] = 0.0;
+
+        gradient[i*NY+NY-1] = 0.0;
+        gradient[NX*NY+i*NY+NY-1] = 0.0;
+    }
+    
+    for (j=1; j<NY-1; j++)
+    {
+        gradient[j] = 0.0;
+        gradient[(NX-1)*NY+j] = 0.0;
+
+        gradient[NX*NY+j] = 0.0;
+        gradient[NX*NY+(NX-1)*NY+j] = 0.0;
     }
 }
 
@@ -457,7 +649,7 @@ void compute_probabilities(t_rde rde[NX*NY], short int xy_in[NX*NY], double prob
 
 
 
-void compute_laplacian(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY])
+void compute_laplacian_rde(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY])
 /* computes the Laplacian of phi_in and stores it in phi_out */
 {
     int i, j, iplus, iminus, jplus, jminus;

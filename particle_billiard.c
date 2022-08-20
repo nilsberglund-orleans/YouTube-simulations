@@ -33,19 +33,28 @@
 
 #define MOVIE 0         /* set to 1 to generate movie */
 
-#define WINWIDTH 	720  /* window width */
+#define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define XMIN -1.125
-#define XMAX 1.125	/* x interval */
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+
+// #define WINWIDTH 	1920  /* window width */
+// #define WINHEIGHT 	1000  /* window height */
+// 
+// #define XMIN -2.0
+// #define XMAX 2.0	/* x interval  */
+// #define YMIN -1.041666667
+// #define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
+
 
 #define SCALING_FACTOR 1.0       /* scaling factor of drawing, needed for flower billiards, otherwise set to 1.0 */
 
 /* Choice of the billiard table, see global_particles.c */
 
-#define B_DOMAIN 30     /* choice of domain shape */
+#define B_DOMAIN 16     /* choice of domain shape */
 
 #define CIRCLE_PATTERN 1    /* pattern of circles */
 #define POLYLINE_PATTERN 8  /* pattern of polyline */
@@ -54,6 +63,8 @@
 
 #define NMAXCIRCLES 100000     /* total number of circles (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 100000        /* total number of sides of polygonal line */   
+// #define NCX 10            /* number of circles in x direction */
+// #define NCY 10            /* number of circles in y direction */
 #define NCX 30            /* number of circles in x direction */
 #define NCY 20            /* number of circles in y direction */
 #define NPOISSON 500        /* number of points for Poisson C_RAND_POISSON arrangement */
@@ -61,10 +72,12 @@
 #define SDEPTH 1            /* Sierpinski gastket depth */
 
 #define LAMBDA 1.5	/* parameter controlling shape of domain */
-#define MU 0.01          /* second parameter controlling shape of billiard */
+#define MU 0.5          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define PENROSE_RATIO 2.5    /* parameter controlling the shape of small ellipses in Penrose room */
+
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
 #define DRAW_CONSTRUCTION_LINES 0   /* set to 1 to draw additional construction lines for billiard */
 #define PERIODIC_BC 0       /* set to 1 to enforce periodic boundary conditions when drawing particles */
@@ -74,21 +87,23 @@
 
 /* Simulation parameters */
 
-#define NPART 5000     /* number of particles */
+#define NPART 16     /* number of particles */
+// #define NPART 2000     /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
-#define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
-#define SHOWZOOM 1      /* set to 1 to show zoom on specific area */
-#define PRINT_PARTICLE_NUMBER 1 /* set to 1 to print number of particles */
+#define SHOWTRAILS 1    /* set to 1 to keep trails of the particles */
+#define SHOWZOOM 0      /* set to 1 to show zoom on specific area */
+#define PRINT_PARTICLE_NUMBER 0 /* set to 1 to print number of particles */
 #define PRINT_COLLISION_NUMBER 0 /* set to 1 to print number of collisions */
 #define TEST_ACTIVE 1   /* set to 1 to test whether particle is in billiard */
 
-#define NSTEPS 1000      /* number of frames of movie */
-#define TIME 2500         /* time between movie frames, for fluidity of real-time simulation */ 
+#define NSTEPS 5250      /* number of frames of movie */
+#define TIME 750         /* time between movie frames, for fluidity of real-time simulation */ 
 #define DPHI 0.00001     /* integration step */
-#define NVID 100         /* number of iterations between images displayed on screen */
+#define NVID 25         /* number of iterations between images displayed on screen */
+// #define NVID 100         /* number of iterations between images displayed on screen */
 #define END_FRAMES 25    /* number of still frames at the end of the movie */
 
 /* Decreasing TIME accelerates the animation and the movie                               */
@@ -99,14 +114,15 @@
 
 /* Colors and other graphical parameters */
 
-#define COLOR_PALETTE 17     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 14     /* Color palette, see list in global_pdes.c  */
 
-#define NCOLORS 64       /* number of colors */
+#define NCOLORS 16       /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
-#define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
+#define RAINBOW_COLOR 0  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
-#define LENGTH 0.03       /* length of velocity vectors */
+#define LENGTH 0.005       /* length of velocity vectors */
+// #define LENGTH 0.03       /* length of velocity vectors */
 #define BILLIARD_WIDTH 2    /* width of billiard */
 #define PARTICLE_WIDTH 3    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */

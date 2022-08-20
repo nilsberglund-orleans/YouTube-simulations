@@ -498,12 +498,13 @@ void init_particle_config(t_particle particles[NMAXCIRCLES])
                 for (j = 0; j < NGRIDY+1; j++)
                 {
                     n = (NGRIDY+1)*i + j;
-                    particles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dx;   /* is +0.5 needed? */
+//                     particles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dx;   /* is +0.5 needed? */
+                    particles[n].xc = INITXMIN + ((double)i - 0.5)*dx;   
                     particles[n].yc = INITYMIN + ((double)j - 0.5)*dy;
                     if ((i+NGRIDX)%2 == 1) particles[n].yc += 0.5*dy;
                     particles[n].radius = MU;
                     /* activate only circles that intersect the domain */
-                    if ((particles[n].yc < INITYMAX + MU)&&(particles[n].yc > INITYMIN - MU)) particles[n].active = 1;
+                    if ((particles[n].yc < INITYMAX + MU)&&(particles[n].yc > INITYMIN - MU)&&(particles[n].xc < INITXMAX + MU)&&(particles[n].xc > INITXMIN - MU)) particles[n].active = 1;
                     else particles[n].active = 0;
                 }
             break;
@@ -1030,20 +1031,92 @@ void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, d
     else printf("Warning: NMAXSEGMENTS too small\n");
 }
  
-double nozzle_width(double x, double width)
+double nozzle_width(double x, double width, int nozzle_shape)
 /* width of bell-shaped nozzle */
 {
     double lam  = 0.5*LAMBDA;
     
     if (x >= 0.0) return(width);
-    else return(sqrt(width*width - 0.5*x));
+    else switch (nozzle_shape) {
+        case (NZ_STRAIGHT): return(width);
+        case (NZ_BELL): return(sqrt(width*width - 0.5*x));
+        case (NZ_GLAS): return(sqrt(width*width - 1.2*x) + 1.0*x);
+        case (NZ_CONE): return(width - (sqrt(width*width + 0.5) - width)*x);
+        case (NZ_TRUMPET): return(width + (sqrt(width*width + LAMBDA)-width)*x*x);
+        default: return(0.0);
+    }
+}
+
+
+void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y0, int nozzle_shape, int nsides, int group)
+/* add one or several rocket_shaped set of segments */
+{
+    int i, j, cycle = 0, nsegments0; 
+    double angle, dx, x1, y1, x2, y2, nozx, nozy;
+    
+    nsegments0 = nsegments;
+
+    /* ellipse */
+    for (i=1; i<NPOLY-1; i++)
+    {
+        angle = -PID + (double)i*DPI/(double)NPOLY;
+        x1 = x0 + 0.7*LAMBDA*cos(angle);
+        y1 = y0 + YMIN + LAMBDA*(1.7 + 0.7*sin(angle));
+        angle = -PID + (double)(i+1)*DPI/(double)NPOLY;
+        x2 = x0 + 0.7*LAMBDA*cos(angle);
+        y2 = y0 + YMIN + LAMBDA*(1.7 + 0.7*sin(angle));
+        add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment);
+    }
+             
+    /* compute intersection point of nozzle and ellipse */
+    angle = -PID + DPI/(double)NPOLY;
+    nozx = 0.7*LAMBDA*cos(angle);
+    nozy = y0 + YMIN + LAMBDA*(1.7 + 0.7*sin(angle));
+            
+    dx = LAMBDA/(double)(nsides);
+    
+    /* nozzle */
+    if (nozzle_shape != NZ_NONE)
+    {
+        for (i=0; i<nsides; i++)
+        {
+            y1 = y0 - LAMBDA + dx*(double)(i-1);
+            x1 = x0 + nozzle_width(y1 - y0, nozx, nozzle_shape);
+            y2 = y1 + dx;
+            x2 = x0 + nozzle_width(y2 - y0, nozx, nozzle_shape);
+            add_rotated_angle_to_segments(x1, y1 + YMIN + LAMBDA, x2, y2 + YMIN + LAMBDA, 0.02, segment);
+        }
+        add_rotated_angle_to_segments(x2, y2 + YMIN + LAMBDA, x0 + nozx, nozy, 0.02, segment);
+        for (i=0; i<nsides; i++)
+        {
+            y1 = y0 - LAMBDA + dx*(double)(i-1);
+            x1 = x0 - nozzle_width(y1 - y0, nozx, nozzle_shape);
+            y2 = y1 + dx;
+            x2 = x0 - nozzle_width(y2 - y0, nozx, nozzle_shape);
+            add_rotated_angle_to_segments(x1, y1 + YMIN + LAMBDA, x2, y2 + YMIN + LAMBDA, 0.02, segment);
+        }
+        add_rotated_angle_to_segments(x2, y2 + YMIN + LAMBDA, x0 - nozx, nozy, 0.02, segment);
+    }
+    
+    for (i=nsegments0; i<nsegments; i++) segment[i].inactivate = 0;
+    
+    /* closing segment */
+    segment[nsegments].x1 = x0 - nozx;
+    segment[nsegments].y1 = nozy;
+    segment[nsegments].x2 = x0 + nozx;
+    segment[nsegments].y2 = nozy;
+    segment[nsegments].inactivate = 1;
+    nsegments++;
+    
+    /* set group of segments */
+    for (i=nsegments0; i<nsegments; i++) segment[i].group = group;
 }
  
 void init_segment_config(t_segment segment[NMAXSEGMENTS])
 /* initialise linear obstacle configuration */
 {
     int i, j, cycle = 0, iminus, iplus, nsides, n; 
-    double angle, angle2, dx, width, height, a, b, length, xmid = 0.5*(BCXMIN + BCXMAX), lpocket, r, x, x1, y1, x2, y2, nozx, nozy;
+    double angle, angle2, dangle, dx, width, height, a, b, length, xmid = 0.5*(BCXMIN + BCXMAX), lpocket, r, x, x1, y1, x2, y2, nozx, nozy;
     
     switch (SEGMENT_PATTERN) {
         case (S_RECTANGLE):
@@ -1067,6 +1140,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             {
                 segment[i].concave = 0;
                 segment[i].group = 0;
+                segment[i].inactivate = 0;
             }
             break;
         }
@@ -1094,6 +1168,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             {
                 segment[i].concave = 0;
                 segment[i].group = 0;
+                segment[i].inactivate = 0;
             }
             
             break;
@@ -1138,7 +1213,11 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             
             cycle = 1;
             nsegments = 8;
-            for (i=0; i<nsegments; i++) segment[i].group = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
             
             break;
         }
@@ -1169,6 +1248,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             {
                 segment[i].concave = 0;
                 segment[i].group = 0;
+                segment[i].inactivate = 0;
             }
             
             break;
@@ -1199,7 +1279,11 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             cycle = 1;
             nsegments = 4*NPOLY;
             
-            for (i=0; i<nsegments; i++) segment[i].group = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
             
             break;
         }
@@ -1224,6 +1308,8 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             
             cycle = 1;
             nsegments = 2*NPOLY;
+            
+            for (i=0; i<nsegments; i++) segment[i].inactivate = 0;
             break;
         }
         case (S_POOL_TABLE):
@@ -1244,6 +1330,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             {
                 segment[i].concave = 0;
                 segment[i].group = 0;
+                segment[i].inactivate = 0;
             }
             
             break;
@@ -1281,7 +1368,11 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             
             cycle = 1;
             nsegments = (nsides+2)*NPOLY;
-            for (i=0; i<nsegments; i++) segment[i].group = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
             
             break;
         }
@@ -1330,6 +1421,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             {
                 segment[i].concave = 0;
                 segment[i].group = 0;
+                segment[i].inactivate = 0;
             }
             
             break;
@@ -1348,7 +1440,11 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             cycle = 1;
             nsegments = NPOLY;
             
-            for (i=0; i<nsegments; i++) segment[i].group = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
             
             break;
         }
@@ -1378,18 +1474,18 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             for (i=0; i<nsides; i++)
             {
                 x1 = -LAMBDA + dx*(double)(i-1);
-                y1 = nozzle_width(x1, nozy);
+                y1 = nozzle_width(x1, nozy, NOZZLE_SHAPE);
                 x2 = x1 + dx;
-                y2 = nozzle_width(x2, nozy);
+                y2 = nozzle_width(x2, nozy, NOZZLE_SHAPE);
                 add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment);
             }
             add_rotated_angle_to_segments(x2, y2, nozx, nozy, 0.02, segment);
             for (i=0; i<nsides; i++)
             {
                 x1 = -LAMBDA + dx*(double)(i-1);
-                y1 = -nozzle_width(x1, nozy);
+                y1 = -nozzle_width(x1, nozy, NOZZLE_SHAPE);
                 x2 = x1 + dx;
-                y2 = -nozzle_width(x2, nozy);
+                y2 = -nozzle_width(x2, nozy, NOZZLE_SHAPE);
                 add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment);
             }
             add_rotated_angle_to_segments(x2, y2, nozx, -nozy, 0.02, segment);
@@ -1402,8 +1498,26 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             nsegments++;
         
             cycle = 0;
-            for (i=0; i<nsegments; i++) segment[i].group = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            segment[nsegments-1].inactivate = 1;
             
+            break;
+        }
+        case (S_ROCKET_NOZZLE_ROTATED):
+        {
+            add_rocket_to_segments(segment, 0.0, SEGMENTS_Y0, NOZZLE_SHAPE, 10, 0);
+            cycle = 0;            
+            break;
+        }
+        case (S_TWO_ROCKETS):
+        {
+            add_rocket_to_segments(segment, SEGMENTS_X0, SEGMENTS_Y0, NOZZLE_SHAPE, 10, 0);
+            add_rocket_to_segments(segment, -SEGMENTS_X0, SEGMENTS_Y0, NOZZLE_SHAPE_B, 10, 1);
+            cycle = 0;
             break;
         }
         case (S_TWO_CIRCLES_EXT):
@@ -1418,6 +1532,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 segment[i].y2 = SEGMENTS_Y0 - LAMBDA*sin(((double)(i+1))*angle);
                 segment[i].concave = 1;
                 segment[i].group = 0;
+                segment[i].inactivate = 0;
             }
             for (i=NPOLY; i<2*NPOLY; i++)
             {
@@ -1427,11 +1542,66 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 segment[i].y2 = SEGMENTS_Y0 - TWO_CIRCLES_RADIUS_RATIO*LAMBDA*sin(((double)(i+1))*angle);
                 segment[i].concave = 1;
                 segment[i].group = 1;
+                segment[i].inactivate = 0;
             }
             
             cycle = 0;
             nsegments = 2*NPOLY;
             
+            break;
+        }
+        case (S_DAM):
+        {
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, LAMBDA, segment);
+            
+            cycle = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 1;
+            }
+            break;
+        }
+        case (S_DAM_WITH_HOLE):
+        {
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, BCYMIN + 0.1, segment);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.3, -DAM_WIDTH, LAMBDA, segment);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.1, -DAM_WIDTH, BCYMIN + 0.3, segment);
+            
+            cycle = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                if (i > 7) segment[i].inactivate = 1;
+                else segment[i].inactivate = 0;
+            }
+            break;
+        }
+        case (S_DAM_WITH_HOLE_AND_RAMP):
+        {
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, BCYMIN + 0.2, segment);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.3, -DAM_WIDTH, LAMBDA, segment);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.2, -DAM_WIDTH, BCYMIN + 0.3, segment);
+            
+            r = 1.0;
+            for (i=0; i<10; i++)
+            {
+                angle = 0.1*PID*(double)i;
+                dangle = 0.1*PID;
+                x1 = XMAX - r + (r + MU)*cos(angle);
+                y1 = YMIN + r - (r + MU)*sin(angle);
+                x2 = XMAX - r + (r + MU)*cos(angle + dangle);
+                y2 = YMIN + r - (r + MU)*sin(angle + dangle);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, MU, segment);
+            }
+            
+            cycle = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                if ((i > 7)&&(i < 12)) segment[i].inactivate = 1;
+                else segment[i].inactivate = 0;
+            }
             break;
         }
         default: 
@@ -1458,6 +1628,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         segment[nsegments].y1 = LAMBDA*sin(((double)i + 0.5)*angle);
         segment[nsegments].x2 = -cos(((double)i + 0.5)*angle);
         segment[nsegments].y2 = -LAMBDA*sin(((double)i + 0.5)*angle);
+        segment[nsegments].inactivate = 1;
         nsegments++;
     }
     
@@ -1530,7 +1701,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
 int in_segment_region(double x, double y)
 /* returns 1 if (x,y) is inside region delimited by obstacle segments */
 {
-    double angle, dx, height, width, theta, lx, ly;
+    double angle, dx, height, width, theta, lx, ly, x1, y1, x2, y2;
     
     if (x >= BCXMAX) return(0);
     if (x <= BCXMIN) return(0);
@@ -1622,11 +1793,51 @@ int in_segment_region(double x, double y)
             else 
             {
                 lx = 0.7*LAMBDA;
-                ly = 0.5*LAMBDA;
+                ly = 0.7*LAMBDA;
                 x -= lx;
                 if (x*x/(lx*lx) + y*y/(ly*ly) < 0.95) return(1);
             }
             return(0);
+        }
+        case (S_ROCKET_NOZZLE_ROTATED):
+        {
+            y1 = y - ysegments[0];
+            if (y1 < YMIN + LAMBDA) return(0);
+            else if (y1 > YMIN + 2.4*LAMBDA) return(0);
+            else 
+            {
+                ly = 0.7*LAMBDA;
+                lx = 0.7*LAMBDA;
+                x1 = x - xsegments[0];
+                y1 -= YMIN + 1.7*LAMBDA;
+                if (x1*x1/(lx*lx) + y1*y1/(ly*ly) + MU*MU < 0.925) return(1);
+            }
+            return(0);
+        }
+        case (S_TWO_ROCKETS):
+        {
+            y1 = y - ysegments[0];
+            y2 = y - ysegments[1];
+            if ((y1 < YMIN + LAMBDA)&&(y2 < YMIN + LAMBDA)) return(0);
+            else if ((y1 > YMIN + 2.4*LAMBDA)&&(y2 > YMIN + 2.4*LAMBDA)) return(0);
+            else 
+            {
+                ly = 0.7*LAMBDA;
+                lx = 0.7*LAMBDA;
+                x1 = x - xsegments[0];
+                y1 -= YMIN + 1.7*LAMBDA;
+                if (x1*x1/(lx*lx) + y1*y1/(ly*ly) + MU*MU < 0.925) return(1);
+                x2 = x - xsegments[1];
+                y2 -= YMIN + 1.7*LAMBDA;
+                if (x2*x2/(lx*lx) + y2*y2/(ly*ly) + MU*MU  < 0.925) return(1);
+            }
+            return(0);
+        }
+        case (S_DAM):
+        {
+            if (vabs(x) > DAM_WIDTH) return(1);
+            else if (y > LAMBDA) return(1);
+            else return(0);
         }
         default: return(1);
     }
@@ -2281,12 +2492,12 @@ int compute_repelling_force(int i, int j, double force[2], double *torque, t_par
     distance = module2(particle[i].deltax[j], particle[i].deltay[j]);
     
     /* for monitoring purposes */
-    if (distance > distmin) 
-    {
-        printf("i = %i, hashcell %i, j = %i, hashcell %i\n", i, particle[i].hashcell, k, particle[k].hashcell);
-        printf("X = (%.3lg, %.3lg)\n", particle[i].xc, particle[i].yc);
-        printf("Y = (%.3lg, %.3lg) d = %.3lg\n", particle[k].xc, particle[k].yc, distance);
-    }
+//     if (distance > distmin) 
+//     {
+//         printf("i = %i, hashcell %i, j = %i, hashcell %i\n", i, particle[i].hashcell, k, particle[k].hashcell);
+//         printf("X = (%.3lg, %.3lg)\n", particle[i].xc, particle[i].yc);
+//         printf("Y = (%.3lg, %.3lg) d = %.3lg\n", particle[k].xc, particle[k].yc, distance);
+//     }
         
     if ((distance == 0.0)||(i == k))
     {
@@ -2519,11 +2730,202 @@ void compute_entropy(t_particle particle[NMAXCIRCLES], double entropy[2])
 }
 
 
-void draw_triangles(t_particle particle[NMAXCIRCLES])
+void compute_particle_colors(t_particle particle, int plot, double rgb[3], double rgbx[3], double rgby[3], double *radius, int *width)
+{
+    double ej, angle, hue, huex, huey, lum;
+    int i;
+    
+    switch (plot) {
+        case (P_KINETIC): 
+        {
+            ej = particle.energy;
+            if (ej > 0.0) 
+            {
+                hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*ej/PARTICLE_EMAX;
+                if (hue > ENERGY_HUE_MIN) hue = ENERGY_HUE_MIN;
+                if (hue < ENERGY_HUE_MAX) hue = ENERGY_HUE_MAX;
+            }
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_NEIGHBOURS): 
+        {
+            hue = neighbour_color(particle.neighb);
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_BONDS):
+        {
+            hue = neighbour_color(particle.neighb);
+            *radius = particle.radius;
+            *width = 1;
+            break;
+        }
+        case (P_ANGLE):
+        {
+            angle = particle.angle;
+            hue = angle*particle.spin_freq/DPI;
+            hue -= (double)((int)hue);
+            huex = (DPI - angle)*particle.spin_freq/DPI;
+            huex -= (double)((int)huex);
+            angle = PI - angle;
+            if (angle < 0.0) angle += DPI;
+            huey = angle*particle.spin_freq/DPI;
+            huey -= (double)((int)huey);
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*(hue);
+            huex = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*(huex);
+            huey = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*(huey);
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_TYPE):
+        {
+            if (particle.type <= 1) hue = HUE_TYPE0;
+            else if (particle.type == 2) hue = HUE_TYPE1;
+            else if (particle.type == 3) hue = HUE_TYPE2;
+            else hue = HUE_TYPE3;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_DIRECTION): 
+        {
+            hue = argument(particle.vx, particle.vy);
+            if (hue > DPI) hue -= DPI;
+            if (hue < 0.0) hue += DPI;
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*(hue)/DPI;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_DIRECT_ENERGY): 
+        {
+            hue = argument(particle.vx, particle.vy);
+            if (hue > DPI) hue -= DPI;
+            if (hue < 0.0) hue += DPI;
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*(hue)/DPI;
+            if (particle.energy < 0.1*PARTICLE_EMAX) lum = 10.0*particle.energy/PARTICLE_EMAX;
+            else lum = 1.0;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_ANGULAR_SPEED): 
+        {
+            hue = 160.0*(1.0 + tanh(SLOPE*particle.omega));
+//                printf("omega = %.3lg, hue = %.3lg\n", particle[j].omega, hue);
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_DIFF_NEIGHB): 
+        {
+            hue = (double)(particle.diff_neighb+1)/(double)(particle.neighb+1);
+//                hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*hue;
+            hue = 180.0*(1.0 + hue);
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_THERMOSTAT):
+        {
+            if (particle.thermostat) hue = 30.0;
+            else hue = 270.0;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_INITIAL_POS):
+        {
+            hue = particle.color_hue;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+    }
+    
+    switch (plot) {
+        case (P_KINETIC):  
+        {
+            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgbx);
+            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgby);
+            break;
+        }
+        case (P_BONDS):  
+        {
+            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgbx);
+            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgby);
+            break;
+        }
+        case (P_DIRECTION): 
+        {
+            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgb);
+            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgbx);
+            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgby);
+            break;
+        }
+        case (P_DIRECT_ENERGY): 
+        {
+            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgb);
+            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgbx);
+            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgby);
+            for (i=0; i<3; i++)
+            {
+                rgb[i] *= lum;
+                rgbx[i] *= lum;
+                rgby[i] *= lum;
+            }
+            break;
+        }
+        case (P_DIFF_NEIGHB):  
+        {
+            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgb);
+            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgbx);
+            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgby);
+            break;
+        }
+        default: 
+        {
+            hsl_to_rgb(hue, 0.9, 0.5, rgb);
+            hsl_to_rgb(hue, 0.9, 0.5, rgbx);
+            hsl_to_rgb(hue, 0.9, 0.5, rgby);
+        }
+    }
+}
+
+
+void draw_one_triangle(t_particle particle, int same_table[9*HASHMAX], int p, int q, int nsame)
+{
+    double x, y, dx, dy;
+    int k;
+    
+    x = particle.xc + (double)p*(BCXMAX - BCXMIN);
+    y = particle.yc + (double)q*(BCYMAX - BCYMIN);
+            
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(x, y);
+
+    for (k=0; k<nsame; k++) 
+    {
+        dx = particle.deltax[same_table[k]];
+        dy = particle.deltay[same_table[k]];
+        if (module2(dx, dy) < particle.radius*NBH_DIST_FACTOR)
+            glVertex2d(x + dx, y + dy);
+    }
+    glEnd();
+}
+
+
+void draw_triangles(t_particle particle[NMAXCIRCLES], int plot)
 /* fill triangles between neighboring particles */
 {
-    int i, j, k, p, q, t0, tj, tmax, nsame = 0, same_table[9*HASHMAX];
-    double rgb[3], hue, dx, dy, x, y;
+    int i, j, k, p, q, t0, tj, tmax, nsame = 0, same_table[9*HASHMAX], width;
+    double rgb[3], hue, dx, dy, x, y, radius, rgbx[3], rgby[3];
     
     printf("Number of nbs: ");
     for (i=0; i<ncircles; i++) if (particle[i].active)
@@ -2535,7 +2937,7 @@ void draw_triangles(t_particle particle[NMAXCIRCLES])
         for (j=0; j<particle[i].hash_nneighb; j++)
         {
             k = particle[i].hashneighbour[j];
-            if ((k!=i)&&(particle[k].type == t0)) 
+            if ((k!=i)&&((plot != P_TYPE)||(particle[k].type == t0))) 
             {
                 same_table[nsame] = j;
                 nsame++;
@@ -2545,30 +2947,23 @@ void draw_triangles(t_particle particle[NMAXCIRCLES])
         /* draw the triangles */
         if (nsame > 1)
         {
-            if (t0 <= 1) hue = HUE_TYPE0;
-            else if (t0 == 2) hue = HUE_TYPE1;
-            else if (t0 == 3) hue = HUE_TYPE2;
-            else hue = HUE_TYPE3;
-                
-            hsl_to_rgb(hue, 0.9, 0.3, rgb);
-            glColor3f(rgb[0], rgb[1], rgb[2]);
-            for (p=-1; p<2; p++) for (q=-1; q<2; q++)
+            if (plot == P_TYPE)
             {
-                x = particle[i].xc + (double)p*(BCXMAX - BCXMIN);
-                y = particle[i].yc + (double)q*(BCYMAX - BCYMIN);
-            
-                glBegin(GL_TRIANGLE_FAN);
-                glVertex2d(x, y);
-//                 printf("%i | ", particle[i].hash_nneighb);
-                for (k=0; k<nsame; k++) 
-                {
-                    dx = particle[i].deltax[same_table[k]];
-                    dy = particle[i].deltay[same_table[k]];
-                    if (module2(dx, dy) < particle[i].radius*NBH_DIST_FACTOR)
-                        glVertex2d(x + dx, y + dy);
-                }
-                glEnd();
+                if (t0 <= 1) hue = HUE_TYPE0;
+                else if (t0 == 2) hue = HUE_TYPE1;
+                else if (t0 == 3) hue = HUE_TYPE2;
+                else hue = HUE_TYPE3;
+                hsl_to_rgb(hue, 0.9, 0.3, rgb);
             }
+            else
+            {
+                compute_particle_colors(particle[i], plot, rgb, rgbx, rgby, &radius, &width);
+            }
+                
+            glColor3f(rgb[0], rgb[1], rgb[2]);
+            if (PERIODIC_BC) for (p=-1; p<2; p++) for (q=-1; q<2; q++)
+                draw_one_triangle(particle[i], same_table, p, q, nsame);
+            else draw_one_triangle(particle[i], same_table, 0, 0, nsame);    
         }
     }
     printf("\n");
@@ -2758,114 +3153,14 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta)
     }
                 
     /* fill triangles between particles */
-    if (FILL_TRIANGLES) draw_triangles(particle);
+    if (FILL_TRIANGLES) draw_triangles(particle, plot);
     
     
     /* determine particle color and size */
     for (j=0; j<ncircles; j++) if (particle[j].active)
     {
-        switch (plot) {
-            case (P_KINETIC): 
-            {
-                ej = particle[j].energy;
-                if (ej > 0.0) 
-                {
-                    hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*ej/PARTICLE_EMAX;
-                    if (hue > ENERGY_HUE_MIN) hue = ENERGY_HUE_MIN;
-                    if (hue < ENERGY_HUE_MAX) hue = ENERGY_HUE_MAX;
-                }
-                radius = particle[j].radius;
-                width = BOUNDARY_WIDTH;
-                break;
-            }
-            case (P_NEIGHBOURS): 
-            {
-                hue = neighbour_color(particle[j].neighb);
-                radius = particle[j].radius;
-                width = BOUNDARY_WIDTH;
-                break;
-            }
-            case (P_BONDS):
-            {
-//                 if (particle[j].type == 1) hue = 70.0;        /* to make second particle type more visible */
-//                 if (particle[j].type == 1) hue = neighbour_color(7 - particle[j].neighb);
-//                 else 
-                hue = neighbour_color(particle[j].neighb);
-                radius = particle[j].radius;
-                width = 1;
-                break;
-            }
-            case (P_ANGLE):
-            {
-                angle = particle[j].angle;
-                hue = angle*particle[j].spin_freq/DPI;
-                hue -= (double)((int)hue);
-                huex = (DPI - angle)*particle[j].spin_freq/DPI;
-                huex -= (double)((int)huex);
-                angle = PI - angle;
-                if (angle < 0.0) angle += DPI;
-                huey = angle*particle[j].spin_freq/DPI;
-                huey -= (double)((int)huey);
-                hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*hue;
-                huex = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*huex;
-                huey = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*huey;
-                radius = particle[j].radius;
-                width = BOUNDARY_WIDTH;
-                break;
-            }
-            case (P_TYPE):
-            {
-//                 if (particle[j].type == 0) hue = 310.0;
-//                 else hue = 70.0;
-                if (particle[j].type <= 1) hue = HUE_TYPE0;
-                else if (particle[j].type == 2) hue = HUE_TYPE1;
-                else if (particle[j].type == 3) hue = HUE_TYPE2;
-                else hue = HUE_TYPE3;
-                radius = particle[j].radius;
-                width = BOUNDARY_WIDTH;
-                break;
-            }
-            case (P_DIRECTION): 
-            {
-                hue = argument(particle[j].vx, particle[j].vy);
-                if (hue > DPI) hue -= DPI;
-                if (hue < 0.0) hue += DPI;
-                hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*hue/DPI;
-                radius = particle[j].radius;
-                width = BOUNDARY_WIDTH;
-                break;
-            }
-            case (P_DIRECT_ENERGY): 
-            {
-                hue = argument(particle[j].vx, particle[j].vy);
-                if (hue > DPI) hue -= DPI;
-                if (hue < 0.0) hue += DPI;
-                hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*hue/DPI;
-                if (particle[j].energy < 0.1*PARTICLE_EMAX) lum = 10.0*particle[j].energy/PARTICLE_EMAX;
-                else lum = 1.0;
-                radius = particle[j].radius;
-                width = BOUNDARY_WIDTH;
-                break;
-            }
-            case (P_ANGULAR_SPEED): 
-            {
-                hue = 160.0*(1.0 + tanh(SLOPE*particle[j].omega));
-//                 printf("omega = %.3lg, hue = %.3lg\n", particle[j].omega, hue);
-                radius = particle[j].radius;
-                width = BOUNDARY_WIDTH;
-                break;
-            }
-            case (P_DIFF_NEIGHB): 
-            {
-                hue = (double)(particle[j].diff_neighb+1)/(double)(particle[j].neighb+1);
-//                 hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*hue;
-                hue = 180.0*(1.0 + hue);
-                radius = particle[j].radius;
-                width = BOUNDARY_WIDTH;
-                break;
-            }
-        }
-
+        compute_particle_colors(particle[j], plot, rgb, rgbx, rgby, &radius, &width);
+       
         switch (particle[j].interaction) {
             case (I_LJ_DIRECTIONAL): 
             {   
@@ -2891,55 +3186,6 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta)
             default: nsides = NSEG;
         }
 
-        switch (plot) {
-            case (P_KINETIC):  
-            {
-                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
-                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgbx);
-                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgby);
-                break;
-            }
-            case (P_BONDS):  
-            {
-                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
-                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgbx);
-                hsl_to_rgb_turbo(hue, 0.9, 0.5, rgby);
-                break;
-            }
-            case (P_DIRECTION): 
-            {
-                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgb);
-                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgbx);
-                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgby);
-                break;
-            }
-            case (P_DIRECT_ENERGY): 
-            {
-                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgb);
-                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgbx);
-                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgby);
-                for (i=0; i<3; i++)
-                {
-                    rgb[i] *= lum;
-                    rgbx[i] *= lum;
-                    rgby[i] *= lum;
-                }
-                break;
-            }
-            case (P_DIFF_NEIGHB):  
-            {
-                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgb);
-                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgbx);
-                hsl_to_rgb_twilight(hue, 0.9, 0.5, rgby);
-                break;
-            }
-            default: 
-            {
-                hsl_to_rgb(hue, 0.9, 0.5, rgb);
-                hsl_to_rgb(hue, 0.9, 0.5, rgbx);
-                hsl_to_rgb(hue, 0.9, 0.5, rgby);
-            }
-        }
         angle = particle[j].angle + APOLY*DPI;
         
         draw_one_particle(particle[j], particle[j].xc, particle[j].yc, radius, angle, nsides, width, rgb);
@@ -3279,27 +3525,29 @@ void print_parameters(double beta, double temperature, double krepel, double len
     int i, j, k;
     double density, hue, rgb[3], logratio, x, y, meanpress[N_PRESSURES], phi, sphi, dphi, pprint, mean_temp;
     static double xbox, xtext, xmid, xmidtext, xxbox, xxtext, pressures[N_P_AVERAGE], meanpressure = 0.0, maxpressure = 0.0;
-    static double press[N_PRESSURES][N_P_AVERAGE], temp[N_T_AVERAGE];
+    static double press[N_PRESSURES][N_P_AVERAGE], temp[N_T_AVERAGE], scale;
     static int first = 1, i_pressure, i_temp;
     
     if (first)
     {
+//         scale = (XMAX - XMIN)/4.0;
+        scale = (YMAX - YMIN)/2.5;
         if (left)
         {
-            xbox = XMIN + 0.4;
-            xtext = XMIN + 0.08;
-            xxbox = XMAX - 0.39;
-            xxtext = XMAX - 0.73;
+            xbox = XMIN + 0.45*scale;
+            xtext = XMIN + 0.12*scale;
+            xxbox = XMAX - 0.39*scale;
+            xxtext = XMAX - 0.73*scale;
        }
         else
         {
-            xbox = XMAX - 0.41;
-            xtext = XMAX - 0.73;
-            xxbox = XMIN + 0.4;
-            xxtext = XMIN + 0.08;
+            xbox = XMAX - 0.41*scale;
+            xtext = XMAX - 0.73*scale;
+            xxbox = XMIN + 0.4*scale;
+            xxtext = XMIN + 0.08*scale;
         }
-        xmid = 0.5*(XMIN + XMAX) - 0.1;
-        xmidtext = xmid - 0.24;
+        xmid = 0.5*(XMIN + XMAX) - 0.1*scale;
+        xmidtext = xmid - 0.24*scale;
         for (i=0; i<N_P_AVERAGE; i++) pressures[i] = 0.0;
         if (RECORD_PRESSURES) for (j=0; j<N_PRESSURES; j++) 
         {
@@ -3344,7 +3592,7 @@ void print_parameters(double beta, double temperature, double krepel, double len
         printf("Max pressure = %.5lg\n\n", maxpressure);
     }
     
-    y = YMAX - 0.1;
+    y = YMAX - 0.1*scale;
     if (INCREASE_BETA)  /* print temperature */
     {
         logratio = log(beta/BETA)/log(0.5*BETA_FACTOR);
@@ -3352,13 +3600,13 @@ void print_parameters(double beta, double temperature, double krepel, double len
         else if (logratio < 0.0) logratio = 0.0;
         if (BETA_FACTOR > 1.0) hue = PARTICLE_HUE_MAX - (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*logratio;
         else hue = PARTICLE_HUE_MIN - (PARTICLE_HUE_MIN - PARTICLE_HUE_MAX)*logratio;
-        erase_area_hsl_turbo(xbox, y + 0.025, 0.37, 0.05, hue, 0.9, 0.5);
-//         erase_area_hsl_turbo(xmid + 0.1, y + 0.025, 0.4, 0.05, hue, 0.9, 0.5);
+        if (PRINT_LEFT) erase_area_hsl_turbo(xbox, y + 0.025*scale, 0.5*scale, 0.05*scale, hue, 0.9, 0.5);
+        else erase_area_hsl_turbo(xmid + 0.1, y + 0.025*scale, 0.45*scale, 0.05*scale, hue, 0.9, 0.5);
         if ((hue < 90)||(hue > 270)) glColor3f(1.0, 1.0, 1.0);
         else glColor3f(0.0, 0.0, 0.0);
         sprintf(message, "Temperature %.2f", 1.0/beta);
-        write_text(xtext, y, message);
-//         write_text(xmidtext, y, message);
+        if (PRINT_LEFT) write_text(xtext, y, message);
+        else write_text(xmidtext, y, message);
 //         y -= 0.1;
         
 //         erase_area_hsl(xxbox, y + 0.025, 0.37, 0.05, 0.0, 0.9, 0.0);
@@ -3369,17 +3617,17 @@ void print_parameters(double beta, double temperature, double krepel, double len
     if (DECREASE_CONTAINER_SIZE)  /* print density */
     {
         density = (double)ncircles/((lengthcontainer)*(INITYMAX - INITYMIN));
-        erase_area_hsl(xbox, y + 0.025, 0.37, 0.05, 0.0, 0.9, 0.0);
+        erase_area_hsl(xbox, y + 0.025*scale, 0.37*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Density %.3f", density);
         write_text(xtext, y, message);
         
-        erase_area_hsl(xmid, y + 0.025, 0.37, 0.05, 0.0, 0.9, 0.0);
+        erase_area_hsl(xmid, y + 0.025*scale, 0.37*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Temperature %.2f", temperature);
         write_text(xmidtext, y, message);
 
-        erase_area_hsl(xxbox, y + 0.025, 0.37, 0.05, 0.0, 0.9, 0.0);
+        erase_area_hsl(xxbox, y + 0.025*scale, 0.37*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Pressure %.3f", meanpressure);
         write_text(xxtext, y, message);
@@ -3387,7 +3635,7 @@ void print_parameters(double beta, double temperature, double krepel, double len
     }   
     else if (INCREASE_KREPEL)  /* print force constant */
     {
-        erase_area_hsl(xbox, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+        erase_area_hsl(xbox, y + 0.025*scale, 0.22*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Force %.0f", krepel);
         write_text(xtext + 0.28, y, message);
@@ -3436,7 +3684,7 @@ void print_parameters(double beta, double temperature, double krepel, double len
         
         hue = PARTICLE_HUE_MIN + 0.5*(PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*mean_temp/PARTICLE_EMAX;
         if (hue < PARTICLE_HUE_MAX) hue = PARTICLE_HUE_MAX;
-        erase_area_hsl_turbo(xbox, y + 0.025, 0.37, 0.05, hue, 0.9, 0.5);
+        erase_area_hsl_turbo(xbox, y + 0.025*scale, 0.37*scale, 0.05*scale, hue, 0.9, 0.5);
         if ((hue < 90)||(hue > 270)) glColor3f(1.0, 1.0, 1.0);
         else glColor3f(0.0, 0.0, 0.0);
         sprintf(message, "Temperature %.2f", mean_temp);
@@ -3445,7 +3693,7 @@ void print_parameters(double beta, double temperature, double krepel, double len
     
     if (INCREASE_GRAVITY)
     {
-        erase_area_hsl(xmid, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+        erase_area_hsl(xmid, y + 0.025*scale, 0.22*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Gravity %.2f", gravity/GRAVITY);
         write_text(xmidtext + 0.1, y, message);
@@ -3649,40 +3897,42 @@ void print_omega(double angular_speed)
 void print_segments_speeds(double vx[2], double vy[2])
 {
     char message[100];
-    double rgb[3], y = YMAX - 0.1;
-    static double xleftbox, xlefttext, xrightbox, xrighttext, ymin = YMIN + 0.05;
+    double rgb[3], y;
+    static double xleftbox, xlefttext, xrightbox, xrighttext, ymin = YMIN + 0.05, scale;
     static int first = 1;
     
     if (first)
     {
-        xleftbox = XMIN + 0.4;
-        xlefttext = xleftbox - 0.3;
-        xrightbox = XMAX - 0.39;
-        xrighttext = xrightbox - 0.3;
+        scale = (XMAX - XMIN)/4.0;
+        xleftbox = XMIN + 0.4*scale;
+        xlefttext = xleftbox - 0.3*scale;
+        xrightbox = XMAX - 0.39*scale;
+        xrighttext = xrightbox - 0.3*scale;
         first = 0;
     }
     
-    erase_area_hsl(xrightbox, y + 0.025, 0.25, 0.05, 0.0, 0.9, 0.0);
+    y = YMAX - 0.1*scale;
+    erase_area_hsl(xrightbox, y + 0.025*scale, 0.25*scale, 0.05*scale, 0.0, 0.9, 0.0);
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "Vx = %.2f", vx[0]);
     write_text(xrighttext + 0.1, y, message);
 
-    y -= 0.1;
-    erase_area_hsl(xrightbox, y + 0.025, 0.25, 0.05, 0.0, 0.9, 0.0);
+    y -= 0.1*scale;
+    erase_area_hsl(xrightbox, y + 0.025*scale, 0.25*scale, 0.05*scale, 0.0, 0.9, 0.0);
     glColor3f(1.0, 1.0, 1.0);
     sprintf(message, "Vy = %.2f", vy[0]);
     write_text(xrighttext + 0.1, y, message);
     
     if (TWO_OBSTACLES)
     {
-        y = YMAX - 0.1;
-        erase_area_hsl(xleftbox, y + 0.025, 0.25, 0.05, 0.0, 0.9, 0.0);
+        y = YMAX - 0.1*scale;
+        erase_area_hsl(xleftbox, y + 0.025*scale, 0.25*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Vx = %.2f", vx[1]);
         write_text(xlefttext + 0.1, y, message);
 
-        y -= 0.1;
-        erase_area_hsl(xleftbox, y + 0.025, 0.25, 0.05, 0.0, 0.9, 0.0);
+        y -= 0.1*scale;
+        erase_area_hsl(xleftbox, y + 0.025*scale, 0.25*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Vy = %.2f", vy[1]);
         write_text(xlefttext + 0.1, y, message);
@@ -4182,24 +4432,33 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
             x = particle[j].xc;
             y = particle[j].yc;
             
-            if ((x > XMAX + padding)||(x < XMIN - padding)||(y > YMAX + padding)||(y < YMIN - padding)) 
+            if ((x > BCXMAX + padding)||(x < BCXMIN - padding)||(y > BCYMAX + padding)||(y < BCYMIN - padding)) 
             {
                 particle[j].active = 0;
                 particle[j].vx = 0.0;
                 particle[j].vy = 0.0;
-                particle[j].xc = XMAX + 2.0*padding;
-                particle[j].yc = YMAX + 2.0*padding;
+                particle[j].xc = BCXMAX + 2.0*padding;
+                particle[j].yc = BCYMAX + 2.0*padding;
             }
             
-//             if ((x > XMAX)&&(x < XMAX + 0.5*padding)) particle[j].fx += KSPRING_BOUNDARY*(XMAX + 0.5*padding - x);
-//             else if (x < XMIN) particle[j].fx -= KSPRING_BOUNDARY;
-//             if (y > YMAX) particle[j].fy += KSPRING_BOUNDARY;
-//             else if (y < YMIN) particle[j].fy -= KSPRING_BOUNDARY;
+            return(fperp);
+        }
+        case (BC_REFLECT_ABS):
+        {
+            /* add harmonic force outside screen */
+            padding = 0.1;
+            x = particle[j].xc;
+            y = particle[j].yc;
             
-//             if (x > XMAX + padding) particle[j].fx -= KSPRING_BOUNDARY*(x - XMAX - padding);
-//             else if (x < XMIN - padding) particle[j].fx += KSPRING_BOUNDARY*(XMIN - padding - x);
-//             if (y > YMAX + padding) particle[j].fy -= KSPRING_BOUNDARY*(y - YMAX - padding);
-//             else if (y < YMIN - padding) particle[j].fy += KSPRING_BOUNDARY*(YMIN - padding - y);
+            if ((x > BCXMAX + padding)||(y > BCYMAX + padding)||(y < BCYMIN - padding)) 
+            {
+                particle[j].active = 0;
+                particle[j].vx = 0.0;
+                particle[j].vy = 0.0;
+                particle[j].xc = BCXMAX + 2.0*padding;
+                particle[j].yc = BCYMAX + 2.0*padding;
+            }
+             else if (particle[j].yc < BCYMIN) particle[j].fy += KSPRING_BOUNDARY*(BCYMIN - particle[j].yc);
             
             return(fperp);
         }
@@ -4233,6 +4492,55 @@ void compute_particle_force(int j, double krepel, t_particle particle[NMAXCIRCLE
     particle[j].fx += fx;
     particle[j].fy += fy;
     particle[j].torque += torque;
+}
+
+
+int reorder_particles(t_particle particle[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES])
+/* keep only active particles */
+{
+    int i, k, new = 0, nactive = 0;
+    
+    for (i=0; i<ncircles; i++) if (particle[i].active)
+    {
+        particle[new].xc = particle[i].xc;
+        particle[new].yc = particle[i].yc;
+        particle[new].radius = particle[i].radius;
+        particle[new].angle = particle[i].angle;
+        particle[new].active = particle[i].active;
+        particle[new].energy = particle[i].energy;
+        particle[new].vx = particle[i].vx;
+        particle[new].vy = particle[i].vy;
+        particle[new].omega = particle[i].omega;
+        particle[new].mass_inv = particle[i].mass_inv;
+        particle[new].inertia_moment_inv = particle[i].inertia_moment_inv;
+        particle[new].fx = particle[i].fx;
+        particle[new].fy = particle[i].fy;
+        particle[new].thermostat = particle[i].thermostat;
+        particle[new].hashcell = particle[i].hashcell;
+        particle[new].neighb = particle[i].neighb;
+        particle[new].diff_neighb = particle[i].diff_neighb;
+        particle[new].hash_nneighb = particle[i].hash_nneighb;
+        particle[new].type = particle[i].type;
+        particle[new].interaction = particle[i].interaction;
+        particle[new].eq_dist = particle[i].eq_dist;
+        particle[new].spin_range = particle[i].spin_range;
+        particle[new].spin_freq = particle[i].spin_freq;
+        
+        py[new] = py[i];
+        pangle[new] = pangle[i];
+        
+        for (k=0; k<9*HASHMAX; k++)
+        {
+            particle[new].hashneighbour[k] = particle[i].hashneighbour[k];
+            particle[new].deltax[k] = particle[i].deltax[k];
+            particle[new].deltay[k] = particle[i].deltay[k];
+        }
+        
+        new++;
+        nactive++;
+    }
+    
+    return(nactive);
 }
 
 
@@ -4303,6 +4611,9 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
             particle[i].omega = 0.0;
         }
         pangle[i] = particle[i].omega;
+        
+        if ((PLOT == P_INITIAL_POS)||(PLOT_B == P_INITIAL_POS))
+            particle[i].color_hue = 360.0*(particle[i].yc - YMIN)/(YMAX - YMIN);
     }
     /* initialize dummy values in case particles are added */
     for (i=ncircles; i < NMAXCIRCLES; i++) 
@@ -4465,12 +4776,15 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
     {
         particle[i].type = 1 + (int)(RD_TYPES*(double)rand()/(double)RAND_MAX);
     }   
+    
+    /* keep only active particles */
+//     ncircles = reorder_particles(particle, py, pangle);
             
     /* count number of active particles */
     for (i=0; i< ncircles; i++) nactive += particle[i].active;
     printf("%i active particles\n", nactive);
     
-    for (i=0; i<ncircles; i++) printf("particle %i of type %i\n", i, particle[i].type);
+//     for (i=0; i<ncircles; i++) printf("particle %i of type %i\n", i, particle[i].type);
     
     return(nactive);
 }
@@ -4570,8 +4884,9 @@ int partial_thermostat_coupling(t_particle particle[NMAXCIRCLES], double xmin)
             }
             case (TH_INSEGMENT):
             {
-                condition = (in_segment_region(particle[i].xc - xsegments[0], particle[i].yc - ysegments[0]));
+                condition = (in_segment_region(particle[i].xc, particle[i].yc));
 //                 condition = (in_segment_region(particle[i].xc - xsegments[0], particle[i].yc - ysegments[0]));
+// //                 condition = (in_segment_region(particle[i].xc - xsegments[0], particle[i].yc - ysegments[0]));
 //                 if (TWO_OBSTACLES) 
 //                     condition = condition||(in_segment_region(particle[i].xc - xsegments[1], particle[i].yc - ysegments[1]));
                 break;

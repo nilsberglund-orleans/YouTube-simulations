@@ -151,6 +151,14 @@ int ipowi(int base, int n)
     }
  }
  
+ double module2(double x, double y)   /* Euclidean norm */
+ {
+	double m;
+
+	m = sqrt(x*x + y*y);
+	return(m);
+ }
+
 
 
  
@@ -267,6 +275,46 @@ void draw_colored_rectangle(double x1, double y1, double x2, double y2, double h
 
 }
 
+
+void draw_circle(double x, double y, double r, int nseg)
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI/(double)nseg;
+    
+    glBegin(GL_LINE_LOOP);
+    for (i=0; i<=nseg; i++)
+    {
+        alpha = (double)i*dalpha;
+        xy_to_pos(x + r*cos(alpha), y + r*sin(alpha), pos);
+        glVertex2d(pos[0], pos[1]);
+    }
+    glEnd();
+}
+
+
+void draw_colored_circle(double x, double y, double r, int nseg)
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI/(double)nseg;
+    
+    glBegin(GL_TRIANGLE_FAN);
+    xy_to_pos(x, y, pos);
+    glVertex2d(pos[0], pos[1]);
+    for (i=0; i<=nseg; i++)
+    {
+        alpha = (double)i*dalpha;
+        xy_to_pos(x + r*cos(alpha), y + r*sin(alpha), pos);
+        glVertex2d(pos[0], pos[1]);
+    }
+    
+    glEnd();
+}
+
+
 int graphical_rep(int bcondition)
 /* return type of drawing, depending on lattice/boundary conditions */
 {
@@ -277,15 +325,16 @@ int graphical_rep(int bcondition)
         case (BC_HEX_SITE_DIRICHLET): return(PLOT_HEX); 
         case (BC_HEX_BOND_DIRICHLET): return(PLOT_HEX_BONDS); 
         case (BC_TRIANGLE_SITE_DIRICHLET): return(PLOT_TRIANGLE); 
+        case (BC_POISSON_DISC): return(PLOT_POISSON_DISC);
         default: return(0);
     }
     
 }
 
-double pcritical(int bcondition)
+double pcritical(int lattice)
 /* critical probability in terms of lattice and boundary condition */
 {
-    switch (LATTICE) {
+    switch (lattice) {
         case (BC_SQUARE_DIRICHLET): return(0.59274);
         case (BC_SQUARE_PERIODIC): return(0.59274);
         case (BC_SQUARE_BOND_DIRICHLET): return(0.5);
@@ -304,33 +353,37 @@ int cellnb(int i, int j, int group, int nx, int ny)
         case (BC_SQUARE_DIRICHLET):
         {
             return(i*ny+j);
-            break;
+//             break;
         }
         case (BC_SQUARE_PERIODIC):
         {
             return(i*ny+j);
-            break;
+//             break;
         }
         case (BC_SQUARE_BOND_DIRICHLET):
         {
             if (group == 0) return(i+nx*j);
             else return (nx*(ny+1) + i*ny+j);
-            break;
+//             break;
         }
         case (BC_HEX_SITE_DIRICHLET):
         {
             return(i+nx*j);
-            break;
+//             break;
         }
         case (BC_HEX_BOND_DIRICHLET):
         {
             return (group*nx*(ny+1) + i+nx*j);
-            break;
+//             break;
         }
         case (BC_TRIANGLE_SITE_DIRICHLET):
         {
             return(i+2*nx*j);
-            break;
+//             break;
+        }
+        case (BC_POISSON_DISC):
+        {
+            return(i);
         }
     }
 }
@@ -411,7 +464,7 @@ double p_schedule(int i)
 int in_plot_box(double x, double y)
 {
     int pos[2];
-    static double xmin, xmax, ymin, ymax;
+    static double xmin, ymin;
     static int first = 1;
     
     if (first)
@@ -423,7 +476,21 @@ int in_plot_box(double x, double y)
     }
     
     return((x > xmin)&&(y > ymin));
-//     return((x + 0.5*(double)size > xmin)&&(y + 0.5*(double)size > ymin));
+}
+
+int in_plot_box_screencoord(double x, double y)
+{
+    static double xmin, ymin;
+    static int first = 1;
+    
+    if (first)
+    {
+        xmin = XMAX - 1.0;
+        ymin = YMAX - 1.0;
+        first = 0;
+    }
+    
+    return((x > xmin)&&(y > ymin));
 }
 
 double size_ratio_color(int clustersize, int ncells)
@@ -916,6 +983,11 @@ void draw_cell(int c, int nx, int ny, int size)
             glEnd();
             break;
         }
+        case (PLOT_POISSON_DISC):
+        {
+            /* beta version, TO DO */
+//             draw_circle();
+        }   
     }
 }
 
@@ -939,11 +1011,11 @@ void test_neighbours(int start, t_perco *cell, int nx, int ny, int size, int nce
 
 
 
-void draw_configuration(t_perco *cell, int *cluster_sizes, int nx, int ny, int size, int max_cluster_size)
+void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, int ny, int size, int max_cluster_size)
 /* draw the configuration */
 {
-    int i, j, ishift, k;
-    double rgb[3], x, y, alpha, r, fade = 0, dsize;
+    int i, j, ishift, k, n;
+    double rgb[3], x, y, alpha, r, fade = 0, dsize, radius, x2, y2;
     static double h, h1;
     static int first = 1;
     
@@ -1142,7 +1214,7 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int nx, int ny, int s
                     x = 0.5*((double)i + 1.25)*dsize;
                     y = h*dsize*((double)j);
                     
-                    if ((ADD_PLOT)&&(in_plot_box(x, y))) fade = 1;
+                    if ((ADD_PLOT)&&(in_plot_box(x, y+0.5*h*dsize))) fade = 1;
                     else fade = 0;
                     
                     set_cell_color(cell[2*j*nx+i], cluster_sizes, fade, max_cluster_size);
@@ -1162,6 +1234,41 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int nx, int ny, int s
                     }
                     glEnd();
                 }
+            break;
+        }
+        case (PLOT_POISSON_DISC):
+        {
+            radius = sqrt((XMAX - XMIN)*(YMAX - YMIN)/(PI*(double)nx));; 
+            
+            blank();
+            
+            if (ADD_PLOT)
+            {
+                rgb[0] = 1.0; rgb[1] = 1.0; rgb[2] = 1.0;
+                erase_area_rgb(XMAX - 0.5, YMAX - 0.5, 0.5, 0.5, rgb);
+            }
+            
+            for (i=0; i<ncells; i++)
+            {
+                x = cell[i].x;
+                y = cell[i].y;
+                
+                if ((ADD_PLOT)&&(in_plot_box_screencoord(x, y))) fade = 1;
+                else fade = 0;
+                    
+                set_cell_color(cell[i], cluster_sizes, fade, max_cluster_size);
+                
+                for (k=0; k<cell[i].nneighb; k++)
+                {
+                    n = cell[i].nghb[k];
+//                     printf("Cell %i, %ith neighbour cell %i\n", i, k, n);
+                    x2 = cell[n].x;
+                    y2 = cell[n].y;
+                    draw_line(x, y, 0.5*(x + x2), 0.5*(y + y2));
+                }
+                    
+                draw_colored_circle(x, y, radius, NSEG);
+            }
             break;
         }
     }
@@ -1259,6 +1366,74 @@ void print_largest_cluster_size(int max_cluster_size)
 /* animation part    */
 /*********************/
 
+int generate_poisson_discs(t_perco *cell, double dpoisson, int nmaxcells)
+/* generate Poisson disc configuration */
+{
+    double x, y, r, phi;
+    int i, j, k, n_p_active, ncircles, ncandidates=NPOISSON_CANDIDATES, naccepted; 
+    short int *active_poisson, far;
+    
+    active_poisson = (short int *)malloc(2*(nmaxcells)*sizeof(short int));
+    
+    printf("Generating Poisson disc sample\n");
+    /* generate first circle */
+    cell[0].x = (XMAX - XMIN)*(double)rand()/RAND_MAX + XMIN;
+    cell[0].y = (YMAX - YMIN)*(double)rand()/RAND_MAX + YMIN;
+    active_poisson[0] = 1;
+    n_p_active = 1;
+    ncircles = 1;
+        
+    while ((n_p_active > 0)&&(ncircles < nmaxcells))
+    {
+        /* randomly select an active circle */
+        i = rand()%(ncircles);
+        while (!active_poisson[i]) i = rand()%(ncircles);                 
+        /* generate new candidates */
+        naccepted = 0;
+        for (j=0; j<ncandidates; j++)
+        {
+            r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
+            phi = DPI*(double)rand()/RAND_MAX;
+            x = cell[i].x + r*cos(phi);
+            y = cell[i].y + r*sin(phi);
+//                       printf("Testing new circle at (%.3f,%.3f)\t", x, y);
+            far = 1;
+            for (k=0; k<ncircles; k++) if ((k!=i))
+            {
+                /* new circle is far away from circle k */
+                far = far*((x - cell[k].x)*(x - cell[k].x) + (y - cell[k].y)*(y - cell[k].y) >= dpoisson*dpoisson);
+                /* new circle is in domain */
+                far = far*(x < XMAX)*(x > XMIN)*(y < YMAX)*(y > YMIN);
+            }
+            if (far)    /* accept new circle */
+            {
+                printf("New circle at (%.3f,%.3f) accepted\n", x, y);
+                cell[ncircles].x = x;
+                cell[ncircles].y = y;
+                cell[ncircles].active = 1;
+                active_poisson[ncircles] = 1;
+                ncircles++;
+                n_p_active++;
+                naccepted++;
+            }
+//                        else printf("Rejected\n");
+        }
+        if (naccepted == 0)    /* inactivate circle i */ 
+        {
+            active_poisson[i] = 0;
+            n_p_active--;
+        }
+        printf("%i active circles\n", n_p_active);
+    }
+        
+    printf("Generated %i circles\n", ncircles);
+    
+    free(active_poisson);
+    
+    return(ncircles);
+}
+
+
 int cell_number(int nx, int ny)
 /* total number of cells in graph */
 {
@@ -1270,6 +1445,7 @@ int cell_number(int nx, int ny)
         case (BC_HEX_BOND_DIRICHLET): return(3*(int)((double)((nx+2)*(ny+2))*2.0/sqrt(3.0))); 
         /* hex lattice requires more vertical space! */
         case (BC_TRIANGLE_SITE_DIRICHLET): return((int)((double)(2*nx*ny)*2.0/sqrt(3.0))); /* triangle lattice requires more vertical space! */
+        case (BC_POISSON_DISC): return(nx*ny);   /* TO IMPROVE */
     }
 }
 
@@ -1296,6 +1472,13 @@ void compute_nxny(int size, int *nx, int *ny)
             *ny = (int)((double)NY*2.0/((double)size*sqrt(3.0))) + 1;
             break;
         }
+        case (BC_POISSON_DISC):
+        {
+            /* for Poisson disc configuration, use a 1d labelling */
+            *nx = NX*NY/(size*size);
+            *ny = 1;
+            break;
+        }
         default:
         {
             *nx = NX/size;
@@ -1308,7 +1491,9 @@ void compute_nxny(int size, int *nx, int *ny)
 int init_cell_lattice(t_perco *cell, int nx, int ny)
 /* initialize the graph of connected cells - returns the number of cells */
 {
-    int i, j, iplus, iminus, ishift, n;
+    int i, j, k, iplus, iminus, ishift, n;
+    int ncells;
+    double dpoisson, radius;
     
     printf("Initializing cell lattice ...");
     
@@ -2073,6 +2258,33 @@ int init_cell_lattice(t_perco *cell, int nx, int ny)
             return(2*nx*ny);
             break;
         }
+        case (BC_POISSON_DISC):
+        {
+            dpoisson = 3.0*sqrt((XMAX - XMIN)*(YMAX - YMIN)/(PI*(double)nx));
+            
+//             printf("nx = %i, dpoisson = %.5lg\n", nx, dpoisson);
+            ncells = generate_poisson_discs(cell, dpoisson, nx);
+            radius = 1.8*dpoisson; 
+            
+            for (i=0; i<ncells; i++)
+            {
+                k = 0;
+                
+                for (j=0; j<ncells; j++) if ((j != i)&&(k < MAX_NEIGHB))
+                {
+                    if (module2(cell[j].x - cell[i].x, cell[j].y - cell[i].y) < radius)
+                    {
+                        cell[i].nghb[k] = j;
+//                         printf("%i ", j);
+                        k++;
+                    }
+                }
+                cell[i].nneighb = k;
+            }
+            
+            return(ncells);
+            break;
+        }
     }
     printf("Done\n");
 }
@@ -2095,12 +2307,15 @@ void init_cell_probabilities(t_perco *cell, int ncells)
 void init_cell_state(t_perco *cell, double p, int ncells, int first)
 /* initialize the probabilities of cells being open */
 {
-    int i;
+    int i, delta_i;
+    
+    delta_i = ncells/100;
     
     printf("Initializing cell state ...");
     #pragma omp parallel for private(i)
     for (i=0; i<ncells; i++)
     {
+        if ((VERBOSE)&&(i%delta_i == 0)) printf("%i ", i/delta_i);
         if (cell[i].proba < p) 
         {
             cell[i].open = 1;
@@ -2120,10 +2335,11 @@ void init_cell_state(t_perco *cell, double p, int ncells, int first)
     printf("Done\n");
 }
 
-int init_flooded_cells(t_perco *cell, int nx, int ny, t_perco* *pstack)
+int init_flooded_cells(t_perco *cell, int ncells, int nx, int ny, t_perco* *pstack)
 /* make the left row of cells flooded, returns number of flooded cells */
 {
-    int j, ishift;
+    int j, n, ishift;
+    double pdisc_prop;
     
 //     printf("Initializing flooded cells ...");
     switch (graphical_rep(LATTICE)) {
@@ -2199,6 +2415,25 @@ int init_flooded_cells(t_perco *cell, int nx, int ny, t_perco* *pstack)
             }
             return(ny);
         }
+        case (PLOT_POISSON_DISC):
+        {
+            n = 0;
+            pdisc_prop = 0.5/sqrt((double)ncells);
+            #pragma omp parallel for private(j)
+            for (j=0; j<ncells; j++) if (cell[j].x - XMIN < (XMAX - XMIN)*pdisc_prop)
+            {
+//                 printf("Flooding cell %i\n", j);
+                cell[j].open = 1;
+                cell[j].flooded = 1;
+                cell[j].cluster = 1;
+                cell[j].previous_cluster = 1;
+                cell[j].active = 1;
+                pstack[n] = &cell[j];
+                n++;
+            }
+            printf("Flooded %i cells\n", n);
+            return(n);
+        }
     }
 //     printf("Done\n");
 }
@@ -2207,9 +2442,14 @@ int init_flooded_cells(t_perco *cell, int nx, int ny, t_perco* *pstack)
 int count_open_cells(t_perco *cell, int ncells)
 /* count the number of active cells */
 {
-    int n = 0, i;
+    int n = 0, i, delta_i;
     
-    for (i=0; i<ncells; i++) if (cell[i].open) n++;
+    delta_i = ncells/100;
+    for (i=0; i<ncells; i++) 
+    {
+        if (cell[i].open) n++;
+        if ((VERBOSE)&&(i%delta_i == 0)) printf("%i ", i/delta_i);
+    }
     return(n);
 }
 
@@ -2235,7 +2475,7 @@ int count_active_cells(t_perco *cell, int ncells)
 
 
 int find_open_cells(t_perco *cell, int ncells, int position, t_perco* *pstack, int *stacksize, int cluster)
-/* look for open neighbours of start_cell, returns difference in open cells */
+/* look for open neighbours of cell[position], returns difference in open cells */
 {
     int k, nopen = 0, n;
     
@@ -2286,6 +2526,7 @@ int find_percolation_cluster(t_perco *cell, int ncells, t_perco* *pstack, int ns
         nactive += find_open_cells(cell, ncells, position, pstack, &stacksize, 1);
     }
     printf("Stack size %i\n", stacksize);
+    
     return(stacksize);
 }
 
@@ -2293,7 +2534,7 @@ int find_percolation_cluster(t_perco *cell, int ncells, t_perco* *pstack, int ns
 int find_all_clusters(t_perco *cell, int ncells, int reset, int *max_cluster_label)
 /* find all clusters of open cells; returns number of clusters */
 {
-    int nclusters = 0, i, j, nactive, stacksize, position, newcluster = 1, maxlabel = 0;
+    int nclusters = 0, i, j, nactive, stacksize, position, newcluster = 1, maxlabel = 0, delta_i;
     t_perco **cstack;
     static int cluster;
     
@@ -2302,6 +2543,8 @@ int find_all_clusters(t_perco *cell, int ncells, int reset, int *max_cluster_lab
     if (reset) cluster = CLUSTER_SHIFT;
     else cluster = (*max_cluster_label) + CLUSTER_SHIFT;   /* give higher labels than before to new clusters */
 
+    delta_i = ncells/1000;
+    
     for (i=0; i<ncells; i++) if ((cell[i].open)&&(cell[i].cluster != 1)&&(!cell[i].tested))
     {
         position = 0;
@@ -2327,8 +2570,11 @@ int find_all_clusters(t_perco *cell, int ncells, int reset, int *max_cluster_lab
             if (position == stacksize) position = 0;
         
             nactive += find_open_cells(cell, ncells, position, cstack, &stacksize, newcluster);
+            
+//             if ((VERBOSE)&&(nactive%100 == 99)) printf ("%i active cells\n", nactive + 1);
         }
-//         printf("Found cluster %i with %i active cells\n", cluster, stacksize);
+        
+        if ((VERBOSE)&&(i%delta_i == 0)) printf("Found cluster %i with %i active cells\n", cluster, stacksize);
 
         nclusters++;
     }

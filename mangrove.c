@@ -226,6 +226,15 @@
 #define FLOOR 1         /* set to 1 to limit wave amplitude to VMAX */
 #define VMAX 10.0       /* max value of wave amplitude */
 
+/* the following constants are only used by wave_billiard and wave_3d so far */
+#define COMPARISON 0        /* set to 1 to compare two different patterns */
+#define B_DOMAIN_B 20       /* second domain shape, for comparisons */
+#define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
+#define OSCILLATION_SCHEDULE 3  /* oscillation schedule, see list in global_pdes.c */
+#define ACHIRP 0.2        /* acceleration coefficient in chirp */
+#define DAMPING 0.0        /* damping of periodic excitation */
+/* end of constants only used by wave_billiard and wave_3d */
+
 #include "global_pdes.c"
 #include "sub_wave.c"
 #include "wave_common.c"
@@ -867,8 +876,8 @@ void animation()
     hashgrid_mangroves = (int *)malloc(HASHX*HASHY*HASHMAX*sizeof(int)); /* numbers of mangroves in each hash grid cell */
     
     /* initialise positions and radii of circles */
-    if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)) init_circle_config(circles);
-    else if (B_DOMAIN == D_POLYGONS) init_polygon_config(polygons);
+    if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)) ncircles = init_circle_config(circles);
+    else if (B_DOMAIN == D_POLYGONS) ncircles = init_polygon_config(polygons);
 
     
 
@@ -1295,4 +1304,3 @@ int main(int argc, char** argv)
 
     return 0;
 }
-

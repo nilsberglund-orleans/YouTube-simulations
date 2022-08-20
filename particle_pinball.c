@@ -79,6 +79,7 @@
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
 #define DRAW_CONSTRUCTION_LINES 0   /* set to 1 to draw additional construction lines for billiard */
 #define PERIODIC_BC 0       /* set to 1 to enforce periodic boundary conditions when drawing particles */
+#define PENROSE_RATIO 2.5    /* parameter controlling the shape of small ellipses in Penrose room */
 
 #define RESAMPLE 0      /* set to 1 if particles should be added when dispersion too large */
 #define DEBUG 0         /* draw trajectories, for debugging purposes */

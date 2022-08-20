@@ -14,6 +14,7 @@
 #define BC_HEX_SITE_DIRICHLET 10    /* hexagonal lattice, site percolation, Dirichlet b.c. */
 #define BC_HEX_BOND_DIRICHLET 12    /* hexagonal lattice, bond percolation, Dirichlet b.c. */
 #define BC_TRIANGLE_SITE_DIRICHLET 20   /* triangular lattice, site percolation, Dirichlet b.c. */
+#define BC_POISSON_DISC 50      /* Poisson disc (blue noise) lattice */
 
 /* Plot types */
 
@@ -22,6 +23,7 @@
 #define PLOT_HEX 2          /* plot hexagons */
 #define PLOT_TRIANGLE 3     /* plot triangles */
 #define PLOT_HEX_BONDS 4    /* plot edges of hexagonal lattice */
+#define PLOT_POISSON_DISC 5 /* plot Poisson disc process */
 
 /* Color schemes */
 
@@ -50,17 +52,22 @@
 #define COL_TURBO_CYCLIC 101    /* TURBO color palette (by Anton Mikhailov) corrected to be cyclic, beta */
 
 
+#define NSEG 50         /* number of segments of drawn circles */
+#define MAX_NEIGHB 10   /* maximal number of neighbours */
+#define NPOISSON_CANDIDATES 30  /* number of candidates in Poisson disc process */
+
 typedef struct
 {
     double proba;           /* probability of being open */
     short int nneighb;      /* number of neighbours */
-    int nghb[6];            /* indices of neighbours */
+    int nghb[MAX_NEIGHB];   /* indices of neighbours */
     short int open;         /* vertex is open, flooded */
     short int flooded;      /* vertex is open, flooded */
     short int active;       /* used in cluster algorithm */
     int cluster;            /* number of cluster, for search of all clusters */
     int previous_cluster;   /* number of cluster of previous p, to limit number of color changes */
     int tested;             /* 1 if the site has been tested for belonging to a cluster */
+    double x, y;            /* coordinates of center, for Poisson disc process */
 } t_perco;
 
 

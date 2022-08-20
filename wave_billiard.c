@@ -24,7 +24,7 @@
 /*  create movie using                                                           */
 /*  ffmpeg -i wave.%05d.tif -vcodec libx264 wave.mp4                             */
 /*                                                                               */
-/*********************************************************************************/
+/******************************F***************************************************/
 
 /*********************************************************************************/
 /*                                                                               */
@@ -50,17 +50,17 @@
 
 #define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1000  /* window height */
-#define NX 1920          /* number of grid points on x axis */
-#define NY 1000          /* number of grid points on y axis */
-// #define NX 3840          /* number of grid points on x axis */
-// #define NY 2000          /* number of grid points on y axis */
+// #define NX 1920          /* number of grid points on x axis */
+// #define NY 1000          /* number of grid points on y axis */
+#define NX 3840          /* number of grid points on x axis */
+#define NY 2000          /* number of grid points on y axis */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval  */
 #define YMIN -1.041666667
 #define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
 
-#define HIGHRES 0        /* set to 1 if resolution of grid is double that of displayed image */
+#define HIGHRES 1       /* set to 1 if resolution of grid is double that of displayed image */
 
 // #define WINWIDTH 	1280  /* window width */
 // #define WINHEIGHT 	720   /* window height */
@@ -79,16 +79,20 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 3       /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 20       /* choice of domain shape, see list in global_pdes.c */
 
-#define CIRCLE_PATTERN 201   /* pattern of circles or polygons, see list in global_pdes.c */
+#define CIRCLE_PATTERN 1   /* pattern of circles or polygons, see list in global_pdes.c */
+
+#define COMPARISON 0        /* set to 1 to compare two different patterns */
+#define B_DOMAIN_B 20       /* second domain shape, for comparisons */
+#define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 0.75	    /* parameter controlling the dimensions of domain */
-#define MU 0.2              /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.7	    /* parameter controlling the dimensions of domain */
+#define MU 0.028            /* parameter controlling the dimensions of domain */
 #define NPOLY 3             /* number of sides of polygon */
 #define APOLY 0.3333333333333333           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 6            /* depth of computation of Menger gasket */
@@ -96,8 +100,8 @@
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0    /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-#define NGRIDX 36           /* number of grid point for grid of disks */
-#define NGRIDY 6           /* number of grid point for grid of disks */
+#define NGRIDX 12           /* number of grid point for grid of disks */
+#define NGRIDY 15           /* number of grid point for grid of disks */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
@@ -118,13 +122,14 @@
 #define TWOSPEEDS 1          /* set to 1 to replace hardcore boundary by medium with different speed */
 #define OSCILLATE_LEFT 1     /* set to 1 to add oscilating boundary condition on the left */
 #define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
+#define OSCILLATION_SCHEDULE 3  /* oscillation schedule, see list in global_pdes.c */
 
-#define OMEGA 0.005        /* frequency of periodic excitation */
+#define OMEGA 0.0005       /* frequency of periodic excitation */
 #define AMPLITUDE 0.8      /* amplitude of periodic excitation */ 
-#define DAMPING 2.5e-5     /* damping of periodic excitation */
+#define ACHIRP 0.25        /* acceleration coefficient in chirp */
+#define DAMPING 0.0        /* damping of periodic excitation */
 #define COURANT 0.05       /* Courant number */
-#define COURANTB 0.0375      /* Courant number in medium B */
-// #define COURANTB 0.016363636     /* Courant number in medium B */
+#define COURANTB 0.0125     /* Courant number in medium B */
 #define GAMMA 0.0          /* damping factor in wave equation */
 #define GAMMAB 0.0          /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
@@ -138,21 +143,20 @@
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
 #define ADD_OSCILLATING_SOURCE 0        /* set to 1 to add an oscillating wave source */
-#define OSCILLATING_SOURCE_PERIOD 100    /* period of oscillating source */
+#define OSCILLATING_SOURCE_PERIOD 6     /* period of oscillating source */
 
 /* Boundary conditions, see list in global_pdes.c  */
 
 #define B_COND 3
-// #define B_COND 2
 
 /* Parameters for length and speed of simulation */
 
 #define NSTEPS 2700        /* number of frames of movie */
-// #define NSTEPS 100      /* number of frames of movie */
-#define NVID 30          /* number of iterations between images displayed on screen */
+#define NVID 15          /* number of iterations between images displayed on screen */
 #define NSEG 1000         /* number of segments of boundary */
-#define INITIAL_TIME 0      /* time after which to start saving frames */
+#define INITIAL_TIME 50      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 1    /* width of billiard boundary */
+#define PRINT_SPEED 0       /* print speed of moving source */
 
 #define PAUSE 200       /* number of frames after which to pause */
 #define PSLEEP 2         /* sleep time during pause */
@@ -165,21 +169,19 @@
 /* Parameters of initial condition */
 
 #define INITIAL_AMP 0.75         /* amplitude of initial condition */
-#define INITIAL_VARIANCE 0.00025  /* variance of initial condition */
-#define INITIAL_WAVELENGTH  0.015  /* wavelength of initial condition */
+#define INITIAL_VARIANCE 0.00005  /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.004  /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 
-#define PLOT 0
-// #define PLOT 0
-// #define PLOT 1
+#define PLOT 1
 
-#define PLOT_B 3        /* plot type for second movie */
+#define PLOT_B 0        /* plot type for second movie */
 
 /* Color schemes */
 
-#define COLOR_PALETTE 18     /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 13     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 13     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 11     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
@@ -190,7 +192,7 @@
 #define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-#define E_SCALE 300.0     /* scaling factor for energy representation */
+#define E_SCALE 250.0     /* scaling factor for energy representation */
 #define LOG_SCALE 1.0     /* scaling factor for energy log representation */
 #define LOG_SHIFT 1.0     /* shift of colors on log scale */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
@@ -202,9 +204,9 @@
 #define HUEMEAN 180.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
 
-#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 1.0     /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 5.0    /* scale of color scheme bar for 2nd part */
+#define DRAW_COLOR_SCHEME 1    /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 5.0     /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 2.0    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 
 #define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
@@ -226,20 +228,24 @@ double courant2, courantb2;  /* Courant parameters squared */
 /*********************/
 
 
-
-void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX],
+// void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], double *psi_out[NX], 
+//                       short int *xy_in[NX])
+void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], 
                       short int *xy_in[NX])
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 /* this version of the function has been rewritten in order to minimize the number of if-branches */
 {
     int i, j, iplus, iminus, jplus, jminus;
-    double delta, x, y, c, cc, gamma;
+    double delta, x, y, c, cc, gamma, tb_shift;
     static long time = 0;
     static double tc[NX][NY], tcc[NX][NY], tgamma[NX][NY];
     static short int first = 1;
     
     time++;
+    
+//     if (OSCILLATE_TOPBOT) tb_shift = (int)((X_SHIFT - XMIN)*(double)NX/(XMAX - XMIN));
+    if (OSCILLATE_TOPBOT) tb_shift = (int)((XMAX - XMIN)*(double)NX/(XMAX - XMIN));
     
     /* initialize tables with wave speeds and dissipation */
     if (first)
@@ -277,12 +283,13 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
 
                 /* evolve phi */
                 phi_out[i][j] = -y + 2*x + tcc[i][j]*delta - KAPPA*x - tgamma[i][j]*(x-y);
+//                 psi_out[i][j] = x;
             }
         }
     }
     
     /* left boundary */
-    if (OSCILLATE_LEFT) for (j=1; j<NY-1; j++) phi_out[0][j] = AMPLITUDE*cos((double)time*OMEGA)*exp(-(double)time*DAMPING);
+    if (OSCILLATE_LEFT) for (j=1; j<NY-1; j++) phi_out[0][j] = oscillating_bc(time);
     else for (j=1; j<NY-1; j++){
         if ((TWOSPEEDS)||(xy_in[0][j] != 0)){
             x = phi_in[0][j];
@@ -314,6 +321,7 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                     break;
                 }
             }
+//             psi_out[0][j] = x;
         }
     }
     
@@ -349,6 +357,7 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                     break;
                 }
             }
+//             psi_out[NX-1][j] = x;
         }
     }
     
@@ -358,7 +367,15 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
             x = phi_in[i][NY-1];
             y = psi_in[i][NY-1];
                     
-            switch (B_COND) {
+            if ((OSCILLATE_TOPBOT)&&(i < tb_shift)&&(i<NX-1)&&(i>0))
+            {
+                iplus = i+1;
+                iminus = i-1;   if (iminus < 0) iminus = 0;
+                delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + - 2.0*x;
+                phi_out[i][NY-1] = -y + 2*x + tcc[i][NY-1]*delta - KAPPA*x - tgamma[i][NY-1]*(x-y);
+            }
+            
+            else switch (B_COND) {
                 case (BC_DIRICHLET):
                 {
                     iplus = i+1;   if (iplus == NX) iplus = NX-1;
@@ -398,6 +415,7 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                     break;
                 }
             }
+//             psi_out[i][NY-1] = x;
         }
     }
     
@@ -407,7 +425,15 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
             x = phi_in[i][0];
             y = psi_in[i][0];
                     
-            switch (B_COND) {
+            if ((OSCILLATE_TOPBOT)&&(i < tb_shift)&&(i<NX-1)&&(i>0))
+            {
+                iplus = i+1;
+                iminus = i-1;   if (iminus < 0) iminus = 0;
+                delta = phi_in[iplus][0] + phi_in[iminus][0] + - 2.0*x;
+                phi_out[i][0] = -y + 2*x + tcc[i][0]*delta - KAPPA*x - tgamma[i][0]*(x-y);
+            }
+            
+            else switch (B_COND) {
                 case (BC_DIRICHLET):
                 {
                     iplus = i+1;   if (iplus == NX) iplus = NX-1;
@@ -447,14 +473,15 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                     break;
                 }
             }
+//             psi_out[i][0] = x;
         }
     }
     
     /* add oscillating boundary condition on the left corners */
     if (OSCILLATE_LEFT)
     {
-        phi_out[0][0] = AMPLITUDE*cos((double)time*OMEGA)*exp(-(double)time*DAMPING);
-        phi_out[0][NY-1] = AMPLITUDE*cos((double)time*OMEGA)*exp(-(double)time*DAMPING);
+        phi_out[0][0] = oscillating_bc(time);
+        phi_out[0][NY-1] = oscillating_bc(time);
     }
     
     /* for debugging purposes/if there is a risk of blow-up */
@@ -464,6 +491,8 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
             {
                 if (phi_out[i][j] > VMAX) phi_out[i][j] = VMAX;
                 if (phi_out[i][j] < -VMAX) phi_out[i][j] = -VMAX;
+//                 if (psi_out[i][j] > VMAX) psi_out[i][j] = VMAX;
+//                 if (psi_out[i][j] < -VMAX) psi_out[i][j] = -VMAX;
             }
         }
     }
@@ -474,7 +503,7 @@ void evolve_wave(double *phi[NX], double *psi[NX], double *tmp[NX], short int *x
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 {
-    // For the purpose of these comments w[t], w[t-1], w[t+1] are used to refer
+   // For the purpose of these comments w[t], w[t-1], w[t+1] are used to refer
     // to phi, psi and the result respectively to avoid confusion with the
     // passed parameter names.
     // At the beginning w[t] is saved in phi, w[t-1] in psi and tmp is space
@@ -518,7 +547,8 @@ void draw_color_bar_palette(int plot, double range, int palette, int fade, doubl
 
 void animation()
 {
-    double time, scale, ratio, startleft[2], startright[2], sign, r2, xy[2], fade_value; 
+    double time, scale, ratio, startleft[2], startright[2], sign = 1.0, r2, xy[2], fade_value, yshift, speed = 0.0, a, b, c; 
+//     double *phi[NX], *psi[NX], *phi_tmp[NX], *psi_tmp[NX], *total_energy[NX], *color_scale[NX];
     double *phi[NX], *psi[NX], *tmp[NX], *total_energy[NX], *color_scale[NX];
     short int *xy_in[NX];
     int i, j, s, sample_left[2], sample_right[2], period = 0, fade;
@@ -536,6 +566,8 @@ void animation()
     {
         phi[i] = (double *)malloc(NY*sizeof(double));
         psi[i] = (double *)malloc(NY*sizeof(double));
+//         phi_tmp[i] = (double *)malloc(NY*sizeof(double));
+//         psi_tmp[i] = (double *)malloc(NY*sizeof(double));
         tmp[i] = (double *)malloc(NY*sizeof(double));
         total_energy[i] = (double *)malloc(NY*sizeof(double));
         xy_in[i] = (short int *)malloc(NY*sizeof(short int));
@@ -543,8 +575,8 @@ void animation()
     }
     
     /* initialise positions and radii of circles */
-    if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)) init_circle_config(circles);
-    else if (B_DOMAIN == D_POLYGONS) init_polygon_config(polygons);
+    if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)) ncircles = init_circle_config(circles);
+    else if (B_DOMAIN == D_POLYGONS) ncircles = init_polygon_config(polygons);
     printf("Polygons initialized\n");
     
     /* initialise polyline for von Koch and similar domains */
@@ -553,6 +585,7 @@ void animation()
 
     courant2 = COURANT*COURANT;
     courantb2 = COURANTB*COURANTB;
+    c = COURANT*(XMAX - XMIN)/(double)NX;
     
     /* initialize color scale, for option RESCALE_COLOR_IN_CENTER */
     if (RESCALE_COLOR_IN_CENTER)
@@ -627,13 +660,23 @@ void animation()
     blank();
     glColor3f(0.0, 0.0, 0.0);
 //     draw_wave(phi, psi, xy_in, 1.0, 0, PLOT);
-    if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, 1.0, 0, PLOT, COLOR_PALETTE);
+    if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, 1.0, 0, PLOT, COLOR_PALETTE, 0, 1.0);
     else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, 1.0, 0, PLOT, COLOR_PALETTE, 0, 1.0);
 
     draw_billiard(0, 1.0);
     
     
     if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, fade, fade_value);
+    if (PRINT_SPEED) 
+    {   
+        a = 0.0075;
+        b = 0.00015;
+//         speed = a/((double)(NVID)*c);
+//         speed = 0.55*a/((double)(NVID*OSCILLATING_SOURCE_PERIOD)*c);
+        speed = a/((double)(3*NVID*OSCILLATING_SOURCE_PERIOD)*c);
+        /* the factor 3 is due to evolve_wave calling evolve_wave_half 3 times */
+        print_speed(speed, 0, 1.0);
+    }
 
     glutSwapBuffers();
 
@@ -654,10 +697,11 @@ void animation()
         else scale = 1.0;
 
 //         draw_wave(phi, psi, xy_in, scale, i, PLOT);
-        if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, i, PLOT, COLOR_PALETTE);
+        if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, i, PLOT, COLOR_PALETTE, 0, 1.0);
         else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, i, PLOT, COLOR_PALETTE, 0, 1.0);
         for (j=0; j<NVID; j++) 
         {
+//             evolve_wave(phi, psi, phi_tmp, psi_tmp, xy_in);
             evolve_wave(phi, psi, tmp, xy_in);
             if (SAVE_TIME_SERIES)
             {
@@ -673,15 +717,26 @@ void animation()
         
         draw_billiard(0, 1.0);
         
-        if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, fade, fade_value); 
+        if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, fade, fade_value);
         
         /* add oscillating waves */
         if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == OSCILLATING_SOURCE_PERIOD - 1))
         {
 //               add_circular_wave(1.0, -1.5*LAMBDA, 0.0, phi, psi, xy_in);
-            add_circular_wave(-1.0, 0.6*cos((double)(period)*DPI/3.0), 0.6*sin((double)(period)*DPI/3.0), phi, psi, xy_in);
-            period++;    
+//             add_circular_wave(-1.0, 0.6*cos((double)(period)*DPI/3.0), 0.6*sin((double)(period)*DPI/3.0), phi, psi, xy_in);
+            sign = -sign;
+            period++; 
+            
+            yshift = (double)period*a + (double)(period*period)*b;
+            add_circular_wave(sign, -1.5 + yshift, 0.0, phi, psi, xy_in);
+//             speed = (a + 2.0*(double)(period)*b)/((double)(NVID));
+//             speed = 0.55*(a + 2.0*(double)(period)*b)/((double)(NVID*OSCILLATING_SOURCE_PERIOD));
+            speed = (a + 2.0*(double)(period)*b)/((double)(3*NVID*OSCILLATING_SOURCE_PERIOD));
+            printf("v = %.3lg, c = %.3lg\n", speed, c);
+            speed = speed/c;
+//             speed = 120.0*speed/((double)NVID*COURANT);
         }
+        if (PRINT_SPEED) print_speed(speed, 0, 1.0);
 
 	glutSwapBuffers();
 
@@ -693,10 +748,12 @@ void animation()
             if ((i >= INITIAL_TIME)&&(DOUBLE_MOVIE))
             {
 //                 draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
-                if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, i, PLOT_B, COLOR_PALETTE_B);
+                if (HIGHRES) 
+                    draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, i, PLOT_B, COLOR_PALETTE_B, 0, 1.0);
                 else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, i, PLOT_B, COLOR_PALETTE_B, 0, 1.0);
                 draw_billiard(0, 1.0);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 0, 1.0);  
+                if (PRINT_SPEED) print_speed(speed, 0, 1.0);
                 glutSwapBuffers();
                 save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter);
 //                 save_frame_counter(NSTEPS + 21 + counter);
@@ -720,42 +777,50 @@ void animation()
         if (DOUBLE_MOVIE) 
         {
 //             draw_wave(phi, psi, xy_in, scale, i, PLOT);
-            if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE);
+            if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE, 0, 1.0);
             else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE, 0, 1.0);
             draw_billiard(0, 1.0);
             if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, 0, 1.0);   
+            if (PRINT_SPEED) print_speed(speed, 0, 1.0);
             glutSwapBuffers();
         }
         if (!FADE) for (i=0; i<MID_FRAMES; i++) save_frame();
         else for (i=0; i<MID_FRAMES; i++) 
         {
             fade_value = 1.0 - (double)i/(double)MID_FRAMES;
-            if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE);
+            if (HIGHRES) 
+                draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE, 1, fade_value);
             else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE, 1, fade_value);
             draw_billiard(1, fade_value);
-            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, 1, fade_value);   
+            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, 1, fade_value); 
+            if (PRINT_SPEED) print_speed(speed, 1, fade_value);
             glutSwapBuffers();
             save_frame_counter(NSTEPS + i + 1);
         }
         if (DOUBLE_MOVIE) 
         {
 //             draw_wave(phi, psi, xy_in, scale, i, PLOT_B);
-            if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B);
+            if (HIGHRES) 
+                draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B, 0, 1.0);
             else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B, 0, 1.0);
             draw_billiard(0, 1.0);
             if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 0, 1.0); 
+            if (PRINT_SPEED) print_speed(speed, 0, 1.0);
             glutSwapBuffers();
-        }
-        if (!FADE) for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
-        else for (i=0; i<END_FRAMES; i++) 
-        {
-            fade_value = 1.0 - (double)i/(double)END_FRAMES;
-            if (HIGHRES) draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B);
-            else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B, 1, fade_value);
-            draw_billiard(1, fade_value);
-            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 1, fade_value);   
-            glutSwapBuffers();
-            save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
+
+            if (!FADE) for (i=0; i<END_FRAMES; i++) save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
+            else for (i=0; i<END_FRAMES; i++) 
+            {
+                fade_value = 1.0 - (double)i/(double)END_FRAMES;
+                if (HIGHRES) 
+                    draw_wave_highres_palette(2, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B, 1, fade_value);
+                else draw_wave_epalette(phi, psi, total_energy, color_scale, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B, 1, fade_value);
+                draw_billiard(1, fade_value);
+                if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 1, fade_value); 
+                if (PRINT_SPEED) print_speed(speed, 1, fade_value);
+                glutSwapBuffers();
+                save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
+            }
         }
         
         s = system("mv wave*.tif tif_wave/");
@@ -764,6 +829,8 @@ void animation()
     {
         free(phi[i]);
         free(psi[i]);
+//         free(phi_tmp[i]);
+//         free(psi_tmp[i]);
         free(tmp[i]);
         free(total_energy[i]);
         free(xy_in[i]);

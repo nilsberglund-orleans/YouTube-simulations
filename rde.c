@@ -39,54 +39,66 @@
 #include <omp.h>
 #include <time.h>
 
-#define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define MOVIE 1         /* set to 1 to generate movie */
+#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
 
 /* General geometrical parameters */
 
 #define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1000  /* window height */
-#define NX 480          /* number of grid points on x axis */
-#define NY 240          /* number of grid points on y axis */
-
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
-#define YMIN -1.041666667
-#define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
-
-// #define WINWIDTH 	1280  /* window width */
-// #define WINHEIGHT 	720   /* window height */
-// 
-// // #define NX 160          /* number of grid points on x axis */
-// // #define NY 90          /* number of grid points on y axis */
-// #define NX 320          /* number of grid points on x axis */
-// #define NY 180          /* number of grid points on y axis */
-// 
 // // #define NX 640          /* number of grid points on x axis */
 // // #define NY 360          /* number of grid points on y axis */
-// 
-// // #define NX 1280          /* number of grid points on x axis */
-// // #define NY 720          /* number of grid points on y axis */
+// #define NX 600          /* number of grid points on x axis */
+// #define NY 300          /* number of grid points on y axis */
+// // #define NX 480          /* number of grid points on x axis */
+// // #define NY 240          /* number of grid points on y axis */
+// // #define NX 1920          /* number of grid points on x axis */
+// // #define NY 1000          /* number of grid points on y axis */
 // 
 // #define XMIN -2.0
 // #define XMAX 2.0	/* x interval */
-// #define YMIN -1.125
-// #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+// #define YMIN -1.041666667
+// #define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
+
+// #define WINWIDTH 	1280  /* window width */
+// #define WINHEIGHT 	720   /* window height */
+
+// #define NX 200          /* number of grid points on x axis */
+// #define NY 200          /* number of grid points on y axis */
+#define NX 500          /* number of grid points on x axis */
+#define NY 500          /* number of grid points on y axis */
+
+// #define NX 640          /* number of grid points on x axis */
+// #define NY 360          /* number of grid points on y axis */
+
+// #define NX 1280          /* number of grid points on x axis */
+// #define NY 720          /* number of grid points on y axis */
+
+#define XMIN -1.8
+#define XMAX 1.8	/* x interval */
+#define YMIN -1.8
+#define YMAX 1.8	/* y interval for 9/16 aspect ratio */
 
 /* Choice of simulated equation */
 
 #define RDE_EQUATION 5  /* choice of reaction term, see list in global_3d.c */
 #define NFIELDS 2       /* number of fields in reaction-diffusion equation */
 #define NLAPLACIANS 2   /* number of fields for which to compute Laplacian */
+// #define RDE_EQUATION 4  /* choice of reaction term, see list in global_3d.c */
+// #define NFIELDS 3       /* number of fields in reaction-diffusion equation */
+// #define NLAPLACIANS 3   /* number of fields for which to compute Laplacian */
 
-#define ADD_POTENTIAL 1 /* set to 1 to add a potential (for Schrodiner equation) */
-#define POTENTIAL 2     /* type of potential, see list in global_3d.c  */
+#define ADD_POTENTIAL 1 /* set to 1 to add a potential (for Schrodinger equation) */
+#define POTENTIAL 1     /* type of potential, see list in global_3d.c  */
+#define ADD_MAGNETIC_FIELD 1    /* set to 1 to add a magnetic field (for Schrodinger equation) - then set POTENTIAL 1 */
+
+#define ANTISYMMETRIZE_WAVE_FCT 0   /* set tot 1 to make wave function antisymmetric */
 
 #define JULIA_SCALE 0.5 /* scaling for Julia sets */
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 999      /* choice of domain shape, see list in global_pdes.c  */
+#define B_DOMAIN 999       /* choice of domain shape, see list in global_pdes.c  */
 
 #define CIRCLE_PATTERN 99    /* pattern of circles, see list in global_pdes.c */
 
@@ -96,8 +108,8 @@
 
 #define LAMBDA 1.0	    /* parameter controlling the dimensions of domain */
 #define MU 1.0	            /* parameter controlling the dimensions of domain */
-#define NPOLY 6             /* number of sides of polygon */
-#define APOLY 0.333333333   /* angle by which to turn polygon, in units of Pi/2 */
+#define NPOLY 5             /* number of sides of polygon */
+#define APOLY 2.0          /* angle by which to turn polygon, in units of Pi/2 */
 #define MDEPTH 7            /* depth of computation of Menger gasket */
 #define MRATIO 5            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
@@ -111,7 +123,7 @@
 #define X_TARGET 0.4
 #define Y_TARGET 0.7        /* shooter and target positions in laser fight */
 
-#define ISO_XSHIFT_LEFT -1.65 
+#define ISO_XSHIFT_LEFT -1.65  
 #define ISO_XSHIFT_RIGHT 0.4
 #define ISO_YSHIFT_LEFT -0.05
 #define ISO_YSHIFT_RIGHT -0.05 
@@ -123,6 +135,9 @@
 /* Physical patameters of wave equation */
 
 #define DT 0.00000002
+// #define DT 0.00000003
+// #define DT 0.000000011
+// #define DT 0.00000001
 
 #define VISCOSITY 2.0
 
@@ -133,7 +148,7 @@
 #define DELTA 0.1       /* time scale separation */
 #define FHNA 1.0        /* parameter in FHN equation */
 #define FHNC -0.01      /* parameter in FHN equation */
-#define K_HARMONIC 0.2  /* spring constant of harmonic potential */
+#define K_HARMONIC 0.5  /* spring constant of harmonic potential */
 #define K_COULOMB 0.5   /* constant in Coulomb potential */
 #define BZQ 0.0008      /* parameter in BZ equation */
 #define BZF 1.2         /* parameter in BZ equation */
@@ -167,13 +182,15 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 1150      /* number of frames of movie */
-#define NVID 850          /* number of iterations between images displayed on screen */
+// #define NSTEPS 500       /* number of frames of movie */
+#define NSTEPS 1100       /* number of frames of movie */
+#define NVID 500          /* number of iterations between images displayed on screen */
+// #define NVID 1100          /* number of iterations between images displayed on screen */
 #define ACCELERATION_FACTOR 1.0 /* factor by which to increase NVID in course of simulation */
 #define DT_ACCELERATION_FACTOR 1.0 /* factor by which to increase time step in course of simulation  */
 #define MAX_DT 0.024     /* maximal value of integration step */
 #define NSEG 100         /* number of segments of boundary */
-#define BOUNDARY_WIDTH 4    /* width of billiard boundary */
+#define BOUNDARY_WIDTH 5    /* width of billiard boundary */
 
 #define PAUSE 100       /* number of frames after which to pause */
 #define PSLEEP 2         /* sleep time during pause */
@@ -188,19 +205,19 @@
 
 #define PLOT_3D 1    /* controls whether plot is 2D or 3D */
 
-#define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
+#define ROTATE_VIEW 0       /* set to 1 to rotate position of observer */
 #define ROTATE_ANGLE 360.0  /* total angle of rotation during simulation */
 
 /* Plot type - color scheme */
 
-#define CPLOT 30
+#define CPLOT 32
+// #define CPLOT 32
 #define CPLOT_B 31
 
 /* Plot type - height of 3D plot */
 
-// #define ZPLOT 30     /* z coordinate in 3D plot */
-// #define ZPLOT_B 32    /* z coordinate in second 3D plot */
-#define ZPLOT 30     /* z coordinate in 3D plot */
+#define ZPLOT 32     /* z coordinate in 3D plot */
+// #define ZPLOT 32     /* z coordinate in 3D plot */
 #define ZPLOT_B 30    /* z coordinate in second 3D plot */
 
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of P_3D_AMPLITUDE plot */
@@ -209,8 +226,8 @@
 #define WRAP_ANGLE 1            /* experimental: wrap angle to [0, 2Pi) for interpolation in angle schemes */
 #define FADE_IN_OBSTACLE 0      /* set to 1 to fade color inside obstacles */
 #define DRAW_OUTSIDE_GRAY 0     /* experimental - draw outside of billiard in gray */
-#define ADD_POTENTIAL_TO_Z 1    /* set to 1 to add the external potential to z-coordinate of plot */
-#define ADD_POT_CONSTANT 0.5    /* constant in front of added potential */
+#define ADD_POTENTIAL_TO_Z 0    /* set to 1 to add the external potential to z-coordinate of plot */
+#define ADD_POT_CONSTANT 1.0    /* constant in front of added potential */
 
 #define PLOT_SCALE_ENERGY 0.05      /* vertical scaling in energy plot */
 
@@ -237,8 +254,8 @@
 
 /* Color schemes, see list in global_pdes.c  */
 
-#define COLOR_PALETTE 14     /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 10     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 11     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 0     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
 
@@ -248,12 +265,12 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
-#define VSCALE_AMPLITUDE 7.5      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSCALE_AMPLITUDE 30.0      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define CURL_SCALE 0.000015   /* scaling factor for curl representation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
-#define SLOPE_SCHROD_LUM 15.0       /* sensitivity of luminosity on module, for color scheme Z_ARGUMENT */
-#define MIN_SCHROD_LUM 0.075      /* minimal luminosity in color scheme Z_ARGUMENT*/
+#define SLOPE_SCHROD_LUM 50.0       /* sensitivity of luminosity on module, for color scheme Z_ARGUMENT */
+#define MIN_SCHROD_LUM 0.2       /* minimal luminosity in color scheme Z_ARGUMENT*/
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
@@ -263,11 +280,11 @@
 #define HUEAMP -359.0      /* amplitude of variation of hue for color scheme C_HUE */
 #define E_SCALE 100.0     /* scaling factor for energy representation */
 #define LOG_SCALE 1.0     /* scaling factor for energy log representation */
-#define LOG_SHIFT 0.0 
+#define LOG_SHIFT 0.0   
 
 #define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 3.0      /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 3.0   /* scale of color scheme bar for 2nd part */
+#define COLORBAR_RANGE 2.5      /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 2.5   /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 
 /* only for compatibility with wave_common.c */
@@ -281,6 +298,13 @@
 #define VSCALE_ENERGY 200.0       /* additional scaling factor for color scheme P_3D_ENERGY */
 #define PHASE_FACTOR 20.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
+#define OSCILLATION_SCHEDULE 0  /* oscillation schedule, see list in global_pdes.c */
+#define AMPLITUDE 0.8      /* amplitude of periodic excitation */ 
+#define ACHIRP 0.2        /* acceleration coefficient in chirp */
+#define DAMPING 0.0        /* damping of periodic excitation */
+#define COMPARISON 0        /* set to 1 to compare two different patterns (beta) */
+#define B_DOMAIN_B 20       /* second domain shape, for comparisons */
+#define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
 /* end of constants added only for compatibility with wave_common.c */
 
 
@@ -288,14 +312,14 @@ double u_3d[2] = {0.75, -0.45};     /* projections of basis vectors for REP_AXO_
 double v_3d[2] = {-0.75, -0.45};
 double w_3d[2] = {0.0, 0.015};
 double light[3] = {0.816496581, -0.40824829, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
-double observer[3] = {8.0, 8.0, 6.0};    /* location of observer for REP_PROJ_3D representation */ 
+double observer[3] = {8.0, 8.0, 12.0};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
-#define Z_SCALING_FACTOR 0.75   /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define XY_SCALING_FACTOR 2.2   /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define Z_SCALING_FACTOR 1.25   /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define XY_SCALING_FACTOR 1.8  /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0         /* max value of z coordinate for REP_PROJ_3D representation */
 #define XSHIFT_3D -0.1           /* overall x shift for REP_PROJ_3D representation */
-#define YSHIFT_3D 0.2          /* overall y shift for REP_PROJ_3D representation */
+#define YSHIFT_3D 0.0          /* overall y shift for REP_PROJ_3D representation */
 
 
 /* For debugging purposes only */
@@ -319,7 +343,7 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 double potential(int i, int j)
 /* compute potential (e.g. for Schrödinger equation) */
 {
-    double x, y, xy[2], r, small = 2.0e-1, kx, ky;
+    double x, y, xy[2], r, small = 2.0e-1, kx, ky, lx = XMAX - XMIN, r1, r2, r3;
     
     ij_to_xy(i, j, xy);
     x = xy[0];
@@ -343,12 +367,42 @@ double potential(int i, int j)
             ky = 2.0*DPI/(YMAX - YMIN);
             return(-K_HARMONIC*cos(kx*x)*cos(ky*y));
         }
+        case (POT_FERMIONS):
+        {
+            r = sqrt((x-y)*(x-y) + small*small);
+            return (-K_COULOMB/r);
+        }
+        case (POT_FERMIONS_PERIODIC):
+        {
+            r1 = sqrt((x-y)*(x-y) + small*small);
+            r2 = sqrt((x-lx-y)*(x-lx-y) + small*small);
+            r3 = sqrt((x+lx-y)*(x+lx-y) + small*small);
+//             r = r/3.0;
+            return (-0.5*K_COULOMB*(1.0/r1 + 1.0/r2 + 1.0/r3));
+        }
         default:
         {
             return(0.0);
         }
     }
-}       
+}   
+
+
+void compute_vector_potential(int i, int j, double *ax, double *ay)
+/* initialize the vector potential, for Schrodinger equation in a magnetic field */
+{
+    double x, y, xy[2], b;
+    
+    ij_to_xy(i, j, xy);
+    x = xy[0];
+    y = xy[1];
+    
+    b = sqrt(K_HARMONIC);
+    /* magnetic field strength b is chosen such that b^2/4 = K_HARMONIC */
+
+    *ax = b*y;
+    *ay = -b*x;
+}
 
 
 void initialize_potential(double potential_field[NX*NY])
@@ -364,18 +418,40 @@ void initialize_potential(double potential_field[NX*NY])
     }
 }
 
-void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short int xy_in[NX*NY], double potential_field[NX*NY])
+void initialize_vector_potential(double vpotential_field[2*NX*NY])
+/* initialize the potential field, e.g. for the Schrödinger equation */
+{
+    int i, j;
+    
+    #pragma omp parallel for private(i,j)
+    for (i=0; i<NX; i++){
+        for (j=0; j<NY; j++){
+            compute_vector_potential(i, j, &vpotential_field[i*NY+j], &vpotential_field[NX*NY+i*NY+j]);
+        }
+    }
+}
+
+void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short int xy_in[NX*NY], double potential_field[NX*NY],         double vector_potential_field[2*NX*NY])
 /* time step of field evolution */
 {
     int i, j, k, iplus, iminus, jplus, jminus;
-    double x, y, z, deltax, deltay, deltaz, rho, pot;
-    double *delta_phi[NLAPLACIANS];
+    double x, y, z, deltax, deltay, deltaz, rho, pot, vx, vy;
+    double *delta_phi[NLAPLACIANS], *nabla_phi, *nabla_psi;
     static double invsqr3 = 0.577350269;    /* 1/sqrt(3) */
     
     for (i=0; i<NLAPLACIANS; i++) delta_phi[i] = (double *)malloc(NX*NY*sizeof(double));
     
     /* compute the Laplacian of phi */
-    for (i=0; i<NLAPLACIANS; i++) compute_laplacian(phi_in[i], delta_phi[i], xy_in);
+    for (i=0; i<NLAPLACIANS; i++) compute_laplacian_rde(phi_in[i], delta_phi[i], xy_in);
+    
+    /* compute the gradient of phi if there is a magnetic field */
+    if (ADD_MAGNETIC_FIELD) 
+    {
+        nabla_phi = (double *)malloc(2*NX*NY*sizeof(double));
+        nabla_psi = (double *)malloc(2*NX*NY*sizeof(double));
+        compute_gradient_xy(phi_in[0], nabla_phi);
+        compute_gradient_xy(phi_in[1], nabla_psi);
+    }
     
     #pragma omp parallel for private(i,j,k,x,y,z,deltax,deltay,deltaz,rho)
     for (i=0; i<NX; i++){
@@ -447,6 +523,13 @@ void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short i
                         phi_out[0][i*NY+j] += intstep*pot*phi_in[1][i*NY+j];
                         phi_out[1][i*NY+j] -= intstep*pot*phi_in[0][i*NY+j];
                     }
+                    if (ADD_MAGNETIC_FIELD)
+                    {
+                        vx = vector_potential_field[i*NY+j];
+                        vy = vector_potential_field[NX*NY+i*NY+j];
+                        phi_out[0][i*NY+j] -= 2.0*intstep*(vx*nabla_phi[i*NY+j] + vy*nabla_phi[NX*NY+i*NY+j]);
+                        phi_out[1][i*NY+j] -= 2.0*intstep*(vx*nabla_psi[i*NY+j] + vy*nabla_psi[NX*NY+i*NY+j]);
+                    }
                 }
             }
         }
@@ -463,13 +546,19 @@ void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short i
     }
     
     for (i=0; i<NLAPLACIANS; i++) free(delta_phi[i]);
+    
+    if (ADD_MAGNETIC_FIELD) 
+    {
+        free(nabla_phi);
+        free(nabla_psi);
+    }
 }
 
-void evolve_wave(double *phi[NFIELDS], double *phi_tmp[NFIELDS], short int xy_in[NX*NY], double potential_field[NX*NY])
+void evolve_wave(double *phi[NFIELDS], double *phi_tmp[NFIELDS], short int xy_in[NX*NY], double potential_field[NX*NY],         double vector_potential_field[2*NX*NY])
 /* time step of field evolution */
 {
-    evolve_wave_half(phi, phi_tmp, xy_in, potential_field);
-    evolve_wave_half(phi_tmp, phi, xy_in, potential_field);
+    evolve_wave_half(phi, phi_tmp, xy_in, potential_field, vector_potential_field);
+    evolve_wave_half(phi_tmp, phi, xy_in, potential_field, vector_potential_field);
 }
 
 
@@ -643,7 +732,7 @@ void animation()
 {
     double time = 0.0, scale, dx, var, jangle, cosj, sinj, sqrintstep, 
         intstep0, viscosity_printed, fade_value, noise = NOISE_INTENSITY;
-    double *phi[NFIELDS], *phi_tmp[NFIELDS], *potential_field;
+    double *phi[NFIELDS], *phi_tmp[NFIELDS], *potential_field, *vector_potential_field;
     short int *xy_in;
     int i, j, k, s, nvid, field;
     static int counter = 0;
@@ -663,6 +752,12 @@ void animation()
     {
         potential_field = (double *)malloc(NX*NY*sizeof(double));
         initialize_potential(potential_field);
+    }
+    
+    if (ADD_MAGNETIC_FIELD)
+    {
+        vector_potential_field = (double *)malloc(2*NX*NY*sizeof(double));
+        initialize_vector_potential(vector_potential_field);
     }
 
     npolyline = init_polyline(MDEPTH, polyline);
@@ -684,7 +779,9 @@ void animation()
 //     init_random(0.5, 0.4, phi, xy_in);
 //     init_random(0.0, 0.4, phi, xy_in);
 //     init_gaussian(x, y, mean, amplitude, scalex, phi, xy_in)
-    init_coherent_state(-0.7, 0.0, 3.5, 0.0, 0.15, phi, xy_in);
+    init_coherent_state(1.0, 0.0, 0.0, 5.0, 0.1, phi, xy_in);
+//     init_fermion_state(-0.5, 0.5, 2.0, 0.0, 0.1, phi, xy_in);
+//     init_boson_state(-0.5, 0.5, 2.0, 0.0, 0.1, phi, xy_in);
     
     init_cfield_rde(phi, xy_in, CPLOT, rde, 0);
     if (PLOT_3D) init_zfield_rde(phi, xy_in, ZPLOT, rde, 0);
@@ -752,7 +849,9 @@ void animation()
 //         printf("Integration step %.5lg\n", intstep);
         
         printf("Evolving wave\n");
-        for (j=0; j<nvid; j++) evolve_wave(phi, phi_tmp, xy_in, potential_field);
+        for (j=0; j<nvid; j++) evolve_wave(phi, phi_tmp, xy_in, potential_field, vector_potential_field);
+        
+        if (ANTISYMMETRIZE_WAVE_FCT) antisymmetrize_wave_function(phi, xy_in);
         
         for (j=0; j<NFIELDS; j++) printf("field[%i] = %.3lg\t", j, phi[j][0]);
         printf("\n");
@@ -886,6 +985,7 @@ void animation()
     }
     free(xy_in);
     if (ADD_POTENTIAL) free(potential_field);
+    if (ADD_MAGNETIC_FIELD) free(vector_potential_field);
     
     printf("Time %.5lg\n", time);
 
