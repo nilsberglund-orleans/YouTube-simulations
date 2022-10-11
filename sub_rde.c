@@ -671,7 +671,7 @@ void compute_laplacian_rde(double phi_in[NX*NY], double phi_out[NX*NY], short in
             /* left and right side */
             for (j = 0; j < NY; j++) 
             {
-                jplus = j+1;  if (jplus == NX) jplus = 0;
+                jplus = j+1;  if (jplus == NY) jplus = 0;
                 jminus = j-1; if (jminus == -1) jminus = NY-1;
                 
                 phi_out[j] = phi_in[jminus] + phi_in[jplus] + phi_in[(NX-1)*NY+j] + phi_in[NY+j] - 4.0*phi_in[j];
