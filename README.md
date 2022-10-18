@@ -13,6 +13,10 @@ In addition the following files handling color schemes have been included:
 2. `turbo_colormap.c` from https://gist.github.com/mikhailov-work/6a308c20e494d9e0ccc29036b28faa7a
 3. `colormaps.c` containing look-up tables from https://github.com/yuki-koyama/tinycolormap
 
+The following file (beta version) provides support for creating mazes:
+
+4. `sub_maze.c`
+
 ### Simulations of classical particles in billiards.
 
 1. *particle_billiard.c*:   simulation of a collection of non-interacting particles in a billiard
