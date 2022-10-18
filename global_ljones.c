@@ -14,7 +14,8 @@
 #define NMAXCIRCLES 20000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define MAXNEIGH 20         /* max number of neighbours kept in memory */
 #define NMAXOBSTACLES 100   /* max number of obstacles */
-#define NMAXSEGMENTS 1000    /* max number of repelling segments */
+#define NMAXSEGMENTS 1000   /* max number of repelling segments */
+#define NMAXGROUPS 50       /* max number of groups of segments */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -60,6 +61,9 @@
 #define S_DAM 12              /* segments forming a dam that can break */
 #define S_DAM_WITH_HOLE 13    /* segments forming a dam in which a hole can open */
 #define S_DAM_WITH_HOLE_AND_RAMP 14    /* segments forming a dam in which a hole can open */
+#define S_MAZE 15           /* segments forming a maze */
+#define S_EXT_RECTANGLE 16  /* particles outside a rectangle */
+#define S_DAM_BRICKS 17     /* dam made of several bricks */
 
 /* particle interaction */
 
@@ -102,6 +106,12 @@
 #define G_INCREASE_RELEASE 1    /* slow increase and instant release */
 #define G_INCREASE_DECREASE 2   /* slow increase an decrease */
 
+/* Rocket shapes */
+
+#define RCK_DISC 0      /* disc-shaped rocket */
+#define RCK_RECT 1      /* rectangular rocket */
+#define RCK_RECT_HAT 2  /* rectangular rocket with a hat */
+
 /* Nozzle shapes */
 
 #define NZ_STRAIGHT 0   /* straight nozzle */
@@ -109,6 +119,7 @@
 #define NZ_GLAS 2       /* glas-shaped nozzle */
 #define NZ_CONE 3       /* cone-shaped nozzle */
 #define NZ_TRUMPET 4    /* trumpet-shaped nozzle */
+#define NZ_BROAD 5      /* broad straight nozzle */
 #define NZ_NONE 99      /* no nozzle */
 
 /* Plot types */
@@ -218,6 +229,7 @@ typedef struct
 typedef struct
 {
     double x1, x2, y1, y2;      /* extremities of segment */
+    double xc, yc;              /* mid-point of segment */
     double nx, ny;              /* normal vector */
     double c;                   /* constant term in cartesian eq nx*x + ny*y = c */
     double length;              /* length of segment */
@@ -230,6 +242,7 @@ typedef struct
     double nx0, ny0;            /* initial normal vector */
     double angle01, angle02;    /* initial values of angles in which concave corners repel */
     double fx, fy;              /* x and y-components of force on segment */
+    double torque;              /* torque on segment with respect to its center */
     short int inactivate;       /* set to 1 for segment to become inactive at time SEGMENT_DEACTIVATION_TIME */
 } t_segment;
 
@@ -238,6 +251,23 @@ typedef struct
     double xc, yc;              /* center of circle */
 } t_tracer;
 
+typedef struct
+{
+    double xc, yc;              /* center of mass of obstacle */
+    double angle;               /* orientation of obstacle */
+    double vx, vy;              /* velocity of center of mass */
+    double omega;               /* angular velocity */ 
+    double mass;                /* mass of obstacle */
+    double moment_inertia;      /* moment of inertia */
+} t_group_segments;
 
-int ncircles, nobstacles, nsegments, counter = 0;
+typedef struct
+{
+    double xc, yc;              /* coordinates of centers of mass */
+    double vx, vy;              /* velocities */
+    double omega;               /* angular velocity */
+} t_group_data;
+
+
+int ncircles, nobstacles, nsegments, ngroups = 1, counter = 0;
 

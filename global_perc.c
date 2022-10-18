@@ -16,6 +16,8 @@
 #define BC_TRIANGLE_SITE_DIRICHLET 20   /* triangular lattice, site percolation, Dirichlet b.c. */
 #define BC_POISSON_DISC 50      /* Poisson disc (blue noise) lattice */
 
+#define BC_CUBIC_DIRICHLET 100  /* cubic lattice */
+
 /* Plot types */
 
 #define PLOT_SQUARES 0      /* plot squares */
@@ -24,6 +26,14 @@
 #define PLOT_TRIANGLE 3     /* plot triangles */
 #define PLOT_HEX_BONDS 4    /* plot edges of hexagonal lattice */
 #define PLOT_POISSON_DISC 5 /* plot Poisson disc process */
+
+#define PLOT_CUBES 10       /* plot cubes */
+
+/* 3D representation */
+
+#define REP_AXO_3D 0        /* linear projection (axonometry) */
+#define REP_PROJ_3D 1       /* projection on plane orthogonal to observer line of sight */
+
 
 /* Color schemes */
 

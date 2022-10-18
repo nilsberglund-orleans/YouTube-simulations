@@ -78,6 +78,7 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
   TIFF *file;
   GLubyte *image, *p;
   int i;
+  static int mem_counter = 0;
 
   file = TIFFOpen(filename, "w");
   if (file == NULL) 
@@ -121,6 +122,15 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
     p += width * sizeof(GLubyte) * 3;
   }
   TIFFClose(file);
+  
+  /* to avoid RAM overflow */
+  mem_counter++;
+  if (mem_counter >= 12)
+  {
+        free(image);
+        mem_counter = 0;
+  }
+  
   return 0;
 }
 
@@ -189,6 +199,20 @@ void save_frame()
   
     counter++; 
 //     printf (" p2 counter = %d \n",counter);
+    strcpy(n2, name);
+    sprintf(strstr(n2,"."), format, counter);
+    strcat(n2, ".tif");
+    printf(" saving frame %s \n",n2);
+    writetiff(n2, "Billiard in an ellipse", 0, 0,
+         WINWIDTH, WINHEIGHT, COMPRESSION_LZW);
+
+}
+
+void save_frame_counter(int counter)
+{
+  char *name="part.", n2[100];
+  char format[6]=".%05i";
+  
     strcpy(n2, name);
     sprintf(strstr(n2,"."), format, counter);
     strcat(n2, ".tif");
@@ -5353,7 +5377,8 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         case D_POLYLINE:
         {
             /* not easy to implement for non-convex polygons */
-            return(1);
+            if (POLYLINE_PATTERN == P_MAZE) return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
+            else return(1);
             break;
         }
         default: 
@@ -5722,7 +5747,9 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
 {
     int i, j, k, l, n, z, ii, jj, terni[SDEPTH], ternj[SDEPTH], quater[SDEPTH], cond;
     short int vkoch[NMAXCIRCLES], turnright; 
-    double ratio, omega, angle, sw, length, dist, x, y, ta, tb, a, b;
+    double ratio, omega, angle, sw, length, dist, x, y, ta, tb, a, b,
+    x1, y1, x2, y2, dx, dy, padding = 0.02, width = 0.01;
+    t_maze* maze;
     
     switch (POLYLINE_PATTERN) {
         case (P_RECTANGLE):
@@ -6148,6 +6175,96 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
             }
             break;
         }
+        case (P_MAZE):
+        {
+            maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+    
+            init_maze(maze);
+            
+            /* build walls of maze */
+            dx = (YMAX - YMIN - 2.0*padding)/(double)(NXMAZE);
+            dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+            
+            nsides = 0;
+            ncircles = 0;
+    
+            for (i=0; i<NXMAZE; i++)
+                for (j=0; j<NYMAZE; j++)
+                {
+                    n = nmaze(i, j);
+                    x1 = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
+                    y1 = YMIN + padding + (double)j*dy;
+            
+                    if (((i>0)||(j!=NYMAZE/2))&&(maze[n].west)) 
+                    {
+                        polyline[nsides].x1 = x1;
+                        polyline[nsides].y1 = y1;
+                        polyline[nsides].x2 = x1;
+                        polyline[nsides].y2 = y1 + dy;
+                        polyline[nsides].angle = PID;
+                        
+//                         add_rectangle_to_segments(x1, y1, x1 - width, y1 + dy, segment, 0);
+                    }
+                    nsides++;
+                    
+                    if (maze[n].south) 
+                    {
+                        polyline[nsides].x1 = x1;
+                        polyline[nsides].y1 = y1;
+                        polyline[nsides].x2 = x1 + dx;
+                        polyline[nsides].y2 = y1;
+                        polyline[nsides].angle = 0.0;
+
+//                         add_rectangle_to_segments(x1, y1, x1 + dx, y1 - width, segment, 0);
+                    }
+                    
+                    nsides++;
+                }
+    
+            /* top side of maze */
+            polyline[nsides].x1 = YMIN + padding + MAZE_XSHIFT;
+            polyline[nsides].y1 = YMAX - padding;
+            polyline[nsides].x2 = YMAX - padding + MAZE_XSHIFT;
+            polyline[nsides].y2 = YMAX - padding;
+            polyline[nsides].angle = 0.0;
+            nsides++;
+    
+            /* right side of maze */
+            y1 = YMIN + padding + dy*((double)NYMAZE/2);
+            x1 = YMAX - padding + MAZE_XSHIFT;
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = YMIN - 1.0;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = y1 - dy;
+            polyline[nsides].angle = PID;
+            nsides++;
+            
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = y1;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = YMAX + 1.0;
+            polyline[nsides].angle = PID;
+            nsides++;
+    
+            /* left side of maze */
+            x1 = YMIN + padding + MAZE_XSHIFT;
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = YMIN - 1.0;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = YMIN + padding;
+            polyline[nsides].angle = PID;
+            nsides++;
+            
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = YMAX - padding;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = YMAX + 1.0;
+            polyline[nsides].angle = PID;
+            nsides++;
+    
+            free(maze);
+            break;
+        }
     }
 }
 
@@ -6248,4 +6365,64 @@ void init_polyline_depth(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRC
     }
 }
 
+
+int test_initial_condition(double *configs[NPARTMAX], int active[NPARTMAX], int color[NPARTMAX])
+/* apply a test to initial conditions - so far, whether particle has left maze on the right */
+{
+    int i, j, time, nactive = 0, counter = 0, tmax[NPARTMAX], tmaxmax = 0, tmaxmin = 1000;
+    double conf[8], newconf[8], cosphi, x2, pcolor;
+    
+    for (i=0; i<nparticles; i++)
+    {
+        for (j=0; j<8; j++) conf[j] = configs[i][j];
+        for (j=0; j<8; j++) newconf[j] = configs[i][j];
+        
+        time = 0;
+        while ((time < 100000)&&(newconf[4] < 1000.0))
+        {
+            for (j=0; j<8; j++) conf[j] = newconf[j];
+            vbilliard(newconf); 
+            time++;
+        }
+        
+        tmax[i] = time;
+        
+        printf("tmax = %i\n", time);
+        
+        cosphi = (conf[6] - conf[4])/conf[3];
+        x2 = conf[4] + 10.0*cosphi;
+        
+        if (x2 > 0.0) 
+        {
+            active[i] = 1;
+            if (time > tmaxmax) tmaxmax = time;
+            else if (time < tmaxmin) tmaxmin = time;
+        }
+        else active[i] = 0;
+        
+        nactive += active[i];
+    }
+    
+    printf("%i particles, %i active particles\n", nparticles, nactive);
+    printf("tmin = %i, tmax = %i\n", tmaxmin, tmaxmax);
+//     sleep(5);
+    
+    /* reorder particles */
+    for (i=0; i<nparticles; i++)
+    {
+        if (active[i])
+        {
+            for (j=0; j<8; j++) configs[counter][j] = configs[i][j];
+            pcolor = sqrt((double)tmax[i] - (double)tmaxmin - 1.0)/sqrt((double)tmaxmax - (double)tmaxmin);
+            color[counter] = (int)((double)NCOLORS*pcolor);
+            active[counter] = 1;
+            counter++;
+        }
+    }
+    
+    for (i=0; i<counter; i++) active[i] = 1;
+    for (i=counter; i<nparticles; i++) active[i] = 0;
+
+    return(counter);
+}
 

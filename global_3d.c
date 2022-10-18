@@ -23,6 +23,7 @@
 #define E_RPS 4             /* rock-paper-scissors equation */
 #define E_RPSLZ 41          /* rock-paper-scissors-lizard-Spock equation */
 #define E_SCHRODINGER 5     /* Schrodinger equation */
+#define E_EULER_INCOMP 6    /* incompressigle Euler equation */
 
 /* Choice of potential */
 
@@ -32,6 +33,12 @@
 #define POT_DOUBLE_COULOMB 4      /* sum of Coulomb potentials located at focal points of ellipse */
 #define POT_FERMIONS 5      /* two interacting 1D fermions */
 #define POT_FERMIONS_PERIODIC 6      /* two interacting 1D fermions on the circle */
+#define POT_MAZE 7          /* higher potential on walls of a maze */
+
+/* Choice of vector potential */
+
+#define VPOT_CONSTANT_FIELD 100  /* constant magnetic field */
+#define VPOT_AHARONOV_BOHM 101   /* single flux line for Aharonov-Bohm effect */
 
 /* plot types used by rde */
 
@@ -55,6 +62,11 @@
 #define Z_MAXTYPE_RPSLZ 40      /* color of type with maximal density */
 #define Z_THETA_RPSLZ 41        /* polar angle */
 #define Z_NORM_GRADIENT_RPSLZ 42    /* gradient of polar angle */
+
+/* for Euler equation */
+#define Z_EULER_VORTICITY 50    /* vorticity of velocity */
+#define Z_EULER_LOG_VORTICITY 51    /* log of vorticity of velocity */
+#define Z_EULER_VORTICITY_ASYM 52   /* vorticity of velocity */
 
 /* macros to avoid unnecessary computations in 3D plots */
 
@@ -104,6 +116,7 @@ typedef struct
     double field_arg;           /* argument of field or gradient */
     double curl;                /* curl of field */
     double cos_angle;           /* cos of angle between normal vector and direction of light */
+    double log_vorticity;       /* logarithm of vorticity (for Euler equation) */
     double rgb[3];              /* RGB color code */
     double *p_zfield[2];        /* pointers to z field (second pointer for option DOUBLE_MOVIE) */
     double *p_cfield[2];        /* pointers to color field (second pointer for option DOUBLE_MOVIE) */

@@ -54,10 +54,10 @@
 
 /* Choice of the billiard table, see global_particles.c */
 
-#define B_DOMAIN 16     /* choice of domain shape */
+#define B_DOMAIN 30     /* choice of domain shape */
 
 #define CIRCLE_PATTERN 1    /* pattern of circles */
-#define POLYLINE_PATTERN 8  /* pattern of polyline */
+#define POLYLINE_PATTERN 10  /* pattern of polyline */
 
 #define ABSORBING_CIRCLES 1 /* set to 1 for circular scatterers to be absorbing */
 
@@ -87,7 +87,7 @@
 
 /* Simulation parameters */
 
-#define NPART 16     /* number of particles */
+#define NPART 1000     /* number of particles */
 // #define NPART 2000     /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
@@ -96,13 +96,16 @@
 #define SHOWTRAILS 1    /* set to 1 to keep trails of the particles */
 #define SHOWZOOM 0      /* set to 1 to show zoom on specific area */
 #define PRINT_PARTICLE_NUMBER 0 /* set to 1 to print number of particles */
+#define PRINT_LEFT_RIGHT_PARTICLE_NUMBER 1 /* set to 1 to print number of particles on left and right side */
 #define PRINT_COLLISION_NUMBER 0 /* set to 1 to print number of collisions */
 #define TEST_ACTIVE 1   /* set to 1 to test whether particle is in billiard */
 
-#define NSTEPS 5250      /* number of frames of movie */
-#define TIME 750         /* time between movie frames, for fluidity of real-time simulation */ 
-#define DPHI 0.00001     /* integration step */
-#define NVID 25         /* number of iterations between images displayed on screen */
+#define TEST_INITIAL_COND 1     /* set to 1 to allow only initial conditions that pass a test */
+
+#define NSTEPS 6000      /* number of frames of movie */
+#define TIME 1500        /* time between movie frames, for fluidity of real-time simulation */ 
+#define DPHI 0.00002     /* integration step */
+#define NVID 25          /* number of iterations between images displayed on screen */
 // #define NVID 100         /* number of iterations between images displayed on screen */
 #define END_FRAMES 25    /* number of still frames at the end of the movie */
 
@@ -114,16 +117,16 @@
 
 /* Colors and other graphical parameters */
 
-#define COLOR_PALETTE 14     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 11     /* Color palette, see list in global_pdes.c  */
 
 #define NCOLORS 16       /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
-#define RAINBOW_COLOR 0  /* set to 1 to use different colors for all particles */
+#define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
-#define LENGTH 0.005       /* length of velocity vectors */
-// #define LENGTH 0.03       /* length of velocity vectors */
-#define BILLIARD_WIDTH 2    /* width of billiard */
+// #define LENGTH 0.01       /* length of velocity vectors */
+#define LENGTH 0.04       /* length of velocity vectors */
+#define BILLIARD_WIDTH 3    /* width of billiard */
 #define PARTICLE_WIDTH 3    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
 
@@ -133,13 +136,20 @@
 #define PAINT_INT 0         /* set to 1 to paint interior in other color (for polygon/Reuleaux) */
 #define PAINT_EXT 1         /* set to 1 to paint exterior */
 
-#define PAUSE 200       /* number of frames after which to pause */
+#define PAUSE 1000       /* number of frames after which to pause */
 #define PSLEEP 2         /* sleep time during pause */
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1       /* final sleeping time */
 
+#define NXMAZE 8      /* width of maze */
+#define NYMAZE 8      /* height of maze */
+#define MAZE_MAX_NGBH 4     /* max number of neighbours of maze cell */
+#define RAND_SHIFT 58       /* seed of random number generator */
+#define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
+
 
 #include "global_particles.c"
+#include "sub_maze.c"
 #include "sub_part_billiard.c"
 
 int ncollisions = 0;
@@ -403,7 +413,8 @@ void draw_config_showtrails(int color[NPARTMAX], double *configs[NPARTMAX], int 
     
     glEnable(GL_LINE_SMOOTH);
 
-    for (i=0; i<nparticles; i++)
+    for (i=0; i<nparticles; i++) 
+//         if (active[i])
     {
 //         if (configs[i][2]<0.0) 
 //         {    
@@ -484,7 +495,7 @@ void draw_config(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPAR
     
     glEnable(GL_LINE_SMOOTH);
 
-    for (i=0; i<nparticles; i++)
+    for (i=0; i<nparticles; i++) if (active[i])
     {
         if (configs[i][2]<0.0) 
         {    
@@ -595,7 +606,7 @@ void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX], int a
 
     for (j=0; j<time; j++)
     {
-        for (i=0; i<nparticles; i++)
+        for (i=0; i<nparticles; i++) if (active[i])
         {      
             if (configs[i][2]<0.0) 
             {    
@@ -643,6 +654,35 @@ void print_part_number(double *configs[NPARTMAX], int active[NPARTMAX], double x
     sprintf(message, "%i particles", n_active_particles);
     write_text(x, y, message);
     
+}
+
+void print_left_right_part_number(double *configs[NPARTMAX], int active[NPARTMAX], double xl, double yl, double xr, double yr, double xmin, double xmax)
+{
+    char message[50];
+    int i, nleft = 0, nright = 0;
+    double rgb[3], x1, cosphi;
+    
+    /* count active particles, using the fact that absorbed particles have been given dummy coordinates */
+    for (i=0; i<nparticles; i++) /*if (active[i])*/
+    {
+        cosphi = (configs[i][6] - configs[i][4])/configs[i][3];
+        x1 = configs[i][4] + configs[i][2]*cosphi;
+        if (x1 < xmin) nleft++;
+        else if (x1 > xmax) nright++; 
+    }
+        
+    hsl_to_rgb(0.0, 0.0, 0.0, rgb);
+    
+    erase_area(xl, yl - 0.03, 0.5, 0.12, rgb);
+    erase_area(xr, yr - 0.03, 0.4, 0.12, rgb);
+    
+    glColor3f(1.0, 1.0, 1.0);
+    if (nleft > 1) sprintf(message, "%i particles", nleft);
+    else sprintf(message, "%i particle", nleft);
+    write_text(xl, yl, message);
+    if (nright > 1) sprintf(message, "%i particles", nright);
+    else sprintf(message, "%i particle", nright);
+    write_text(xr, yr, message);
 }
 
 void print_collision_number(int ncollisions, double x, double y)
@@ -730,7 +770,7 @@ void animation()
     
     
 //     init_drop_config(-0.5, 0.0, 0.2, 0.4, configs);    
-    init_drop_config(0.0, 0.0, 0.0, DPI, configs);    
+    init_drop_config(-1.3, 0.2, -0.25*PI, 0.25*PI, configs);   
     
 //     init_drop_config(-1.3, -0.1, 0.0, DPI, configs);    
 //     init_drop_config(1.4, 0.1, 0.0, DPI, configs);    
@@ -746,11 +786,13 @@ void animation()
 //     init_line_config(-1.0, -0.3, -1.0, 0.3, 0.0, configs);
 //     init_line_config(-0.7, -0.45, -0.7, 0.45, 0.0, configs);
 //     init_line_config(-1.5, 0.1, -0.1, 1.0, -0.5*PID, configs);
-  
+    
     if (!SHOWTRAILS) blank();
     glColor3f(0.0, 0.0, 0.0);
     if (DRAW_BILLIARD) draw_billiard();
     if (PRINT_PARTICLE_NUMBER) print_part_number(configs, active, XMIN + 0.1, YMIN + 0.1);
+    else if (PRINT_LEFT_RIGHT_PARTICLE_NUMBER) 
+        print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.1, XMAX - 0.45, YMIN + 0.1, YMAX + MAZE_XSHIFT, YMAX + MAZE_XSHIFT);
     else if (PRINT_COLLISION_NUMBER) print_collision_number(ncollisions, XMIN + 0.1, YMIN + 0.1);
     
     glutSwapBuffers();   
@@ -787,6 +829,8 @@ void animation()
             color[i] = (i*NCOLORS)/NPART;
             newcolor[i] = (i*NCOLORS)/NPART;  
         }
+        
+    if (TEST_INITIAL_COND) nparticles = test_initial_condition(configs, active, newcolor);
 
     sleep(SLEEP1);
     
@@ -805,6 +849,9 @@ void animation()
 //         draw_config(newcolor, configs, active);
         if (DRAW_BILLIARD) draw_billiard();
         if (PRINT_PARTICLE_NUMBER) print_part_number(configs, active, XMIN + 0.1, YMIN + 0.1);
+        else if (PRINT_LEFT_RIGHT_PARTICLE_NUMBER) 
+            print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.1, XMAX - 0.45, YMIN + 0.1, YMAX + MAZE_XSHIFT, YMAX + MAZE_XSHIFT);
+//             print_left_right_part_number(configs, XMIN + 0.1, YMIN + 0.1, XMAX - 0.45, YMIN + 0.1, YMIN + MAZE_XSHIFT, YMAX + MAZE_XSHIFT);
         else if (PRINT_COLLISION_NUMBER) print_collision_number(ncollisions, XMIN + 0.1, YMIN + 0.1);
     
         for (j=0; j<NPARTMAX; j++) color[j] = newcolor[j];

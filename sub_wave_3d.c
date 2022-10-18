@@ -1631,8 +1631,8 @@ void draw_wave_3d(int movie, double phi[NX*NY], double psi[NX*NY], short int xy_
     
     if (!ROTATE_VIEW)
     {
-        for (i=1; i<NX-2; i++)
-            for (j=1; j<NY-2; j++)
+        for (i=0; i<NX-2; i++)
+            for (j=0; j<NY-2; j++)
                 draw_wave_3d_ij(i, j, movie, phi, psi, xy_in, wave, zplot, cplot, palette, fade, fade_value);
     }
     else    /* draw facets in an order depending on the position of the observer */
@@ -1768,6 +1768,24 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
             {
                 value = dy_phase*(double)(j - jmin);
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (Z_EULER_VORTICITY):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_LOG_VORTICITY):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_VORTICITY_ASYM):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
                 break;
             }
         }

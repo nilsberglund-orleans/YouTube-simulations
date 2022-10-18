@@ -105,6 +105,8 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
     }
     p += width * sizeof(GLubyte) * 3;
   }
+  /* added 9/9/22 and removed again, since it produces an unwanted "band" on the right */
+//   free(image); /* prevents RAM consumption*/
   TIFFClose(file);
   return 0;
 }
@@ -440,6 +442,22 @@ void draw_rectangle(double x1, double y1, double x2, double y2)
     glEnd();    
 }
 
+void draw_filled_rectangle(double x1, double y1, double x2, double y2)
+{
+    double pos[2];
+    
+    glBegin(GL_TRIANGLE_FAN);
+    xy_to_pos(x1, y1, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x2, y1, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x2, y2, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(x1, y2, pos);
+    glVertex2d(pos[0], pos[1]);
+    glEnd();    
+}
+
 void draw_rotated_rectangle(double x1, double y1, double x2, double y2)
 {
     double pos[2];
@@ -475,6 +493,23 @@ void draw_circle(double x, double y, double r, int nseg)
     for (i=0; i<=nseg; i++)
     {
         alpha = (double)i*dalpha;
+        xy_to_pos(x + r*cos(alpha), y + r*sin(alpha), pos);
+        glVertex2d(pos[0], pos[1]);
+    }
+    glEnd();
+}
+
+void draw_circle_arc(double x, double y, double r, double angle1, double dangle, int nseg)
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = dangle/(double)nseg;
+    
+    glBegin(GL_LINE_STRIP);
+    for (i=0; i<=nseg; i++)
+    {
+        alpha = angle1 + (double)i*dalpha;
         xy_to_pos(x + r*cos(alpha), y + r*sin(alpha), pos);
         glVertex2d(pos[0], pos[1]);
     }
@@ -1566,6 +1601,120 @@ int compute_qrd_coordinates(t_vertex polyline[NMAXPOLY])
     return(n);
 }
 
+int compute_maze_coordinates(t_rectangle polyrect[NMAXPOLY], int closed)
+/* compute positions of quadratic noise diffuser */
+{
+    t_maze* maze;
+    int i, j, n, nsides = 0, ropening;
+    double dx, dy, x1, y1, padding = 0.02, pos[2], width = 0.02;
+    
+    maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+    
+    init_maze(maze);
+            
+    /* build walls of maze */
+    dx = (YMAX - YMIN - 2.0*padding)/(double)(NXMAZE);
+    dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+    
+    ropening = (NYMAZE+1)/2;
+            
+    for (i=0; i<NXMAZE; i++)
+        for (j=0; j<NYMAZE; j++)
+        {
+            n = nmaze(i, j);
+            x1 = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
+            y1 = YMIN + padding + (double)j*dy;
+            
+            if (((i>0)||(j!=ropening))&&(maze[n].west)) 
+            {
+                polyrect[nsides].x1 = x1 - width;
+                polyrect[nsides].y1 = y1 - width;
+                polyrect[nsides].x2 = x1 + width;
+                polyrect[nsides].y2 = y1 + width + dy;
+            }
+            nsides++;
+                    
+            if (maze[n].south) 
+            {
+                polyrect[nsides].x1 = x1 - width;
+                polyrect[nsides].y1 = y1 - width;
+                polyrect[nsides].x2 = x1 + width + dx;
+                polyrect[nsides].y2 = y1 + width;
+            }
+            nsides++;
+        }
+    
+    /* top side of maze */
+    polyrect[nsides].x1 = YMIN + padding + MAZE_XSHIFT;
+    polyrect[nsides].y1 = YMAX - padding - width;
+    polyrect[nsides].x2 = YMAX - padding + MAZE_XSHIFT;
+    polyrect[nsides].y2 = YMAX - padding + width;
+    nsides++;
+    
+    /* right side of maze */
+    y1 = YMIN + padding + dy*((double)ropening);
+    x1 = YMAX - padding + MAZE_XSHIFT;
+    polyrect[nsides].x1 = x1 - width;
+    polyrect[nsides].y1 = YMIN - 1.0;
+    polyrect[nsides].x2 = x1 + width;
+    polyrect[nsides].y2 = y1 - dy;
+    nsides++;
+            
+    polyrect[nsides].x1 = x1 - width;
+    polyrect[nsides].y1 = y1;
+    polyrect[nsides].x2 = x1 + width;
+    polyrect[nsides].y2 = YMAX + 1.0;
+    nsides++;
+    
+    /* left side of maze */
+    x1 = YMIN + padding + MAZE_XSHIFT;
+    polyrect[nsides].x1 = x1 - width;
+    polyrect[nsides].y1 = YMIN - 1.0;
+    polyrect[nsides].x2 = x1 + width;
+    polyrect[nsides].y2 = YMIN + padding;
+    nsides++;
+            
+    polyrect[nsides].x1 = x1 - width;
+    polyrect[nsides].y1 = YMAX - padding;
+    polyrect[nsides].x2 = x1 + width;
+    polyrect[nsides].y2 = YMAX + 1.0;
+    nsides++;
+    
+    if (closed)
+    {
+        polyrect[nsides].x1 = XMIN - 0.5*width;
+        polyrect[nsides].y1 = YMIN - 0.5*width;
+        polyrect[nsides].x2 = XMIN + 0.5*width;
+        polyrect[nsides].y2 = YMAX + 0.5*width;
+        nsides++;
+        
+        polyrect[nsides].x1 = XMIN - 0.5*width;
+        polyrect[nsides].y1 = YMIN - 0.5*width;
+        polyrect[nsides].x2 = x1 + 0.5*width;
+        polyrect[nsides].y2 = YMIN + 0.5*width;
+        nsides++;
+
+        polyrect[nsides].x1 = XMIN - 0.5*width;
+        polyrect[nsides].y1 = YMAX - 0.5*width;
+        polyrect[nsides].x2 = x1 + 0.5*width;
+        polyrect[nsides].y2 = YMAX + 0.5*width;
+        nsides++;
+    }
+    
+    for (i=0; i<nsides; i++)
+    {
+        xy_to_pos(polyrect[i].x1, polyrect[i].y1, pos);        
+        polyrect[i].posi1 = pos[0];
+        polyrect[i].posj1 = pos[1];
+        xy_to_pos(polyrect[i].x2, polyrect[i].y2, pos);        
+        polyrect[i].posi2 = pos[0];
+        polyrect[i].posj2 = pos[1];        
+    }
+    
+    free(maze);
+    return(nsides);
+}
+
 int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
 /* initialise variable polyline, for certain polygonal domain shapes */
 {
@@ -1629,6 +1778,27 @@ int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
     }
 }
 
+int init_polyrect(t_rectangle polyrect[NMAXPOLY])
+/* initialise variable polyrect, for certain polygonal domain shapes */
+{
+    switch (B_DOMAIN) {
+        case (D_MAZE):
+        {
+            return(compute_maze_coordinates(polyrect, 0));
+        }
+        case (D_MAZE_CLOSED):
+        {
+            return(compute_maze_coordinates(polyrect, 1));
+        }
+        default:
+        {
+            if ((ADD_POTENTIAL)&&(POTENTIAL == POT_MAZE)) return(compute_maze_coordinates(polyrect, 1));
+            return(0);
+        }
+    }
+}
+
+
 void isospectral_initial_point(double x, double y, double left[2], double right[2])
 /* compute initial coordinates in isospectral billiards */
 {
@@ -1676,10 +1846,76 @@ int xy_in_triangle_tvertex(double x, double y, t_vertex z1, t_vertex z2, t_verte
 }
 
 
+int xy_in_polyrect(double x, double y, t_rectangle rectangle)
+/* returns 1 if (x,y) is in rectangle */
+{
+    double x1, y1, x2, y2;
+    
+    if (rectangle.x1 < rectangle.x2) 
+    {
+        x1 = rectangle.x1;
+        x2 = rectangle.x2;
+    }
+    else 
+    {
+        x1 = rectangle.x2;
+        x2 = rectangle.x1;        
+    }
+    if (rectangle.y1 < rectangle.y2) 
+    {
+        y1 = rectangle.y1;
+        y2 = rectangle.y2;
+    }
+    else 
+    {
+        y1 = rectangle.y2;
+        y2 = rectangle.y1;        
+    }
+    if (x < x1) return(0);
+    if (x > x2) return(0);
+    if (y < y1) return(0);
+    if (y > y2) return(0);
+    return(1);
+}
+
+
+int ij_in_polyrect(double i, double j, t_rectangle rectangle)
+/* returns 1 if (x,y) is in rectangle */
+{
+    int i1, i2, j1, j2;
+    
+    if (rectangle.posi1 < rectangle.posi2) 
+    {
+        i1 = rectangle.posi1;
+        i2 = rectangle.posi2;
+    }
+    else 
+    {
+        i1 = rectangle.posi2;
+        i2 = rectangle.posi1;        
+    }
+    if (rectangle.posj1 < rectangle.posj2) 
+    {
+        j1 = rectangle.posj1;
+        j2 = rectangle.posj2;
+    }
+    else 
+    {
+        j1 = rectangle.posj2;
+        j2 = rectangle.posj1;        
+    }
+    if (i < i1) return(0);
+    if (i > i2) return(0);
+    if (j < j1) return(0);
+    if (j > j2) return(0);
+    return(1);
+}
+
+
 int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_circle *circles)
 /* returns 1 if (x,y) represents a point in the billiard */
 {
-    double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, alpha, s, a;
+    double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, alpha, s, a, r, height;
     int i, j, k, k1, k2, condition = 0, m;
     static int first = 1, nsides;
 
@@ -2198,6 +2434,57 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             else if ((x > 0.0)&&(y > 0.0)) return(0);
             else return(1);
         }
+        case (D_WAVEGUIDE):
+        {
+            x1 = XMIN + MU;
+            x2 = XMAX - 2.0*MU - 1.5*LAMBDA;
+            y1 = 0.5*LAMBDA;
+            y2 = 1.5*LAMBDA;
+            if (x < x1) return(0);
+            if (x > x2 + 1.5*LAMBDA) return(0);
+            if (vabs(y) > y2) return(0);
+            if (x < x2) return(vabs(y) >= y1);
+            r = module2(x-x2, y);
+            if (r < 0.5*LAMBDA) return(0);
+            if (r > 1.5*LAMBDA) return(0);
+            return(1);
+        }
+        case (D_WAVEGUIDE_W):
+        {
+            x1 = vabs(x);
+            width = LAMBDA - 2.0*MU;
+            height = 0.5*MU;
+            if (x1 > 2.0*LAMBDA - MU) return(0);
+            if (vabs(y) > MU + width + height) return(0);
+            if (y >= height)
+            {
+                r = module2(x1, y-height);
+                if ((r > MU)&&(r < MU + width)) return(1);
+                if (x1 > LAMBDA + MU) return(1);
+                return(0);
+            }
+            if (y <= -height)
+            {
+                r = module2(x1-LAMBDA, y+height);
+                if ((r > MU)&&(r < MU + width)) return(1);
+                return(0);
+            }
+            if (x1 > LAMBDA + MU) return(1);
+            if ((x1 > MU)&&(x1 < MU + width)) return(1);
+            return(0);
+        }   
+        case (D_MAZE):
+        {
+            for (i=0; i<npolyrect; i++)
+                if ((x > polyrect[i].x1)&&(x < polyrect[i].x2)&&(y > polyrect[i].y1)&&(y < polyrect[i].y2)) return(0);
+            return(1);
+        }
+        case (D_MAZE_CLOSED):
+        {
+            for (i=0; i<npolyrect; i++)
+                if ((x > polyrect[i].x1)&&(x < polyrect[i].x2)&&(y > polyrect[i].y1)&&(y < polyrect[i].y2)) return(0);
+            return(1);
+        }
         case (D_MENGER):       
         {
             x1 = 0.5*(x+1.0);
@@ -2390,7 +2677,7 @@ void tvertex_lineto(t_vertex z)
 
 void draw_billiard(int fade, double fade_value)      /* draws the billiard boundary */
 {
-    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax;
+    double x0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax, height;
     int i, j, k, k1, k2, mr2;
     static int first = 1, nsides;
 
@@ -3209,6 +3496,76 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             draw_line(-LAMBDA + 0.5*MU, YMIN, LAMBDA + 0.5*MU, YMAX);
             break;
         }
+        case (D_WAVEGUIDE):
+        {   
+            x1 = XMIN + MU;
+            x2 = XMAX - 2.0*MU - 1.5*LAMBDA;
+            y1 = 0.5*LAMBDA;
+            y2 = 1.5*LAMBDA;
+             
+            glLineWidth(BOUNDARY_WIDTH);
+            draw_line(x1, y1, x2, y1);
+            draw_line(x1, y1, x1, y2);
+            draw_line(x1, y2, x2, y2);
+            draw_line(x1, -y1, x2, -y1);
+            draw_line(x1, -y1, x1, -y2);
+            draw_line(x1, -y2, x2, -y2);
+            
+            dphi = PI/(double)NSEG;
+            glBegin(GL_LINE_STRIP);
+            for (i=0; i<NSEG; i++) 
+            {
+                phi = -PID + dphi*(double)i;
+                x = x2 + y2*cos(phi);
+                y = y2*sin(phi);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd();
+            
+            glBegin(GL_LINE_STRIP);
+            for (i=0; i<NSEG; i++) 
+            {
+                phi = -PID + dphi*(double)i;
+                x = x2 + y1*cos(phi);
+                y = y1*sin(phi);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd();
+            
+            break;
+        }
+        case (D_WAVEGUIDE_W):
+        {
+            width = LAMBDA - 2.0*MU;
+            height = 0.5*MU;
+            
+            draw_circle_arc(0.0, height, MU, 0.0, PI, NSEG);
+            draw_circle_arc(0.0, height, MU + width, 0.0, PI, NSEG);
+            
+            draw_circle_arc(LAMBDA, -height, MU, PI, PI, NSEG);
+            draw_circle_arc(LAMBDA, -height, MU + width, PI, PI, NSEG);
+            
+            draw_circle_arc(-LAMBDA, -height, MU, PI, PI, NSEG);
+            draw_circle_arc(-LAMBDA, -height, MU + width, PI, PI, NSEG);
+            
+            draw_line(-2.0*LAMBDA + MU, - height, -2.0*LAMBDA + MU, height + MU + width);
+            draw_line(-2.0*LAMBDA + MU, height + MU + width, -2.0*LAMBDA + MU + width, height + MU + width);
+            draw_line(-2.0*LAMBDA + MU + width, height + MU + width, -2.0*LAMBDA + MU + width, -height);
+            
+            draw_line(-MU-width, -height, -MU-width, height);
+            draw_line(-MU, -height, -MU, height);
+            
+            draw_line(2.0*LAMBDA - MU, - height, 2.0*LAMBDA - MU, height + MU + width);
+            draw_line(2.0*LAMBDA - MU, height + MU + width, 2.0*LAMBDA - MU - width, height + MU + width);
+            draw_line(2.0*LAMBDA - MU - width, height + MU + width, 2.0*LAMBDA - MU - width, -height);
+            
+            draw_line(MU+width, -height, MU+width, height);
+            draw_line(MU, -height, MU, height);
+            
+            break;
+        }
         case (D_CIRCLE_SEGMENT):
         {
             glLineWidth(BOUNDARY_WIDTH);
@@ -3254,6 +3611,24 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             glLineWidth(BOUNDARY_WIDTH);
             for (i = 0; i < ncircles; i++) 
                 if (polygons[i].active) draw_tpolygon(polygons[i]);
+            break;
+        }
+        case (D_MAZE):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            if (fade) glColor3f(0.15*fade_value, 0.15*fade_value, 0.15*fade_value);
+            else glColor3f(0.15, 0.15, 0.15);
+            for (i=0; i<npolyrect; i++)
+                draw_filled_rectangle(polyrect[i].x1, polyrect[i].y1, polyrect[i].x2, polyrect[i].y2);
+            break;
+        }
+        case (D_MAZE_CLOSED):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            if (fade) glColor3f(0.15*fade_value, 0.15*fade_value, 0.15*fade_value);
+            else glColor3f(0.15, 0.15, 0.15);
+            for (i=0; i<npolyrect; i++)
+                draw_filled_rectangle(polyrect[i].x1, polyrect[i].y1, polyrect[i].x2, polyrect[i].y2);
             break;
         }
         case (D_MENGER):
@@ -3785,6 +4160,24 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
                 while (amp > 1.0) amp -= 2.0;
                 while (amp < -1.0) amp += 2.0;
                 amp_to_rgb(0.5*(1.0 + amp), rgb);
+                break;
+            }
+            case (50):      /* to fix: put #define in correct file */
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (51):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (52):      /* to fix: put #define in correct file */
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
                 break;
             }
         }

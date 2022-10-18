@@ -61,6 +61,10 @@
 #define D_GROOVE 48             /* groove array supposed to induce polaritons */
 #define D_FABRY_PEROT 49        /* Fabry-Perrot cavity (in fact simply a vertical slab) */
 #define D_LSHAPE 50             /* L-shaped billiard (surface of genus 2) */
+#define D_WAVEGUIDE 51          /* wave guide */
+#define D_WAVEGUIDE_W 52        /* W-shaped wave guide */
+#define D_MAZE 53               /* maze */
+#define D_MAZE_CLOSED 54        /* closed maze */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
@@ -194,6 +198,12 @@ typedef struct
 
 typedef struct
 {
+    double x1, y1, x2, y2;   /* (x,y) coordinates of vertices */
+    double posi1, posj1, posi2, posj2;   /* (i,j) coordinates of vertices */
+} t_rectangle;
+
+typedef struct
+{
     int nneighb;    /* number of neighbours to compute Laplacian */
     double *nghb[4];    /* pointers to neighbours */ 
 } t_laplacian;
@@ -201,10 +211,12 @@ typedef struct
 
 int ncircles = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */
 int npolyline = NMAXPOLY;           /* actual length of polyline */
+int npolyrect = NMAXPOLY;           /* actual number of polyrect */
 
 t_circle circles[NMAXCIRCLES];      /* circular scatterers */
 t_polygon polygons[NMAXCIRCLES];    /* polygonal scatterers */
 t_vertex polyline[NMAXPOLY];        /* vertices of polygonal line */
+t_rectangle polyrect[NMAXPOLY];     /* vertices of rectangles */
 
 /* the same for comparisons between different domains */
 int ncircles_b = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */

@@ -235,7 +235,19 @@
 #define DAMPING 0.0        /* damping of periodic excitation */
 /* end of constants only used by wave_billiard and wave_3d */
 
+/* for compatibility with sub_wave and sub_maze */
+#define NXMAZE 7      /* width of maze */
+#define NYMAZE 7      /* height of maze */
+#define MAZE_MAX_NGBH 4     /* max number of neighbours of maze cell */
+#define RAND_SHIFT 24        /* seed of random number generator */
+#define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
+#define ADD_POTENTIAL 0
+#define POT_MAZE 7
+#define POTENTIAL 0
+/* end of constants only used by sub_wave and sub_maze */
+
 #include "global_pdes.c"
+#include "sub_maze.c"           /* support for generating mazes */
 #include "sub_wave.c"
 #include "wave_common.c"
 

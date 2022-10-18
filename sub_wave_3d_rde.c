@@ -1194,8 +1194,10 @@ void draw_wave_3d(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], 
     
 //     if ((plot == P_3D_ANGLE)||(plot == P_3D_AMP_ANGLE)) compute_light_angle(phi, xy_in, cos_angle);
     
-    for (i=0; i<NX-2; i++)
-        for (j=0; j<NY-2; j++)
+//     for (i=0; i<NX-2; i++)
+//         for (j=0; j<NY-2; j++)
+    for (i=1; i<NX-2; i++)
+        for (j=1; j<NY-2; j++)
         {
             if ((TWOSPEEDS)||(xy_in[i*NY+j]))
             {
@@ -1461,6 +1463,24 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
             {
                 value = min + 1.0*dy*(double)(j - jmin);
                 color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (Z_EULER_VORTICITY):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_LOG_VORTICITY):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_VORTICITY_ASYM):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
                 break;
             }
        }

@@ -57,6 +57,7 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
     p += width * sizeof(GLubyte) * 3;
   }
   TIFFClose(file);
+//   free(image);
   return 0;
 }
 
@@ -954,39 +955,6 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
     }
 }
 
-void add_rectangle_to_segments(double x1, double y1, double x2, double y2, t_segment segment[NMAXSEGMENTS])
-/* add four segements forming a rectangle to linear obstacle configuration */
-{
-    int i, n = nsegments; 
-    
-    if (nsegments + 4 < NMAXSEGMENTS)
-    {
-        segment[n].x1 = x1;
-        segment[n].y1 = y1;
-        segment[n].x2 = x2;
-        segment[n].y2 = y1;
-        
-        segment[n+1].x1 = x2;
-        segment[n+1].y1 = y1;
-        segment[n+1].x2 = x2;
-        segment[n+1].y2 = y2;
-        
-        segment[n+2].x1 = x2;
-        segment[n+2].y1 = y2;
-        segment[n+2].x2 = x1;
-        segment[n+2].y2 = y2;
-        
-        segment[n+3].x1 = x1;
-        segment[n+3].y1 = y2;
-        segment[n+3].x2 = x1;
-        segment[n+3].y2 = y1;
-        
-        for (i=0; i<4; i++) segment[n+i].concave = 1;
-        nsegments += 4;
-    }
-    else printf("Warning: NMAXSEGMENTS too small\n");
-}
-
 void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, double width, t_segment segment[NMAXSEGMENTS])
 /* add four segments forming a rectangle, specified by two adjacent corners and width */
 {
@@ -1031,6 +999,57 @@ void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, d
     else printf("Warning: NMAXSEGMENTS too small\n");
 }
  
+void add_rectangle_to_segments(double x1, double y1, double x2, double y2, t_segment segment[NMAXSEGMENTS], int group)
+/* add four segements forming a rectangle to linear obstacle configuration */
+{
+    int i, n = nsegments, nplus, nminus; 
+    
+    if (nsegments + 4 < NMAXSEGMENTS)
+    {
+        segment[n].x1 = x1;
+        segment[n].y1 = y1;
+        segment[n].x2 = x2;
+        segment[n].y2 = y1;
+        
+        segment[n+1].x1 = x2;
+        segment[n+1].y1 = y1;
+        segment[n+1].x2 = x2;
+        segment[n+1].y2 = y2;
+        
+        segment[n+2].x1 = x2;
+        segment[n+2].y1 = y2;
+        segment[n+2].x2 = x1;
+        segment[n+2].y2 = y2;
+        
+        segment[n+3].x1 = x1;
+        segment[n+3].y1 = y2;
+        segment[n+3].x2 = x1;
+        segment[n+3].y2 = y1;
+        
+        segment[n].angle1 = -PID;
+        segment[n].angle2 = 0.0;
+        
+        segment[n+1].angle1 = PI;
+        segment[n+1].angle2 = 1.5*PI;
+        
+        segment[n+2].angle1 = PID;
+        segment[n+2].angle2 = PI;
+        
+        segment[n+3].angle1 = 0.0;
+        segment[n+3].angle2 = PID;
+        
+        for (i=0; i<4; i++) 
+        {
+            segment[n+i].concave = 1;
+            segment[n+i].group = group;
+        }
+        
+        nsegments += 4;
+    }
+    else printf("Warning: NMAXSEGMENTS too small\n");
+}
+
+
 double nozzle_width(double x, double width, int nozzle_shape)
 /* width of bell-shaped nozzle */
 {
@@ -1043,35 +1062,70 @@ double nozzle_width(double x, double width, int nozzle_shape)
         case (NZ_GLAS): return(sqrt(width*width - 1.2*x) + 1.0*x);
         case (NZ_CONE): return(width - (sqrt(width*width + 0.5) - width)*x);
         case (NZ_TRUMPET): return(width + (sqrt(width*width + LAMBDA)-width)*x*x);
+        case (NZ_BROAD): 
+        {
+            if (-x < 0.1) return(width - (0.5 - width)*x/0.1);
+            else return(0.5);
+        }
         default: return(0.0);
     }
 }
 
 
-void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y0, int nozzle_shape, int nsides, int group)
+void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y0, int rocket_shape, int nozzle_shape, int nsides, int group)
 /* add one or several rocket_shaped set of segments */
 {
     int i, j, cycle = 0, nsegments0; 
-    double angle, dx, x1, y1, x2, y2, nozx, nozy;
+    double angle, dx, x1, y1, x2, y2, nozx, nozy, a, b;
     
     nsegments0 = nsegments;
 
-    /* ellipse */
-    for (i=1; i<NPOLY-1; i++)
-    {
-        angle = -PID + (double)i*DPI/(double)NPOLY;
-        x1 = x0 + 0.7*LAMBDA*cos(angle);
-        y1 = y0 + YMIN + LAMBDA*(1.7 + 0.7*sin(angle));
-        angle = -PID + (double)(i+1)*DPI/(double)NPOLY;
-        x2 = x0 + 0.7*LAMBDA*cos(angle);
-        y2 = y0 + YMIN + LAMBDA*(1.7 + 0.7*sin(angle));
-        add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment);
-    }
-             
     /* compute intersection point of nozzle and ellipse */
     angle = -PID + DPI/(double)NPOLY;
     nozx = 0.7*LAMBDA*cos(angle);
     nozy = y0 + YMIN + LAMBDA*(1.7 + 0.7*sin(angle));
+            
+    /* form of combustion chamber */
+    switch (rocket_shape) {
+        case (RCK_DISC):    /* circular chamber */
+        {
+            for (i=1; i<NPOLY-1; i++)
+            {
+                angle = -PID + (double)i*DPI/(double)NPOLY;
+                x1 = x0 + 0.7*LAMBDA*cos(angle);
+                y1 = y0 + YMIN + LAMBDA*(1.7 + 0.7*sin(angle));
+                angle = -PID + (double)(i+1)*DPI/(double)NPOLY;
+                x2 = x0 + 0.7*LAMBDA*cos(angle);
+                y2 = y0 + YMIN + LAMBDA*(1.7 + 0.7*sin(angle));
+                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment);
+            }
+            break;
+        }
+        case (RCK_RECT):    /* rectangular chamber */
+        {
+            /* dimensions chosen to have same area as circular chamber */
+            a = 0.5*LAMBDA;
+            b = 0.49*PI*LAMBDA;
+            add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, segment);
+            add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, segment);
+            add_rotated_angle_to_segments(x0+a, nozy+b, x0-a, nozy+b, 0.02, segment);
+            add_rotated_angle_to_segments(x0-a, nozy+b, x0-a, nozy, 0.02, segment);
+            add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, segment);
+            break;
+        }
+        case (RCK_RECT_HAT):    /* rectangular chamber with a hat */
+        {
+            a = 0.5*LAMBDA;
+            b = 0.49*PI*LAMBDA;
+            add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, segment);
+            add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, segment);
+            add_rotated_angle_to_segments(x0+a, nozy+b, x0, nozy+b+a, 0.02, segment);
+            add_rotated_angle_to_segments(x0, nozy+b+a, x0-a, nozy+b, 0.02, segment);
+            add_rotated_angle_to_segments(x0-a, nozy+b, x0-a, nozy, 0.02, segment);
+            add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, segment);
+            break;
+        }
+    }
             
     dx = LAMBDA/(double)(nsides);
     
@@ -1112,11 +1166,55 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
     for (i=nsegments0; i<nsegments; i++) segment[i].group = group;
 }
  
+int init_maze_segments(t_segment segment[NMAXSEGMENTS])
+/* init segments forming a maze */
+{
+    t_maze* maze;
+    int i, j, n;
+    double x1, y1, x2, y2, dx, dy, padding = 0.02, width = 0.01;
+    
+    maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+    
+    init_maze(maze);
+        
+    /* build walls of maze */
+    dx = (YMAX - YMIN - 2.0*padding)/(double)(NXMAZE);
+    dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+    
+    for (i=0; i<NXMAZE; i++)
+        for (j=0; j<NYMAZE; j++)
+        {
+            n = nmaze(i, j);
+            x1 = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
+            y1 = YMIN + padding + (double)j*dy;
+            
+            if (((i>0)||(j!=NYMAZE/2))&&(maze[n].west)) add_rectangle_to_segments(x1, y1, x1 - width, y1 + dy, segment, 0);
+            if (maze[n].south) add_rectangle_to_segments(x1, y1, x1 + dx, y1 - width, segment, 0);            
+        }
+    
+    /* top side of maze */
+    add_rectangle_to_segments(YMIN + padding + MAZE_XSHIFT, YMAX - padding, YMAX - padding + MAZE_XSHIFT, YMAX - padding - width, segment, 0);
+    
+    /* right side of maze */
+    y1 = YMIN + padding + dy*((double)NYMAZE/2);
+    x1 = YMAX - padding + MAZE_XSHIFT;
+    add_rectangle_to_segments(x1, YMIN - 1.0, x1 - width, y1 - dy, segment, 0);
+    add_rectangle_to_segments(x1, y1, x1 - width, YMAX + 1.0, segment, 0);
+    
+    /* left side of maze */
+    x1 = YMIN + padding + MAZE_XSHIFT;
+    add_rectangle_to_segments(x1, YMIN - 1.0, x1 - width, YMIN + padding, segment, 0);
+    add_rectangle_to_segments(x1, YMAX - padding, x1 - width, YMAX + 1.0, segment, 0);
+    
+    free(maze);
+}
+
+
 void init_segment_config(t_segment segment[NMAXSEGMENTS])
 /* initialise linear obstacle configuration */
 {
-    int i, j, cycle = 0, iminus, iplus, nsides, n; 
-    double angle, angle2, dangle, dx, width, height, a, b, length, xmid = 0.5*(BCXMIN + BCXMAX), lpocket, r, x, x1, y1, x2, y2, nozx, nozy;
+    int i, j, cycle = 0, iminus, iplus, nsides, n, concave = 1; 
+    double angle, angle2, dangle, dx, width, height, a, b, length, xmid = 0.5*(BCXMIN + BCXMAX), lpocket, r, x, x1, y1, x2, y2, nozx, nozy, y, dy;
     
     switch (SEGMENT_PATTERN) {
         case (S_RECTANGLE):
@@ -1317,13 +1415,13 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             width = MU;
             lpocket = 0.1;
             
-            add_rectangle_to_segments(BCXMIN + lpocket, BCYMIN, xmid - lpocket, BCYMIN - width, segment);
-            add_rectangle_to_segments(xmid + lpocket, BCYMIN, BCXMAX - lpocket, BCYMIN - width, segment);
-            add_rectangle_to_segments(BCXMAX + width, BCYMIN + lpocket, BCXMAX, BCYMAX - lpocket, segment); 
+            add_rectangle_to_segments(BCXMIN + lpocket, BCYMIN, xmid - lpocket, BCYMIN - width, segment, 0);
+            add_rectangle_to_segments(xmid + lpocket, BCYMIN, BCXMAX - lpocket, BCYMIN - width, segment, 0);
+            add_rectangle_to_segments(BCXMAX + width, BCYMIN + lpocket, BCXMAX, BCYMAX - lpocket, segment, 0); 
             
-            add_rectangle_to_segments(BCXMAX - lpocket, BCYMAX, xmid + lpocket, BCYMAX + width, segment);
-            add_rectangle_to_segments(xmid - lpocket, BCYMAX, BCXMIN + lpocket, BCYMAX + width, segment);
-            add_rectangle_to_segments(BCXMIN - width, BCYMAX - lpocket, BCXMIN, BCYMIN + lpocket, segment); 
+            add_rectangle_to_segments(BCXMAX - lpocket, BCYMAX, xmid + lpocket, BCYMAX + width, segment, 0);
+            add_rectangle_to_segments(xmid - lpocket, BCYMAX, BCXMIN + lpocket, BCYMAX + width, segment, 0);
+            add_rectangle_to_segments(BCXMIN - width, BCYMAX - lpocket, BCXMIN, BCYMIN + lpocket, segment, 0); 
             
             cycle = 0;
             for (i=0; i<nsegments; i++) 
@@ -1509,14 +1607,18 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         }
         case (S_ROCKET_NOZZLE_ROTATED):
         {
-            add_rocket_to_segments(segment, 0.0, SEGMENTS_Y0, NOZZLE_SHAPE, 10, 0);
-            cycle = 0;            
+            add_rocket_to_segments(segment, 0.0, SEGMENTS_Y0, ROCKET_SHAPE, NOZZLE_SHAPE, 10, 1);
+            /* segments from group 0 are immobile by convention */
+            ngroups = 2;
+            cycle = 0; 
+//             for (i=0; i<nsegments; i++) segment[i].group = 1;
             break;
         }
         case (S_TWO_ROCKETS):
         {
-            add_rocket_to_segments(segment, SEGMENTS_X0, SEGMENTS_Y0, NOZZLE_SHAPE, 10, 0);
-            add_rocket_to_segments(segment, -SEGMENTS_X0, SEGMENTS_Y0, NOZZLE_SHAPE_B, 10, 1);
+            add_rocket_to_segments(segment, -SEGMENTS_X0, SEGMENTS_Y0, ROCKET_SHAPE, NOZZLE_SHAPE, 10, 1);
+            add_rocket_to_segments(segment, SEGMENTS_X0, SEGMENTS_Y0, ROCKET_SHAPE_B, NOZZLE_SHAPE_B, 10, 2);
+            ngroups = 3;
             cycle = 0;
             break;
         }
@@ -1552,7 +1654,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         }
         case (S_DAM):
         {
-            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, LAMBDA, segment);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, LAMBDA, segment, 0);
             
             cycle = 0;
             for (i=0; i<nsegments; i++) 
@@ -1564,11 +1666,13 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         }
         case (S_DAM_WITH_HOLE):
         {
-            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, BCYMIN + 0.1, segment);
-            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.3, -DAM_WIDTH, LAMBDA, segment);
-            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.1, -DAM_WIDTH, BCYMIN + 0.3, segment);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, BCYMIN + 0.1, segment, 0);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.3, -DAM_WIDTH, LAMBDA, segment, 0);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.1, -DAM_WIDTH, BCYMIN + 0.3, segment, 0);
             
             cycle = 0;
+            concave = 0;    /* add_rectangle_to_segments already deals with concave corners */
+            
             for (i=0; i<nsegments; i++) 
             {
                 segment[i].group = 0;
@@ -1579,9 +1683,9 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         }
         case (S_DAM_WITH_HOLE_AND_RAMP):
         {
-            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, BCYMIN + 0.2, segment);
-            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.3, -DAM_WIDTH, LAMBDA, segment);
-            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.2, -DAM_WIDTH, BCYMIN + 0.3, segment);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, BCYMIN + 0.2, segment, 0);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.3, -DAM_WIDTH, LAMBDA, segment, 0);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN + 0.2, -DAM_WIDTH, BCYMIN + 0.3, segment, 0);
             
             r = 1.0;
             for (i=0; i<10; i++)
@@ -1596,6 +1700,8 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             }
             
             cycle = 0;
+            concave = 0;    /* add_rectangle_to_segments already deals with concave corners */
+            
             for (i=0; i<nsegments; i++) 
             {
                 segment[i].group = 0;
@@ -1603,6 +1709,69 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 else segment[i].inactivate = 0;
             }
             break;
+        }
+        case (S_MAZE):
+        {
+            init_maze_segments(segment);
+            
+            cycle = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_EXT_RECTANGLE):
+        {
+            width = 0.1*LAMBDA;
+            
+            segment[0].x1 = -LAMBDA;
+            segment[0].y1 = -width;
+            
+            segment[1].x1 = -LAMBDA;
+            segment[1].y1 = width;
+
+            segment[2].x1 = LAMBDA;
+            segment[2].y1 = width;
+
+            segment[3].x1 = LAMBDA;
+            segment[3].y1 = -width;
+            
+            cycle = 1;
+            nsegments = 4;
+            ngroups = 2;
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].concave = 1;
+                segment[i].group = 1;
+                segment[i].inactivate = 0;
+            }
+            break;
+        }
+        case (S_DAM_BRICKS):
+        {
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, BCYMIN, segment, i);
+            dy = 0.1*(LAMBDA - BCYMIN);
+            
+            for (i=1; i<11; i++)
+            {
+                y = BCYMIN + (double)i*dy;
+                add_rectangle_to_segments(DAM_WIDTH, y-dy+MU, -DAM_WIDTH, y, segment, i);
+            }
+            
+            ngroups = 11;
+            cycle = 0;
+            concave = 0;    /* add_rectangle_to_segments already deals with concave corners */
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].inactivate = 0;
+            }
+            break;
+            
         }
         default: 
         {
@@ -1651,10 +1820,14 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         segment[i].length = length;
         segment[i].fx = 0.0;
         segment[i].fy = 0.0;
+        segment[i].torque = 0.0;
+        
+        segment[i].xc = 0.5*(segment[i].x1 + segment[i].x2);
+        segment[i].yc = 0.5*(segment[i].y1 + segment[i].y2);
     }
     
     /* deal with concave corners */
-    for (i=0; i<nsegments; i++) if (segment[i].concave)
+    if (concave) for (i=0; i<nsegments; i++) if (segment[i].concave)
         {
             iminus = i-1;  
             iplus = i+1;  
@@ -1678,7 +1851,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         }
     
     /* make copy of initial values in case of rotation/translation */
-    if ((ROTATE_BOUNDARY)||(MOVE_BOUNDARY)) for (i=0; i<nsegments; i++) 
+    if ((ROTATE_BOUNDARY)||(MOVE_BOUNDARY)||(MOVE_SEGMENT_GROUPS)) for (i=0; i<nsegments; i++) 
     {
         segment[i].x01 = segment[i].x1;
         segment[i].x02 = segment[i].x2;
@@ -1690,18 +1863,49 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         segment[i].angle02 = segment[i].angle2;
     }
     
-    for (i=0; i<nsegments; i++) 
-    {
-        printf("Segment %i: (x1, y1) = (%.3lg,%.3lg), (x2, y2) = (%.3lg,%.3lg)\n (nx, ny) = (%.3lg,%.3lg), c = %.3lg, length = %.3lg\n", i, segment[i].x1, segment[i].y1, segment[i].x2, segment[i].y2, segment[i].nx, segment[i].ny, segment[i].c, segment[i].length);
-        if (segment[i].concave) printf("Concave with angles %.3lg Pi, %.3lg Pi\n", segment[i].angle1/PI, segment[i].angle2/PI);
-    }
+//     for (i=0; i<nsegments; i++) 
+//     {
+//         printf("Segment %i: (x1, y1) = (%.3lg,%.3lg), (x2, y2) = (%.3lg,%.3lg)\n (nx, ny) = (%.3lg,%.3lg), c = %.3lg, length = %.3lg\n", i, segment[i].x1, segment[i].y1, segment[i].x2, segment[i].y2, segment[i].nx, segment[i].ny, segment[i].c, segment[i].length);
+//         if (segment[i].concave) printf("Concave with angles %.3lg Pi, %.3lg Pi\n", segment[i].angle1/PI, segment[i].angle2/PI);
+//     }
 }
 
+int in_rocket(double x, double y, int rocket_shape)
+/* returns 1 if (x,y) is in rocket chamber, with translated coordinates */
+{
+    double l, y1, a, b;
+    
+    switch (rocket_shape) {
+        case (RCK_DISC) :
+        {
+            l = 0.7*LAMBDA;
+            y1 = y - YMIN - 1.7*LAMBDA;
+            return ((x*x + y1*y1)/(l*l) + MU*MU < 0.925);
+        }
+        case (RCK_RECT) :
+        {
+            a = 0.5*LAMBDA;
+            b = 0.49*PI*LAMBDA;
+            y1 = y - YMIN - LAMBDA;
+            return ((vabs(x) < 0.95*a)&&(y1 > 0.05)&&(y1 < b - 0.05));
+        }
+        case (RCK_RECT_HAT) :
+        {
+            a = 0.5*LAMBDA;
+            b = 0.49*PI*LAMBDA;
+            y1 = y - YMIN - LAMBDA;
+            if (vabs(x) > 0.95*a) return(0);
+            if (y1 < 0.05) return(0);
+            if (y1 < b - 0.05) return(1);
+            return(y1 < a + b - 0.05 - vabs(x));
+        }
+    }
+}
 
 int in_segment_region(double x, double y)
 /* returns 1 if (x,y) is inside region delimited by obstacle segments */
 {
-    double angle, dx, height, width, theta, lx, ly, x1, y1, x2, y2;
+    double angle, dx, height, width, theta, lx, ly, x1, y1, x2, y2, padding;
     
     if (x >= BCXMAX) return(0);
     if (x <= BCXMIN) return(0);
@@ -1804,14 +2008,14 @@ int in_segment_region(double x, double y)
             y1 = y - ysegments[0];
             if (y1 < YMIN + LAMBDA) return(0);
             else if (y1 > YMIN + 2.4*LAMBDA) return(0);
-            else 
-            {
-                ly = 0.7*LAMBDA;
-                lx = 0.7*LAMBDA;
-                x1 = x - xsegments[0];
-                y1 -= YMIN + 1.7*LAMBDA;
-                if (x1*x1/(lx*lx) + y1*y1/(ly*ly) + MU*MU < 0.925) return(1);
-            }
+            else if (in_rocket(x - xsegments[0], y1, ROCKET_SHAPE)) return(1);
+//             {
+//                 ly = 0.7*LAMBDA;
+//                 lx = 0.7*LAMBDA;
+//                 x1 = x - xsegments[0];
+//                 y1 -= YMIN + 1.7*LAMBDA;
+//                 if (x1*x1/(lx*lx) + y1*y1/(ly*ly) + MU*MU < 0.925) return(1);
+//             }
             return(0);
         }
         case (S_TWO_ROCKETS):
@@ -1819,17 +2023,11 @@ int in_segment_region(double x, double y)
             y1 = y - ysegments[0];
             y2 = y - ysegments[1];
             if ((y1 < YMIN + LAMBDA)&&(y2 < YMIN + LAMBDA)) return(0);
-            else if ((y1 > YMIN + 2.4*LAMBDA)&&(y2 > YMIN + 2.4*LAMBDA)) return(0);
+            else if ((y1 > YMIN + 3.5*LAMBDA)&&(y2 > YMIN + 3.5*LAMBDA)) return(0);
             else 
             {
-                ly = 0.7*LAMBDA;
-                lx = 0.7*LAMBDA;
-                x1 = x - xsegments[0];
-                y1 -= YMIN + 1.7*LAMBDA;
-                if (x1*x1/(lx*lx) + y1*y1/(ly*ly) + MU*MU < 0.925) return(1);
-                x2 = x - xsegments[1];
-                y2 -= YMIN + 1.7*LAMBDA;
-                if (x2*x2/(lx*lx) + y2*y2/(ly*ly) + MU*MU  < 0.925) return(1);
+                if (in_rocket(x - xsegments[0], y1, ROCKET_SHAPE)) return(1);
+                if (in_rocket(x - xsegments[1], y2, ROCKET_SHAPE_B)) return(1);
             }
             return(0);
         }
@@ -1837,6 +2035,13 @@ int in_segment_region(double x, double y)
         {
             if (vabs(x) > DAM_WIDTH) return(1);
             else if (y > LAMBDA) return(1);
+            else return(0);
+        }
+        case (S_EXT_RECTANGLE):
+        {
+            padding = 0.1;
+            if (vabs(x) > LAMBDA + padding) return(1);
+            else if (vabs(y) > 0.1*LAMBDA + padding) return(1);
             else return(0);
         }
         default: return(1);
@@ -1898,6 +2103,69 @@ void translate_segments(t_segment segment[NMAXSEGMENTS], double deltax[2], doubl
         segment[i].y1 = segment[i].y01 + deltay[group] - SEGMENTS_Y0;
         segment[i].y2 = segment[i].y02 + deltay[group] - SEGMENTS_Y0;
         segment[i].c = segment[i].nx*segment[i].x1 + segment[i].ny*segment[i].y1;
+    }
+}
+
+void translate_one_segment(t_segment segment[NMAXSEGMENTS], int i, double deltax, double deltay)
+/* translates the repelling segment by given vector */
+{
+    segment[i].x1 += deltax;
+    segment[i].x2 += deltax;
+        
+    segment[i].y1 += deltay;
+    segment[i].y2 += deltay;
+    segment[i].c = segment[i].nx*segment[i].x1 + segment[i].ny*segment[i].y1;
+    
+    segment[i].xc += deltax;
+    segment[i].yc += deltay;
+    
+}
+
+void rotate_one_segment(t_segment segment[NMAXSEGMENTS], int i, double dalpha, double xc, double yc)
+/* rotates the repelling segment by given angle around (xc, yc) */
+{
+    double ca, sa, x, y, nx, ny;
+    
+    ca = cos(dalpha);
+    sa = sin(dalpha);
+    
+    x = segment[i].x1 - xc;
+    y = segment[i].y1 - yc;
+    
+    segment[i].x1 = xc + x*ca - y*sa;
+    segment[i].y1 = yc + x*sa + y*ca;
+    
+    x = segment[i].x2 - xc;
+    y = segment[i].y2 - yc;
+    
+    segment[i].x2 = xc + x*ca - y*sa;
+    segment[i].y2 = yc + x*sa + y*ca;
+    
+    segment[i].xc = 0.5*(segment[i].x1 + segment[i].x2);
+    segment[i].yc = 0.5*(segment[i].y1 + segment[i].y2);
+    
+    nx = segment[i].nx;
+    ny = segment[i].ny;
+    
+    segment[i].nx = ca*nx - sa*ny;
+    segment[i].ny = sa*nx + ca*ny;
+    
+    segment[i].c = segment[i].nx*segment[i].x1 + segment[i].ny*segment[i].y1;
+    
+    if (segment[i].concave)
+    {
+        segment[i].angle1 += dalpha;
+        segment[i].angle2 += dalpha;
+        while (segment[i].angle1 > DPI)
+        {
+            segment[i].angle1 -= DPI;
+            segment[i].angle2 -= DPI;
+        }
+        while (segment[i].angle2 < 0.0)
+        {
+            segment[i].angle1 += DPI;
+            segment[i].angle2 += DPI;
+        }
     }
 }
 
@@ -2899,6 +3167,31 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
 }
 
 
+void set_segment_group_color(int group, double lum, double rgb[3])
+{
+    switch (group) {
+        case (1):
+        {
+            hsl_to_rgb_palette(270.0, 0.9, 0.5, rgb, COLOR_PALETTE);
+            break;
+        }
+        case (2):
+        {
+            hsl_to_rgb_palette(90.0, 0.9, 0.5, rgb, COLOR_PALETTE);
+            break;
+        }
+        default:
+        {
+            rgb[0] = 1.0;
+            rgb[1] = 1.0;
+            rgb[2] = 1.0;
+        }
+    }
+    
+    glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+}
+
+
 void draw_one_triangle(t_particle particle, int same_table[9*HASHMAX], int p, int q, int nsame)
 {
     double x, y, dx, dy;
@@ -2906,6 +3199,12 @@ void draw_one_triangle(t_particle particle, int same_table[9*HASHMAX], int p, in
     
     x = particle.xc + (double)p*(BCXMAX - BCXMIN);
     y = particle.yc + (double)q*(BCYMAX - BCYMIN);
+    
+    if (TRACK_SEGMENT_GROUPS) 
+    {
+        x -= xtrack;
+        y -= ytrack;
+    }
             
     glBegin(GL_TRIANGLE_FAN);
     glVertex2d(x, y);
@@ -3004,15 +3303,20 @@ void draw_one_particle_links(t_particle particle)
 void draw_one_particle(t_particle particle, double xc, double yc, double radius, double angle, int nsides, double width, double rgb[3])
 /* draw one of the particles */ 
 {
-    double ca, sa, x1, x2, y1, y2, xc1, wangle;
+    double ca, sa, x1, x2, y1, y2, xc1, yc1, wangle;
     int wsign;
     
     if (CENTER_VIEW_ON_OBSTACLE) xc1 = xc - xshift;
     else xc1 = xc;
+    if (TRACK_SEGMENT_GROUPS) 
+    {
+        xc1 -= xtrack;
+        yc1 = yc - ytrack;
+    }
     glColor3f(rgb[0], rgb[1], rgb[2]);
     if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)) 
-        draw_colored_rhombus(xc1, yc, radius, angle + APOLY*PID, rgb);
-    else draw_colored_polygon(xc1, yc, radius, nsides, angle + APOLY*PID, rgb);
+        draw_colored_rhombus(xc1, yc1, radius, angle + APOLY*PID, rgb);
+    else draw_colored_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID, rgb);
         
     /* draw crosses on particles of second type */
     if ((TWO_TYPES)&&(DRAW_CROSS))
@@ -3025,28 +3329,28 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
             glLineWidth(3);
             glColor3f(0.0, 0.0, 0.0);
             x1 = xc1 - MU_B*ca;
-            y1 = yc - MU_B*sa;
+            y1 = yc1 - MU_B*sa;
             x2 = xc1 + MU_B*ca;
-            y2 = yc + MU_B*sa;
+            y2 = yc1 + MU_B*sa;
             draw_line(x1, y1, x2, y2);
             x1 = xc1 - MU_B*sa;
-            y1 = yc + MU_B*ca;
+            y1 = yc1 + MU_B*ca;
             x2 = xc1 + MU_B*sa;
-            y2 = yc - MU_B*ca;
+            y2 = yc1 - MU_B*ca;
             draw_line(x1, y1, x2, y2);
         }
         
     glLineWidth(width);
     glColor3f(1.0, 1.0, 1.0);
     if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)) 
-        draw_rhombus(xc1, yc, radius, angle + APOLY*PID);
-    else draw_polygon(xc1, yc, radius, nsides, angle + APOLY*PID); 
+        draw_rhombus(xc1, yc1, radius, angle + APOLY*PID);
+    else draw_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID); 
     
     if (particle.interaction == I_LJ_WATER) for (wsign = -1; wsign <= 1; wsign+=2)
     {
         wangle = particle.angle + (double)wsign*DPI/3.0;
         x1 = xc1 + particle.radius*cos(wangle);
-        y1 = yc + particle.radius*sin(wangle);
+        y1 = yc1 + particle.radius*sin(wangle);
         draw_colored_polygon(x1, y1, 0.5*radius, nsides, angle + APOLY*PID, rgb);
         glColor3f(1.0, 1.0, 1.0);
         draw_polygon(x1, y1, 0.5*radius, nsides, angle + APOLY*PID);
@@ -3310,17 +3614,20 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
         glLineWidth(CONTAINER_WIDTH);
         hsl_to_rgb(300.0, 0.1, 0.5, rgb);
         for (i = 0; i < nobstacles; i++)
-            draw_colored_circle(obstacle[i].xc, obstacle[i].yc, obstacle[i].radius, NSEG, rgb);
+            draw_colored_circle(obstacle[i].xc - xtrack, obstacle[i].yc - ytrack, obstacle[i].radius, NSEG, rgb);
         glColor3f(1.0, 1.0, 1.0);
         for (i = 0; i < nobstacles; i++)
-            draw_circle(obstacle[i].xc, obstacle[i].yc, obstacle[i].radius, NSEG);
+            draw_circle(obstacle[i].xc - xtrack, obstacle[i].yc - ytrack, obstacle[i].radius, NSEG);
     }
     if (ADD_FIXED_SEGMENTS)
     {
         glLineWidth(CONTAINER_WIDTH);
         glColor3f(1.0, 1.0, 1.0);
         for (i = 0; i < nsegments; i++) if (segment[i].active)
-            draw_line(segment[i].x1, segment[i].y1, segment[i].x2, segment[i].y2);
+        {
+            if (COLOR_SEG_GROUPS) set_segment_group_color(segment[i].group, 1.0, rgb);
+            draw_line(segment[i].x1 - xtrack, segment[i].y1 - ytrack, segment[i].x2 - xtrack, segment[i].y2 - ytrack);
+        }
     }
 
     switch (BOUNDARY_COND) {
@@ -3547,7 +3854,7 @@ void print_parameters(double beta, double temperature, double krepel, double len
             xxtext = XMIN + 0.08*scale;
         }
         xmid = 0.5*(XMIN + XMAX) - 0.1*scale;
-        xmidtext = xmid - 0.24*scale;
+        xmidtext = xmid - 0.3*scale;
         for (i=0; i<N_P_AVERAGE; i++) pressures[i] = 0.0;
         if (RECORD_PRESSURES) for (j=0; j<N_PRESSURES; j++) 
         {
@@ -3904,8 +4211,8 @@ void print_segments_speeds(double vx[2], double vy[2])
     if (first)
     {
         scale = (XMAX - XMIN)/4.0;
-        xleftbox = XMIN + 0.4*scale;
-        xlefttext = xleftbox - 0.3*scale;
+        xleftbox = XMIN + 0.3*scale;
+        xlefttext = xleftbox - 0.22*scale;
         xrightbox = XMAX - 0.39*scale;
         xrighttext = xrightbox - 0.3*scale;
         first = 0;
@@ -3926,16 +4233,89 @@ void print_segments_speeds(double vx[2], double vy[2])
     if (TWO_OBSTACLES)
     {
         y = YMAX - 0.1*scale;
-        erase_area_hsl(xleftbox, y + 0.025*scale, 0.25*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        erase_area_hsl(xleftbox, y + 0.025*scale, 0.2*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Vx = %.2f", vx[1]);
         write_text(xlefttext + 0.1, y, message);
 
         y -= 0.1*scale;
-        erase_area_hsl(xleftbox, y + 0.025*scale, 0.25*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        erase_area_hsl(xleftbox, y + 0.025*scale, 0.2*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Vy = %.2f", vy[1]);
         write_text(xlefttext + 0.1, y, message);
+    }
+}
+
+void print_segment_group_speeds(t_group_segments *segment_group)
+{
+    char message[100];
+    double rgb[3], y, av_vx = 0.0, av_vy = 0.0, av_omega = 0.0, xbox, xtext;
+    int i, group, groupshift;
+    static double xleftbox, xlefttext, xrightbox, xrighttext, ymin = YMIN + 0.05, scale;
+    static double vx[100*NMAXGROUPS], vy[100*NMAXGROUPS], omega[100*NMAXGROUPS], inv_t_window, speed_ratio;
+    static int first = 1, position[NMAXGROUPS], t_window = 50;
+    
+    if (first)
+    {
+        scale = (XMAX - XMIN)/4.0;
+        xleftbox = XMIN + 0.3*scale;
+        xlefttext = xleftbox - 0.22*scale;
+        xrightbox = XMAX - 0.39*scale;
+        xrighttext = xrightbox - 0.3*scale;
+        speed_ratio = (double)(25*NVID)*DT_PARTICLE;
+        inv_t_window = 1.0/(double)t_window;
+        for (group=1; group<NMAXGROUPS; group++) position[group] = 0;
+        
+        first = 0;
+    }
+    
+    /* compute time averages */
+    for (group = 1; group < ngroups; group++)
+    {
+        groupshift = (group-1)*100;
+        vx[groupshift + position[group]] = segment_group[group].vx*speed_ratio;
+        vy[groupshift + position[group]] = segment_group[group].vy*speed_ratio;
+        omega[groupshift + position[group]] = segment_group[group].omega*speed_ratio;
+        position[group]++;
+        if (position[group] >=t_window) position[group] = 0;
+        for (i=0; i<t_window; i++)
+        {
+            av_vx += vx[groupshift + i];
+            av_vy += vy[groupshift + i];
+            av_omega += omega[groupshift + i];
+        }
+        av_vx *= inv_t_window;
+        av_vy *= inv_t_window;
+        av_omega *= inv_t_window;
+        
+        xbox = xleftbox + (xrightbox - xleftbox)*(group-1)/(ngroups-2);
+        xtext = xlefttext + (xrighttext - xlefttext)*(group-1)/(ngroups-2);
+        
+//         printf("xbox = %.2f, xtext = %.2f, av_vy = %.2f\n", xbox, xtext, av_vy);
+        
+        y = YMAX - 0.1*scale;
+        erase_area_hsl(xbox, y + 0.025*scale, 0.25*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        set_segment_group_color(group, 1.0, rgb);
+        sprintf(message, "Vx = %.4f", av_vx);
+        write_text(xtext + 0.1, y, message);
+
+        y -= 0.1*scale;
+        erase_area_hsl(xbox, y + 0.025*scale, 0.25*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        set_segment_group_color(group, 1.0, rgb);
+        sprintf(message, "Vy = %.4f", av_vy);
+        write_text(xtext + 0.1, y, message);
+
+        y -= 0.1*scale;
+        erase_area_hsl(xbox, y + 0.025*scale, 0.3*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        set_segment_group_color(group, 1.0, rgb);
+        sprintf(message, "V = %.4f", module2(av_vx, av_vy));
+        write_text(xtext + 0.1, y, message);
+        
+        y -= 0.1*scale;
+        erase_area_hsl(xbox, y + 0.025*scale, 0.3*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        set_segment_group_color(group, 1.0, rgb);
+        sprintf(message, "Omega = %.4f", av_omega);
+        write_text(xtext + 0.1, y, message);
     }
 }
 
@@ -4018,12 +4398,11 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                 f = KSPRING_OBSTACLE*(r - distance);
                 particle[j].fx += f*segment[i].nx;
                 particle[j].fy += f*segment[i].ny;
-                if (MOVE_BOUNDARY)
+                if ((MOVE_BOUNDARY)||(MOVE_SEGMENT_GROUPS))
                 {
                     segment[i].fx -= f*segment[i].nx;
                     segment[i].fy -= f*segment[i].ny;
-//                 segment[i].fx += f*segment[i].nx;
-//                 segment[i].fy += f*segment[i].ny;
+                    segment[i].torque -= (x - segment[i].xc)*f*segment[i].ny - (y - segment[i].yc)*f*segment[i].nx;
                 }
             }
         }
@@ -4034,6 +4413,10 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
             distance = module2(x - segment[i].x1, y - segment[i].y1);
             angle = argument(x - segment[i].x1, y - segment[i].y1);
             if (angle < segment[i].angle1) angle += DPI;
+            
+            /* added 24/9/22 */
+            else if (angle > segment[i].angle2) angle -= DPI;
+            
             r = 1.5*particle[j].radius;
             
             if ((distance < r)&&(angle > segment[i].angle1)&&(angle < segment[i].angle2))
@@ -4041,12 +4424,11 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                 f = KSPRING_OBSTACLE*(r - distance);
                 particle[j].fx += f*cos(angle);
                 particle[j].fy += f*sin(angle);
-                if (MOVE_BOUNDARY)
+                if ((MOVE_BOUNDARY)||(MOVE_SEGMENT_GROUPS))
                 {
                     segment[i].fx -= f*cos(angle);
                     segment[i].fy -= f*sin(angle);
-//                     segment[i].fx += f*cos(angle);
-//                     segment[i].fy += f*sin(angle);
+                    segment[i].torque -= (x - segment[i].xc)*f*sin(angle) - (y - segment[i].yc)*f*cos(angle);
                 }
             }
         }
@@ -4942,3 +5324,227 @@ void update_types(t_particle particle[NMAXCIRCLES])
         }
 }
     
+    
+double plot_coord(double x, double xmin, double xmax)
+{
+    return(xmin + x*(xmax - xmin));
+}
+
+
+void draw_speed_plot(t_group_data *group_speeds, int i)
+/* draw plot of obstacle speeds as a function of time */
+{
+    int j, group;
+    char message[100];
+    static double xmin, xmax, ymin, ymax, xmid, ymid, dx, dy, plotxmin, plotxmax, plotymin, plotymax;
+    double pos[2], x1, y1, x2, y2, rgb[3];
+    static int first = 1, gshift = INITIAL_TIME + NSTEPS;
+    
+    if (first)
+    {
+//         xmin = XMAX - 1.35;
+//         xmax = XMAX - 0.05;
+//         ymin = YMAX - 1.8;
+//         ymax = YMAX - 0.5;
+                
+        xmin = XMAX - 1.8;
+        xmax = XMAX - 0.066;
+        ymin = YMAX - 2.5;
+        ymax = YMAX - 0.76;
+
+        xmid = 0.5*(xmin + xmax);
+        ymid = 0.5*(ymin + ymax);
+        
+        dx = 0.5*(xmax - xmin);
+        dy = 0.5*(ymax - ymin);
+        
+        plotxmin = xmin + 0.05;
+        plotxmax = xmax - 0.1;
+        plotymin = ymin + 0.07;
+        plotymax = ymax - 0.15;
+        
+        first = 0;
+    }
+    
+//     rgb[0] = 1.0; rgb[1] = 1.0; rgb[2] = 1.0;
+    
+    glLineWidth(2);
+    
+    /* plot angular speed */
+    for (group=1; group<ngroups; group++)
+    {
+        set_segment_group_color(group, 0.5, rgb);
+        x1 = plotxmin;
+        y1 = plotymin;
+        for (j=0; j<i; j++)
+        {
+            x2 = plot_coord((double)j/(double)NSTEPS, plotxmin, plotxmax);
+            y2 = plot_coord(group_speeds[(group-1)*gshift + j].omega/VMAX_PLOT_SPEEDS, plotymin, plotymax);
+        
+            draw_line(x1, y1, x2, y2);
+            x1 = x2;
+            y1 = y2;
+        }
+    
+        sprintf(message, "omega");
+        write_text_fixedwidth(plotxmin - 0.22 + (double)(group-1)*0.3, plotymax + 0.16, message);
+    }
+
+    /* plot speed of obstacles */
+    for (group=1; group<ngroups; group++)
+    {
+        set_segment_group_color(group, 1.0, rgb);
+        x1 = plotxmin;
+        y1 = plotymin;
+        for (j=0; j<i; j++)
+        {
+            x2 = plot_coord((double)j/(double)NSTEPS, plotxmin, plotxmax);
+            y2 = plot_coord(group_speeds[(group-1)*gshift + j].vy/VMAX_PLOT_SPEEDS, plotymin, plotymax);
+        
+            draw_line(x1, y1, x2, y2);
+            x1 = x2;
+            y1 = y2;
+        }
+        
+        sprintf(message, "vy");
+        write_text_fixedwidth(plotxmin - 0.22 + (double)(group-1)*0.3, plotymax + 0.25, message);
+    }
+    
+    glColor3f(1.0, 1.0, 1.0);
+    
+    /* axes and labels */
+    draw_line(plotxmin, plotymin, plotxmax + 0.05, plotymin);
+    draw_line(plotxmin, plotymin, plotxmin, plotymax + 0.1);
+    
+    for (j=1; j<=(int)(10.0*VMAX_PLOT_SPEEDS); j++)
+    {
+        y1 = plot_coord((double)j/(10.0*VMAX_PLOT_SPEEDS), plotymin, plotymax);
+        draw_line(plotxmin - 0.02, y1, plotxmin + 0.02, y1);
+    }
+    
+    sprintf(message, "%.1f", VMAX_PLOT_SPEEDS);
+    write_text_fixedwidth(plotxmin - 0.28, y1 - 0.025, message);
+//     write_text_fixedwidth(plotxmin - 0.22, y1 - 0.025, message);
+        
+    sprintf(message, "time");
+    write_text_fixedwidth(plotxmax - 0.13, plotymin - 0.12, message);
+//     write_text_fixedwidth(plotxmax - 0.1, plotymin - 0.08, message);
+}
+
+
+void draw_trajectory_plot(t_group_data *group_speeds, int i)
+/* draw plot of obstacle speeds as a function of time */
+{
+    int j, group;
+    char message[100];
+    static double xmin, xmax, ymin, ymax, xmid, ymid, dx, dy, plotxmin, plotxmax, plotymin, plotymax, scalex, scaley, yinitial[NMAXGROUPS];
+    double pos[2], x0, y0, x1, y1, x2, y2, rgb[3];
+    static int first = 1, gshift = INITIAL_TIME + NSTEPS;
+    
+    if (first)
+    {
+        xmin = XMAX - 1.8;
+        xmax = XMAX - 0.066;
+        ymin = YMIN + 0.1;
+        ymax = YMIN + 1.9;
+
+        xmid = 0.5*(xmin + xmax);
+        ymid = 0.5*(ymin + ymax);
+        
+        dx = 0.5*(xmax - xmin);
+        dy = 0.5*(ymax - ymin);
+        
+        plotxmin = xmin + 0.05;
+        plotxmax = xmax - 0.1;
+        plotymin = ymin + 0.07;
+        plotymax = ymax - 0.15;
+        
+        scalex = 6.0;
+        scaley = 3.0;
+        
+        for (group = 0; group < ngroups; group++)
+            yinitial[group] = group_speeds[(group-1)*gshift].yc;
+        
+        first = 0;
+    }
+    
+    glLineWidth(2);
+    
+    /* plot trajectories */
+    for (group=1; group<ngroups; group++)
+    {
+        set_segment_group_color(group, 0.75, rgb);
+        x1 = group_speeds[(group-1)*gshift].xc;
+        y1 = group_speeds[(group-1)*gshift].yc - yinitial[group];
+            
+        for (j=0; j<i-1; j++)
+        {
+            x0 = group_speeds[(group-1)*gshift + j].xc;
+            y0 = group_speeds[(group-1)*gshift + j].yc - yinitial[group];
+            
+            if (y0 > scaley) scaley = y0;
+            
+            x2 = plot_coord(0.5 + x0/scalex, plotxmin, plotxmax);
+            y2 = plot_coord(y0/scaley + 0.05, plotymin, plotymax);
+            
+//             printf("yinitial = %.3lg, (x0, y0) = (%.3lg, %.3lg), (x2, y2) = (%.3lg, %.3lg)\n", yinitial, x0, y0, x2, y2); 
+        
+            if ((j>0)&&(module2(x2-x1, y2-y1) < 0.1)) draw_line(x1, y1, x2, y2);
+            x1 = x2;
+            y1 = y2;
+        }
+        if (i>0) draw_colored_circle(x1, y1, 0.015, NSEG, rgb);
+    }
+
+    glColor3f(1.0, 1.0, 1.0);
+    
+    /* axes and labels */
+    draw_line(plotxmin, plotymin, plotxmax + 0.05, plotymin);
+    draw_line(plotxmin, plotymin, plotxmin, plotymax + 0.1);
+    
+    for (j=1; j<(int)scaley; j++)
+    {
+        y1 = plot_coord((double)j/scaley, plotymin, plotymax);
+        draw_line(plotxmin - 0.02, y1, plotxmin + 0.02, y1);
+    }
+    
+    sprintf(message, "%i", (int)scaley - 1);
+    write_text_fixedwidth(plotxmin - 0.15, y1 - 0.025, message);
+    
+//     sprintf(message, "%.1f", VMAX_PLOT_SPEEDS);
+    sprintf(message, "y");
+    write_text_fixedwidth(plotxmin - 0.1, plotymax - 0.01, message);
+        
+    sprintf(message, "x");
+    write_text_fixedwidth(plotxmax - 0.1, plotymin - 0.1, message);
+}
+
+
+void init_segment_group(t_segment segment[NMAXSEGMENTS], int group, t_group_segments segment_group[NMAXGROUPS])
+/* initialize center of mass and similar data of grouped segments */
+{
+    int i, nseg_group = 0;
+    double xc = 0.0, yc = 0.0;
+    
+    for (i=0; i<nsegments; i++) if (segment[i].group == group) 
+    {
+        xc += 0.5*(segment[i].x1 + segment[i].x2);
+        yc += 0.5*(segment[i].y1 + segment[i].y2);
+        
+        nseg_group++;
+    }
+    
+    if (nseg_group == 0) nseg_group = 1;
+    
+    segment_group[group].xc = xc/(double)nseg_group;
+    segment_group[group].yc = yc/(double)nseg_group;
+    segment_group[group].angle = 0.0;
+    segment_group[group].vx = 0.0;
+    segment_group[group].vy = 0.0;
+    segment_group[group].omega = 0.0;
+    segment_group[group].mass = SEGMENT_GROUP_MASS;
+    segment_group[group].moment_inertia = SEGMENT_GROUP_I;
+    
+    printf("Segment group data %i: (%.3lg, %.3lg)\n", group, segment_group[group].xc, segment_group[group].yc);
+    
+}

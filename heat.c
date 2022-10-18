@@ -35,7 +35,7 @@
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 #include <omp.h>
 
-#define MOVIE 1         /* set to 1 to generate movie */
+#define MOVIE 0         /* set to 1 to generate movie */
 
 /* General geometrical parameters */
 
@@ -188,7 +188,19 @@
 #define AMPLITUDE 0.8      /* amplitude of periodic excitation */ 
 /* end of constants only used by wave_billiard and wave_3d */
 
+/* for compatibility with sub_wave and sub_maze */
+#define NXMAZE 7      /* width of maze */
+#define NYMAZE 7      /* height of maze */
+#define MAZE_MAX_NGBH 4     /* max number of neighbours of maze cell */
+#define RAND_SHIFT 24        /* seed of random number generator */
+#define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
+#define ADD_POTENTIAL 0
+#define POT_MAZE 7
+#define POTENTIAL 0
+/* end of constants only used by sub_wave and sub_maze */
+
 #include "global_pdes.c"
+#include "sub_maze.c"
 #include "sub_wave.c"
 
 

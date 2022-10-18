@@ -6,6 +6,25 @@
 
 #define CLUSTER_SHIFT 10    /* shift in numbering of open clusters */
 
+double argument(double x, double y)
+ {
+	double alph;
+
+	if (x!=0.0)
+	{
+		alph = atan(y/x);
+		if (x<0.0)
+			alph += PI;
+	}
+	else
+	{
+		alph = PID;
+		if (y<0.0)
+			alph = PI*1.5;
+	}
+	return(alph);
+ }
+
 int writetiff(char *filename, char *description, int x, int y, int width, int height, int compression)
 {
   TIFF *file;
@@ -64,8 +83,8 @@ void init()		/* initialisation of window */
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-//     glOrtho(XMIN, XMAX, YMIN, YMAX , -1.0, 1.0);
-    glOrtho(0.0, NX, 0.0, NY, -1.0, 1.0);
+    if (PLOT_3D) glOrtho(XMIN, XMAX, YMIN, YMAX , -1.0, 1.0);
+    else glOrtho(0.0, NX, 0.0, NY, -1.0, 1.0);
 }
 
 void blank()
@@ -190,11 +209,19 @@ void xy_to_pos(double x, double y, double pos[2])
 {
     double x1, y1;
 
-    x1 = (x - XMIN)/(XMAX - XMIN);
-    y1 = (y - YMIN)/(YMAX - YMIN);
+    if (PLOT_3D)
+    {
+        pos[0] = x;
+        pos[1] = y;
+    }
+    else
+    {
+        x1 = (x - XMIN)/(XMAX - XMIN);
+        y1 = (y - YMIN)/(YMAX - YMIN);
 
-    pos[0] = x1 * (double)NX;
-    pos[1] = y1 * (double)NY;
+        pos[0] = x1 * (double)NX;
+        pos[1] = y1 * (double)NY;
+    }
 }
 
 void erase_area_rgb(double x, double y, double dx, double dy, double rgb[3])
@@ -326,6 +353,8 @@ int graphical_rep(int bcondition)
         case (BC_HEX_BOND_DIRICHLET): return(PLOT_HEX_BONDS); 
         case (BC_TRIANGLE_SITE_DIRICHLET): return(PLOT_TRIANGLE); 
         case (BC_POISSON_DISC): return(PLOT_POISSON_DISC);
+//         case (BC_CUBIC_DIRICHLET): return(PLOT_SQUARES);
+        case (BC_CUBIC_DIRICHLET): return(PLOT_CUBES);
         default: return(0);
     }
     
@@ -340,6 +369,7 @@ double pcritical(int lattice)
         case (BC_SQUARE_BOND_DIRICHLET): return(0.5);
         case (BC_HEX_BOND_DIRICHLET): return(1.0 - 2.0*sin(PI/18.0));
         case (BC_TRIANGLE_SITE_DIRICHLET): return(0.6970402);
+        case (BC_CUBIC_DIRICHLET): return(0.311604);
         default: return(0.5);
         
     }
@@ -353,37 +383,42 @@ int cellnb(int i, int j, int group, int nx, int ny)
         case (BC_SQUARE_DIRICHLET):
         {
             return(i*ny+j);
-//             break;
         }
         case (BC_SQUARE_PERIODIC):
         {
             return(i*ny+j);
-//             break;
         }
         case (BC_SQUARE_BOND_DIRICHLET):
         {
             if (group == 0) return(i+nx*j);
             else return (nx*(ny+1) + i*ny+j);
-//             break;
         }
         case (BC_HEX_SITE_DIRICHLET):
         {
             return(i+nx*j);
-//             break;
         }
         case (BC_HEX_BOND_DIRICHLET):
         {
             return (group*nx*(ny+1) + i+nx*j);
-//             break;
         }
         case (BC_TRIANGLE_SITE_DIRICHLET):
         {
             return(i+2*nx*j);
-//             break;
         }
         case (BC_POISSON_DISC):
         {
             return(i);
+        }
+    }
+}
+
+int cellnb_3d(int i, int j, int k, int group, int nx, int ny, int nz)
+/* convert 3d coordinates to 1d */
+{
+    switch (LATTICE) {
+        case (BC_CUBIC_DIRICHLET):
+        {
+            return(k*nx*ny + j*nx + i);
         }
     }
 }
@@ -449,16 +484,16 @@ double p_schedule(int i)
 /* percolation probability p as a function of time */
 {
     double time, pstar;
-    int power = 2, factor;
+    int factor;
     
     pstar = pcritical(LATTICE);
     
-    factor = ipow(2, power);
+    factor = ipow(2, P_SCHEDULE_POWER);
     
     time = (double)i/(double)(NSTEPS-1);
     
-    if (time > 0.5) return(pstar + factor*(1.0 - pstar)*ipow(time - 0.5, power));
-    else return(pstar - factor*pstar*ipow(0.5 - time, power));
+    if (time > 0.5) return(pstar + factor*(1.0 - pstar)*ipow(time - 0.5, P_SCHEDULE_POWER));
+    else return(pstar - factor*pstar*ipow(0.5 - time, P_SCHEDULE_POWER));
 }
 
 int in_plot_box(double x, double y)
@@ -496,12 +531,17 @@ int in_plot_box_screencoord(double x, double y)
 double size_ratio_color(int clustersize, int ncells)
 /* color of cell as function of the size of its cluster */
 {
-    double ratio, minratio = 1.0e-2, x;
+    double ratio, minratio = 1.0e-2, x, p = 0.1;
+    
+    minratio = 1.0/(double)ncells;
     
     ratio = (double)clustersize/(double)ncells;
     if (ratio > 1.0) ratio = 1.0;
     else if (ratio < minratio) ratio = minratio;
-    x = log(ratio/minratio)/log(1.0/minratio);
+//     x = log(ratio/minratio)/log(1.0/minratio);
+//     x = log(1.0 + log(ratio/minratio))/log(1.0 - log(minratio));
+//     x = pow(log(ratio/minratio)/(-log(minratio)), 0.1);
+    x = (pow(ratio, p) - pow(minratio, p))/(1.0 - pow(minratio, p));
     return(CLUSTER_HUEMIN*x + CLUSTER_HUEMAX*(1.0 -x));
     
     /* other attempts that seem to bug */
@@ -513,17 +553,30 @@ double size_ratio_color(int clustersize, int ncells)
 //     return(CLUSTER_HUEMAX*ratio + CLUSTER_HUEMIN*(1.0 -ratio));
 }
 
-void set_cell_color(t_perco cell, int *cluster_sizes, int fade, int max_cluster_size)
+void compute_cell_color(t_perco cell, int *cluster_sizes, int fade, int max_cluster_size, int kx, int nx, int kz, int nz, double rgb[3])
 /* compute color of cell */
 {
     int k, color, csize;
-    double rgb[3], fade_factor = 0.15, hue;
+    double fade_factor = 0.15, hue;
     
     if (!cell.open) hsl_to_rgb_palette(HUE_CLOSED, 0.9, 0.5, rgb, COLOR_PALETTE);
     else
         {
             if (!cell.flooded) hsl_to_rgb_palette(HUE_OPEN, 0.9, 0.5, rgb, COLOR_PALETTE);
-            else hsl_to_rgb_palette(HUE_FLOODED, 0.9, 0.5, rgb, COLOR_PALETTE);
+            else 
+            {
+                if (COLOR_CELLS_BY_XCOORD)
+                {
+                    hue = CLUSTER_HUEMIN + (CLUSTER_HUEMAX - CLUSTER_HUEMIN)*(double)kx/(double)nx;
+                    hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE);
+                }
+                else if (COLOR_CELLS_BY_ZCOORD)
+                {
+                    hue = CLUSTER_HUEMIN + (CLUSTER_HUEMAX - CLUSTER_HUEMIN)*(double)kz/(double)nz;
+                    hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE);
+                }
+                else hsl_to_rgb_palette(HUE_FLOODED, 0.9, 0.5, rgb, COLOR_PALETTE);
+            }
             
             if ((FIND_ALL_CLUSTERS)&&(COLOR_CLUSTERS_BY_SIZE))
             {
@@ -537,13 +590,22 @@ void set_cell_color(t_perco cell, int *cluster_sizes, int fade, int max_cluster_
                 hue = CLUSTER_HUEMIN + (CLUSTER_HUEMAX - CLUSTER_HUEMIN)*(double)color/(double)N_CLUSTER_COLORS;
                 hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE);
             }
+            
+//             if ((FLOOD_LEFT_BOUNDARY)&&(cell.flooded == 1)) hsl_to_rgb_palette(HUE_FLOODED, 0.9, 0.5, rgb, COLOR_PALETTE);
         }
         
     if (fade) for (k=0; k<3; k++) rgb[k] = 1.0 - fade_factor + fade_factor*rgb[k];
-        
-    glColor3f(rgb[0], rgb[1], rgb[2]);
+    
 }
 
+void set_cell_color(t_perco cell, int *cluster_sizes, int fade, int max_cluster_size, int i, int nx, int k, int nz)
+/* set color of cell */
+{
+    double rgb[3];
+    
+    compute_cell_color(cell, cluster_sizes, fade, max_cluster_size, i, nx, k, nz, rgb);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+}
 
 double plot_coord(double x, double xmin, double xmax)
 {
@@ -598,15 +660,18 @@ void draw_size_plot(double plot_cluster_size[NSTEPS], int i, double pcrit)
     sprintf(message, "p");
     write_text_fixedwidth(pos[0], pos[1], message);
     
-    xy_to_pos(plotxmax - 0.015, plotymin - 0.06, pos);
-    sprintf(message, "1");
-    write_text_fixedwidth(pos[0], pos[1], message);
-    
     xy_to_pos(x - 0.02, plotymin - 0.04, pos);
     sprintf(message, "pc");
     write_text_fixedwidth(pos[0], pos[1], message);
     
-    xy_to_pos(plotxmin + 0.02, plotymax + 0.05, pos);
+    hsl_to_rgb_palette(HUE_GRAPH_SIZE, 0.9, 0.5, rgb, COLOR_PALETTE);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    
+    xy_to_pos(plotxmax - 0.015, plotymin - 0.06, pos);
+    sprintf(message, "1");
+    write_text_fixedwidth(pos[0], pos[1], message);
+    
+    xy_to_pos(plotxmin + 0.02, plotymax + 0.1, pos);
     sprintf(message, "nflooded/nopen");
     write_text_fixedwidth(pos[0], pos[1], message);
     
@@ -615,8 +680,6 @@ void draw_size_plot(double plot_cluster_size[NSTEPS], int i, double pcrit)
     write_text_fixedwidth(pos[0], pos[1], message);
     
     /* plot */
-    hsl_to_rgb_palette(HUE_GRAPH, 0.9, 0.5, rgb, COLOR_PALETTE);
-    glColor3f(rgb[0], rgb[1], rgb[2]);
     x1 = plotxmin;
     y1 = plotymin;
     for (j=0; j<i; j++)
@@ -679,12 +742,15 @@ void draw_cluster_number_plot(int plot_cluster_number[NSTEPS], int max_number, i
     sprintf(message, "p");
     write_text_fixedwidth(pos[0], pos[1], message);
     
-    xy_to_pos(plotxmax - 0.015, plotymin - 0.06, pos);
-    sprintf(message, "1");
-    write_text_fixedwidth(pos[0], pos[1], message);
-    
     xy_to_pos(x - 0.02, plotymin - 0.04, pos);
     sprintf(message, "pc");
+    write_text_fixedwidth(pos[0], pos[1], message);
+    
+    hsl_to_rgb_palette(HUE_GRAPH_CLUSTERS, 0.9, 0.5, rgb, COLOR_PALETTE);
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    
+    xy_to_pos(plotxmax - 0.015, plotymin - 0.06, pos);
+    sprintf(message, "1");
     write_text_fixedwidth(pos[0], pos[1], message);
     
     xy_to_pos(plotxmin + 0.02, plotymax + 0.05, pos);
@@ -696,8 +762,6 @@ void draw_cluster_number_plot(int plot_cluster_number[NSTEPS], int max_number, i
     write_text_fixedwidth(pos[0], pos[1], message);
     
     /* plot */
-    hsl_to_rgb_palette(HUE_GRAPH, 0.9, 0.5, rgb, COLOR_PALETTE);
-    glColor3f(rgb[0], rgb[1], rgb[2]);
     x1 = plotxmin;
     y1 = plotymin;
     for (j=0; j<i; j++)
@@ -719,7 +783,7 @@ void draw_cluster_histogram(int ncells, int *cluster_sizes, int maxclustersize, 
     static int maxbins = HISTO_BINS;
     char message[100];
     static double xmin, xmax, ymin, ymax, xmid, ymid, dx, dy, plotxmin, plotxmax, plotymin, plotymax, x, y;
-    double pos[2], x1, y1, x2, y2, hue, delta;
+    double pos[2], x1, y1, x2, y2, hue, delta, logfactor = 5.0, logbinwidth;
     static int first = 1;
     
     if (first)
@@ -756,12 +820,25 @@ void draw_cluster_histogram(int ncells, int *cluster_sizes, int maxclustersize, 
     
 //         binwidth = maxclustersize/nbins;
 //         if (binwidth == 0) binwidth = 1;
-        binwidth = maxclustersize/nbins + 1;
+        if (HISTO_X_LOG_SCALE) logbinwidth = log(logfactor*(double)maxclustersize)/nbins;
+        else binwidth = maxclustersize/nbins + 1;
+        
+        if (binwidth < 1) binwidth = 1;
+        if (logbinwidth < 0.2) logbinwidth = 0.2;
     
+        printf("max cluster size = %i, binwidth = %i\n", maxclustersize, binwidth);
+        
         /* compute histogram */
         for (i=CLUSTER_SHIFT; i<maxclusterlabel; i++) if (cluster_sizes[i] > 0)
         {
-            bin = (cluster_sizes[i]-1)/binwidth;
+            if (HISTO_X_LOG_SCALE) 
+            {
+                bin = (int)(log(logfactor*(double)cluster_sizes[i])/logbinwidth) - 1;
+                if (bin >= nbins) bin = nbins - 1;
+                else if (bin < 0) bin = 0;
+            }
+            else bin = (cluster_sizes[i]-1)/binwidth;
+//             printf("cluster size = %i, bin = %i\n", cluster_sizes[i], bin);
             histo[bin]++;
         }
         for (bin=0; bin<maxbins; bin++) if (histo[bin] > maxheight) maxheight = histo[bin];
@@ -772,20 +849,25 @@ void draw_cluster_histogram(int ncells, int *cluster_sizes, int maxclustersize, 
     
         x1 = plotxmin;
         y1 = plotymin;
-        max_x_axis = maxclustersize;
+        if (HISTO_X_LOG_SCALE) max_x_axis = log((double)maxclustersize); 
+        else max_x_axis = maxclustersize;
         if (max_x_axis < HISTO_BINS) max_x_axis = HISTO_BINS;
         
         for (bin=0; bin < nbins; bin++)
         {
-            csize = bin*binwidth + binwidth/2;
+//             csize = bin*binwidth + binwidth/2;
+            if (HISTO_X_LOG_SCALE) csize = (int)(exp((double)bin*logbinwidth)/logfactor);
+            else csize = bin*binwidth;
+            if (csize >= ncells) csize = ncells-1;
             hue = size_ratio_color(csize, ncells);
             
-            x2 = plot_coord((double)((bin+1)*binwidth)/(double)(max_x_axis+1), plotxmin, plotxmax);
+            x2 = plot_coord((double)((bin+1)*binwidth)/(double)(max_x_axis), plotxmin, plotxmax);
 //             x2 = plot_coord((double)(bin+1)/(double)nbins, plotxmin, plotxmax);
             
             y = log((double)(histo[bin]+1))/log((double)(maxheight+1));
             y2 = plot_coord(y, plotymin, plotymax);
         
+//             printf("x1 = %.2f, x2 %.2f\n", x1, x2);
             draw_colored_rectangle(x1, y1, x2, y2, hue);
             x1 = x2;
         }
@@ -808,33 +890,54 @@ void draw_cluster_histogram(int ncells, int *cluster_sizes, int maxclustersize, 
         }
     
         /* graduation of x axis */
-        x = log((double)(max_x_axis+1))/log(10.0);
-        n = ipowi(10, (int)x);
-        y = (double)n/10.0;
-
-        delta = plot_coord((double)n/((double)(max_x_axis+1)), plotxmin, plotxmax) - plotxmin;
-        if (delta > 0.13 + 0.01*x) di = 1;
-        else if (delta > 0.08 + 0.01*x) di = 2;
-        else di = 5;
-        for (i=di; i<10; i+=di)
+        if (HISTO_X_LOG_SCALE)
         {
-            x1 = plot_coord(y*(double)i*10.0/(double)(max_x_axis+1), plotxmin, plotxmax);
-            if (i*n < max_x_axis*11/10)
+            y = log(logfactor*(double)(maxclustersize+1))/log(10.0);
+            printf("y = %.3lg\n", y);
+            for (i=1; i<(int)y + 1; i++)
             {
-                sprintf(message, "%i", i*n);
-                xy_to_pos(x1 + 0.005 - 0.012*x, plotymin - 0.07, pos);
+                n = ipowi(10, i);
+                x = log((double)(n+1))/(log(logfactor*(double)(maxclustersize+1)));
+//                 printf("n = %i, x = %.3lg\n", n, x);
+                x1 = plot_coord(x, plotxmin, plotxmax);
+                xy_to_pos(x1, plotymin - 0.1, pos);
+                draw_line(x1, plotymin - 0.02, x1, plotymin + 0.02);
+                if (n <= 1000) sprintf(message, "%i", n); 
+                else sprintf(message, "1e%i", i);
+                xy_to_pos(x1 - 0.015, plotymin - 0.05, pos);
                 write_text_fixedwidth(pos[0], pos[1], message);
             }
         }
-        
-        delta = plot_coord((double)n/(10.0*(double)(max_x_axis+1)), plotxmin, plotxmax) - plotxmin;
-        for (i=0; i<100; i++) if (i*n < 11*max_x_axis)
+        else
         {
-            y = (double)(i*n)/10.0;
-            x1 = plot_coord(y/(double)(max_x_axis+1), plotxmin, plotxmax);
-            xy_to_pos(x1, plotymin , pos);
-            if (i%10 == 0) draw_line(x1, plotymin - 0.02, x1, plotymin + 0.02);
-            else if (delta > 0.02) draw_line(x1, plotymin - 0.01, x1, plotymin + 0.01);
+            x = log((double)(max_x_axis+1))/log(10.0);
+            n = ipowi(10, (int)x);
+            y = (double)n/10.0;
+
+            delta = plot_coord((double)n/((double)(max_x_axis+1)), plotxmin, plotxmax) - plotxmin;
+            if (delta > 0.13 + 0.01*x) di = 1;
+            else if (delta > 0.08 + 0.01*x) di = 2;
+            else di = 5;
+            for (i=di; i<10; i+=di)
+            {
+                x1 = plot_coord(y*(double)i*10.0/(double)(max_x_axis+1), plotxmin, plotxmax);
+                if (i*n < max_x_axis*11/10)
+                {
+                    sprintf(message, "%i", i*n);
+                    xy_to_pos(x1 + 0.005 - 0.012*x, plotymin - 0.07, pos);
+                    write_text_fixedwidth(pos[0], pos[1], message);
+                }
+            }
+        
+            delta = plot_coord((double)n/(10.0*(double)(max_x_axis+1)), plotxmin, plotxmax) - plotxmin;
+            for (i=0; i<100; i++) if (i*n < 11*max_x_axis)
+            {
+                y = (double)(i*n)/10.0;
+                x1 = plot_coord(y/(double)(max_x_axis+1), plotxmin, plotxmax);
+                xy_to_pos(x1, plotymin , pos);
+                if (i%10 == 0) draw_line(x1, plotymin - 0.02, x1, plotymin + 0.02);
+                else if (delta > 0.02) draw_line(x1, plotymin - 0.01, x1, plotymin + 0.01);
+            }
         }
         
         /* for debugging */
@@ -1010,12 +1113,33 @@ void test_neighbours(int start, t_perco *cell, int nx, int ny, int size, int nce
 }   
 
 
+void draw_cube_ijk(int i, int j, int k, t_perco *cell, int *cluster_sizes, int nx, int ny, int nz, int size, int max_cluster_size)
+/* draw one cube of 3d configuration */
+{
+    double dx, x, y, z, rgb[3];
+    
+    dx = 1.0/(double)nx;
+    
+    compute_cell_color(cell[k*nx*ny+j*nx+i], cluster_sizes, 0, max_cluster_size, i, nx, k, nz, rgb);
+                        
+    x = (double)i*dx - 0.5;
+    y = (double)j*dx - 0.5;
+    z = (double)k*dx - 0.5;
+    draw_cube(x, y, z, dx, rgb);
+}
+ 
+int plot_cube(t_perco cell)
+/* returns 1 if cube is plotted */
+{
+    if (PLOT_ONLY_FLOODED_CELLS) return(cell.flooded);
+    else return(cell.open);
+}
 
-void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, int ny, int size, int max_cluster_size)
+void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, int ny, int nz, int size, int max_cluster_size)
 /* draw the configuration */
 {
-    int i, j, ishift, k, n;
-    double rgb[3], x, y, alpha, r, fade = 0, dsize, radius, x2, y2;
+    int i, j, ishift, k, n, sector;
+    double rgb[3], x, y, z, alpha, r, fade = 0, dsize, radius, x2, y2, dx, dy, dz, observer_angle;
     static double h, h1;
     static int first = 1;
     
@@ -1034,7 +1158,7 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, i
                     if ((ADD_PLOT)&&(in_plot_box((double)(i+1)*dsize, (double)(j)*dsize))) fade = 1;
                     else fade = 0;
                     
-                    set_cell_color(cell[i*ny+j], cluster_sizes, fade, max_cluster_size);
+                    set_cell_color(cell[i*ny+j], cluster_sizes, fade, max_cluster_size, 0, 1, 0, 1);
             
                     glVertex2i(i*size, j*size);
                     glVertex2i((i+1)*size, j*size);
@@ -1070,7 +1194,7 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, i
                     if ((ADD_PLOT)&&(in_plot_box((double)(i+1)*dsize, (double)(j)*dsize))) fade = 1;
                     else fade = 0;
                     
-                    set_cell_color(cell[i+nx*j], cluster_sizes, fade, max_cluster_size);
+                    set_cell_color(cell[i+nx*j], cluster_sizes, fade, max_cluster_size, 0, 1, 0, 1);
                     
                     glVertex2i(i*size, j*size);
                     glVertex2i((i+1)*size, j*size);
@@ -1083,7 +1207,7 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, i
                     if ((ADD_PLOT)&&(in_plot_box((double)(i+1)*dsize, (double)(j+1)*dsize))) fade = 1;
                     else fade = 0;
                     
-                    set_cell_color(cell[ishift+ny*i+j], cluster_sizes, fade, max_cluster_size);
+                    set_cell_color(cell[ishift+ny*i+j], cluster_sizes, fade, max_cluster_size, 0, 1, 0, 1);
                     
                     glVertex2i(i*size, j*size);
                     glVertex2i(i*size, (j+1)*size);
@@ -1115,7 +1239,7 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, i
                     if ((ADD_PLOT)&&(in_plot_box(x, y))) fade = 1;
                     else fade = 0;
                     
-                    set_cell_color(cell[j*nx+i], cluster_sizes, fade, max_cluster_size);
+                    set_cell_color(cell[j*nx+i], cluster_sizes, fade, max_cluster_size, 0, 1, 0, 1);
                     
                     glBegin(GL_TRIANGLE_FAN);
                     
@@ -1165,7 +1289,7 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, i
                     /* vertical bonds */
                     if (j<ny-1)
                     {
-                        set_cell_color(cell[i+nx*j], cluster_sizes, fade, max_cluster_size);
+                        set_cell_color(cell[i+nx*j], cluster_sizes, fade, max_cluster_size, 0, 1, 0, 1);
                     
                         glVertex2d(x-0.5*dsize, y+0.5*r);
                         glVertex2d(x-0.5*dsize, y-0.5*r);
@@ -1175,7 +1299,7 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, i
                     else fade = 0;
                     
                     /* NW-SE bonds */
-                    set_cell_color(cell[2*ishift + i+nx*j], cluster_sizes, fade, max_cluster_size);
+                    set_cell_color(cell[2*ishift + i+nx*j], cluster_sizes, fade, max_cluster_size, 0, 1, 0, 1);
                     
                     glVertex2d(x-0.5*dsize, y-0.5*r);
                     glVertex2d(x, y-r);
@@ -1184,7 +1308,7 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, i
                     else fade = 0;
                     
                     /* NE-SW bonds */
-                    set_cell_color(cell[ishift + i+nx*j], cluster_sizes, fade, max_cluster_size);
+                    set_cell_color(cell[ishift + i+nx*j], cluster_sizes, fade, max_cluster_size, 0, 1, 0, 1);
                     
                     glVertex2d(x, y-r);
                     glVertex2d(x+0.5*dsize, y-0.5*r);
@@ -1217,7 +1341,7 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, i
                     if ((ADD_PLOT)&&(in_plot_box(x, y+0.5*h*dsize))) fade = 1;
                     else fade = 0;
                     
-                    set_cell_color(cell[2*j*nx+i], cluster_sizes, fade, max_cluster_size);
+                    set_cell_color(cell[2*j*nx+i], cluster_sizes, fade, max_cluster_size, 0, 1, 0, 1);
                     
                     glBegin(GL_TRIANGLES);
                     if ((i+j)%2 == 1)
@@ -1256,7 +1380,7 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, i
                 if ((ADD_PLOT)&&(in_plot_box_screencoord(x, y))) fade = 1;
                 else fade = 0;
                     
-                set_cell_color(cell[i], cluster_sizes, fade, max_cluster_size);
+                set_cell_color(cell[i], cluster_sizes, fade, max_cluster_size, 0, 1, 0, 1);
                 
                 for (k=0; k<cell[i].nneighb; k++)
                 {
@@ -1271,6 +1395,100 @@ void draw_configuration(t_perco *cell, int *cluster_sizes, int ncells, int nx, i
             }
             break;
         }
+        
+        case (PLOT_CUBES):  /* beta version */
+        {
+            blank();
+            
+//             glBegin(GL_QUADS);
+            
+            if (ADD_PLOT)
+            {
+                rgb[0] = 1.0; rgb[1] = 1.0; rgb[2] = 1.0;
+                erase_area_rgb(XMAX - 0.5, YMAX - 0.5, 0.5, 0.5, rgb);
+            }
+            
+            for (k=0; k<nz; k++) 
+            {
+//                 if (ROTATE_VIEW)
+                {
+                    observer_angle = argument(observer[0], observer[1]);
+//                     observer_angle += 0.1*PID;
+                    if (observer_angle < 0.0) observer_angle += DPI;
+                    sector = (int)(observer_angle*2.0/PID);
+//                     printf("Observer_angle = %.3lg\n", observer_angle*360.0/DPI); 
+                    
+                    switch (sector) {
+                        case (0):
+                        {
+                            for (i=0; i<nx; i++) 
+                                for (j=0; j<ny; j++) if (plot_cube(cell[k*nx*ny+j*nx+i]))
+                                    draw_cube_ijk(i, j, k, cell, cluster_sizes, nx, ny, nz, size, max_cluster_size);
+                            break;
+                        }
+                        case (1):
+                        {
+                            for (j=0; j<ny; j++) 
+                                for (i=0; i<nx; i++) if (plot_cube(cell[k*nx*ny+j*nx+i]))
+                                    draw_cube_ijk(i, j, k, cell, cluster_sizes, nx, ny, nz, size, max_cluster_size);
+                            break;
+                        }
+                        case (2):
+                        {
+                            for (j=0; j<ny; j++) 
+                                for (i=nx-1; i>=0; i--) if (plot_cube(cell[k*nx*ny+j*nx+i]))
+                                    draw_cube_ijk(i, j, k, cell, cluster_sizes, nx, ny, nz, size, max_cluster_size);
+                            break;
+                        }
+                        case (3):
+                        {
+                            for (i=nx-1; i>= 0; i--) 
+                                for (j=0; j<ny; j++) if (plot_cube(cell[k*nx*ny+j*nx+i]))
+                                    draw_cube_ijk(i, j, k, cell, cluster_sizes, nx, ny, nz, size, max_cluster_size);
+                            break;
+                        }
+                        case (4):
+                        {
+                            for (i=nx-1; i>= 0; i--) 
+                                for (j=ny-1; j>=0; j--) if (plot_cube(cell[k*nx*ny+j*nx+i]))
+                                    draw_cube_ijk(i, j, k, cell, cluster_sizes, nx, ny, nz, size, max_cluster_size);
+                            break;
+                        }
+                        case (5):
+                        {
+                            for (j=ny-1; j>=0; j--) 
+                                for (i=nx-1; i>=0; i--) if (plot_cube(cell[k*nx*ny+j*nx+i]))
+                                    draw_cube_ijk(i, j, k, cell, cluster_sizes, nx, ny, nz, size, max_cluster_size);
+                            break;
+                        }
+                        case (6):
+                        {
+                            for (j=ny-1; j>=0; j--) 
+                                for (i=0; i<nx; i++) if (plot_cube(cell[k*nx*ny+j*nx+i]))
+                                    draw_cube_ijk(i, j, k, cell, cluster_sizes, nx, ny, nz, size, max_cluster_size);
+                            break;
+                        }
+                        case (7):
+                        {
+                            for (i=0; i<nx; i++)  
+                                for (j=ny-1; j>=0; j--) if (plot_cube(cell[k*nx*ny+j*nx+i]))
+                                    draw_cube_ijk(i, j, k, cell, cluster_sizes, nx, ny, nz, size, max_cluster_size);
+                            break;
+                        }
+                    }
+                }
+//                 else
+//                 {
+//                     for (i=0; i < nx; i++)
+//                         for (j=0; j<ny; j++) if (plot_cube(cell[k*nx*ny+j*nx+i]))
+//                             draw_cube_ijk(i, j, k, cell, cluster_sizes, nx, ny, nz, size, max_cluster_size);
+//                 }
+                
+            }
+            break;
+        }
+        
+        
     }
 }
 
@@ -1434,7 +1652,7 @@ int generate_poisson_discs(t_perco *cell, double dpoisson, int nmaxcells)
 }
 
 
-int cell_number(int nx, int ny)
+int cell_number(int nx, int ny, int nz)
 /* total number of cells in graph */
 {
     switch (LATTICE) {
@@ -1446,11 +1664,12 @@ int cell_number(int nx, int ny)
         /* hex lattice requires more vertical space! */
         case (BC_TRIANGLE_SITE_DIRICHLET): return((int)((double)(2*nx*ny)*2.0/sqrt(3.0))); /* triangle lattice requires more vertical space! */
         case (BC_POISSON_DISC): return(nx*ny);   /* TO IMPROVE */
+        case (BC_CUBIC_DIRICHLET): return(nx*ny*nz);
     }
 }
 
 
-void compute_nxny(int size, int *nx, int *ny)
+void compute_nxnynz(int size, int *nx, int *ny, int *nz)
 /* compute the number of rows and columns depending on lattice */
 {
     switch (LATTICE) {
@@ -1458,18 +1677,21 @@ void compute_nxny(int size, int *nx, int *ny)
         {
             *nx = NX/size - 1;
             *ny = (int)((double)NY*2.0/((double)size*sqrt(3.0)));
+            *nz = 1;
             break;
         }
         case (BC_HEX_BOND_DIRICHLET):
         {
             *nx = NX/size + 1;
             *ny = (int)((double)NY*2.0/((double)size*sqrt(3.0))) + 1;
+            *nz = 1;
             break;
         }
         case (BC_TRIANGLE_SITE_DIRICHLET):
         {
             *nx = NX/size - 1;
             *ny = (int)((double)NY*2.0/((double)size*sqrt(3.0))) + 1;
+            *nz = 1;
             break;
         }
         case (BC_POISSON_DISC):
@@ -1477,18 +1699,27 @@ void compute_nxny(int size, int *nx, int *ny)
             /* for Poisson disc configuration, use a 1d labelling */
             *nx = NX*NY/(size*size);
             *ny = 1;
+            *nz = 1;
+            break;
+        }
+        case (BC_CUBIC_DIRICHLET):
+        {
+            *nx = NX/size;
+            *ny = NY/size;
+            *nz = NZ/size;
             break;
         }
         default:
         {
             *nx = NX/size;
             *ny = NY/size;
+            *nz = 1;
         }
     }
     
 }
 
-int init_cell_lattice(t_perco *cell, int nx, int ny)
+int init_cell_lattice(t_perco *cell, int nx, int ny, int nz)
 /* initialize the graph of connected cells - returns the number of cells */
 {
     int i, j, k, iplus, iminus, ishift, n;
@@ -2285,6 +2516,238 @@ int init_cell_lattice(t_perco *cell, int nx, int ny)
             return(ncells);
             break;
         }
+        case (BC_CUBIC_DIRICHLET):
+        {
+            /* neighbours in the bulk */
+            #pragma omp parallel for private(i,j,k)
+            for (i=1; i<nx-1; i++){
+                for (j=1; j<ny-1; j++){
+                    for (k=1; k<nz-1; k++){
+                        n = cellnb_3d(i, j, k, 0, nx, ny, nz);
+                        cell[n].nneighb = 6;
+                        cell[n].nghb[0] = cellnb_3d(i+1, j, k, 0, nx, ny, nz);
+                        cell[n].nghb[1] = cellnb_3d(i-1, j, k, 0, nx, ny, nz);
+                        cell[n].nghb[2] = cellnb_3d(i, j+1, k, 0, nx, ny, nz);
+                        cell[n].nghb[3] = cellnb_3d(i, j-1, k, 0, nx, ny, nz);
+                        cell[n].nghb[4] = cellnb_3d(i, j, k+1, 0, nx, ny, nz);
+                        cell[n].nghb[5] = cellnb_3d(i, j, k-1, 0, nx, ny, nz);
+                    }
+                }
+            }
+            
+            /* back and front face */
+            #pragma omp parallel for private(j,k)
+            for (j=1; j<ny-1; j++){
+                for (k=1; k<nz-1; k++){
+                    n = cellnb_3d(0, j, k, 0, nx, ny, nz);
+                    cell[n].nneighb = 5;
+                    cell[n].nghb[0] = cellnb_3d(0, j+1, k, 0, nx, ny, nz);
+                    cell[n].nghb[1] = cellnb_3d(0, j-1, k, 0, nx, ny, nz);
+                    cell[n].nghb[2] = cellnb_3d(0, j, k+1, 0, nx, ny, nz);
+                    cell[n].nghb[3] = cellnb_3d(0, j, k-1, 0, nx, ny, nz);
+                    cell[n].nghb[4] = cellnb_3d(1, j, k, 0, nx, ny, nz);
+                    
+                    n = cellnb_3d(nx-1, j, k, 0, nx, ny, nz);
+                    cell[n].nneighb = 5;
+                    cell[n].nghb[0] = cellnb_3d(nx-1, j+1, k, 0, nx, ny, nz);
+                    cell[n].nghb[1] = cellnb_3d(nx-1, j-1, k, 0, nx, ny, nz);
+                    cell[n].nghb[2] = cellnb_3d(nx-1, j, k+1, 0, nx, ny, nz);
+                    cell[n].nghb[3] = cellnb_3d(nx-1, j, k-1, 0, nx, ny, nz);
+                    cell[n].nghb[4] = cellnb_3d(nx-2, j, k, 0, nx, ny, nz);
+                }
+            }
+            
+            /* left and right face */
+            #pragma omp parallel for private(i,k)
+            for (i=1; i<nx-1; i++){
+                for (k=1; k<nz-1; k++){
+                    n = cellnb_3d(i, 0, k, 0, nx, ny, nz);
+                    cell[n].nneighb = 5;
+                    cell[n].nghb[0] = cellnb_3d(i+1, 0, k, 0, nx, ny, nz);
+                    cell[n].nghb[1] = cellnb_3d(i-1, 0, k, 0, nx, ny, nz);
+                    cell[n].nghb[2] = cellnb_3d(i, 0, k+1, 0, nx, ny, nz);
+                    cell[n].nghb[3] = cellnb_3d(i, 0, k-1, 0, nx, ny, nz);
+                    cell[n].nghb[4] = cellnb_3d(i, 1, k, 0, nx, ny, nz);
+                    
+                    n = cellnb_3d(i, ny-1, k, 0, nx, ny, nz);
+                    cell[n].nneighb = 5;
+                    cell[n].nghb[0] = cellnb_3d(i+1, ny-1, k, 0, nx, ny, nz);
+                    cell[n].nghb[1] = cellnb_3d(i-1, ny-1, k, 0, nx, ny, nz);
+                    cell[n].nghb[2] = cellnb_3d(i, ny-1, k+1, 0, nx, ny, nz);
+                    cell[n].nghb[3] = cellnb_3d(i, ny-1, k-1, 0, nx, ny, nz);
+                    cell[n].nghb[4] = cellnb_3d(i, ny-2, k, 0, nx, ny, nz);
+                }
+            }
+            
+            /* lower and upper face */
+            #pragma omp parallel for private(i,j)
+            for (i=1; i<nx-1; i++){
+                for (j=1; j<ny-1; j++){
+                    n = cellnb_3d(i, j, 0, 0, nx, ny, nz);
+                    cell[n].nneighb = 5;
+                    cell[n].nghb[0] = cellnb_3d(i+1, j, 0, 0, nx, ny, nz);
+                    cell[n].nghb[1] = cellnb_3d(i-1, j, 0, 0, nx, ny, nz);
+                    cell[n].nghb[2] = cellnb_3d(i, j+1, 0, 0, nx, ny, nz);
+                    cell[n].nghb[3] = cellnb_3d(i, j-1, 0, 0, nx, ny, nz);
+                    cell[n].nghb[4] = cellnb_3d(i, j, 1, 0, nx, ny, nz);
+                    
+                    n = cellnb_3d(i, j, nz-1, 0, nx, ny, nz);
+                    cell[n].nneighb = 5;
+                    cell[n].nghb[0] = cellnb_3d(i+1, j, nz-1, 0, nx, ny, nz);
+                    cell[n].nghb[1] = cellnb_3d(i-1, j, nz-1, 0, nx, ny, nz);
+                    cell[n].nghb[2] = cellnb_3d(i, j+1, nz-1, 0, nx, ny, nz);
+                    cell[n].nghb[3] = cellnb_3d(i, j-1, nz-1, 0, nx, ny, nz);
+                    cell[n].nghb[4] = cellnb_3d(i, j, nz-2, 0, nx, ny, nz);
+                }
+            }
+            
+            /* back to front edges */
+            #pragma omp parallel for private(i)
+            for (i=1; i<nx-1; i++){
+                n = cellnb_3d(i, 0, 0, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(i+1, 0, 0, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(i-1, 0, 0, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(i, 1, 0, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(i, 0, 1, 0, nx, ny, nz);
+                    
+                n = cellnb_3d(i, ny-1, 0, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(i+1, ny-1, 0, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(i-1, ny-1, 0, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(i, ny-2, 0, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(i, ny-1, 1, 0, nx, ny, nz);
+                    
+                n = cellnb_3d(i, 0, nz-1, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(i+1, 0, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(i-1, 0, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(i, 1, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(i, 0, nz-2, 0, nx, ny, nz);
+                    
+                n = cellnb_3d(i, ny-1, nz-1, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(i+1, ny-1, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(i-1, ny-1, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(i, ny-2, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(i, ny-1, nz-2, 0, nx, ny, nz);
+            }
+            
+            /* left to right edges */
+            #pragma omp parallel for private(j)
+            for (j=1; j<ny-1; j++){
+                n = cellnb_3d(0, j, 0, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(0, j+1, 0, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(0, j-1, 0, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(1, j, 0, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(0, j, 1, 0, nx, ny, nz);
+                    
+                n = cellnb_3d(nx-1, j, 0, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(nx-1, j+1, 0, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(nx-1, j-1, 0, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(nx-2, j, 0, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(nx-1, j, 1, 0, nx, ny, nz);
+                    
+                n = cellnb_3d(0, j, nz-1, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(0, j+1, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(0, j-1, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(1, j, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(0, j, nz-2, 0, nx, ny, nz);
+                    
+                n = cellnb_3d(nx-1, j, nz-1, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(nx-1, j+1, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(nx-1, j-1, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(nx-2, j, nz-1, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(nx-1, j, nz-2, 0, nx, ny, nz);
+            }
+            
+            /* top to bottom edges */
+            #pragma omp parallel for private(k)
+            for (k=1; k<nz-1; k++){
+                n = cellnb_3d(0, 0, k, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(0, 0, k+1, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(0, 0, k-1, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(1, 0, k, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(0, 1, k, 0, nx, ny, nz);
+                    
+                n = cellnb_3d(nx-1, 0, k, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(nx-1, 0, k+1, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(nx-1, 0, k-1, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(nx-2, 0, k, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(nx-1, 1, k, 0, nx, ny, nz);
+                    
+                n = cellnb_3d(0, ny-1, k, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(0, ny-1, k+1, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(0, ny-1, k-1, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(1, ny-1, k, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(0, ny-2, k, 0, nx, ny, nz);
+                   
+                n = cellnb_3d(nx-1, ny-1, k, 0, nx, ny, nz);
+                cell[n].nneighb = 4;
+                cell[n].nghb[0] = cellnb_3d(nx-1, ny-1, k+1, 0, nx, ny, nz);
+                cell[n].nghb[1] = cellnb_3d(nx-1, ny-1, k-1, 0, nx, ny, nz);
+                cell[n].nghb[2] = cellnb_3d(nx-2, ny-1, k, 0, nx, ny, nz);
+                cell[n].nghb[3] = cellnb_3d(nx-1, ny-2, k, 0, nx, ny, nz);
+            }
+            
+            /* corners */
+            n = cellnb_3d(0, 0, 0, 0, nx, ny, nz);
+            cell[n].nneighb = 3;
+            cell[n].nghb[0] = cellnb_3d(1, 0, 0, 0, nx, ny, nz);
+            cell[n].nghb[1] = cellnb_3d(0, 1, 0, 0, nx, ny, nz);
+            cell[n].nghb[2] = cellnb_3d(0, 0, 1, 0, nx, ny, nz);
+            
+            n = cellnb_3d(nx-1, 0, 0, 0, nx, ny, nz);
+            cell[n].nneighb = 3;
+            cell[n].nghb[0] = cellnb_3d(nx-2, 0, 0, 0, nx, ny, nz);
+            cell[n].nghb[1] = cellnb_3d(nx-1, 1, 0, 0, nx, ny, nz);
+            cell[n].nghb[2] = cellnb_3d(nx-1, 0, 1, 0, nx, ny, nz);
+            
+            n = cellnb_3d(0, ny-1, 0, 0, nx, ny, nz);
+            cell[n].nneighb = 3;
+            cell[n].nghb[0] = cellnb_3d(1, ny-1, 0, 0, nx, ny, nz);
+            cell[n].nghb[1] = cellnb_3d(0, ny-2, 0, 0, nx, ny, nz);
+            cell[n].nghb[2] = cellnb_3d(0, ny-1, 1, 0, nx, ny, nz);
+            
+            n = cellnb_3d(nx-1, ny-1, 0, 0, nx, ny, nz);
+            cell[n].nneighb = 3;
+            cell[n].nghb[0] = cellnb_3d(nx-2, ny-1, 0, 0, nx, ny, nz);
+            cell[n].nghb[1] = cellnb_3d(nx-1, ny-2, 0, 0, nx, ny, nz);
+            cell[n].nghb[2] = cellnb_3d(nx-1, ny-1, 1, 0, nx, ny, nz);
+            
+            n = cellnb_3d(0, 0, nz-1, 0, nx, ny, nz);
+            cell[n].nneighb = 3;
+            cell[n].nghb[0] = cellnb_3d(1, 0, nz-1, 0, nx, ny, nz);
+            cell[n].nghb[1] = cellnb_3d(0, 1, nz-1, 0, nx, ny, nz);
+            cell[n].nghb[2] = cellnb_3d(0, 0, nz-2, 0, nx, ny, nz);
+            
+            n = cellnb_3d(nx-1, 0, nz-1, 0, nx, ny, nz);
+            cell[n].nneighb = 3;
+            cell[n].nghb[0] = cellnb_3d(nx-2, 0, nz-1, 0, nx, ny, nz);
+            cell[n].nghb[1] = cellnb_3d(nx-1, 1, nz-1, 0, nx, ny, nz);
+            cell[n].nghb[2] = cellnb_3d(nx-1, 0, nz-2, 0, nx, ny, nz);
+            
+            n = cellnb_3d(0, ny-1, nz-1, 0, nx, ny, nz);
+            cell[n].nneighb = 3;
+            cell[n].nghb[0] = cellnb_3d(1, ny-1, nz-1, 0, nx, ny, nz);
+            cell[n].nghb[1] = cellnb_3d(0, ny-2, nz-1, 0, nx, ny, nz);
+            cell[n].nghb[2] = cellnb_3d(0, ny-1, nz-2, 0, nx, ny, nz);
+            
+            n = cellnb_3d(nx-1, ny-1, nz-1, 0, nx, ny, nz);
+            cell[n].nneighb = 3;
+            cell[n].nghb[0] = cellnb_3d(nx-2, ny-1, nz-1, 0, nx, ny, nz);
+            cell[n].nghb[1] = cellnb_3d(nx-1, ny-2, nz-1, 0, nx, ny, nz);
+            cell[n].nghb[2] = cellnb_3d(nx-1, ny-1, nz-2, 0, nx, ny, nz);
+                        
+            return(nx*ny*nz);
+        }
     }
     printf("Done\n");
 }
@@ -2335,10 +2798,10 @@ void init_cell_state(t_perco *cell, double p, int ncells, int first)
     printf("Done\n");
 }
 
-int init_flooded_cells(t_perco *cell, int ncells, int nx, int ny, t_perco* *pstack)
+int init_flooded_cells(t_perco *cell, int ncells, int nx, int ny, int nz, int bottom, t_perco* *pstack)
 /* make the left row of cells flooded, returns number of flooded cells */
 {
-    int j, n, ishift;
+    int i, j, k, n, ishift, c;
     double pdisc_prop;
     
 //     printf("Initializing flooded cells ...");
@@ -2434,13 +2897,49 @@ int init_flooded_cells(t_perco *cell, int ncells, int nx, int ny, t_perco* *psta
             printf("Flooded %i cells\n", n);
             return(n);
         }
+        case (PLOT_CUBES): 
+        {
+            if (bottom)
+            {
+                #pragma omp parallel for private(i, j)
+                for (i=0; i<nx; i++)
+                    for (j=0; j<ny; j++)
+                    {
+                        c = cellnb_3d(i, j, 0, 0, nx, ny, nz);
+                        cell[c].open = 1;
+                        cell[c].flooded = 1;
+                        cell[c].cluster = 1;
+                        cell[c].previous_cluster = 1;
+                        cell[c].active = 1;
+                        pstack[j*nx+i] = &cell[c];
+                    }
+                return(nx*ny);                
+            }
+            else
+            {
+                #pragma omp parallel for private(j,k)
+                for (j=0; j<ny; j++)
+                    for (k=0; k<nz; k++)
+                    {
+                        c = cellnb_3d(0, j, k, 0, nx, ny, nz);
+                        cell[c].open = 1;
+                        cell[c].flooded = 1;
+                        cell[c].cluster = 1;
+                        cell[c].previous_cluster = 1;
+                        cell[c].active = 1;
+                        pstack[j*nz+k] = &cell[c];
+                    }
+                return(ny*nz);
+            }
+        }
+        
     }
 //     printf("Done\n");
 }
 
 
 int count_open_cells(t_perco *cell, int ncells)
-/* count the number of active cells */
+/* count the number of open cells */
 {
     int n = 0, i, delta_i;
     
@@ -2454,7 +2953,7 @@ int count_open_cells(t_perco *cell, int ncells)
 }
 
 int count_flooded_cells(t_perco *cell, int ncells)
-/* count the number of active cells */
+/* count the number of flooded cells */
 {
     int n = 0, i;
     

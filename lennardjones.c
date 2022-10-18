@@ -49,36 +49,48 @@
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
-#define YMIN -1.125
-#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+// #define XMIN -2.3
+// #define XMAX 3.7	/* x interval */
+// #define YMIN -1.6875
+// #define YMAX 1.6875	/* y interval for 9/16 aspect ratio */
 
-#define INITXMIN -2.0
-#define INITXMAX -0.04	/* x interval for initial condition */
-#define INITYMIN -1.125
-#define INITYMAX 0.65	/* y interval for initial condition */
+#define XMIN -3.3
+#define XMAX 4.7	/* x interval */
+#define YMIN -2.25
+#define YMAX 2.25	/* y interval for 9/16 aspect ratio */
 
-#define BCXMIN -2.05
-#define BCXMAX 2.0	/* x interval for boundary condition */
-#define BCYMIN -1.125
-#define BCYMAX 1.25	/* y interval for boundary condition */
+#define INITXMIN -2.5
+#define INITXMAX 2.5	/* x interval for initial condition */
+#define INITYMIN -1.7
+#define INITYMAX 0.7	/* y interval for initial condition */
+
+// #define BCXMIN -3.1
+// #define BCXMAX 3.1	/* x interval for boundary condition */
+// #define BCYMIN -4.5
+// #define BCYMAX 4.5	/* y interval for boundary condition */
+
+#define BCXMIN -5.1
+#define BCXMAX 6.1	/* x interval for boundary condition */
+#define BCYMIN -6.5
+#define BCYMAX 44.0	/* y interval for boundary condition */
 
 #define OBSXMIN -2.0
 #define OBSXMAX 2.0     /* x interval for motion of obstacle */
 
-#define CIRCLE_PATTERN 1   /* pattern of circles, see list in global_ljones.c */
+#define CIRCLE_PATTERN 8   /* pattern of circles, see list in global_ljones.c */
 
 #define ADD_FIXED_OBSTACLES 0   /* set to 1 do add fixed circular obstacles */
 #define OBSTACLE_PATTERN 3  /* pattern of obstacles, see list in global_ljones.c */
 
 #define ADD_FIXED_SEGMENTS 1    /* set to 1 to add fixed segments as obstacles */
-#define SEGMENT_PATTERN 14   /* pattern of repelling segments, see list in global_ljones.c */
+#define SEGMENT_PATTERN 102     /* pattern of repelling segments, see list in global_ljones.c */
+#define ROCKET_SHAPE 2        /* shape of rocket combustion chamber, see list in global_ljones.c */
+#define ROCKET_SHAPE_B 2      /* shape of second rocket */
 #define NOZZLE_SHAPE 1        /* shape of nozzle, see list in global_ljones.c */
-#define NOZZLE_SHAPE_B 2      /* shape of nozzle for second rocket, see list in global_ljones.c */
+#define NOZZLE_SHAPE_B 0      /* shape of nozzle for second rocket, see list in global_ljones.c */
 
 #define TWO_TYPES 0         /* set to 1 to have two types of particles */
-#define TPYE_PROPORTION 0.7 /* proportion of particles of first type */
+#define TPYE_PROPORTION 0.5 /* proportion of particles of first type */
 #define SYMMETRIZE_FORCE 1  /* set to 1 to symmetrize two-particle interaction, only needed if particles are not all the same */
 #define CENTER_PX 0         /* set to 1 to center horizontal momentum */
 #define CENTER_PY 0         /* set to 1 to center vertical momentum */
@@ -91,12 +103,15 @@
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 100        /* number of points for Poisson C_RAND_POISSON arrangement */
-#define PDISC_DISTANCE 2.5  /* minimal distance in Poisson disc process, controls density of particles */
-#define PDISC_CANDIDATES 50 /* number of candidates in construction of Poisson disc process */
+#define PDISC_DISTANCE 2.7  /* minimal distance in Poisson disc process, controls density of particles */
+#define PDISC_CANDIDATES 100 /* number of candidates in construction of Poisson disc process */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 0.8	    /* parameter controlling the dimensions of domain */
-#define MU 0.0075  	    /* parameter controlling radius of particles */
+// #define MU 0.02  	    /* parameter controlling radius of particles */
+// #define MU 0.015  	    /* parameter controlling radius of particles */
+#define MU 0.009 	    /* parameter controlling radius of particles */
+// #define MU 0.012  	    /* parameter controlling radius of particles */
 #define MU_B 0.018          /* parameter controlling radius of particles of second type */
 #define NPOLY 25            /* number of sides of polygon */
 #define APOLY 0.666666666   /* angle by which to turn polygon, in units of Pi/2 */ 
@@ -119,11 +134,13 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 3500      /* number of frames of movie */
-#define NVID 60         /* number of iterations between images displayed on screen */
+#define NSTEPS 3300      /* number of frames of movie */
+// #define NSTEPS 2000      /* number of frames of movie */
+#define NVID 100         /* number of iterations between images displayed on screen */
 #define NSEG 250         /* number of segments of boundary */
-#define INITIAL_TIME 0     /* time after which to start saving frames */
-#define OBSTACLE_INITIAL_TIME 10     /* time after which to start moving obstacle */
+#define INITIAL_TIME 10     /* time after which to start saving frames */
+// #define OBSTACLE_INITIAL_TIME 10     /* time after which to start moving obstacle */
+#define OBSTACLE_INITIAL_TIME 200     /* time after which to start moving obstacle */
 #define BOUNDARY_WIDTH 1    /* width of particle boundary */
 #define LINK_WIDTH 2        /* width of links between particles */
 #define CONTAINER_WIDTH 4   /* width of container boundary */
@@ -137,16 +154,17 @@
 
 /* Boundary conditions, see list in global_ljones.c */
 
-#define BOUNDARY_COND 0
+#define BOUNDARY_COND 20
 
 /* Plot type, see list in global_ljones.c  */
 
-#define PLOT 11
-#define PLOT_B 0        /* plot type for second movie */
+#define PLOT 0
+#define PLOT_B 8        /* plot type for second movie */
 
-#define DRAW_BONDS 1    /* set to 1 to draw bonds between neighbours */
+#define DRAW_BONDS 0    /* set to 1 to draw bonds between neighbours */
 #define COLOR_BONDS 1   /* set to 1 to color bonds according to length */
 #define FILL_TRIANGLES 1    /* set to 1 to fill triangles between neighbours */
+#define COLOR_SEG_GROUPS 1  /* set to 1 to collor segment groups differently */
 
 /* Color schemes */
 
@@ -173,36 +191,36 @@
 #define ENERGY_HUE_MAX 50.0         /* color of saturated particle */
 #define PARTICLE_HUE_MIN 359.0      /* color of original particle */
 #define PARTICLE_HUE_MAX 0.0        /* color of saturated particle */
-#define PARTICLE_EMAX 1.0e3         /* energy of particle with hottest color */
-#define HUE_TYPE0 280.0     /* hue of particles of type 0 */
-#define HUE_TYPE1 70.0      /* hue of particles of type 1 */
-#define HUE_TYPE2 70.0      /* hue of particles of type 2 */
+#define PARTICLE_EMAX 2.0e2         /* energy of particle with hottest color */
+#define HUE_TYPE0 70.0     /* hue of particles of type 0 */
+#define HUE_TYPE1 280.0      /* hue of particles of type 1 */
+#define HUE_TYPE2 .0      /* hue of particles of type 2 */
 #define HUE_TYPE3 210.0     /* hue of particles of type 3 */
 
 #define RANDOM_RADIUS 0     /* set to 1 for random circle radius */
 #define DT_PARTICLE 3.0e-6    /* time step for particle displacement */
 #define KREPEL 12.0          /* constant in repelling force between particles */
-#define EQUILIBRIUM_DIST 3.5    /* Lennard-Jones equilibrium distance */
+#define EQUILIBRIUM_DIST 4.5    /* Lennard-Jones equilibrium distance */
 #define EQUILIBRIUM_DIST_B 3.5  /* Lennard-Jones equilibrium distance for second type of particle */
 #define REPEL_RADIUS 20.0    /* radius in which repelling force acts (in units of particle radius) */
-#define DAMPING 10.0    /* damping coefficient of particles */
-#define PARTICLE_MASS 1.0   /* mass of particle of radius MU */
+#define DAMPING 5.0          /* damping coefficient of particles */
+#define PARTICLE_MASS 1.0    /* mass of particle of radius MU */
 #define PARTICLE_MASS_B 1.0   /* mass of particle of radius MU */
 #define PARTICLE_INERTIA_MOMENT 0.2     /* moment of inertia of particle */
 #define PARTICLE_INERTIA_MOMENT_B 0.02     /* moment of inertia of second type of particle */
 #define V_INITIAL 0.0        /* initial velocity range */
 #define OMEGA_INITIAL 10.0        /* initial angular velocity range */
 
-#define THERMOSTAT 0        /* set to 1 to switch on thermostat */
+#define THERMOSTAT 1        /* set to 1 to switch on thermostat */
 #define VARY_THERMOSTAT 0   /* set to 1 for time-dependent thermostat schedule */
 #define SIGMA 5.0           /* noise intensity in thermostat */
-#define BETA 0.02           /* initial inverse temperature */
+#define BETA 0.02          /* initial inverse temperature */
 #define MU_XI 0.01           /* friction constant in thermostat */
-#define KSPRING_BOUNDARY 1.0e11    /* confining harmonic potential outside simulation region */
+#define KSPRING_BOUNDARY 1.0e7    /* confining harmonic potential outside simulation region */
 #define KSPRING_OBSTACLE 1.0e11    /* harmonic potential of obstacles */
-#define NBH_DIST_FACTOR 7.0       /* radius in which to count neighbours */
-#define GRAVITY 2000.0            /* gravity acting on all particles */
-#define GRAVITY_X 0.0            /* gravity acting on all particles */
+#define NBH_DIST_FACTOR 7.5       /* radius in which to count neighbours */
+#define GRAVITY 15.0            /* gravity acting on all particles */
+#define GRAVITY_X 0.0        /* horizontal gravity acting on all particles */
 #define INCREASE_GRAVITY 0     /* set to 1 to increase gravity during the simulation */
 #define GRAVITY_SCHEDULE 2     /* type of gravity schedule, see list in global_ljones.c */
 #define GRAVITY_FACTOR 100.0    /* factor by which to increase gravity */
@@ -222,13 +240,13 @@
 #define SPIN_RANGE_B 5.0     /* range of spin-spin interaction for second type of particle */
 #define QUADRUPOLE_RATIO 0.6  /* anisotropy in quadrupole potential */ 
 
-#define INCREASE_BETA 0  /* set to 1 to increase BETA during simulation */
-#define BETA_FACTOR 0.01   /* factor by which to change BETA during simulation */
+#define INCREASE_BETA 1  /* set to 1 to increase BETA during simulation */
+#define BETA_FACTOR 0.025   /* factor by which to change BETA during simulation */
 #define N_TOSCILLATIONS 1.5   /* number of temperature oscillations in BETA schedule */
 #define NO_OSCILLATION 1        /* set to 1 to have exponential BETA change only */
-#define MIDDLE_CONSTANT_PHASE 370  /* final phase in which temperature is constant */
-#define FINAL_DECREASE_PHASE 350   /* final phase in which temperature decreases */ 
-#define FINAL_CONSTANT_PHASE 1180  /* final phase in which temperature is constant */
+#define MIDDLE_CONSTANT_PHASE 1600   /* final phase in which temperature is constant */
+#define FINAL_DECREASE_PHASE 1500    /* final phase in which temperature decreases */ 
+#define FINAL_CONSTANT_PHASE -1     /* final phase in which temperature is constant */
 
 #define DECREASE_CONTAINER_SIZE 0   /* set to 1 to decrease size of container */
 #define SYMMETRIC_DECREASE 0        /* set tp 1 to decrease container symmetrically */
@@ -249,7 +267,7 @@
 #define N_P_AVERAGE 100      /* size of pressure averaging window */
 #define N_T_AVERAGE 50       /* size of temperature averaging window */
 #define MAX_PRESSURE 3.0e10  /* pressure shown in "hottest" color */
-#define PARTIAL_THERMO_COUPLING 1   /* set to 1 to couple only particles to the right of obstacle to thermostat */
+#define PARTIAL_THERMO_COUPLING 0   /* set to 1 to couple only particles to the right of obstacle to thermostat */
 #define PARTIAL_THERMO_REGION 1     /* region for partial thermostat coupling (see list in global_ljones.c) */
 #define PARTIAL_THERMO_SHIFT 0.2    /* distance from obstacle at the right of which particles are coupled to thermostat */
 #define PARTIAL_THERMO_WIDTH 0.5    /* vertical size of partial thermostat coupling */
@@ -283,21 +301,33 @@
 #define OMEGAMAX 100.0              /* maximal rotation speed */
 #define PRINT_OMEGA 0               /* set to 1 to print angular speed */
 #define PRINT_PARTICLE_SPEEDS 0     /* set to 1 to print average speeds/momenta of particles */
-#define PRINT_SEGMENTS_SPEEDS 0     /* set to 1 to print velocity of moving segments */
+#define PRINT_SEGMENTS_SPEEDS 1     /* set to 1 to print velocity of moving segments */
 
 #define MOVE_BOUNDARY 0        /* set to 1 to move repelling segments, due to force from particles */
 #define SEGMENTS_MASS 40.0     /* mass of collection of segments */
 #define DEACTIVATE_SEGMENT 1    /* set to 1 to deactivate last segment after a certain time */
-#define SEGMENT_DEACTIVATION_TIME 500   /* time at which to deactivate last segment */
-#define RELEASE_ROCKET_AT_DEACTIVATION 0    /* set to 1 to limit segments velocity before segment release */
-#define SEGMENTS_X0 0.0        /* initial position of segments */
-#define SEGMENTS_Y0 1.5        /* initial position of segments */
+#define SEGMENT_DEACTIVATION_TIME 200   /* time at which to deactivate last segment */
+#define RELEASE_ROCKET_AT_DEACTIVATION 1    /* set to 1 to limit segments velocity before segment release */
+#define SEGMENTS_X0 1.5        /* initial position of segments */
+#define SEGMENTS_Y0 0.0        /* initial position of segments */
 #define SEGMENTS_VX0 0.0       /* initial velocity of segments */
-#define SEGMENTS_VY0 -4.0      /* initial velocity of segments */
+#define SEGMENTS_VY0 0.0      /* initial velocity of segments */
 #define DAMP_SEGS_AT_NEGATIVE_Y 0   /* set to 1 to dampen segments when y coordinate is negative */
 
+#define MOVE_SEGMENT_GROUPS 1       /* set to 1 to group segments into moving units */
+#define SEGMENT_GROUP_MASS 1000.0   /* mass of segment group */
+#define SEGMENT_GROUP_I 1000.0      /* moment of inertia of segment group */
+#define SEGMENT_GROUP_DAMPING 0.0   /* damping of segment groups */
+#define GROUP_REPULSION 1           /* set to 1 for groups of segments to repel each other */
+#define KSPRING_GROUPS 1.0e11       /* harmonic potential between segment groups */
+#define GROUP_WIDTH 0.05            /* interaction width of groups */
+#define GROUP_G_REPEL 1             /* set to 1 to add repulsion between centers of mass of groups */
+#define GROUP_G_REPEL_RADIUS 1.2    /* radius within which centers of mass of groups repel each other */
+#define TRACK_SEGMENT_GROUPS 1      /* set to 1 for view to track group of segments */
+#define TRACK_X_PADDING 2.0         /* distance from x boundary where tracking starts */
+
 #define POSITION_DEPENDENT_TYPE 0   /* set to 1 to make particle type depend on initial position */
-#define POSITION_Y_DEPENDENCE 0     /* set to 1 for the separation between particles to be vertical */
+#define POSITION_Y_DEPENDENCE 0     /* set to 1 for the separation between particles to be horizontal */
 #define PRINT_ENTROPY 0     /* set to 1 to compute entropy */
 
 #define REACTION_DIFFUSION 0    /* set to 1 to simulate a chemical reaction (particles may change type) */
@@ -305,7 +335,10 @@
 #define REACTION_PROB 0.0045      /* probability controlling reaction term */ 
 
 #define PRINT_PARTICLE_NUMBER 0     /* set to 1 to print total number of particles */
-#define PRINT_LEFT 1        /* set to 1 to print certain parameters at the top left instead of right */
+#define PRINT_LEFT 0        /* set to 1 to print certain parameters at the top left instead of right */
+#define PLOT_SPEEDS 1       /* set to 1 to add a plot of obstacle speeds (e.g. for rockets) */
+#define PLOT_TRAJECTORIES 1     /* set to 1 to add a plot of obstacle trajectories (e.g. for rockets) */
+#define VMAX_PLOT_SPEEDS 0.6    /* vertical scale of plot of obstacle speeds */
 
 #define EHRENFEST_COPY 0    /* set to 1 to add equal number of larger particles (for Ehrenfest model) */
 
@@ -315,15 +348,21 @@
 #define WALL_FRICTION 0.0   /* friction on wall for BC_RECTANGLE_WALL b.c. */
 #define WALL_WIDTH 0.1      /* width of wall for BC_RECTANGLE_WALL b.c. */
 #define WALL_VMAX 100.0     /* max speed of wall */
-#define WALL_TIME 500       /* time during which to keep wall */
+#define WALL_TIME 0         /* time during which to keep wall */
+
+#define NXMAZE 10      /* width of maze */
+#define NYMAZE 10      /* height of maze */
+#define MAZE_MAX_NGBH 4     /* max number of neighbours of maze cell */
+#define RAND_SHIFT 200      /* seed of random number generator */
+#define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 
 #define FLOOR_FORCE 1      /* set to 1 to limit force on particle to FMAX */
 #define FMAX 1.0e12         /* maximal force */
 #define FLOOR_OMEGA 0      /* set to 1 to limit particle momentum to PMAX */
 #define PMAX 1000.0        /* maximal force */
 
-#define HASHX 160   /* size of hashgrid in x direction */
-#define HASHY 80    /* size of hashgrid in y direction */
+#define HASHX 120   /* size of hashgrid in x direction */
+#define HASHY 450    /* size of hashgrid in y direction */
 #define HASHMAX 100  /* maximal number of particles per hashgrid cell */
 #define HASHGRID_PADDING 0.1    /* padding of hashgrid outside simulation window */
 
@@ -343,6 +382,8 @@ double vylid = 0.0;       /* y speed coordinate of lid (for BC_RECTANGLE_LID b.c
 double xwall = 0.0;       /* x coordinate of wall (for BC_RECTANGLE_WALL b.c.) */
 double vxwall = 0.0;      /* x speed of wall (for BC_RECTANGLE_WALL b.c.) */
 double angular_speed = 0.0;    /* angular speed of rotating segments */
+double xtrack = 0.0;      /* traking coordinate */
+double ytrack = 0.0;      /* traking coordinate */
 double xsegments[2] = {SEGMENTS_X0, -SEGMENTS_X0};  /* x coordinate of segments (for option MOVE_BOUNDARY) */
 double ysegments[2] = {SEGMENTS_Y0, SEGMENTS_Y0};  /* y coordinate of segments (for option MOVE_BOUNDARY) */
 double vxsegments[2] = {SEGMENTS_VX0, SEGMENTS_VX0};       /* vx coordinate of segments (for option MOVE_BOUNDARY) */
@@ -352,6 +393,7 @@ int thermostat_on = 1;    /* thermostat switch used when VARY_THERMOSTAT is on *
 #define THERMOSTAT_ON ((THERMOSTAT)&&((!VARY_THERMOSTAT)||(thermostat_on)))
 
 #include "global_ljones.c"
+#include "sub_maze.c"
 #include "sub_lj.c"
 #include "sub_hashgrid.c"
 
@@ -836,32 +878,195 @@ void evolve_segments(t_segment segment[NMAXSEGMENTS], int time)
 }
 
 
+void evolve_segment_groups(t_segment segment[NMAXSEGMENTS], int time, t_group_segments segment_group[NMAXGROUPS])
+/* new version of evolve_segments that takes the group structure into account */
+{
+    double fx[NMAXGROUPS], fy[NMAXGROUPS], torque[NMAXGROUPS], dx[NMAXGROUPS], dy[NMAXGROUPS], dalpha[NMAXGROUPS];
+    double x, y, dx0, dy0, padding, proj, distance, f, xx[2], yy[2], xmean = 0.0, ymean = 0.0;
+    int i, j, k, group = 0;
+    static double maxdepth, saturation_depth;
+    
+    maxdepth = 0.5*GROUP_WIDTH;
+    saturation_depth = 0.1*GROUP_WIDTH;
+    
+    for (group=0; group<ngroups; group++)
+    {
+        fx[group] = 0.0;
+        fy[group] = 0.0;
+        torque[group] = 0.0;
+    }
+    
+    /* only groups of segments of index 1 or larger are mobile */
+    for (i=0; i<nsegments; i++) if ((segment[i].active)&&(segment[i].group > 0))
+    {
+        group = segment[i].group;
+        
+        fx[group] += segment[i].fx;
+        fy[group] += segment[i].fy;
+        torque[group] += segment[i].torque;
+        
+        dx0 = segment[i].xc - segment_group[group].xc;
+        dy0 = segment[i].yc - segment_group[group].yc;
+        torque[group] += dx0*segment[i].fy - dy0*segment[i].fx;
+                
+        if (BOUNDARY_COND == BC_SCREEN) /* add force from simulation boundary */
+        {
+            x = 0.5*(segment[i].x1 + segment[i].x2);
+            y = 0.5*(segment[i].y1 + segment[i].y2);
+            if (x < XMIN + padding) fx[group] += KSPRING_BOUNDARY*(XMIN + padding - x);
+            else if (x > XMAX - padding) fx[group] -= KSPRING_BOUNDARY*(x - XMAX + padding);
+            if (y < YMIN + padding) fy[group] += KSPRING_BOUNDARY*(YMIN + padding - y);
+            else if (y > YMAX - padding) fy[group] -= KSPRING_BOUNDARY*(y - YMAX + padding);
+        }
+        else if (BOUNDARY_COND == BC_REFLECT_ABS) /* add force from simulation boundary */
+        {
+             y = 0.5*(segment[i].y1 + segment[i].y2);
+             if (y < YMIN) fy[group] += KSPRING_BOUNDARY*(YMIN - y);
+        }
+        
+        /* repulsion between different groups */
+        if (GROUP_REPULSION) for (j=0; j<nsegments; j++) if ((segment[j].active)&&(segment[j].group != group))
+        {
+            xx[0] = segment[j].x1;
+            yy[0] = segment[j].y1;
+            xx[1] = segment[j].x2;
+            yy[1] = segment[j].y2;
+            for (k=0; k<2; k++)
+            {
+                x = xx[k];
+                y = yy[k];
+                proj = (segment[i].ny*(x - segment[i].x1) - segment[i].nx*(y - segment[i].y1))/segment[i].length;
+                if ((proj > 0.0)&&(proj < 1.0))
+                {
+                    distance = segment[i].nx*x + segment[i].ny*y - segment[i].c;
+                    if ((distance > -maxdepth)&&(distance < 0.0))
+                    {
+                        if (distance < -saturation_depth) distance = -saturation_depth;
+                        f = KSPRING_GROUPS*(-distance);
+                        segment[j].fx += f*segment[i].nx;
+                        segment[j].fy += f*segment[i].ny;
+                        segment[j].torque += (x - segment[i].xc)*f*segment[i].ny - (y - segment[i].yc)*f*segment[i].nx;
+                    
+                        fx[group] -= f*segment[i].nx;
+                        fy[group] -= f*segment[i].ny;
+                        torque[group] -= (x - segment[i].xc)*f*segment[i].ny - (y - segment[i].yc)*f*segment[i].nx;
+                    }
+                }
+            }
+        }
+    }
+    
+    if (GROUP_G_REPEL) for (i=0; i<ngroups; i++) for (j=i+1; j<ngroups; j++) 
+    {
+        x = segment_group[j].xc - segment_group[i].xc;
+        y = segment_group[j].yc - segment_group[i].yc;
+        distance = module2(x, y);
+        
+        if (distance < GROUP_G_REPEL_RADIUS)
+        {
+            if (distance < 0.1*GROUP_G_REPEL_RADIUS) distance = 0.1*GROUP_G_REPEL_RADIUS;
+            f = KSPRING_GROUPS*(GROUP_G_REPEL_RADIUS - distance);
+            fx[j] += f*x/distance;
+            fy[j] += f*y/distance;
+            fx[i] -= f*x/distance;
+            fy[i] -= f*y/distance;
+        }
+    }
+        
+    if (FLOOR_FORCE) for (group=1; group<ngroups; group++)
+    {   
+        if (fx[group] > FMAX) fx[group] = FMAX;
+        else if (fx[group] < -FMAX) fx[group] = -FMAX;
+        if (fy[group] > FMAX) fy[group] = FMAX;
+        else if (fy[group] < -FMAX) fy[group] = -FMAX;
+    }
+    
+    for (group=1; group<ngroups; group++)
+    {
+        fy[group] -= GRAVITY*segment_group[group].mass;
+        fx[group] += GRAVITY_X*segment_group[group].mass;
+        
+        segment_group[group].vx += fx[group]*DT_PARTICLE/segment_group[group].mass;
+        segment_group[group].vy += fy[group]*DT_PARTICLE/segment_group[group].mass;
+        segment_group[group].omega += torque[group]*DT_PARTICLE/segment_group[group].moment_inertia;
+
+        segment_group[group].vx *= exp(- DT_PARTICLE*SEGMENT_GROUP_DAMPING);
+        segment_group[group].vy *= exp(- DT_PARTICLE*SEGMENT_GROUP_DAMPING);
+        segment_group[group].omega *= exp(- DT_PARTICLE*SEGMENT_GROUP_DAMPING);
+
+        dx[group] = segment_group[group].vx*DT_PARTICLE;
+        dy[group] = segment_group[group].vy*DT_PARTICLE;
+        dalpha[group] = segment_group[group].omega*DT_PARTICLE;
+        
+        segment_group[group].xc += dx[group];
+        segment_group[group].yc += dy[group];
+        segment_group[group].angle += dalpha[group];
+        
+//         printf("group %i: (dx, dy) = (%.3lg, %.3lg)\n", group, dx[group], dy[group]);
+    }
+    
+        
+    for (i=0; i<nsegments; i++) if ((segment[i].active)&&(segment[i].group > 0))
+    {
+        group = segment[i].group;
+        
+        translate_one_segment(segment, i, dx[group], dy[group]);
+        rotate_one_segment(segment, i, dalpha[group],  segment_group[group].xc,  segment_group[group].yc);
+    }
+    
+    if (TRACK_SEGMENT_GROUPS) 
+    {
+        /* compute mean position */
+        for (group=1; group<ngroups; group++)
+        {
+            xmean += segment_group[group].xc;
+            ymean += segment_group[group].yc;
+        }
+        xmean = xmean/((double)(ngroups-1));
+        ymean = ymean/((double)(ngroups-1));
+        
+        if (ymean > ytrack) ytrack = ymean;
+        if (xmean > XMAX - TRACK_X_PADDING) 
+            xtrack = xmean - XMAX + TRACK_X_PADDING;
+        else if (xmean < XMIN + TRACK_X_PADDING) 
+            xtrack = xmean - XMIN - TRACK_X_PADDING;
+    }
+}
+
+
 void animation()
 {
     double time, scale, diss, rgb[3], dissip, gradient[2], x, y, dx, dy, dt, xleft, xright, a, b, 
             length, fx, fy, force[2], totalenergy = 0.0, krepel = KREPEL, pos[2], prop, vx, 
             beta = BETA, xi = 0.0, xmincontainer = BCXMIN, xmaxcontainer = BCXMAX, torque, torque_ij, 
-            fboundary = 0.0, pleft = 0.0, pright = 0.0, entropy[2], mean_energy, gravity = GRAVITY;
-    double *qx, *qy, *px, *py, *qangle, *pangle, *pressure;
+            fboundary = 0.0, pleft = 0.0, pright = 0.0, entropy[2], mean_energy, gravity = GRAVITY, speed_ratio;
+    double *qx, *qy, *px, *py, *qangle, *pangle, *pressure, *obstacle_speeds;
     int i, j, k, n, m, s, ij[2], i0, iplus, iminus, j0, jplus, jminus, p, q, p1, q1, p2, q2, total_neighbours = 0, 
         min_nb, max_nb, close, wrapx = 0, wrapy = 0, nactive = 0, nadd_particle = 0, nmove = 0, nsuccess = 0, 
-        tracer_n[N_TRACER_PARTICLES], traj_position = 0, traj_length = 0, move = 0, old, m0, floor, nthermo, wall = 0;
+        tracer_n[N_TRACER_PARTICLES], traj_position = 0, traj_length = 0, move = 0, old, m0, floor, nthermo, wall = 0,
+        group, gshift;
     static int imin, imax;
     static short int first = 1;
     t_particle *particle;
     t_obstacle *obstacle;
     t_segment *segment;
+    t_group_segments *segment_group;     
     t_tracer *trajectory;
+    t_group_data *group_speeds;
     t_hashgrid *hashgrid;
     char message[100];
 
 
     particle = (t_particle *)malloc(NMAXCIRCLES*sizeof(t_particle));    /* particles */  
     if (ADD_FIXED_OBSTACLES) obstacle = (t_obstacle *)malloc(NMAXOBSTACLES*sizeof(t_obstacle));    /* circular obstacles */  
-    if (ADD_FIXED_SEGMENTS) segment = (t_segment *)malloc(NMAXSEGMENTS*sizeof(t_segment));         /* linear obstacles */  
+    if (ADD_FIXED_SEGMENTS) 
+    {
+        segment = (t_segment *)malloc(NMAXSEGMENTS*sizeof(t_segment));         /* linear obstacles */  
+        segment_group = (t_group_segments *)malloc(NMAXGROUPS*sizeof(t_group_segments));
+    }
 
     if (TRACER_PARTICLE) trajectory = (t_tracer *)malloc(TRAJECTORY_LENGTH*N_TRACER_PARTICLES*sizeof(t_tracer));
-
+    
     hashgrid = (t_hashgrid *)malloc(HASHX*HASHY*sizeof(t_hashgrid));    /* hashgrid */      
             
     qx = (double *)malloc(NMAXCIRCLES*sizeof(double));
@@ -872,17 +1077,27 @@ void animation()
     pangle = (double *)malloc(NMAXCIRCLES*sizeof(double));
     pressure = (double *)malloc(N_PRESSURES*sizeof(double));
     
+    
     /* initialise positions and radii of circles */
     init_particle_config(particle);
     init_hashgrid(hashgrid);
     
     xshift = OBSTACLE_XMIN;
+    speed_ratio = (double)(25*NVID)*DT_PARTICLE;
     
     if (ADD_FIXED_OBSTACLES) init_obstacle_config(obstacle);
     if (ADD_FIXED_SEGMENTS) init_segment_config(segment);
     
+    if (MOVE_SEGMENT_GROUPS) 
+    {
+        for (i=0; i<ngroups; i++) init_segment_group(segment, i, segment_group);
+        group_speeds = (t_group_data *)malloc(ngroups*(INITIAL_TIME + NSTEPS)*sizeof(t_group_data));
+    }
+    
     if (RECORD_PRESSURES) for (i=0; i<N_PRESSURES; i++) pressure[i] = 0.0;
-
+    if (PLOT_SPEEDS) obstacle_speeds = (double *)malloc(2*ngroups*(INITIAL_TIME + NSTEPS)*sizeof(double));
+    
+    
 //     printf("1\n");
 
     nactive = initialize_configuration(particle, hashgrid, obstacle, px, py, pangle, tracer_n);
@@ -947,11 +1162,13 @@ void animation()
             if ((BOUNDARY_COND == BC_RECTANGLE_WALL)&&(i < INITIAL_TIME + WALL_TIME)) wall = 1;
             else wall = 0;
             
-            if (MOVE_BOUNDARY) for (j=0; j<nsegments; j++)
+            if ((MOVE_BOUNDARY)||(MOVE_SEGMENT_GROUPS)) for (j=0; j<nsegments; j++)
             {
                 segment[j].fx = 0.0;
                 segment[j].fy = 0.0;
+                segment[j].torque = 0.0;
             }
+            
             
             compute_relative_positions(particle, hashgrid);
             update_hashgrid(particle, hashgrid, 0);
@@ -999,12 +1216,36 @@ void animation()
                 else xwall = 0.0;
             }
             if ((MOVE_BOUNDARY)&&(i > OBSTACLE_INITIAL_TIME)) evolve_segments(segment, i);
+            
+            if ((MOVE_SEGMENT_GROUPS)&&(i > OBSTACLE_INITIAL_TIME)) evolve_segment_groups(segment, i, segment_group);
         } /* end of for (n=0; n<NVID; n++) */
+
 //         printf("evolved particles\n");
 
+        if (PLOT_SPEEDS) /* record speeds of segments */
+        {
+            gshift = INITIAL_TIME + NSTEPS;
+            if (MOVE_SEGMENT_GROUPS) for (group = 1; group < ngroups; group++)
+            {
+                group_speeds[(group-1)*gshift + i].xc = segment_group[group].xc;
+                group_speeds[(group-1)*gshift + i].yc = segment_group[group].yc;
+                group_speeds[(group-1)*gshift + i].vx = segment_group[group].vx*speed_ratio;
+                group_speeds[(group-1)*gshift + i].vy = segment_group[group].vy*speed_ratio;
+                group_speeds[(group-1)*gshift + i].omega = segment_group[group].omega*speed_ratio;
+            }
+            else
+            {
+                obstacle_speeds[i] = vysegments[0];
+                obstacle_speeds[INITIAL_TIME + NSTEPS + i] = vysegments[1];
+            }
+        }
         
         if (MOVE_BOUNDARY) 
-            printf("segments position (%.3lg, %.3lg), speed (%.3lg, %.3lg)\n", xsegments[0], ysegments[0], vxsegments[0], vysegments[0]);
+            printf("segment[%i]: (fx, fy) = (%.3lg, %.3lg), torque = %.3lg)\n", i, fx, fy, torque);
+        
+        if (MOVE_SEGMENT_GROUPS) for (group=1; group<ngroups; group++)
+            printf("segments position [%i] (%.3lg, %.3lg) angle %.3lg\n speed (%.3lg, %.3lg) omega %.3lg\n", 
+                   group, segment_group[group].xc, segment_group[group].yc, segment_group[group].angle, segment_group[group].vx, segment_group[group].vy, segment_group[group].omega);
         
 //         if ((PARTIAL_THERMO_COUPLING)) 
         if ((PARTIAL_THERMO_COUPLING)&&(i>N_T_AVERAGE)) 
@@ -1091,12 +1332,18 @@ void animation()
             print_entropy(entropy);
         }
         
+        if (PLOT_SPEEDS) draw_speed_plot(group_speeds, i);
+        if (PLOT_TRAJECTORIES) draw_trajectory_plot(group_speeds, i);
+        
         if (PRINT_OMEGA) print_omega(angular_speed); 
         else if (PRINT_PARTICLE_SPEEDS) print_particles_speeds(particle);
-        else if (PRINT_SEGMENTS_SPEEDS) print_segments_speeds(vxsegments, vysegments);
+        else if (PRINT_SEGMENTS_SPEEDS)
+        {
+            if (MOVE_BOUNDARY) print_segments_speeds(vxsegments, vysegments);
+            else print_segment_group_speeds(segment_group);
+        }
         
 	glutSwapBuffers();
-
 
 	if (MOVIE)
         {
@@ -1129,11 +1376,14 @@ void animation()
                 draw_container(xmincontainer, xmaxcontainer, obstacle, segment, wall);
                 print_parameters(beta, mean_energy, krepel, xmaxcontainer - xmincontainer, 
                          fboundary/(double)(ncircles*NVID), PRINT_LEFT, pressure, gravity);
+                if (PLOT_SPEEDS) draw_speed_plot(group_speeds, i);
+                if (PLOT_TRAJECTORIES) draw_trajectory_plot(group_speeds, i);
                 if (BOUNDARY_COND == BC_EHRENFEST) print_ehrenfest_parameters(particle, pleft, pright);
                 else if (PRINT_PARTICLE_NUMBER) print_particle_number(ncircles);
                 if (PRINT_OMEGA) print_omega(angular_speed); 
                 else if (PRINT_PARTICLE_SPEEDS) print_particles_speeds(particle);
-                else if (PRINT_SEGMENTS_SPEEDS) print_segments_speeds(vxsegments, vysegments);
+                else if (PRINT_SEGMENTS_SPEEDS) print_segment_group_speeds(segment_group);
+//                     print_segments_speeds(vxsegments, vysegments);
                 glutSwapBuffers();
                 save_frame_lj_counter(NSTEPS + MID_FRAMES + 1 + counter);
                 counter++;
@@ -1160,11 +1410,14 @@ void animation()
             draw_container(xmincontainer, xmaxcontainer, obstacle, segment, wall);
             print_parameters(beta, mean_energy, krepel, xmaxcontainer - xmincontainer, 
                          fboundary/(double)(ncircles*NVID), PRINT_LEFT, pressure, gravity);
+            if (PLOT_SPEEDS) draw_speed_plot(group_speeds, i);
+            if (PLOT_TRAJECTORIES) draw_trajectory_plot(group_speeds, i);
             if (BOUNDARY_COND == BC_EHRENFEST) print_ehrenfest_parameters(particle, pleft, pright);
             else if (PRINT_PARTICLE_NUMBER) print_particle_number(ncircles);
             if (PRINT_OMEGA) print_omega(angular_speed); 
             else if (PRINT_PARTICLE_SPEEDS) print_particles_speeds(particle);
-            else if (PRINT_SEGMENTS_SPEEDS) print_segments_speeds(vxsegments, vysegments);
+            else if (PRINT_SEGMENTS_SPEEDS) print_segment_group_speeds(segment_group);
+//                 print_segments_speeds(vxsegments, vysegments);
             glutSwapBuffers();
         }
         for (i=0; i<MID_FRAMES; i++) save_frame_lj();
@@ -1175,11 +1428,14 @@ void animation()
             draw_container(xmincontainer, xmaxcontainer, obstacle, segment, wall);
             print_parameters(beta, mean_energy, krepel, xmaxcontainer - xmincontainer, 
                          fboundary/(double)(ncircles*NVID), PRINT_LEFT, pressure, gravity);
+            if (PLOT_SPEEDS) draw_speed_plot(group_speeds, i);
+            if (PLOT_TRAJECTORIES) draw_trajectory_plot(group_speeds, i);
             if (BOUNDARY_COND == BC_EHRENFEST) print_ehrenfest_parameters(particle, pleft, pright);
             else if (PRINT_PARTICLE_NUMBER) print_particle_number(ncircles);
             if (PRINT_OMEGA) print_omega(angular_speed); 
             else if (PRINT_PARTICLE_SPEEDS) print_particles_speeds(particle);
-            else if (PRINT_SEGMENTS_SPEEDS) print_segments_speeds(vxsegments, vysegments);
+            else if (PRINT_SEGMENTS_SPEEDS) print_segment_group_speeds(segment_group);
+//                 print_segments_speeds(vxsegments, vysegments);
             glutSwapBuffers();
         }
         if ((TIME_LAPSE)&&(!DOUBLE_MOVIE)) 
@@ -1196,8 +1452,14 @@ void animation()
     
     free(particle);
     if (ADD_FIXED_OBSTACLES) free(obstacle);
-    if (ADD_FIXED_SEGMENTS) free(segment);
+    if (ADD_FIXED_SEGMENTS) 
+    {
+        free(segment);
+        free(segment_group);
+    }
+    if (MOVE_SEGMENT_GROUPS) free(group_speeds);
     if (TRACER_PARTICLE) free(trajectory);
+    if (PLOT_SPEEDS) free(obstacle_speeds);
     free(hashgrid);
     free(qx);
     free(qy);

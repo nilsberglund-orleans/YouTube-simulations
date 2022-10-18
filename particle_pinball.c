@@ -142,10 +142,17 @@
 #define SLEEP2  1000     /* final sleeping time */
 #define END_FRAMES 100   /* number of still frames at end of movie */
 
+#define NXMAZE 8      /* width of maze */
+#define NYMAZE 8      /* height of maze */
+#define MAZE_MAX_NGBH 4     /* max number of neighbours of maze cell */
+#define RAND_SHIFT 58       /* seed of random number generator */
+#define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
+
 #define NPATHBINS 200     /* number of bins for path length histogramm */
 #define PATHLMAX 1.8     /* max free path on graph */
 
 #include "global_particles.c"
+#include "sub_maze.c"
 #include "sub_part_billiard.c"
 #include "sub_part_pinball.c"
 
