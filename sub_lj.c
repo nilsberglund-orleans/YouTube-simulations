@@ -3313,6 +3313,7 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
         xc1 -= xtrack;
         yc1 = yc - ytrack;
     }
+    else yc1 = yc;
     glColor3f(rgb[0], rgb[1], rgb[2]);
     if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)) 
         draw_colored_rhombus(xc1, yc1, radius, angle + APOLY*PID, rgb);
