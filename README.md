@@ -6,7 +6,7 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
 Parameter values used in specific simulations will be gradually added to file `Parameters.md`, `Parameters_June21.md` and so on.
 
-There are four groups of 6 files, 17 files, 4 files and 3 files. 
+There are four groups of 6 files, 17 files, 4 files and 4 files. 
 In addition the following files handling color schemes have been included:
 
 1. `hsluv.c`and `hsluv.h` from https://github.com/adammaj1/hsluv-color-gradient 
@@ -109,6 +109,7 @@ in the shell before running the program
 1. *percolation.c*:     simulation of Bernoulli percolation 
 2. *global_perc.c*:     global variables and parameters
 3. *sub_perco.c*:       drawing and cluster finding routines
+4. *sub_perco_3d.c*:    3D drawing routines
 
 - Create subfolder `tif_perc`
 - Customize constants at beginning of .c file
