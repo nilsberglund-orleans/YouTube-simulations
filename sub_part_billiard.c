@@ -1,8 +1,8 @@
 #include "colormaps.c"
 
-#define DUMMY_ABSORBING -1000.0  /* dummy value of config[0] for absorbing circles */
+#define DUMMY_ABSORBING 100000.0  /* dummy value of config[0] for absorbing circles */
 #define BOUNDARY_SHIFT 100000.0    /* shift of boundary parametrisation for circles in domain */
-#define DUMMY_SIDE_ABS -10000      /* dummy value of returned side for absorbing circles */
+#define DUMMY_SIDE_ABS -100000      /* dummy value of returned side for absorbing circles */
 
 long int global_time = 0;    /* counter to keep track of global time of simulation */
 int nparticles=NPART; 
@@ -4617,7 +4617,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
  /* position varies between 0 and nsides */
  /* returns number of hit setment */
  {
-	double len, rlarge = 1000.0;
+	double len, rlarge = 1.0e8;
         int nside;
         
         nside = (int)conf[0];
@@ -4647,7 +4647,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
  int vpolyline_xy(double config[8], double alpha, double pos[2])
  /* determine initial configuration for start at point pos = (x,y) */
  {
-	double c0, s0, a, b, c, t, dx, delta, s, xi, yi, margin = 1.0e-12, tmin, rlarge = 1000.0;
+	double c0, s0, a, b, c, t, dx, delta, s, xi, yi, margin = 1.0e-12, tmin, rlarge = 1.0e8;
         double tval[nsides + ncircles], xint[nsides + ncircles], yint[nsides + ncircles], sint[nsides + ncircles];
 	int i, nt = 0, nsegment[nsides + ncircles], ntmin;
 
@@ -5378,6 +5378,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         {
             /* not easy to implement for non-convex polygons */
             if (POLYLINE_PATTERN == P_MAZE) return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
+            else if (POLYLINE_PATTERN == P_MAZE_DIAG) return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
             else return(1);
             break;
         }
@@ -6179,7 +6180,7 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
         {
             maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
     
-            init_maze(maze);
+            init_maze_exit(0, NYMAZE/2, maze);
             
             /* build walls of maze */
             dx = (YMAX - YMIN - 2.0*padding)/(double)(NXMAZE);
@@ -6233,7 +6234,7 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
             y1 = YMIN + padding + dy*((double)NYMAZE/2);
             x1 = YMAX - padding + MAZE_XSHIFT;
             polyline[nsides].x1 = x1;
-            polyline[nsides].y1 = YMIN - 1.0;
+            polyline[nsides].y1 = YMIN - 1000.0;
             polyline[nsides].x2 = x1;
             polyline[nsides].y2 = y1 - dy;
             polyline[nsides].angle = PID;
@@ -6242,14 +6243,14 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
             polyline[nsides].x1 = x1;
             polyline[nsides].y1 = y1;
             polyline[nsides].x2 = x1;
-            polyline[nsides].y2 = YMAX + 1.0;
+            polyline[nsides].y2 = YMAX + 1000.0;
             polyline[nsides].angle = PID;
             nsides++;
     
             /* left side of maze */
             x1 = YMIN + padding + MAZE_XSHIFT;
             polyline[nsides].x1 = x1;
-            polyline[nsides].y1 = YMIN - 1.0;
+            polyline[nsides].y1 = YMIN - 1000.0;
             polyline[nsides].x2 = x1;
             polyline[nsides].y2 = YMIN + padding;
             polyline[nsides].angle = PID;
@@ -6258,7 +6259,143 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
             polyline[nsides].x1 = x1;
             polyline[nsides].y1 = YMAX - padding;
             polyline[nsides].x2 = x1;
-            polyline[nsides].y2 = YMAX + 1.0;
+            polyline[nsides].y2 = YMAX + 1000.0;
+            polyline[nsides].angle = PID;
+            nsides++;
+    
+            free(maze);
+            break;
+        }
+        case (P_MAZE_DIAG):
+        {
+            maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+    
+            init_maze_exit(0, NYMAZE/2, maze);
+            
+            /* build walls of maze */
+            dx = (YMAX - YMIN - 2.0*padding)/(double)(NXMAZE);
+            dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+            
+            nsides = 0;
+            ncircles = 0;
+    
+            for (i=0; i<NXMAZE; i++)
+                for (j=0; j<NYMAZE; j++)
+                {
+                    n = nmaze(i, j);
+                    x1 = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
+                    y1 = YMIN + padding + (double)j*dy;
+            
+                    if (((i>0)||(j!=NYMAZE/2))&&(maze[n].west)) 
+                    {
+                        polyline[nsides].x1 = x1;
+                        polyline[nsides].y1 = y1;
+                        polyline[nsides].x2 = x1;
+                        polyline[nsides].y2 = y1 + dy;
+                        polyline[nsides].angle = PID;
+                        nsides++;
+                    }
+                    
+                    
+                    if (maze[n].south) 
+                    {
+                        polyline[nsides].x1 = x1;
+                        polyline[nsides].y1 = y1;
+                        polyline[nsides].x2 = x1 + dx;
+                        polyline[nsides].y2 = y1;
+                        polyline[nsides].angle = 0.0;
+                        nsides++;
+                    }
+                    
+                }
+                
+            /* 45 degrees parts */
+            for (i=0; i<NXMAZE; i++)
+                for (j=0; j<NYMAZE; j++)
+                {
+                    n = nmaze(i, j);
+                    x1 = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
+                    y1 = YMIN + padding + (double)j*dy;
+            
+                    if ((maze[n].south)&&(maze[n].west)) 
+                    {
+                        polyline[nsides].x1 = x1 + 0.25*dx;
+                        polyline[nsides].y1 = y1;
+                        polyline[nsides].x2 = x1;
+                        polyline[nsides].y2 = y1 + 0.25*dy;
+                        polyline[nsides].angle = 1.5*PID;
+                        nsides++;
+                    }
+                    
+                    if ((maze[n].south)&&(maze[n].east)) 
+                    {
+                        polyline[nsides].x1 = x1 + 0.75*dx;
+                        polyline[nsides].y1 = y1;
+                        polyline[nsides].x2 = x1 + dx;
+                        polyline[nsides].y2 = y1 + 0.25*dy;
+                        polyline[nsides].angle = 0.5*PID;
+                        nsides++;
+                    }
+                    
+                    if ((maze[n].north)&&(maze[n].east)) 
+                    {
+                        polyline[nsides].x1 = x1 + dx;
+                        polyline[nsides].y1 = y1 + 0.75*dy;
+                        polyline[nsides].x2 = x1 + 0.75*dx;
+                        polyline[nsides].y2 = y1 + dy;
+                        polyline[nsides].angle = 1.5*PID;
+                        nsides++;
+                    }
+                    
+                    if ((maze[n].north)&&(maze[n].west)) 
+                    {
+                        polyline[nsides].x1 = x1;
+                        polyline[nsides].y1 = y1 + 0.75*dy;
+                        polyline[nsides].x2 = x1 + 0.25*dx;
+                        polyline[nsides].y2 = y1 + dy;
+                        polyline[nsides].angle = 0.5*PID;
+                        nsides++;
+                    }
+                }
+    
+            /* top side of maze */
+            polyline[nsides].x1 = YMIN + padding + MAZE_XSHIFT;
+            polyline[nsides].y1 = YMAX - padding;
+            polyline[nsides].x2 = YMAX - padding + MAZE_XSHIFT;
+            polyline[nsides].y2 = YMAX - padding;
+            polyline[nsides].angle = 0.0;
+            nsides++;
+    
+            /* right side of maze */
+            y1 = YMIN + padding + dy*((double)NYMAZE/2);
+            x1 = YMAX - padding + MAZE_XSHIFT;
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = YMIN - 1000.0;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = y1 - dy;
+            polyline[nsides].angle = PID;
+            nsides++;
+            
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = y1;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = YMAX + 1000.0;
+            polyline[nsides].angle = PID;
+            nsides++;
+    
+            /* left side of maze */
+            x1 = YMIN + padding + MAZE_XSHIFT;
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = YMIN - 1000.0;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = YMIN + padding;
+            polyline[nsides].angle = PID;
+            nsides++;
+            
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = YMAX - padding;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = YMAX + 1000.0;
             polyline[nsides].angle = PID;
             nsides++;
     
@@ -6378,7 +6515,8 @@ int test_initial_condition(double *configs[NPARTMAX], int active[NPARTMAX], int 
         for (j=0; j<8; j++) newconf[j] = configs[i][j];
         
         time = 0;
-        while ((time < 100000)&&(newconf[4] < 1000.0))
+//         while ((time < 100000)&&(newconf[4] < 1000.0))
+        while ((time < 100000)&&(newconf[0] < DUMMY_ABSORBING))
         {
             for (j=0; j<8; j++) conf[j] = newconf[j];
             vbilliard(newconf); 
@@ -6390,9 +6528,11 @@ int test_initial_condition(double *configs[NPARTMAX], int active[NPARTMAX], int 
         printf("tmax = %i\n", time);
         
         cosphi = (conf[6] - conf[4])/conf[3];
-        x2 = conf[4] + 10.0*cosphi;
+        x2 = conf[4] + conf[2]*cosphi;
+//         x2 = conf[4] + 10.0*cosphi;
         
-        if (x2 > 0.0) 
+        if ((conf[0] >= DUMMY_ABSORBING)&&(x2 > XMAX)) 
+//         if (conf[0] >= DUMMY_ABSORBING)    
         {
             active[i] = 1;
             if (time > tmaxmax) tmaxmax = time;

@@ -82,6 +82,14 @@ void draw_vertex_xyz(double xy[2], double z)
     glVertex2d(xy_screen[0], xy_screen[1]);
 }
     
+void draw_vertex_xyz_shift(double xy[2], double z, int shiftx, int shifty)
+{
+    double xy_screen[2];
+    
+    xyz_to_xy(xy[0] + (double)shiftx*(XMAX - XMIN), xy[1] + (double)shifty*(YMAX - YMIN), z, xy_screen);
+    glVertex2d(xy_screen[0], xy_screen[1]);
+}
+    
 void draw_vertex_x_y_z(double x, double y, double z)
 {
     double xy_screen[2];

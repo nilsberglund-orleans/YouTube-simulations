@@ -14,6 +14,9 @@
 #define D_NOTHING 999   /* no boundaries */
 #define D_RECTANGLE 0   /* rectangular domain */
 #define D_ELLIPSE 1     /* elliptical domain */
+#define D_EXT_ELLIPSE 199   /* exterior of elliptical domain */
+#define D_EXT_ELLIPSE_CURVED 198   /* exterior of curved elliptical domain */
+#define D_EXT_ELLIPSE_CURVED_BDRY 197   /* exterior of curved elliptical domain, with horizontal boundaries */
 #define D_STADIUM 2     /* stadium-shaped domain */
 #define D_SINAI 3       /* Sinai billiard */
 #define D_DIAMOND 4     /* diamond-shaped billiard */
@@ -65,6 +68,9 @@
 #define D_WAVEGUIDE_W 52        /* W-shaped wave guide */
 #define D_MAZE 53               /* maze */
 #define D_MAZE_CLOSED 54        /* closed maze */
+#define D_CHESSBOARD 55         /* chess board configuration */
+#define D_TRIANGLE_TILES 56     /* triangular tiling */
+#define D_HEX_TILES 57          /* honeycomb tiling */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
@@ -140,6 +146,8 @@
 #define P_MEAN_ENERGY 3  /* energy averaged over time */
 #define P_LOG_ENERGY 4   /* log of energy averaged over time */
 #define P_LOG_MEAN_ENERGY 5  /* log of energy averaged over time */
+#define P_ENERGY_FLUX 6     /* energy flux */
+#define P_TOTAL_ENERGY_FLUX 7    /* energy flux averaged over time */
 
 /* For Schrodinger equation */
 #define P_MODULE 10        /* plot module of wave function squared */

@@ -12,6 +12,8 @@ typedef struct
     short int north, east, south, west;     /* closed walls */
     short int active;                       /* takes value 1 if currently active in RW path */
     short int tested;                       /* takes value 1 if tested */
+    short int connected;                    /* takes value 1 if connected to exit */
+    short int closed;                       /* takes value 1 if no untested neighbours */
 } t_maze;
 
 
@@ -122,6 +124,8 @@ void init_maze_graph(t_maze maze[NXMAZE*NYMAZE])
             n = nmaze(i, j);
             maze[n].active = 0;
             maze[n].tested = 0;
+            maze[n].connected = 0;
+            maze[n].closed = 0;
             maze[n].north = 1;
             maze[n].east = 1;
             maze[n].south = 1;
@@ -129,14 +133,17 @@ void init_maze_graph(t_maze maze[NXMAZE*NYMAZE])
         }
 }
 
-int find_maze_path(t_maze maze[NXMAZE*NYMAZE], int n0)
+int find_maze_path(t_maze maze[NXMAZE*NYMAZE], int n0, int *path, int *pathlength)
 /* find a random walk path in the maze */
+/* returns 0 or 1 depending on whether path reaches a tested cell or a deadend */
 {
-    int active_counter = 0, i, n = n0, npaths, inext, nextcell, trial, nnext;
+    int active_counter = 0, i, n = n0, npaths, inext, nextcell, trial, nnext, deadend = 1, length = 0;
     int next_table[4];
     
     /* contruct random walk */
     npaths = maze[n].nneighb;
+    path[0] = n0;
+    
 //     while ((npaths > 0)&&(!maze[n].tested))
     while ((npaths > 0))
     {
@@ -148,7 +155,7 @@ int find_maze_path(t_maze maze[NXMAZE*NYMAZE], int n0)
         for (i=0; i<npaths; i++)
         {
             nextcell = maze[n].neighb[i];
-            if (!maze[nextcell].active)
+            if ((!maze[nextcell].active)&&((maze[nextcell].connected)||(!maze[nextcell].tested)))
             {
                 next_table[nnext] = i;
                 nnext++;
@@ -157,12 +164,15 @@ int find_maze_path(t_maze maze[NXMAZE*NYMAZE], int n0)
         
         if (nnext == 0) 
         {
+            deadend = 1;
             printf("Ended path\n");
 //             sleep(5);
             npaths = 0;
+            maze[n].closed = 1;
         }
         else
         {
+            deadend = 0;
             inext = next_table[rand()%nnext];
             nextcell = maze[n].neighb[inext];
             switch(maze[n].directions[inext]){
@@ -200,8 +210,18 @@ int find_maze_path(t_maze maze[NXMAZE*NYMAZE], int n0)
             if (maze[n].tested) npaths = 0;
             else npaths = maze[n].nneighb;
             active_counter++;
+            
+            if (length < NXMAZE*NYMAZE) 
+            {
+                length++;
+                path[length] = n;
+            }
+            deadend = 0;
         }
     }
+    printf("Reached tested cell (%i, %i)\n", n%NXMAZE, n/NXMAZE);
+    
+    if (!maze[n].connected) deadend = 1;
     
     /* update cell status */
     for (n=0; n<NXMAZE*NYMAZE; n++) if (maze[n].active)
@@ -211,21 +231,108 @@ int find_maze_path(t_maze maze[NXMAZE*NYMAZE], int n0)
     }
     
     printf("Ended path\n");
+    if (deadend) printf("Deadend\n"); 
+    *pathlength = length;
+    printf("Path length %i \n", length);
     
-    return(active_counter);
+    return(deadend);
+//     return(active_counter);
 }
 
-void init_maze(t_maze maze[NXMAZE*NYMAZE])
+void init_maze_old(t_maze maze[NXMAZE*NYMAZE])
 /* init a maze */
 {
-    int i;
+    int i, pathlength, *path;
     
     init_maze_graph(maze);
     
     for (i=0; i<RAND_SHIFT; i++) rand();
     
-    for (i=0; i<NXMAZE*NYMAZE; i++) if (!maze[i].tested) find_maze_path(maze, i);
+    for (i=0; i<NXMAZE*NYMAZE; i++) if (!maze[i].tested) find_maze_path(maze, i, path, &pathlength);
     
 }
 
+void init_maze(t_maze maze[NXMAZE*NYMAZE])
+/* init a maze with exit at (nx, ny) */
+{
+    int i, j, n, deadend, pathlength, newpathlength;
+    int *path, *newpath;
+    
+    path = (int *)malloc(2*NXMAZE*NYMAZE*sizeof(short int));
+    newpath = (int *)malloc(2*NXMAZE*NYMAZE*sizeof(short int));
+    
+    init_maze_graph(maze);
+    
+    for (i=0; i<RAND_SHIFT; i++) rand();
+    
+    find_maze_path(maze, 0, path, &pathlength);
+    for (n=0; n<pathlength; n++) maze[path[n]].connected = 1;
+    
+    for (i=0; i<NXMAZE*NYMAZE; i++) if ((!maze[i].tested)&&(!maze[i].connected))
+    {
+        deadend = find_maze_path(maze, i, path, &pathlength);
+        if (!deadend) for (n=0; n<pathlength; n++) maze[path[n]].connected = 1;
+        j = 0;
+        printf("deadend = %i, pathlength = %i\n", deadend, pathlength);
+        
+//         while ((deadend)&&(j < pathlength))
+        while (deadend)
+        {
+            j++;
+            if (j > pathlength) j = 0; 
+            printf("j = %i\n", j);
+//             while (deadend) 
+            if (!maze[path[j]].connected) deadend = find_maze_path(maze, path[j], newpath, &newpathlength);
+            if (!deadend) for (n=0; n<newpathlength; n++) maze[newpath[n]].connected = 1;
+        }
+        
+//         for (n=0; n<newpathlength; n++) maze[newpath[n]].connected = 1;
+        for (j=0; j<NXMAZE*NYMAZE; j++) if (maze[j].tested) maze[j].connected = 1;
+    }
+    
+    free(path);
+    free(newpath);
+}
+
+void init_maze_exit(int nx, int ny, t_maze maze[NXMAZE*NYMAZE])
+/* init a maze with exit at (nx, ny) */
+{
+    int i, j, n, deadend, pathlength, newpathlength;
+    int *path, *newpath;
+    
+    path = (int *)malloc(2*NXMAZE*NYMAZE*sizeof(short int));
+    newpath = (int *)malloc(2*NXMAZE*NYMAZE*sizeof(short int));
+    
+    init_maze_graph(maze);
+    
+    for (i=0; i<RAND_SHIFT; i++) rand();
+    
+    find_maze_path(maze, nmaze(nx, ny), path, &pathlength);
+    for (n=0; n<pathlength; n++) maze[path[n]].connected = 1;
+    
+    for (i=0; i<NXMAZE*NYMAZE; i++) if ((!maze[i].tested)&&(!maze[i].connected))
+    {
+        deadend = find_maze_path(maze, i, path, &pathlength);
+        if (!deadend) for (n=0; n<pathlength; n++) maze[path[n]].connected = 1;
+        j = 0;
+        printf("deadend = %i, pathlength = %i\n", deadend, pathlength);
+        
+//         while ((deadend)&&(j < pathlength))
+        while (deadend)
+        {
+            j++;
+            if (j > pathlength) j = 0; 
+            printf("j = %i\n", j);
+//             while (deadend) 
+            if (!maze[path[j]].connected) deadend = find_maze_path(maze, path[j], newpath, &newpathlength);
+            if (!deadend) for (n=0; n<newpathlength; n++) maze[newpath[n]].connected = 1;
+        }
+        
+//         for (n=0; n<newpathlength; n++) maze[newpath[n]].connected = 1;
+        for (j=0; j<NXMAZE*NYMAZE; j++) if (maze[j].tested) maze[j].connected = 1;
+    }
+    
+    free(path);
+    free(newpath);
+}
 

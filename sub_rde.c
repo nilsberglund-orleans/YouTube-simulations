@@ -318,7 +318,7 @@ void init_vortex_state(double x, double y, double scale, double *phi[NFIELDS], s
 /* phi[0] is stream function, phi[1] is vorticity */
 {
     int i, j;
-    double xy[2], dist2, module, phase, scale2;    
+    double xy[2], dist2, module, phase, scale2, sign;    
 
 //     scale2 = scale*scale;
     for (i=0; i<NX; i++)
@@ -330,10 +330,13 @@ void init_vortex_state(double x, double y, double scale, double *phi[NFIELDS], s
             if (xy_in[i*NY+j])
             {
                 dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
-                module = exp(-dist2/scale);
+                module = exp(-dist2/vabs(scale));
                 
-                phi[1][i*NY+j] = module;
-                phi[0][i*NY+j] = -module;    /* approximate, stream function should solve Poisson equation */
+                if (scale > 0.0) sign = 1.0;
+                else sign = -1.0;
+                
+                phi[1][i*NY+j] += sign*module;
+                phi[0][i*NY+j] -= sign*module;    /* approximate, stream function should solve Poisson equation */
             }
             else
             {
@@ -348,7 +351,7 @@ void add_vortex_state(double x, double y, double scale, double *phi[NFIELDS], sh
 /* phi[0] is stream function, phi[1] is vorticity */
 {
     int i, j;
-    double xy[2], dist2, module, phase, scale2;    
+    double xy[2], dist2, module, phase, scale2, sign;    
 
 //     scale2 = scale*scale;
     for (i=0; i<NX; i++)
@@ -360,10 +363,13 @@ void add_vortex_state(double x, double y, double scale, double *phi[NFIELDS], sh
             if (xy_in[i*NY+j])
             {
                 dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
-                module = exp(-dist2/scale);
+                module = exp(-dist2/vabs(scale));
                 
-                phi[1][i*NY+j] += module;
-                phi[0][i*NY+j] -= module;    /* approximate, stream function should solve Poisson equation */
+                if (scale > 0.0) sign = 1.0;
+                else sign = -1.0;
+                
+                phi[1][i*NY+j] += sign*module;
+                phi[0][i*NY+j] -= sign*module;    /* approximate, stream function should solve Poisson equation */
             }
             else
             {
@@ -374,7 +380,7 @@ void add_vortex_state(double x, double y, double scale, double *phi[NFIELDS], sh
 }
 
 
-void init_shear_flow(double amp, double delta, double rho, int nx, int ny, double *phi[NFIELDS], short int xy_in[NX*NY])
+void init_shear_flow(double amp, double delta, double rho, int nx, int ny, double yshift, double *phi[NFIELDS], short int xy_in[NX*NY])
 /* initialise field with a shear flow */
 /* phi[0] is stream function, phi[1] is vorticity */
 /* amp is global amplitude */
@@ -395,7 +401,7 @@ void init_shear_flow(double amp, double delta, double rho, int nx, int ny, doubl
             ij_to_xy(i, j, xy);
 	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
             
-            y1 = xy[1]*(double)ny/YMAX; 
+            y1 = xy[1]*(double)ny/YMAX - yshift; 
             while (y1 > 1.0) y1 -= 2.0;
             while (y1 < -1.0) y1 += 2.0;
 
@@ -415,6 +421,39 @@ void init_shear_flow(double amp, double delta, double rho, int nx, int ny, doubl
                     phi[1][i*NY+j] = amp*(f - 1.0/(rho*cplus*cplus));
                     phi[0][i*NY+j] = amp*(f/(a*a) - rho/(cplus*cplus));    
                 }
+            }
+            else
+            {
+                phi[0][i*NY+j] = 0.0;
+                phi[1][i*NY+j] = 0.0;
+            }
+        }
+}
+
+void init_laminar_flow(double amp, double modulation, double period, double yshift, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise field with a laminar flow in x direction */
+/* phi[0] is stream function, phi[1] is vorticity */
+/* amp is global amplitude */
+{
+    int i, j;
+    double xy[2], y1, a, b, f, cplus, cminus;    
+    
+    a = period*PI/YMAX;
+//     a = PID/YMAX;
+    
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            y1 = xy[1] + yshift;
+
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] = amp*(y1 + modulation*sin(a*y1)/a);
+                phi[1][i*NY+j] = amp*modulation*a*sin(a*y1);
+//                 phi[0][i*NY+j] = amp*sin(a*xy[1]);
+//                 phi[1][i*NY+j] = a*a*amp*sin(a*xy[1]);
             }
             else
             {
@@ -604,7 +643,7 @@ void compute_gradient_xy(double phi[NX*NY], double gradient[2*NX*NY])
     }
 }
 
-void compute_gradient_euler(double phi[NX*NY], double gradient[2*NX*NY])
+void compute_gradient_euler(double phi[NX*NY], double gradient[2*NX*NY], double yshift)
 /* compute the gradient of the field */
 {
     int i, j, iplus, iminus, jplus, jminus, padding = 0; 
@@ -640,14 +679,16 @@ void compute_gradient_euler(double phi[NX*NY], double gradient[2*NX*NY])
         jminus = NY-1;
             
         gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus] - yshift);
+        
+//         if (i == 1) printf("psi+ = %.5lg, psi- = %.5lg, gradient = %.5lg\n", phi[i*NY+jplus], phi[i*NY+jminus], gradient[NX*NY+i*NY+j]);
         
         j = NY-1;
         jplus = 0;
         jminus = NY-2;
         
         gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus] + yshift);
     }
     
     for (j=1; j<NY-1; j++)
@@ -661,6 +702,9 @@ void compute_gradient_euler(double phi[NX*NY], double gradient[2*NX*NY])
 
         gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
         gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+        
+//         printf("j = %i, psi+ = %.5lg, psi- = %.5lg, gradient = %.5lg\n", j, phi[i*NY+jplus], phi[i*NY+jminus], gradient[NX*NY+i*NY+j]);
+
             
         i = NX-1;
         iplus = 0;
@@ -675,21 +719,21 @@ void compute_gradient_euler(double phi[NX*NY], double gradient[2*NX*NY])
     
     j = 0;  jplus = 1;  jminus = NY-1;
     gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus] + yshift);
     
     j = NY-1;  jplus = 0;  jminus = NY-2;
     gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus] - yshift);
     
     i = NX-1;  iplus = 0;  iminus = NX-2;
     
     j = 0;  jplus = 1;  jminus = NY-1;
     gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus] + yshift);
     
     j = NY-1;  jplus = 0;  jminus = NY-2;
     gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus] - yshift);
 }
 
 void compute_gradient_rde(double phi[NX*NY], t_rde rde[NX*NY])
@@ -844,7 +888,7 @@ void compute_field_log(double *phi[NFIELDS], t_rde rde[NX*NY])
         for (j=0; j<NY; j++)
         {
             value = vabs(phi[1][i*NY+j]);
-            if (value < 1.0e-5) value = 1.0e-5;
+            if (value < LOG_MIN) value = LOG_MIN;
             rde[i*NY+j].log_vorticity = LOG_SHIFT + LOG_SCALE*log(value);
         }
 }
@@ -1164,7 +1208,7 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
 //             if (value < 0.0) value = -value;
 //             if (value < 1.0e-10) value = 1.0e-10;
 //             color_scheme_palette(COLOR_SCHEME, palette, LOG_SCALE*value + LOG_SHIFT, 1.0, 0, rgb);
-            color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            color_scheme_palette(COLOR_SCHEME, palette, LOG_SCALE*value, 1.0, 0, rgb);
             break;
         }
         case (Z_EULER_VORTICITY_ASYM): 
@@ -1688,6 +1732,70 @@ void draw_wave_3d_ij_rde(int i, int j, int movie, double *phi[NFIELDS], short in
     }
 }
 
+void draw_wave_3d_ij_rde_periodic(int shiftx, int shifty, int i, int j, int movie, double *phi[NFIELDS], 
+                         short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
+{
+    int k, l, draw = 1;
+    double xy[2], xy_screen[2], rgb[3], pos[2], ca, rgb_e[3], rgb_w[3], rgb_n[3], rgb_s[3]; 
+    double z, z_sw, z_se, z_nw, z_ne, z_mid, zw, ze, zn, zs, min = 1000.0, max = 0.0;
+    double xy_sw[2], xy_se[2], xy_nw[2], xy_ne[2], xy_mid[2];
+    double energy;
+    
+
+    if (NON_DIRICHLET_BC) 
+        draw = (xy_in[i*NY+j])&&(xy_in[(i+1)*NY+j])&&(xy_in[i*NY+j+1])&&(xy_in[(i+1)*NY+j+1]);
+    else draw = (TWOSPEEDS)||(xy_in[i*NY+j]);
+            
+    if (draw)
+    {
+        if (AMPLITUDE_HIGH_RES > 0)
+        {
+            z_mid = compute_interpolated_colors_rde(i, j, rde, potential, palette, cplot, 
+                                                        rgb_e, rgb_w, rgb_n, rgb_s, &z_sw, &z_se, &z_nw, &z_ne, 
+                                                        fade, fade_value, movie);
+            ij_to_xy(i, j, xy_sw);
+            ij_to_xy(i+1, j, xy_se);
+            ij_to_xy(i, j+1, xy_nw);
+            ij_to_xy(i+1, j+1, xy_ne);
+                    
+            for (k=0; k<2; k++) xy_mid[k] = 0.25*(xy_sw[k] + xy_se[k] + xy_nw[k] + xy_ne[k]);
+                       
+            if (AMPLITUDE_HIGH_RES == 1)
+            {                        
+                glBegin(GL_TRIANGLE_FAN);
+                glColor3f(rgb_w[0], rgb_w[1], rgb_w[2]);
+                draw_vertex_xyz_shift(xy_mid, z_mid, shiftx, shifty);
+                draw_vertex_xyz_shift(xy_nw, z_nw, shiftx, shifty);
+                draw_vertex_xyz_shift(xy_sw, z_sw, shiftx, shifty);
+                    
+                glColor3f(rgb_s[0], rgb_s[1], rgb_s[2]);
+                draw_vertex_xyz_shift(xy_se, z_se, shiftx, shifty);
+                    
+                glColor3f(rgb_e[0], rgb_e[1], rgb_e[2]);
+                draw_vertex_xyz_shift(xy_ne, z_ne, shiftx, shifty);
+                    
+                glColor3f(rgb_n[0], rgb_n[1], rgb_n[2]);
+                draw_vertex_xyz_shift(xy_nw, z_nw, shiftx, shifty);
+                glEnd ();
+            }
+        }
+        else
+        {
+            glColor3f(rde[i*NY+j].rgb[0], rde[i*NY+j].rgb[1], rde[i*NY+j].rgb[2]);
+            
+            glBegin(GL_TRIANGLE_FAN);
+            ij_to_xy(i, j, xy);
+            draw_vertex_xyz_shift(xy, adjust_field(*rde[i*NY+j].p_zfield[movie], potential[i*NY+j]), shiftx, shifty);
+            ij_to_xy(i+1, j, xy);
+            draw_vertex_xyz_shift(xy, adjust_field(*rde[(i+1)*NY+j].p_zfield[movie], potential[(i+1)*NY+j]), shiftx, shifty);
+            ij_to_xy(i+1, j+1, xy);
+            draw_vertex_xyz_shift(xy, adjust_field(*rde[(i+1)*NY+j+1].p_zfield[movie], potential[(i+1)*NY+j+1]), shiftx, shifty);
+            ij_to_xy(i, j+1, xy);
+            draw_vertex_xyz_shift(xy, adjust_field(*rde[i*NY+j+1].p_zfield[movie], potential[i*NY+j+1]), shiftx, shifty);
+            glEnd ();
+        }
+    }
+}
 
 
 void draw_wave_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], 
@@ -1742,6 +1850,27 @@ void draw_wave_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t
 }
 
 
+void draw_periodicised_wave_3d(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], 
+                  int zplot, int cplot, int palette, int fade, double fade_value)
+/* a variant where the wave is repeated periodically in x and y directions (beta) */
+{
+    int i, j, shiftx, shifty;
+    double observer_angle;
+    
+    blank();
+    if (DRAW_BILLIARD) draw_billiard_3d(fade, fade_value);
+    
+    if (!ROTATE_VIEW)
+    {
+        for (shiftx = -1; shiftx < 2; shiftx++)
+            for (shifty = -2; shifty < 2; shifty++)
+                for (i=BORDER_PADDING; i<NX-1-BORDER_PADDING; i++)
+                    for (j=BORDER_PADDING; j<NY-1-BORDER_PADDING; j++)
+                        draw_wave_3d_ij_rde_periodic(shiftx, shifty, i, j, movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
+    }
+}
+
+
 void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], 
                    int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
 {
@@ -1760,8 +1889,43 @@ void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rd
     }
     compute_cfield_rde(xy_in, cplot, palette, rde, fade, fade_value, movie);
     
-    if (PLOT_3D) draw_wave_3d_rde(movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
+    if (PLOT_3D) 
+    {
+        if (DRAW_PERIODICISED) 
+            draw_periodicised_wave_3d(movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
+        else draw_wave_3d_rde(movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
+    }
     else draw_wave_2d_rde(xy_in, rde);
 }
 
-
+void draw_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], int time, int fade, double fade_value)
+/* draw trajectories of tracers */
+{
+    int tracer, t, t1, length = 50;
+    double x1, y1, x2, y2, lum;
+    
+    glColor3f(1.0, 1.0, 1.0);
+    glLineWidth(1);
+    
+    t1 = time - length;
+    if (t1 < 1) t1 = 1;
+    
+    for (t = t1 + 1; t < time; t++) 
+        for (tracer = 0; tracer < N_TRACERS; tracer++)
+        {
+            x1 = tracers[2*(t-1)*N_TRACERS + 2*tracer];
+            y1 = tracers[2*(t-1)*N_TRACERS + 2*tracer + 1];
+        
+            x2 = tracers[2*t*N_TRACERS + 2*tracer];
+            y2 = tracers[2*t*N_TRACERS + 2*tracer + 1];
+            
+            lum = 1.0 - 0.75*(double)(time - t)/(double)length;
+            if (fade) lum *= fade_value;
+            
+            glColor3f(lum, lum, lum);
+            if (module2(x2 - x1, y2 - y1) < 0.2) draw_line(x1, y1, x2, y2);
+            
+//             printf("time = %i, tracer = %i, coord = %i, x1 = %.2lg, y1 = %.2lg, x2 = %.2lg, y2 = %.2lg\n", t, tracer,2*t*N_TRACERS + 2*tracer, x1, y1, x2, y2);
+        }
+    
+}

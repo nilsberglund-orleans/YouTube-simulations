@@ -64,6 +64,8 @@
 #define S_MAZE 15           /* segments forming a maze */
 #define S_EXT_RECTANGLE 16  /* particles outside a rectangle */
 #define S_DAM_BRICKS 17     /* dam made of several bricks */
+#define S_HLINE_HOLE 18    /* horizontal line with a hole in the bottom */
+#define S_EXT_CIRCLE_RECT 19    /* particles outside a circle and a rectangle */
 
 /* particle interaction */
 

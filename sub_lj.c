@@ -955,7 +955,7 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
     }
 }
 
-void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, double width, t_segment segment[NMAXSEGMENTS])
+void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, double width, t_segment segment[NMAXSEGMENTS], int group)
 /* add four segments forming a rectangle, specified by two adjacent corners and width */
 {
     double tx, ty, ux, uy, norm, x3, y3, x4, y4;
@@ -993,7 +993,11 @@ void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, d
         segment[n+3].x2 = x1;
         segment[n+3].y2 = y1;
         
-        for (i=0; i<4; i++) segment[n+i].concave = 1;
+        for (i=0; i<4; i++) 
+        {
+            segment[n+i].concave = 1;
+            segment[n+i].group = group;
+        }
         nsegments += 4;
     }
     else printf("Warning: NMAXSEGMENTS too small\n");
@@ -1050,6 +1054,38 @@ void add_rectangle_to_segments(double x1, double y1, double x2, double y2, t_seg
 }
 
 
+void add_circle_to_segments(double x, double y, double r, int nsegs, double angle0, t_segment segment[NMAXSEGMENTS], int group)
+/* add segments forming a circle to linear obstacle configuration */
+{
+    int i, n = nsegments, nplus, nminus; 
+    double angle;
+    
+    angle = DPI/(double)nsegs;
+    
+    if (nsegments + nsegs < NMAXSEGMENTS) 
+    {
+        for (i=0; i<nsegs; i++)
+        {
+            segment[n+i].x1 = -SEGMENTS_X0 + r*cos(((double)i)*angle + angle0*PID);
+            segment[n+i].y1 = SEGMENTS_Y0 - r*sin(((double)i)*angle + angle0*PID);
+            segment[n+i].x2 = -SEGMENTS_X0 + r*cos(((double)(i+1))*angle + angle0*PID);
+            segment[n+i].y2 = SEGMENTS_Y0 - r*sin(((double)(i+1))*angle + angle0*PID);
+            segment[n+i].angle1 = -((double)i + 0.5)*angle - angle0*PID;
+            segment[n+i].angle2 = -((double)i - 0.5)*angle - angle0*PID;
+            while (segment[n+i].angle1 < 0.0) segment[n+i].angle1 += DPI;
+            while (segment[n+i].angle2 < segment[n+i].angle1) segment[n+i].angle2 += DPI;
+            segment[n+i].concave = 1;
+            segment[n+i].group = group;
+        }
+    
+        nsegments += nsegs;
+    }
+    else printf("Warning: NMAXSEGMENTS too small\n");
+}
+        
+        
+
+
 double nozzle_width(double x, double width, int nozzle_shape)
 /* width of bell-shaped nozzle */
 {
@@ -1097,7 +1133,7 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
                 angle = -PID + (double)(i+1)*DPI/(double)NPOLY;
                 x2 = x0 + 0.7*LAMBDA*cos(angle);
                 y2 = y0 + YMIN + LAMBDA*(1.7 + 0.7*sin(angle));
-                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment, 0);
             }
             break;
         }
@@ -1106,23 +1142,23 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
             /* dimensions chosen to have same area as circular chamber */
             a = 0.5*LAMBDA;
             b = 0.49*PI*LAMBDA;
-            add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, segment);
-            add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, segment);
-            add_rotated_angle_to_segments(x0+a, nozy+b, x0-a, nozy+b, 0.02, segment);
-            add_rotated_angle_to_segments(x0-a, nozy+b, x0-a, nozy, 0.02, segment);
-            add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, segment);
+            add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy+b, x0-a, nozy+b, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy+b, x0-a, nozy, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, segment, 0);
             break;
         }
         case (RCK_RECT_HAT):    /* rectangular chamber with a hat */
         {
             a = 0.5*LAMBDA;
             b = 0.49*PI*LAMBDA;
-            add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, segment);
-            add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, segment);
-            add_rotated_angle_to_segments(x0+a, nozy+b, x0, nozy+b+a, 0.02, segment);
-            add_rotated_angle_to_segments(x0, nozy+b+a, x0-a, nozy+b, 0.02, segment);
-            add_rotated_angle_to_segments(x0-a, nozy+b, x0-a, nozy, 0.02, segment);
-            add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, segment);
+            add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy+b, x0, nozy+b+a, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0, nozy+b+a, x0-a, nozy+b, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy+b, x0-a, nozy, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, segment, 0);
             break;
         }
     }
@@ -1138,18 +1174,18 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
             x1 = x0 + nozzle_width(y1 - y0, nozx, nozzle_shape);
             y2 = y1 + dx;
             x2 = x0 + nozzle_width(y2 - y0, nozx, nozzle_shape);
-            add_rotated_angle_to_segments(x1, y1 + YMIN + LAMBDA, x2, y2 + YMIN + LAMBDA, 0.02, segment);
+            add_rotated_angle_to_segments(x1, y1 + YMIN + LAMBDA, x2, y2 + YMIN + LAMBDA, 0.02, segment, 0);
         }
-        add_rotated_angle_to_segments(x2, y2 + YMIN + LAMBDA, x0 + nozx, nozy, 0.02, segment);
+        add_rotated_angle_to_segments(x2, y2 + YMIN + LAMBDA, x0 + nozx, nozy, 0.02, segment, 0);
         for (i=0; i<nsides; i++)
         {
             y1 = y0 - LAMBDA + dx*(double)(i-1);
             x1 = x0 - nozzle_width(y1 - y0, nozx, nozzle_shape);
             y2 = y1 + dx;
             x2 = x0 - nozzle_width(y2 - y0, nozx, nozzle_shape);
-            add_rotated_angle_to_segments(x1, y1 + YMIN + LAMBDA, x2, y2 + YMIN + LAMBDA, 0.02, segment);
+            add_rotated_angle_to_segments(x1, y1 + YMIN + LAMBDA, x2, y2 + YMIN + LAMBDA, 0.02, segment, 0);
         }
-        add_rotated_angle_to_segments(x2, y2 + YMIN + LAMBDA, x0 - nozx, nozy, 0.02, segment);
+        add_rotated_angle_to_segments(x2, y2 + YMIN + LAMBDA, x0 - nozx, nozy, 0.02, segment, 0);
     }
     
     for (i=nsegments0; i<nsegments; i++) segment[i].inactivate = 0;
@@ -1491,7 +1527,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 y1 = LAMBDA*sin(angle2);
                 x2 = 0.7*cos(angle2);
                 y2 = 0.7*sin(angle2);
-                add_rotated_angle_to_segments(x1, y1, x2, y2, MU, segment);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, MU, segment, 0);
                 
                 for (j=0; j<nsides; j++) if (j!=nsides/2)
                 {
@@ -1509,7 +1545,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                     x2 = r*cos(angle2);
                     y2 = r*sin(angle2);
                     
-                    add_rotated_angle_to_segments(x1, y1, x2, y2, 0.5*MU, segment);
+                    add_rotated_angle_to_segments(x1, y1, x2, y2, 0.5*MU, segment, 0);
                 }
             }
             
@@ -1537,10 +1573,11 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             
             cycle = 1;
             nsegments = NPOLY;
+            ngroups = 2;
             
             for (i=0; i<nsegments; i++) 
             {
-                segment[i].group = 0;
+                segment[i].group = 1;
                 segment[i].inactivate = 0;
             }
             
@@ -1557,7 +1594,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 angle = -PI + (double)(i+1)*DPI/(double)NPOLY;
                 x2 = 0.7*LAMBDA*(1.0 + cos(angle));
                 y2 = 0.5*LAMBDA*sin(angle);                
-                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment, 0);
             }
              
             /* compute intersection point of nozzle and ellipse */
@@ -1575,18 +1612,18 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 y1 = nozzle_width(x1, nozy, NOZZLE_SHAPE);
                 x2 = x1 + dx;
                 y2 = nozzle_width(x2, nozy, NOZZLE_SHAPE);
-                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment, 0);
             }
-            add_rotated_angle_to_segments(x2, y2, nozx, nozy, 0.02, segment);
+            add_rotated_angle_to_segments(x2, y2, nozx, nozy, 0.02, segment, 0);
             for (i=0; i<nsides; i++)
             {
                 x1 = -LAMBDA + dx*(double)(i-1);
                 y1 = -nozzle_width(x1, nozy, NOZZLE_SHAPE);
                 x2 = x1 + dx;
                 y2 = -nozzle_width(x2, nozy, NOZZLE_SHAPE);
-                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment, 0);
             }
-            add_rotated_angle_to_segments(x2, y2, nozx, -nozy, 0.02, segment);
+            add_rotated_angle_to_segments(x2, y2, nozx, -nozy, 0.02, segment, 0);
             
             /* closing segment */
             segment[nsegments].x1 = nozx;
@@ -1696,7 +1733,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 y1 = YMIN + r - (r + MU)*sin(angle);
                 x2 = XMAX - r + (r + MU)*cos(angle + dangle);
                 y2 = YMIN + r - (r + MU)*sin(angle + dangle);
-                add_rotated_angle_to_segments(x1, y1, x2, y2, MU, segment);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, MU, segment, 0);
             }
             
             cycle = 0;
@@ -1727,17 +1764,17 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         {
             width = 0.1*LAMBDA;
             
-            segment[0].x1 = -LAMBDA;
-            segment[0].y1 = -width;
+            segment[0].x1 = SEGMENTS_X0 - LAMBDA;
+            segment[0].y1 = SEGMENTS_Y0 - width;
             
-            segment[1].x1 = -LAMBDA;
-            segment[1].y1 = width;
+            segment[1].x1 = SEGMENTS_X0 - LAMBDA;
+            segment[1].y1 = SEGMENTS_Y0 + width;
 
-            segment[2].x1 = LAMBDA;
-            segment[2].y1 = width;
+            segment[2].x1 = SEGMENTS_X0 + LAMBDA;
+            segment[2].y1 = SEGMENTS_Y0 + width;
 
-            segment[3].x1 = LAMBDA;
-            segment[3].y1 = -width;
+            segment[3].x1 = SEGMENTS_X0 + LAMBDA;
+            segment[3].y1 = SEGMENTS_Y0 - width;
             
             cycle = 1;
             nsegments = 4;
@@ -1753,7 +1790,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         }
         case (S_DAM_BRICKS):
         {
-            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, BCYMIN, segment, i);
+            add_rectangle_to_segments(DAM_WIDTH, BCYMIN - 0.5, -DAM_WIDTH, BCYMIN, segment, 0);
             dy = 0.1*(LAMBDA - BCYMIN);
             
             for (i=1; i<11; i++)
@@ -1772,6 +1809,55 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             }
             break;
             
+        }
+        case (S_HLINE_HOLE):
+        {
+            x = 0.15;
+            x1 = XMAX + 1.0;
+            y1 = 0.0;
+            width = 0.05;
+            
+            add_rectangle_to_segments(x1, y1 - width, x, y1, segment, 0);
+            add_rectangle_to_segments(-x, y1 - width, -x1, y1, segment, 0);
+                        
+            /* closing segment */
+            segment[nsegments].x1 = -x;
+            segment[nsegments].y1 = y1;
+            segment[nsegments].x2 = x;
+            segment[nsegments].y2 = y1;
+            nsegments++;
+        
+            cycle = 0;
+            concave = 0;    /* add_rectangle_to_segments already deals with concave corners */
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].inactivate = 0;
+            }
+            segment[nsegments-1].inactivate = 1;
+            
+            break;
+        }
+        case (S_EXT_CIRCLE_RECT):
+        {
+            width = 0.1*LAMBDA;
+            
+            add_rectangle_to_segments(SEGMENTS_X0 + LAMBDA, SEGMENTS_Y0 - width, SEGMENTS_X0 - LAMBDA, SEGMENTS_Y0 + width, segment, 1);
+            
+            add_circle_to_segments(-SEGMENTS_X0, SEGMENTS_Y0, 0.5*LAMBDA, NPOLY, APOLY, segment, 2);
+                        
+            cycle = 0;
+            concave = 0;
+            nsegments = NPOLY + 4;
+            ngroups = 3;
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].concave = 1;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
         }
         default: 
         {
@@ -1840,14 +1926,16 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             }
             else
             {
-                if (iminus == 0) iminus = nsegments - 1;
-                if (iplus == nsegments - 1) iplus = 0;
+                if (iminus < 0) iminus = nsegments - 1;
+                if (iplus > nsegments - 1) iplus = 0;
             }
             angle = argument(segment[iplus].x1 - segment[i].x1, segment[iplus].y1 - segment[i].y1) + PID;
             angle2 = argument(segment[i].x1 - segment[iminus].x1, segment[i].y1 - segment[iminus].y1) + PID;
             if (angle2 < angle) angle2 += DPI;
             segment[i].angle1 = angle;
             segment[i].angle2 = angle2;
+            
+            printf("i = %i, iplus = %i, iminus = %i, angle1 = %.0f, angle2 = %.0f\n", i, iplus, iminus, angle*360.0/DPI, angle2*360.0/DPI);
         }
     
     /* make copy of initial values in case of rotation/translation */
@@ -1868,6 +1956,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
 //         printf("Segment %i: (x1, y1) = (%.3lg,%.3lg), (x2, y2) = (%.3lg,%.3lg)\n (nx, ny) = (%.3lg,%.3lg), c = %.3lg, length = %.3lg\n", i, segment[i].x1, segment[i].y1, segment[i].x2, segment[i].y2, segment[i].nx, segment[i].ny, segment[i].c, segment[i].length);
 //         if (segment[i].concave) printf("Concave with angles %.3lg Pi, %.3lg Pi\n", segment[i].angle1/PI, segment[i].angle2/PI);
 //     }
+//     sleep(4);
 }
 
 int in_rocket(double x, double y, int rocket_shape)
@@ -2043,6 +2132,13 @@ int in_segment_region(double x, double y)
             if (vabs(x) > LAMBDA + padding) return(1);
             else if (vabs(y) > 0.1*LAMBDA + padding) return(1);
             else return(0);
+        }
+        case (S_EXT_CIRCLE_RECT):
+        {
+            padding = 0.1;
+            if ((vabs(x - SEGMENTS_X0) < LAMBDA + padding)&&(vabs(y - SEGMENTS_Y0) < 0.1*LAMBDA + padding)) return(0);
+            else if (module2(x + SEGMENTS_X0, y - SEGMENTS_Y0) < 0.5*LAMBDA + padding) return(0);
+            else return(1);
         }
         default: return(1);
     }
@@ -3192,6 +3288,33 @@ void set_segment_group_color(int group, double lum, double rgb[3])
 }
 
 
+void draw_altitude_lines()
+{
+    int i, i1, i2;
+    double x, y;
+    
+    glColor3f(0.5, 0.5, 0.5);
+    glLineWidth(1);
+    
+    i1 = (int)(YMIN + ytrack) - 1.0;
+    i2 = (int)(YMAX + ytrack) + 1.0;
+    
+    for (i = i1; i < i2; i++)
+    {
+        y = (double)i - ytrack;
+        draw_line(BCXMIN, y, XMAX - 1.8, y);
+    }
+    
+    i1 = (int)(XMIN + xtrack) - 1.0;
+    i2 = (int)(XMAX - 1.8 + xtrack) + 1.0;
+    
+    for (i = i1; i < i2; i++)
+    {
+        x = (double)i - xtrack;
+        if (x < XMAX - 1.8) draw_line(x, YMIN, x, YMAX);
+    }
+}
+
 void draw_one_triangle(t_particle particle, int same_table[9*HASHMAX], int p, int q, int nsame)
 {
     double x, y, dx, dy;
@@ -3449,6 +3572,9 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta)
         erase_area_hsl_turbo(0.0, YMIN, 2.0*PARTIAL_THERMO_WIDTH, PARTIAL_THERMO_HEIGHT*(YMAX - YMIN),  hue, 0.9, 0.15);
         
     }
+    
+    /* draw "altitude lines" */
+    if (ALTITUDE_LINES) draw_altitude_lines();
     
     /* draw the bonds first */
     if ((DRAW_BONDS)||(plot == P_BONDS))
@@ -4996,7 +5122,7 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
         pangle[i] = particle[i].omega;
         
         if ((PLOT == P_INITIAL_POS)||(PLOT_B == P_INITIAL_POS))
-            particle[i].color_hue = 360.0*(particle[i].yc - YMIN)/(YMAX - YMIN);
+            particle[i].color_hue = 360.0*(particle[i].yc - INITYMIN)/(INITYMAX - INITYMIN);
     }
     /* initialize dummy values in case particles are added */
     for (i=ncircles; i < NMAXCIRCLES; i++) 
@@ -5469,6 +5595,17 @@ void draw_trajectory_plot(t_group_data *group_speeds, int i)
         first = 0;
     }
     
+    if (ALTITUDE_LINES)
+    {
+        glLineWidth(1);
+        glColor3f(0.5, 0.5, 0.5);
+        for (j=1; j<(int)scaley + 1; j++)
+        {
+            y1 = plot_coord((double)j/scaley, plotymin, plotymax);
+            if (y1 < plotymax) draw_line(plotxmin, y1, plotxmax + 0.05, y1);
+        }
+    }
+    
     glLineWidth(2);
     
     /* plot trajectories */
@@ -5514,7 +5651,7 @@ void draw_trajectory_plot(t_group_data *group_speeds, int i)
     
 //     sprintf(message, "%.1f", VMAX_PLOT_SPEEDS);
     sprintf(message, "y");
-    write_text_fixedwidth(plotxmin - 0.1, plotymax - 0.01, message);
+    write_text_fixedwidth(plotxmin - 0.1, plotymax - 0.005, message);
         
     sprintf(message, "x");
     write_text_fixedwidth(plotxmax - 0.1, plotymin - 0.1, message);
@@ -5531,6 +5668,9 @@ void init_segment_group(t_segment segment[NMAXSEGMENTS], int group, t_group_segm
     {
         xc += 0.5*(segment[i].x1 + segment[i].x2);
         yc += 0.5*(segment[i].y1 + segment[i].y2);
+        
+//         printf("Segment group data %i: z1 = (%.3lg, %.3lg)\n z2 = (%.3lg, %.3lg)\n zc = (%.3lg, %.3lg)\n\n", group, 
+//                segment[i].x1, segment[i].y1, segment[i].x2, segment[i].y2, xc, yc);
         
         nseg_group++;
     }

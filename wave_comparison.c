@@ -44,6 +44,7 @@
 
 #define MOVIE 0         /* set to 1 to generate movie */
 #define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define SAVE_MEMORY 0   /* set to 1 to save memory when writing tiff images */
 
 #define TIME_LAPSE 0     /* set to 1 to add a time-lapse movie at the end */
 #define TIME_LAPSE_FACTOR 4    /* factor of time-lapse movie */
@@ -200,6 +201,7 @@
 #define E_SCALE 200.0     /* scaling factor for energy representation */
 #define LOG_SCALE 1.5     /* scaling factor for energy log representation */
 #define LOG_SHIFT 1.0     /* shift of colors on log scale */
+#define FLUX_SCALE 1.0e4    /* scaling factor for enegy flux represtnation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */

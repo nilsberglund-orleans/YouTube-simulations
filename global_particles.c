@@ -79,6 +79,7 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define P_TREE 7          /* pine tree */
 #define P_TOKA_NONSELF 8  /* Tokarsky non-self-unilluminable room */
 #define P_MAZE 10         /* maze */
+#define P_MAZE_DIAG 11    /* maze with 45 degrees angles */
 
 /* Color palettes */
 

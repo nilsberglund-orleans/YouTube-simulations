@@ -31,7 +31,7 @@
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 #include <time.h>
 
-#define MOVIE 0         /* set to 1 to generate movie */
+#define MOVIE 1         /* set to 1 to generate movie */
 
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
@@ -57,9 +57,9 @@
 #define B_DOMAIN 30     /* choice of domain shape */
 
 #define CIRCLE_PATTERN 1    /* pattern of circles */
-#define POLYLINE_PATTERN 10  /* pattern of polyline */
+#define POLYLINE_PATTERN 11  /* pattern of polyline */
 
-#define ABSORBING_CIRCLES 1 /* set to 1 for circular scatterers to be absorbing */
+#define ABSORBING_CIRCLES 0 /* set to 1 for circular scatterers to be absorbing */
 
 #define NMAXCIRCLES 100000     /* total number of circles (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 100000        /* total number of sides of polygonal line */   
@@ -87,7 +87,7 @@
 
 /* Simulation parameters */
 
-#define NPART 1000     /* number of particles */
+#define NPART 10000     /* number of particles */
 // #define NPART 2000     /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
@@ -100,9 +100,9 @@
 #define PRINT_COLLISION_NUMBER 0 /* set to 1 to print number of collisions */
 #define TEST_ACTIVE 1   /* set to 1 to test whether particle is in billiard */
 
-#define TEST_INITIAL_COND 1     /* set to 1 to allow only initial conditions that pass a test */
+#define TEST_INITIAL_COND 0     /* set to 1 to allow only initial conditions that pass a test */
 
-#define NSTEPS 6000      /* number of frames of movie */
+#define NSTEPS 4500     /* number of frames of movie */
 #define TIME 1500        /* time between movie frames, for fluidity of real-time simulation */ 
 #define DPHI 0.00002     /* integration step */
 #define NVID 25          /* number of iterations between images displayed on screen */
@@ -117,17 +117,17 @@
 
 /* Colors and other graphical parameters */
 
-#define COLOR_PALETTE 11     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 10     /* Color palette, see list in global_pdes.c  */
 
-#define NCOLORS 16       /* number of colors */
+#define NCOLORS 128      /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
-#define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
+#define RAINBOW_COLOR 0  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
 // #define LENGTH 0.01       /* length of velocity vectors */
 #define LENGTH 0.04       /* length of velocity vectors */
-#define BILLIARD_WIDTH 3    /* width of billiard */
-#define PARTICLE_WIDTH 3    /* width of particles */
+#define BILLIARD_WIDTH 2    /* width of billiard */
+#define PARTICLE_WIDTH 2    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
 
 #define BLACK 1             /* set to 1 for black background */
@@ -141,10 +141,12 @@
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1       /* final sleeping time */
 
-#define NXMAZE 8      /* width of maze */
-#define NYMAZE 8      /* height of maze */
+#define NXMAZE 16      /* width of maze */
+#define NYMAZE 16      /* height of maze */
+// #define NXMAZE 10      /* width of maze */
+// #define NYMAZE 10      /* height of maze */
 #define MAZE_MAX_NGBH 4     /* max number of neighbours of maze cell */
-#define RAND_SHIFT 58       /* seed of random number generator */
+#define RAND_SHIFT 1        /* seed of random number generator */
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 
 
@@ -660,16 +662,25 @@ void print_left_right_part_number(double *configs[NPARTMAX], int active[NPARTMAX
 {
     char message[50];
     int i, nleft = 0, nright = 0;
-    double rgb[3], x1, cosphi;
+    double rgb[3], x1, y1, cosphi, sinphi;
+    static int maxnleft = 0, maxnright = 0;
     
     /* count active particles, using the fact that absorbed particles have been given dummy coordinates */
-    for (i=0; i<nparticles; i++) /*if (active[i])*/
+    for (i=0; i<nparticles; i++) if (configs[i][0] >= DUMMY_ABSORBING)
     {
         cosphi = (configs[i][6] - configs[i][4])/configs[i][3];
+        sinphi = (configs[i][7] - configs[i][5])/configs[i][3];
         x1 = configs[i][4] + configs[i][2]*cosphi;
+        y1 = configs[i][5] + configs[i][2]*cosphi;
         if (x1 < xmin) nleft++;
-        else if (x1 > xmax) nright++; 
+        else if (x1 > xmax)
+        {
+            nright++;
+            printf("Detected leaving particle %i at (%.2f, %2f)\n", i, x1, y1);
+        }
     }
+    if (nleft > maxnleft) maxnleft = nleft;
+    if (nright > maxnright) maxnright = nright;
         
     hsl_to_rgb(0.0, 0.0, 0.0, rgb);
     
@@ -677,11 +688,11 @@ void print_left_right_part_number(double *configs[NPARTMAX], int active[NPARTMAX
     erase_area(xr, yr - 0.03, 0.4, 0.12, rgb);
     
     glColor3f(1.0, 1.0, 1.0);
-    if (nleft > 1) sprintf(message, "%i particles", nleft);
-    else sprintf(message, "%i particle", nleft);
+    if (nleft > 1) sprintf(message, "%i particles", maxnleft);
+    else sprintf(message, "%i particle", maxnleft);
     write_text(xl, yl, message);
-    if (nright > 1) sprintf(message, "%i particles", nright);
-    else sprintf(message, "%i particle", nright);
+    if (nright > 1) sprintf(message, "%i particles", maxnright);
+    else sprintf(message, "%i particle", maxnright);
     write_text(xr, yr, message);
 }
 
@@ -770,7 +781,7 @@ void animation()
     
     
 //     init_drop_config(-0.5, 0.0, 0.2, 0.4, configs);    
-    init_drop_config(-1.3, 0.2, -0.25*PI, 0.25*PI, configs);   
+    init_drop_config(-1.15, 0.01, 0.00*PI, 0.3*PI, configs);   
     
 //     init_drop_config(-1.3, -0.1, 0.0, DPI, configs);    
 //     init_drop_config(1.4, 0.1, 0.0, DPI, configs);    
@@ -792,7 +803,7 @@ void animation()
     if (DRAW_BILLIARD) draw_billiard();
     if (PRINT_PARTICLE_NUMBER) print_part_number(configs, active, XMIN + 0.1, YMIN + 0.1);
     else if (PRINT_LEFT_RIGHT_PARTICLE_NUMBER) 
-        print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.1, XMAX - 0.45, YMIN + 0.1, YMAX + MAZE_XSHIFT, YMAX + MAZE_XSHIFT);
+        print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.05, XMAX - 0.45, YMIN + 0.05, XMIN + MAZE_XSHIFT, XMAX + MAZE_XSHIFT);
     else if (PRINT_COLLISION_NUMBER) print_collision_number(ncollisions, XMIN + 0.1, YMIN + 0.1);
     
     glutSwapBuffers();   
@@ -850,7 +861,7 @@ void animation()
         if (DRAW_BILLIARD) draw_billiard();
         if (PRINT_PARTICLE_NUMBER) print_part_number(configs, active, XMIN + 0.1, YMIN + 0.1);
         else if (PRINT_LEFT_RIGHT_PARTICLE_NUMBER) 
-            print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.1, XMAX - 0.45, YMIN + 0.1, YMAX + MAZE_XSHIFT, YMAX + MAZE_XSHIFT);
+            print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.05, XMAX - 0.45, YMIN + 0.05, YMIN + MAZE_XSHIFT, YMAX + MAZE_XSHIFT);
 //             print_left_right_part_number(configs, XMIN + 0.1, YMIN + 0.1, XMAX - 0.45, YMIN + 0.1, YMIN + MAZE_XSHIFT, YMAX + MAZE_XSHIFT);
         else if (PRINT_COLLISION_NUMBER) print_collision_number(ncollisions, XMIN + 0.1, YMIN + 0.1);
     

@@ -3,6 +3,7 @@
 /*********************/
 
 #include "colors_waves.c"
+#define TIFF_FREE_PERIOD 10
 
 int writetiff_new(char *filename, char *description, int x, int y, int width, int height, int compression)
 {
@@ -63,6 +64,7 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
   TIFF *file;
   GLubyte *image, *p;
   int i;
+  static int counter = 0;
 
   file = TIFFOpen(filename, "w");
   if (file == NULL)
@@ -106,7 +108,16 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
     p += width * sizeof(GLubyte) * 3;
   }
   /* added 9/9/22 and removed again, since it produces an unwanted "band" on the right */
-//   free(image); /* prevents RAM consumption*/
+  /* readded 5/11/22 */
+  if (SAVE_MEMORY) 
+  {
+      counter++; 
+      if (counter%TIFF_FREE_PERIOD == 0)
+      {
+        free(image); /* prevents RAM consumption*/
+        counter = 0;
+      }
+  }
   TIFFClose(file);
   return 0;
 }
@@ -343,6 +354,24 @@ void xy_to_ij(double x, double y, int ij[2])
 
     ij[0] = (int)(x1 * (double)NX);
     ij[1] = (int)(y1 * (double)NY);
+}
+
+
+void xy_to_ij_safe(double x, double y, int ij[2])
+/* convert (x,y) position to (i,j) in table representing wave, making sure (i,j) are between 0 and NX or NY */
+{
+    double x1, y1;
+
+    x1 = (x - XMIN)/(XMAX - XMIN);
+    y1 = (y - YMIN)/(YMAX - YMIN);
+
+    ij[0] = (int)(x1 * (double)NX);
+    ij[1] = (int)(y1 * (double)NY);
+    
+    if (ij[0] < 0) ij[0] = 0;
+    if (ij[0] > NX-1) ij[0] = NX-1;
+    if (ij[1] < 0) ij[1] = 0;
+    if (ij[1] > NY-1) ij[1] = NY-1;
 }
 
 
@@ -1606,13 +1635,14 @@ int compute_maze_coordinates(t_rectangle polyrect[NMAXPOLY], int closed)
 {
     t_maze* maze;
     int i, j, n, nsides = 0, ropening;
-    double dx, dy, x1, y1, padding = 0.02, pos[2], width = 0.02;
+    double dx, dy, x1, y1, x0, padding = 0.02, pos[2], width = 0.02;
     
     maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
     
     init_maze(maze);
             
     /* build walls of maze */
+//     x0 = LAMBDA - 1.0;
     dx = (YMAX - YMIN - 2.0*padding)/(double)(NXMAZE);
     dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
     
@@ -1918,6 +1948,7 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
     double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, alpha, s, a, r, height;
     int i, j, k, k1, k2, condition = 0, m;
     static int first = 1, nsides;
+    static double h, hh, ra, rb;
 
     switch (b_domain) {
         case (D_NOTHING):
@@ -1934,6 +1965,28 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
         case (D_ELLIPSE):
         {
             if (x*x/(LAMBDA*LAMBDA) + y*y < 1.0) return(1);
+            else return(0);
+            break;
+        }
+        case (D_EXT_ELLIPSE):
+        {
+            if (x*x/(LAMBDA*LAMBDA) + y*y/(MU*MU) > 1.0) return(1);
+            else return(0);
+            break;
+        }
+        case (D_EXT_ELLIPSE_CURVED):
+        {
+            y1 = y + 0.4*x*x;
+            if (x*x/(LAMBDA*LAMBDA) + y1*y1/(MU*MU) > 1.0) return(1);
+            else return(0);
+            break;
+        }
+        case (D_EXT_ELLIPSE_CURVED_BDRY):
+        {
+            if (y > YMAX - 0.05) return(0);
+            if (y < YMIN + 0.05) return(0);
+            y1 = y + 0.4*x*x;
+            if (x*x/(LAMBDA*LAMBDA) + y1*y1/(MU*MU) > 1.0) return(1);
             else return(0);
             break;
         }
@@ -2485,6 +2538,49 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
                 if ((x > polyrect[i].x1)&&(x < polyrect[i].x2)&&(y > polyrect[i].y1)&&(y < polyrect[i].y2)) return(0);
             return(1);
         }
+        case (D_CHESSBOARD):
+        {
+            i = (int)(vabs(x)/LAMBDA + 0.5);
+            j = (int)(vabs(y)/LAMBDA + 0.5);
+            if ((i+j)%2 == 0) return(1);
+            else return(0);
+        }
+        case (D_TRIANGLE_TILES):
+        {
+            if (first)
+            {
+                h = LAMBDA/(2.0*sqrt(3.0));
+                hh = h*3.0;
+                first = 0;
+            }
+            i = (int)((y + h)/hh + 10.0);
+            y1 = sin(DPI/3.0)*x - 0.5*y;
+            j = (int)((y1 + h)/hh + 10.0);
+            y1 = sin(-DPI/3.0)*x -0.5*y;
+            k = (int)((y1 + h)/hh + 10.0);
+            if ((i+j+k)%2 == 0) return(1);
+            else return(0);
+        }
+        case (D_HEX_TILES):
+        {
+            if (first)
+            {
+                ra = -1.0/sqrt(3.0);
+                rb = -2.0*ra;
+                first = 0;
+            }
+            x1 = (x + ra*y)/LAMBDA + 30.0;
+            y1 = rb*y/LAMBDA + 30.0;
+            
+            x1 = x1 - (double)(3*(int)(x1/3.0));
+            y1 = y1 - (double)(3*(int)(y1/3.0));
+            
+            if ((x1 > 2.0)&&(y1 < 1.0)) return(1);
+            if ((x1 < 1.0)&&(y1 > 2.0)) return(1);
+            if (x1 + y1 < 1.0) return(1);
+            if (x1 + y1 > 5.0) return(1);
+            return(0);
+        }
         case (D_MENGER):       
         {
             x1 = 0.5*(x+1.0);
@@ -2675,11 +2771,30 @@ void tvertex_lineto(t_vertex z)
 }
 
 
+void hex_transfo(double u, double v, double *x, double *y)
+/* linear transformation of plane used for hex tiles */
+{
+    static double ra, rb;
+    static int first = 1;
+    
+    if (first)
+    {
+        ra = 0.5;
+        rb = 0.5*sqrt(3.0);
+        first = 0;
+    }   
+    
+    *x = u + ra*v;
+    *y = rb*v;
+}
+
+
 void draw_billiard(int fade, double fade_value)      /* draws the billiard boundary */
 {
-    double x0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax, height;
-    int i, j, k, k1, k2, mr2;
+    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax, height;
+    int i, j, k, k1, k2, mr2, ntiles;
     static int first = 1, nsides;
+    static double h, hh, sqr3;
 
     if (fade)
     {
@@ -2736,6 +2851,67 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 draw_circle(x0, 0.0, r, NSEG);
                 draw_circle(-x0, 0.0, r, NSEG);
             }
+            break;
+        }
+        case (D_EXT_ELLIPSE):
+        {
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*DPI/(double)NSEG;
+                x = LAMBDA*cos(phi);
+                y = MU*sin(phi);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+
+            /* draw foci */
+            if (FOCI)
+            {
+                if (fade) glColor3f(0.3*fade_value, 0.3*fade_value, 0.3*fade_value);
+                else glColor3f(0.3, 0.3, 0.3);
+                x0 = sqrt(LAMBDA*LAMBDA-MU*MU);
+
+                glLineWidth(2);
+                glEnable(GL_LINE_SMOOTH);
+                
+                draw_circle(x0, 0.0, r, NSEG);
+                draw_circle(-x0, 0.0, r, NSEG);
+            }
+            break;
+        }
+        case (D_EXT_ELLIPSE_CURVED):
+        {
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*DPI/(double)NSEG;
+                x = LAMBDA*cos(phi);
+                y = MU*sin(phi) - 0.4*x*x;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+
+            break;
+        }
+        case (D_EXT_ELLIPSE_CURVED_BDRY):
+        {
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*DPI/(double)NSEG;
+                x = LAMBDA*cos(phi);
+                y = MU*sin(phi) - 0.4*x*x;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            
+            draw_line(XMIN, YMAX - 0.05, XMAX, YMAX - 0.05);
+            draw_line(XMIN, YMIN + 0.05, XMAX, YMIN + 0.05);
+
             break;
         }
         case (D_STADIUM):
@@ -3631,6 +3807,109 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 draw_filled_rectangle(polyrect[i].x1, polyrect[i].y1, polyrect[i].x2, polyrect[i].y2);
             break;
         }
+        case (D_CHESSBOARD):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            x = 0.5*LAMBDA;
+            while (x < XMAX) 
+            {
+                draw_line(x, YMIN, x, YMAX);
+                x += LAMBDA;
+            }
+            x = -0.5*LAMBDA;
+            while (x > XMIN) 
+            {
+                draw_line(x, YMIN, x, YMAX);
+                x -= LAMBDA;
+            }
+            y = 0.5*LAMBDA;
+            while (y < YMAX) 
+            {
+                draw_line(XMIN, y, XMAX, y);
+                y += LAMBDA;
+            }
+            y = -0.5*LAMBDA;
+            while (y > YMIN) 
+            {
+                draw_line(XMIN, y, XMAX, y);
+                y -= LAMBDA;
+            }
+            
+            break;
+        }
+        case (D_TRIANGLE_TILES):
+        {
+            if (first)
+            {
+                h = LAMBDA/(2.0*sqrt(3.0));
+                hh = h*3.0;
+                sqr3 = sqrt(3.0);
+                first = 0;
+            }
+            glLineWidth(BOUNDARY_WIDTH);
+            y = -h;
+            while (y < YMAX) 
+            {
+                draw_line(XMIN, y, XMAX, y);
+                y += hh;
+            }
+            y = -h;
+            while (y > YMIN) 
+            {
+                draw_line(XMIN, y, XMAX, y);
+                y -= hh;
+            }
+            x = -0.5*LAMBDA;
+            y = -h;
+            while (x < 1.5*XMAX)
+            {
+                draw_line(x - 10.0, y - 10.0*sqr3, x + 10.0, y + 10.0*sqr3);
+                draw_line(x - 10.0, y + 10.0*sqr3, x + 10.0, y - 10.0*sqr3);
+                x += LAMBDA;
+            }
+            x = -0.5*LAMBDA;
+            while (x > 1.5*XMIN)
+            {
+                draw_line(x - 10.0, y - 10.0*sqr3, x + 10.0, y + 10.0*sqr3);
+                draw_line(x - 10.0, y + 10.0*sqr3, x + 10.0, y - 10.0*sqr3);
+                x -= LAMBDA;
+            }
+            break;
+        }
+        case (D_HEX_TILES):
+        {
+            ntiles = (int)(XMAX/LAMBDA) + 1;
+            for (i=-ntiles; i<ntiles; i++)
+                for (j=-ntiles; j<ntiles; j++)
+                {
+                    x0 = 3.0*LAMBDA*(double)i;
+                    y0 = 3.0*LAMBDA*(double)j;
+                    
+                    hex_transfo(x0, y0 + LAMBDA, &x, &y);
+                    hex_transfo(x0, y0 + 2.0*LAMBDA, &x1, &y1);
+                    draw_line(x, y, x1, y1);
+                    hex_transfo(x0 + LAMBDA, y0 + 2.0*LAMBDA, &x2, &y2);
+                    draw_line(x1, y1, x2, y2);
+                    hex_transfo(x0 + LAMBDA, y0 + 3.0*LAMBDA, &x1, &y1);
+                    draw_line(x1, y1, x2, y2);
+                    hex_transfo(x0 + 2.0*LAMBDA, y0 + LAMBDA, &x1, &y1);
+                    draw_line(x1, y1, x2, y2);
+                    hex_transfo(x0 + 3.0*LAMBDA, y0 + LAMBDA, &x2, &y2);
+                    draw_line(x1, y1, x2, y2);
+                    hex_transfo(x0 + 2.0*LAMBDA, y0, &x2, &y2);
+                    draw_line(x1, y1, x2, y2);
+                    hex_transfo(x0 + LAMBDA, y0, &x1, &y1);
+                    draw_line(x1, y1, x2, y2);
+                    draw_line(x1, y1, x, y);
+                
+                    hex_transfo(x0 + 2.0*LAMBDA, y0 + 3.0*LAMBDA, &x, &y);
+                    hex_transfo(x0 + 3.0*LAMBDA, y0 + 2.0*LAMBDA, &x1, &y1);
+                    draw_line(x, y, x1, y1);
+                    
+                }
+            break;
+            
+        }
         case (D_MENGER):
         {
             glLineWidth(3);
@@ -3936,6 +4215,27 @@ void draw_color_scheme(double x1, double y1, double x2, double y2, int plot, dou
                 color_scheme(COLOR_SCHEME, value, 1.0, 1, rgb);
                 break;
             }
+            case (P_ENERGY_FLUX):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, COLOR_PALETTE, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, COLOR_PALETTE, value, 1.0, 1, rgb);
+//                 value = min + 1.0*dy*(double)(j - jmin);
+//                 amp = 0.7*color_amplitude_linear(value, 1.0, 1);
+//                 while (amp > 1.0) amp -= 2.0;
+//                 while (amp < -1.0) amp += 2.0;
+//                 amp_to_rgb(0.5*(1.0 + amp), rgb);
+                break;
+            }
+            case (P_TOTAL_ENERGY_FLUX):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                amp = 0.7*color_amplitude_linear(value, 1.0, 1);
+                while (amp > 1.0) amp -= 2.0;
+                while (amp < -1.0) amp += 2.0;
+                amp_to_rgb(0.5*(1.0 + amp), rgb);
+                break;
+            }
             case (P_PHASE):
             {
                 value = min + 1.0*dy*(double)(j - jmin);
@@ -4042,6 +4342,27 @@ void draw_color_scheme_palette(double x1, double y1, double x2, double y2, int p
                 color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
                 break;
             }
+            case (P_ENERGY_FLUX):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+//                 value = min + 1.0*dy*(double)(j - jmin);
+//                 amp = 0.7*color_amplitude_linear(value, 1.0, 1);
+//                 while (amp > 1.0) amp -= 2.0;
+//                 while (amp < -1.0) amp += 2.0;
+//                 amp_to_rgb(0.5*(1.0 + amp), rgb);
+                break;
+            }
+            case (P_TOTAL_ENERGY_FLUX):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                amp = 0.7*color_amplitude_linear(value, 1.0, 1);
+                while (amp > 1.0) amp -= 2.0;
+                while (amp < -1.0) amp += 2.0;
+                amp_to_rgb(0.5*(1.0 + amp), rgb);
+                break;
+            }
             case (P_PHASE):
             {
                 value = min + 1.0*dy*(double)(j - jmin);
@@ -4137,6 +4458,7 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
             case (P_LOG_ENERGY):
             {
                 value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+//                 printf("value = %.2lg\n", value);
 //                 if (value <= 0.0) value = 0.0;
                 color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
                 break;
@@ -4146,6 +4468,27 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
                 value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
 //                 if (value <= 0.0) value = 0.0;
                 color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_ENERGY_FLUX):
+            {
+                value = dy_e*(double)(j - jmin);
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+//                 value = min + 1.0*dy*(double)(j - jmin);
+//                 amp = 0.7*color_amplitude_linear(value, 1.0, 1);
+//                 while (amp > 1.0) amp -= 2.0;
+//                 while (amp < -1.0) amp += 2.0;
+//                 amp_to_rgb(0.5*(1.0 + amp), rgb);
+                break;
+            }
+            case (P_TOTAL_ENERGY_FLUX):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                amp = 0.7*color_amplitude_linear(value, 1.0, 1);
+                while (amp > 1.0) amp -= 2.0;
+                while (amp < -1.0) amp += 2.0;
+                amp_to_rgb(0.5*(1.0 + amp), rgb);
                 break;
             }
             case (P_PHASE):
