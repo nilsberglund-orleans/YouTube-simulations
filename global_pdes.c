@@ -68,13 +68,17 @@
 #define D_WAVEGUIDE_W 52        /* W-shaped wave guide */
 #define D_MAZE 53               /* maze */
 #define D_MAZE_CLOSED 54        /* closed maze */
+#define D_MAZE_CHANNELS 541     /* maze with two channels attached */
 #define D_CHESSBOARD 55         /* chess board configuration */
 #define D_TRIANGLE_TILES 56     /* triangular tiling */
 #define D_HEX_TILES 57          /* honeycomb tiling */
+#define D_FUNNELS 58            /* two funnels */
+#define D_ONE_FUNNEL 581        /* one funnel */
+#define D_LENSES_RING 59        /* several lenses forming a ring */
+#define D_MAZE_CIRCULAR 60      /* circular maze */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
-// #define NMAXCIRCLES 10000        /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -114,6 +118,7 @@
 #define IOR_MANDELBROT 1      /* index of refraction depends on escape time in Mandelbrot set (log) */
 #define IOR_MANDELBROT_LIN 100    /* index of refraction depends on escape time in Mandelbrot set (linear) */
 #define IOR_EARTH 2         /* index of refraction models speed of seismic waves */
+#define IOR_EXPLO_LENSING 3 /* explosive lensing */
 
 /* Boundary conditions */
 
@@ -185,6 +190,47 @@
 #define NPWIDTH 0.02      /* width of noise panel separation */
 
 
+/* plot types used by rde */
+
+#define Z_AMPLITUDE 0   /* amplitude of first field */
+#define Z_RGB 20        /* RGB plot */
+#define Z_POLAR 21      /* polar angle associated with RBG plot */
+#define Z_NORM_GRADIENT 22      /* gradient of polar angle */
+#define Z_ANGLE_GRADIENT 221    /* direction of polar angle */
+#define Z_NORM_GRADIENTX 23     /* norm of gradient of u */
+#define Z_ANGLE_GRADIENTX 231   /* direction of gradient of u */
+#define Z_NORM_GRADIENT_INTENSITY 24  /* gradient and intensity of polar angle */
+#define Z_VORTICITY 25  /* curl of polar angle */
+#define Z_VORTICITY_ABS 251  /* absolute value of curl of polar angle */
+
+/* for Schrodinger equation */
+#define Z_MODULE 30       /* module squared of first two fields */
+#define Z_ARGUMENT 31     /* argument of first two fields, with luminosity depending on module */
+#define Z_REALPART 32     /* first field, with luminosity depending on module */
+
+/* for RPSLZ equation */
+#define Z_MAXTYPE_RPSLZ 40      /* color of type with maximal density */
+#define Z_THETA_RPSLZ 41        /* polar angle */
+#define Z_NORM_GRADIENT_RPSLZ 42    /* gradient of polar angle */
+
+/* for Euler incompressible Euler equation */
+#define Z_EULER_VORTICITY 50    /* vorticity of velocity */
+#define Z_EULER_LOG_VORTICITY 51    /* log of vorticity of velocity */
+#define Z_EULER_VORTICITY_ASYM 52   /* vorticity of velocity */
+#define Z_EULER_LPRESSURE 53        /* Laplacian of pressure */
+#define Z_EULER_PRESSURE 54         /* pressure */
+
+/* for Euler compressible Euler equation */
+#define Z_EULER_DENSITY 60          /* density */
+#define Z_EULER_SPEED 61            /* norm of velocity */
+#define Z_EULERC_VORTICITY 62        /* vorticity of velocity */
+
+/* special boundary conditions for Euler equation */
+#define BCE_TOPBOTTOM 1         /* laminar flow at top and bottom */
+#define BCE_TOPBOTTOMLEFT 2     /* laminar flow at top, bottom and left side */
+#define BCE_CHANNELS 3          /* laminar flow in channels at left and right */
+#define BCE_MIDDLE_STRIP 4      /* laminar flow in horizontal strip in the middle */
+
 typedef struct
 {
     double xc, yc, radius;      /* center and radius of circle */
@@ -212,6 +258,23 @@ typedef struct
 
 typedef struct
 {
+    double x1, y1, x2, y2;   /* (x,y) coordinates of long symmetry axis */
+    double width;            /* width of rectangle */
+    double posi1, posj1, posi2, posj2;   /* (i,j) coordinates of vertices */
+    double posi3, posj3, posi4, posj4;   /* (i,j) coordinates of vertices */
+} t_rect_rotated;
+
+typedef struct
+{
+    double xc, yc;           /* (x,y) coordinates of center */
+    double r, width;         /* radius and width of arc */
+    double angle1, dangle;   /* start angle and angular width */
+    double posi1, posj1;     /* (i,j) coordinates of center */
+//     double posi3, posj3, posi4, posj4;   /* (i,j) coordinates of vertices */
+} t_arc;
+
+typedef struct
+{
     int nneighb;    /* number of neighbours to compute Laplacian */
     double *nghb[4];    /* pointers to neighbours */ 
 } t_laplacian;
@@ -220,11 +283,15 @@ typedef struct
 int ncircles = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */
 int npolyline = NMAXPOLY;           /* actual length of polyline */
 int npolyrect = NMAXPOLY;           /* actual number of polyrect */
+int npolyrect_rot = NMAXPOLY;       /* actual number of rotated polyrect */
+int npolyarc = NMAXPOLY;            /* actual number of arcs */
 
 t_circle circles[NMAXCIRCLES];      /* circular scatterers */
 t_polygon polygons[NMAXCIRCLES];    /* polygonal scatterers */
 t_vertex polyline[NMAXPOLY];        /* vertices of polygonal line */
 t_rectangle polyrect[NMAXPOLY];     /* vertices of rectangles */
+t_rect_rotated polyrectrot[NMAXPOLY];  /* data of rotated rectangles */
+t_arc polyarc[NMAXPOLY];            /* data of arcs */
 
 /* the same for comparisons between different domains */
 int ncircles_b = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */

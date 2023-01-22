@@ -29,9 +29,11 @@
 #include <unistd.h>
 #include <sys/types.h>
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
+#include <omp.h>
 #include <time.h>
 
-#define MOVIE 1         /* set to 1 to generate movie */
+#define MOVIE 0         /* set to 1 to generate movie */
+#define SAVE_MEMORY 1           /* set to 1 to save memory when writing tiff images */
 
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
@@ -54,10 +56,10 @@
 
 /* Choice of the billiard table, see global_particles.c */
 
-#define B_DOMAIN 30     /* choice of domain shape */
+#define B_DOMAIN 31     /* choice of domain shape */
 
 #define CIRCLE_PATTERN 1    /* pattern of circles */
-#define POLYLINE_PATTERN 11  /* pattern of polyline */
+#define POLYLINE_PATTERN 15  /* pattern of polyline */
 
 #define ABSORBING_CIRCLES 0 /* set to 1 for circular scatterers to be absorbing */
 
@@ -72,7 +74,7 @@
 #define SDEPTH 1            /* Sierpinski gastket depth */
 
 #define LAMBDA 1.5	/* parameter controlling shape of domain */
-#define MU 0.5          /* second parameter controlling shape of billiard */
+#define MU 0.005          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
@@ -87,27 +89,37 @@
 
 /* Simulation parameters */
 
-#define NPART 10000     /* number of particles */
-// #define NPART 2000     /* number of particles */
+// #define NPART 1    /* number of particles */
+#define NPART 20000    /* number of particles */
+// #define NPART 10000      /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
-#define SHOWTRAILS 1    /* set to 1 to keep trails of the particles */
+#define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
+#define HEATMAP 1       /* set to 1 to show heat map of particles */
+#define DRAW_HEATMAP_PARTICLES 1    /* set to 1 to draw particles in heat map */
+#define HEATMAP_MAX_PART_BY_CELL 0     /* to draw only limited number of particles in cell */
+#define PLOT_HEATMAP_AVERAGE 0      /* set to 1 to plot average number of particles in heat map */
 #define SHOWZOOM 0      /* set to 1 to show zoom on specific area */
 #define PRINT_PARTICLE_NUMBER 0 /* set to 1 to print number of particles */
 #define PRINT_LEFT_RIGHT_PARTICLE_NUMBER 1 /* set to 1 to print number of particles on left and right side */
+#define PRINT_CIRCLE_PARTICLE_NUMBER 0 /* set to 1 to print number of particles outside circular maze */
 #define PRINT_COLLISION_NUMBER 0 /* set to 1 to print number of collisions */
 #define TEST_ACTIVE 1   /* set to 1 to test whether particle is in billiard */
 
 #define TEST_INITIAL_COND 0     /* set to 1 to allow only initial conditions that pass a test */
 
-#define NSTEPS 4500     /* number of frames of movie */
+#define NSTEPS 12300     /* number of frames of movie */
+// #define NSTEPS 6500     /* number of frames of movie */
 #define TIME 1500        /* time between movie frames, for fluidity of real-time simulation */ 
+// #define TIME 750         /* time between movie frames, for fluidity of real-time simulation */ 
 #define DPHI 0.00002     /* integration step */
+// #define DPHI 0.00005     /* integration step */
+// #define DPHI 0.00001     /* integration step */
 #define NVID 25          /* number of iterations between images displayed on screen */
 // #define NVID 100         /* number of iterations between images displayed on screen */
-#define END_FRAMES 25    /* number of still frames at the end of the movie */
+#define END_FRAMES 100    /* number of still frames at the end of the movie */
 
 /* Decreasing TIME accelerates the animation and the movie                               */
 /* For constant speed of movie, TIME*DPHI should be kept constant                        */
@@ -117,15 +129,17 @@
 
 /* Colors and other graphical parameters */
 
-#define COLOR_PALETTE 10     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 17     /* Color palette, see list in global_pdes.c  */
 
-#define NCOLORS 128      /* number of colors */
+#define NCOLORS 1000     /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
+#define COLOR_HUEMIN 0   /* minimal color hue */
+#define COLOR_HUEMAX 150 /* maximal color hue */
 #define RAINBOW_COLOR 0  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
-// #define LENGTH 0.01       /* length of velocity vectors */
-#define LENGTH 0.04       /* length of velocity vectors */
+#define LENGTH 0.025       /* length of velocity vectors */
+// #define LENGTH 0.04       /* length of velocity vectors */
 #define BILLIARD_WIDTH 2    /* width of billiard */
 #define PARTICLE_WIDTH 2    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
@@ -141,14 +155,14 @@
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1       /* final sleeping time */
 
-#define NXMAZE 16      /* width of maze */
-#define NYMAZE 16      /* height of maze */
-// #define NXMAZE 10      /* width of maze */
-// #define NYMAZE 10      /* height of maze */
-#define MAZE_MAX_NGBH 4     /* max number of neighbours of maze cell */
-#define RAND_SHIFT 1        /* seed of random number generator */
+#define NXMAZE 24      /* width of maze */
+#define NYMAZE 20      /* height of maze */
+#define MAZE_MAX_NGBH 6     /* max number of neighbours of maze cell */
+#define RAND_SHIFT 11    /* seed of random number generator */
+// #define RAND_SHIFT 0        /* seed of random number generator */
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
-
+#define MAZE_RANDOM_FACTOR 0.1     /* randomization factor for S_MAZE_RANDOM */
+#define MAZE_CORNER_RADIUS 0.5     /* radius of tounded corners in maze */
 
 #include "global_particles.c"
 #include "sub_maze.c"
@@ -389,7 +403,7 @@ void draw_zoom(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTM
 //         if ((active[i])&&(vabs(x1) < 1.0)&&(vabs(y1) < 1.0)&&(vabs(x2) < 1.0)&&(vabs(y2) < 1.0))  
         if (((active[i])&&(vabs(x1) < 1.0)&&(vabs(y1) < 1.0))||((vabs(x2) < 1.0)&&(vabs(y2) < 1.0))) 
         {
-            rgb_color_scheme(color[i], rgb);
+            rgb_color_scheme_minmax(color[i], rgb);
             glColor3f(rgb[0], rgb[1], rgb[2]);
         
             glBegin(GL_LINE_STRIP);
@@ -447,7 +461,7 @@ void draw_config_showtrails(int color[NPARTMAX], double *configs[NPARTMAX], int 
         
         if (active[i])  
         {
-            rgb_color_scheme(color[i], rgb);
+            rgb_color_scheme_minmax(color[i], rgb);
             glColor3f(rgb[0], rgb[1], rgb[2]);
         
             glBegin(GL_LINE_STRIP);
@@ -483,6 +497,105 @@ void draw_config_showtrails(int color[NPARTMAX], double *configs[NPARTMAX], int 
 }
 
 
+void draw_config_heatmap(double *configs[NPARTMAX], int active[NPARTMAX], int heatmap_number[NXMAZE*NYMAZE+1], int heatmap_total[NXMAZE*NYMAZE+1], short int heatmap_visited[NXMAZE*NYMAZE+1], int draw_particles)
+/* draw a heat map of particle distribution (for mazes) */
+{
+    int i, j, n, part_number;
+    double x, y, cosphi, sinphi, rgb[3], len, padding = 0.02;
+    double *xtable, *ytable;
+    short int *drawtable;
+    static int time, first = 1;
+    static double minprop;
+    
+    if (first)
+    {
+        time = 0;
+        first = 0;
+        minprop = 0.01;
+//         if (PLOT_HEATMAP_AVERAGE) minprop = 0.005;
+//         else minprop = 0.01;
+    }
+    time++;
+    
+    drawtable = malloc(sizeof(short int)*(NPARTMAX));
+    xtable = malloc(sizeof(double)*(NPARTMAX));
+    ytable = malloc(sizeof(double)*(NPARTMAX));
+    
+    glutSwapBuffers(); 
+    blank();
+    if (PAINT_INT) paint_billiard_interior();
+    
+    for (i=0; i<NXMAZE*NYMAZE+1; i++) heatmap_number[i] = 0;
+    
+    for (i=0; i<nparticles; i++) 
+//         if ((active[i])&&(configs[i][0] < DUMMY_ABSORBING))
+    {
+//         configs[i][2] += DPHI; 
+        
+        cosphi = (configs[i][6] - configs[i][4])/configs[i][3];
+        sinphi = (configs[i][7] - configs[i][5])/configs[i][3];
+        len = configs[i][2];
+        if (len > configs[i][3] - padding) len = configs[i][3] - padding;
+        if (len < 1.0e-10) len = 1.0e-10;
+//         if (len < 0.0) len = 1.0e-10;
+        
+        x = configs[i][4] + len*cosphi;
+        y = configs[i][5] + len*sinphi;
+        
+        xtable[i] = x;
+        ytable[i] = y;
+        
+        /* test whether particle does not escape billiard */
+        if ((TEST_ACTIVE)&&(active[i])) active[i] = xy_in_billiard(x, y);
+        
+        if (active[i])  
+        {
+            n = find_maze_cell(x, y);
+        
+            if ((n > -1)&&(n < NXMAZE*NYMAZE+1)) 
+            {
+                heatmap_number[n]++;
+                heatmap_total[n]++;
+                heatmap_visited[n] = 1;
+            }
+            
+            if (HEATMAP_MAX_PART_BY_CELL > 0)
+            {
+                drawtable[i] = ((n == -2)||((n >= -1)&&(heatmap_number[n] <= HEATMAP_MAX_PART_BY_CELL)));
+            }
+            else drawtable[i] = (n >= -1);
+        }
+        
+//         printf("Particle %i is in maze cell %i\n", i, n);
+    }
+    
+    for (n=0; n<NXMAZE*NYMAZE+1; n++) 
+    {
+        if (PLOT_HEATMAP_AVERAGE) 
+        {
+            if (heatmap_total[n] == 0) part_number = 0;
+            else part_number = 1 + (int)((double)heatmap_total[n]/(double)time);
+        }
+        else part_number = heatmap_number[n];
+        
+        if ((part_number == 0)&&(heatmap_visited[n])) part_number = -1;
+        draw_maze_cell(n, part_number, minprop);
+//         if (part_number != 0) printf("%i particles in maze cell %i\n", part_number, n);
+    }
+    
+    glColor3f(1.0, 1.0, 1.0);
+    if (draw_particles) 
+        for (i=0; i<nparticles; i++) 
+            if ((active[i])&&(drawtable[i]))
+                draw_circle(SCALING_FACTOR*xtable[i], SCALING_FACTOR*ytable[i], 0.001, 6);
+    
+    if (DRAW_BILLIARD) draw_billiard(); 
+    
+    free(xtable);
+    free(ytable);
+    free(drawtable);
+}
+
 void draw_config(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTMAX])
 /* draw the particles */
 {
@@ -491,26 +604,28 @@ void draw_config(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPAR
 
     glutSwapBuffers(); 
     if (!SHOWTRAILS) blank();
+//     if (!((SHOWTRAILS)||(HEATMAP))) blank();
     if (PAINT_INT) paint_billiard_interior();
       
     glLineWidth(PARTICLE_WIDTH);
     
     glEnable(GL_LINE_SMOOTH);
 
-    for (i=0; i<nparticles; i++) if (active[i])
+    for (i=0; i<nparticles; i++) 
+//         if (active[i])
     {
-        if (configs[i][2]<0.0) 
-        {    
-            c = vbilliard(configs[i]);
-            if (!RAINBOW_COLOR)
-            {
-                color[i]++;
-                if (color[i] >= NCOLORS) color[i] -= NCOLORS;
-            }
-            if ((ABSORBING_CIRCLES)&&(c < 0)) active[i] = 0;
-        }
+//         if (configs[i][2]<0.0) 
+//         {    
+//             c = vbilliard(configs[i]);
+//             if (!RAINBOW_COLOR)
+//             {
+//                 color[i]++;
+//                 if (color[i] >= NCOLORS) color[i] -= NCOLORS;
+//             }
+//             if ((ABSORBING_CIRCLES)&&(c < 0)) active[i] = 0;
+//         }
 
-        configs[i][2] += DPHI; 
+//         configs[i][2] += DPHI; 
         
         cosphi = (configs[i][6] - configs[i][4])/configs[i][3];
         sinphi = (configs[i][7] - configs[i][5])/configs[i][3];
@@ -520,11 +635,11 @@ void draw_config(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPAR
         y2 = configs[i][5] + (configs[i][2] + LENGTH)*sinphi;
         
         /* test whether particle does not escape billiard */
-        if (active[i]) active[i] = xy_in_billiard(x1, y1);
+        if ((TEST_ACTIVE)&&(active[i])) active[i] = xy_in_billiard(x1, y1);
         
         if (active[i])  
         {
-            rgb_color_scheme(color[i], rgb);
+            rgb_color_scheme_minmax(color[i], rgb);
             glColor3f(rgb[0], rgb[1], rgb[2]);
         
             glBegin(GL_LINE_STRIP);
@@ -580,7 +695,7 @@ void draw_config(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPAR
             glLineWidth(3.0);
         }
     
-        if (configs[i][2] > configs[i][3] - DPHI) configs[i][2] -= configs[i][3];
+//         if (configs[i][2] > configs[i][3] - DPHI) configs[i][2] -= configs[i][3];
     }
     if (DRAW_BILLIARD) draw_billiard();    
     
@@ -608,6 +723,7 @@ void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX], int a
 
     for (j=0; j<time; j++)
     {
+        #pragma omp parallel for private(i,c)
         for (i=0; i<nparticles; i++) if (active[i])
         {      
             if (configs[i][2]<0.0) 
@@ -616,6 +732,7 @@ void graph_movie(int time, int color[NPARTMAX], double *configs[NPARTMAX], int a
                 c = vbilliard(configs[i]);
                 
                 if ((ABSORBING_CIRCLES)&&(c < 0)) active[i] = 0;
+                if (c < 0) active[i] = 0;
                 else ncollisions++;
 //                 if (c>=0) color[i]++;
                 if ((!RAINBOW_COLOR)&&(c>=0)) color[i]++;
@@ -658,41 +775,71 @@ void print_part_number(double *configs[NPARTMAX], int active[NPARTMAX], double x
     
 }
 
-void print_left_right_part_number(double *configs[NPARTMAX], int active[NPARTMAX], double xl, double yl, double xr, double yr, double xmin, double xmax)
+void print_left_right_part_number(double *configs[NPARTMAX], int active[NPARTMAX], double xl, double yl, double xr, double yr, t_exit exits[NPARTMAX])
 {
     char message[50];
     int i, nleft = 0, nright = 0;
     double rgb[3], x1, y1, cosphi, sinphi;
-    static int maxnleft = 0, maxnright = 0;
+    static int first = 1;
+    static double xmin, xmax;
+    
+    if (first)
+    {
+        compute_maze_boundaries(POLYLINE_PATTERN, &xmin, &xmax);
+        first = 0;
+    }
     
     /* count active particles, using the fact that absorbed particles have been given dummy coordinates */
-    for (i=0; i<nparticles; i++) if (configs[i][0] >= DUMMY_ABSORBING)
+    for (i=0; i<nparticles; i++) if ((configs[i][0] == DUMMY_ABSORBING))
     {
         cosphi = (configs[i][6] - configs[i][4])/configs[i][3];
         sinphi = (configs[i][7] - configs[i][5])/configs[i][3];
         x1 = configs[i][4] + configs[i][2]*cosphi;
         y1 = configs[i][5] + configs[i][2]*cosphi;
-        if (x1 < xmin) nleft++;
-        else if (x1 > xmax)
+        if ((x1 < xmin)&&(x1 > XMIN)&&(y1 < YMAX)&&(y1 > YMIN)) exits[i].left = 1;
+        else if ((x1 > xmax)&&(x1 < XMAX)&&(y1 < YMAX)&&(y1 > YMIN)) 
         {
-            nright++;
-            printf("Detected leaving particle %i at (%.2f, %2f)\n", i, x1, y1);
+            exits[i].right = 1;
+            printf("Detected leaving particle %i at (%.2f, %2f)\n\n\n", i, x1, y1);
         }
     }
-    if (nleft > maxnleft) maxnleft = nleft;
-    if (nright > maxnright) maxnright = nright;
-        
+    
+    for (i=0; i<nparticles; i++) 
+    {
+        if (exits[i].left) nleft++;
+        if (exits[i].right) nright++;
+//         printf("particle[%i]: left = %i, right = %i\n", i, exits[i].left, exits[i].right);
+    }
+    
     hsl_to_rgb(0.0, 0.0, 0.0, rgb);
     
-    erase_area(xl, yl - 0.03, 0.5, 0.12, rgb);
+    erase_area(xl, yl - 0.03, 0.45, 0.12, rgb);
+    erase_area(xr, yr - 0.03, 0.35, 0.12, rgb);
+    
+    glColor3f(1.0, 1.0, 1.0);
+    if (nleft > 1) sprintf(message, "%i particles", nleft);
+    else sprintf(message, "%i particle", nleft);
+    write_text(xl, yl, message);
+    if (nright > 1) sprintf(message, "%i particles", nright);
+    else sprintf(message, "%i particle", nright);
+    write_text(xr, yr, message);
+}
+
+void print_circle_part_number(double *configs[NPARTMAX], int active[NPARTMAX], double xr, double yr)
+{
+    char message[50];
+    int i, npart = 0;
+    double rgb[3], x1, y1, cosphi, sinphi;
+    
+    /* count active particles, using the fact that absorbed particles have been given dummy coordinates */
+    for (i=0; i<nparticles; i++) if (configs[i][0] >= DUMMY_ABSORBING) npart++;
+        
+    hsl_to_rgb(0.0, 0.0, 0.0, rgb);
     erase_area(xr, yr - 0.03, 0.4, 0.12, rgb);
     
     glColor3f(1.0, 1.0, 1.0);
-    if (nleft > 1) sprintf(message, "%i particles", maxnleft);
-    else sprintf(message, "%i particle", maxnleft);
-    write_text(xl, yl, message);
-    if (nright > 1) sprintf(message, "%i particles", maxnright);
-    else sprintf(message, "%i particle", maxnright);
+    if (npart > 1) sprintf(message, "%i particles", npart);
+    else sprintf(message, "%i particle", npart);
     write_text(xr, yr, message);
 }
 
@@ -715,7 +862,9 @@ void animation()
     double time, dt, alpha, r, rgb[3], alphamax;
     double *configs[NPARTMAX];
     int i, j, resamp = 1, s, i1, i2, c, lengthmax;
-    int *color, *newcolor, *active;
+    int *color, *newcolor, *active, *heatmap_number, *heatmap_total;
+    short int *heatmap_visited;
+    t_exit *exits; 
 //     t_circle *circles;      /* experimental */
     
     /* Since NPARTMAX can be big, it seemed wiser to use some memory allocation here */
@@ -724,6 +873,26 @@ void animation()
     active = malloc(sizeof(int)*(NPARTMAX));
 //     circles = malloc(sizeof(t_circle)*(NMAXCIRCLES));      /* experimental */
     
+    if (HEATMAP) 
+    {
+        heatmap_number = malloc(sizeof(int)*(NXMAZE*NYMAZE+1));
+        heatmap_total = malloc(sizeof(int)*(NXMAZE*NYMAZE+1));
+        heatmap_visited = malloc(sizeof(short int)*(NXMAZE*NYMAZE+1));
+        for (i=0; i<NXMAZE*NYMAZE+1; i++) heatmap_number[i] = 0;
+        for (i=0; i<NXMAZE*NYMAZE+1; i++) heatmap_total[i] = 0;
+        for (i=0; i<NXMAZE*NYMAZE+1; i++) heatmap_visited[i] = 0;
+    }
+    
+    if (PRINT_LEFT_RIGHT_PARTICLE_NUMBER)
+    {
+        exits = malloc(sizeof(t_exit)*(NPARTMAX));
+        for (i=0; i<NPARTMAX; i++)
+        {
+            exits[i].left = 0;
+            exits[i].right = 0;
+        }
+    }
+    
     for (i=0; i<NPARTMAX; i++)
         configs[i] = (double *)malloc(8*sizeof(double));
 
@@ -731,7 +900,7 @@ void animation()
     if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)||(B_DOMAIN == D_CIRCLES_IN_GENUSN)
         ||(B_DOMAIN == D_CIRCLES_IN_TORUS)) init_circles(circles);
     
-    else if (B_DOMAIN == D_POLYLINE) init_polyline(polyline, circles);
+    else if ((B_DOMAIN == D_POLYLINE)||(B_DOMAIN == D_POLYLINE_ARCS)) init_polyline(polyline, circles, arcs);
 
     if (POLYLINE_PATTERN == P_TOKA_PRIME)
     {
@@ -779,9 +948,9 @@ void animation()
 //     alphamax = 2.50949;
 //     init_drop_config(x_shooter, y_shooter, alphamax, alphamax + DPI, configs);
     
-    
+    init_drop_config(-0.05, 0.05, 0.0, 0.3*PID, configs);
 //     init_drop_config(-0.5, 0.0, 0.2, 0.4, configs);    
-    init_drop_config(-1.15, 0.01, 0.00*PI, 0.3*PI, configs);   
+//     init_drop_config(0.0, 0.05, 0.0, DPI, configs);   
     
 //     init_drop_config(-1.3, -0.1, 0.0, DPI, configs);    
 //     init_drop_config(1.4, 0.1, 0.0, DPI, configs);    
@@ -803,7 +972,8 @@ void animation()
     if (DRAW_BILLIARD) draw_billiard();
     if (PRINT_PARTICLE_NUMBER) print_part_number(configs, active, XMIN + 0.1, YMIN + 0.1);
     else if (PRINT_LEFT_RIGHT_PARTICLE_NUMBER) 
-        print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.05, XMAX - 0.45, YMIN + 0.05, XMIN + MAZE_XSHIFT, XMAX + MAZE_XSHIFT);
+        print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.05, XMAX - 0.45, YMIN + 0.05, exits);
+    else if (PRINT_CIRCLE_PARTICLE_NUMBER) print_circle_part_number(configs, active, XMAX - 0.45, YMIN + 0.05);
     else if (PRINT_COLLISION_NUMBER) print_collision_number(ncollisions, XMIN + 0.1, YMIN + 0.1);
     
     glutSwapBuffers();   
@@ -856,12 +1026,18 @@ void animation()
         graph_movie(TIME, newcolor, configs, active);
         
         if (SHOWTRAILS) draw_config_showtrails(newcolor, configs, active);
+        else if (HEATMAP) 
+        {
+            draw_config_heatmap(configs, active, heatmap_number, heatmap_total, heatmap_visited, DRAW_HEATMAP_PARTICLES);
+//             draw_config(newcolor, configs, active);
+        }
         else draw_config(newcolor, configs, active);
 //         draw_config(newcolor, configs, active);
         if (DRAW_BILLIARD) draw_billiard();
         if (PRINT_PARTICLE_NUMBER) print_part_number(configs, active, XMIN + 0.1, YMIN + 0.1);
         else if (PRINT_LEFT_RIGHT_PARTICLE_NUMBER) 
-            print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.05, XMAX - 0.45, YMIN + 0.05, YMIN + MAZE_XSHIFT, YMAX + MAZE_XSHIFT);
+            print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.05, XMAX - 0.45, YMIN + 0.05, exits);
+        else if (PRINT_CIRCLE_PARTICLE_NUMBER) print_circle_part_number(configs, active, XMAX - 0.45, YMIN + 0.05);
 //             print_left_right_part_number(configs, XMIN + 0.1, YMIN + 0.1, XMAX - 0.45, YMIN + 0.1, YMIN + MAZE_XSHIFT, YMAX + MAZE_XSHIFT);
         else if (PRINT_COLLISION_NUMBER) print_collision_number(ncollisions, XMIN + 0.1, YMIN + 0.1);
     
@@ -888,14 +1064,23 @@ void animation()
         else printf("Frame %i\n", i);
     }
  
-    if (MOVIE) 
+    if (MOVIE)
     {
+        if (HEATMAP) 
+            draw_config_heatmap(configs, active, heatmap_number, heatmap_total, heatmap_visited, 0);
         for (i=0; i<END_FRAMES; i++) save_frame();
         s = system("mv part*.tif tif_part/");
     }
     
     free(color);
     free(newcolor);
+    if (HEATMAP) 
+    {
+        free(heatmap_number);
+        free(heatmap_total);
+        free(heatmap_visited);
+    }
+    if (PRINT_LEFT_RIGHT_PARTICLE_NUMBER) free(exits);
     for (i=0; i<NPARTMAX; i++) free(configs[i]);
  
 }

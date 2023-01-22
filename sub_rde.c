@@ -4,6 +4,7 @@ double intstep;   /* integration step */
 double intstep1;  /* integration step used in absorbing boundary conditions */
 double viscosity; /* viscosity (parameter in front of Laplacian) */
 double rpslzb;    /* second parameter in Rock-Paper-Scissors-Lizard-Spock equation */
+double flow_speed;  /* flow speed for laminar boundary conditions in Euler equation */
 
 double gaussian()
 /* returns standard normal random variable, using Box-Mueller algorithm */
@@ -313,70 +314,146 @@ void antisymmetrize_wave_function(double *phi[NFIELDS], short int xy_in[NX*NY])
             }
 }
 
-void init_vortex_state(double x, double y, double scale, double *phi[NFIELDS], short int xy_in[NX*NY])
-/* initialise field with vortex at position (x,y) with variance scale */
-/* phi[0] is stream function, phi[1] is vorticity */
+void init_vortex_state(double amp, double x, double y, double scale, double density_mod, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise field with vortex at position (x,y) with amplitude and variance scale */
+/* for incompressible Euler, phi[0] is stream function, phi[1] is vorticity */
+/* for compressible Euler, phi[0] is the density, phi[1] and phi[2] are velocity components */
 {
     int i, j;
     double xy[2], dist2, module, phase, scale2, sign;    
 
 //     scale2 = scale*scale;
-    for (i=0; i<NX; i++)
-        for (j=0; j<NY; j++)
+    switch (RDE_EQUATION) {
+        case (E_EULER_INCOMP): 
         {
-            ij_to_xy(i, j, xy);
-	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
 
-            if (xy_in[i*NY+j])
-            {
-                dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
-                module = exp(-dist2/vabs(scale));
+                    if (xy_in[i*NY+j])
+                    {
+                        dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+                        module = amp*exp(-dist2/vabs(scale));
                 
-                if (scale > 0.0) sign = 1.0;
-                else sign = -1.0;
+                        if (scale > 0.0) sign = 1.0;
+                        else sign = -1.0;
                 
-                phi[1][i*NY+j] += sign*module;
-                phi[0][i*NY+j] -= sign*module;    /* approximate, stream function should solve Poisson equation */
-            }
-            else
-            {
-                phi[0][i*NY+j] = 0.0;
-                phi[1][i*NY+j] = 0.0;
-            }
+                        phi[1][i*NY+j] += sign*module;
+                        phi[0][i*NY+j] -= sign*module;    /* approximate, stream function should solve Poisson equation */
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 0.0;
+                        phi[1][i*NY+j] = 0.0;
+                    }
+                }
+            break;
         }
+        case (E_EULER_COMP):
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+
+                    if (xy_in[i*NY+j])
+                    {
+                        dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+                        module = amp*exp(-dist2/vabs(scale));
+                
+                        if (scale > 0.0) sign = 1.0;
+                        else sign = -1.0;
+                
+//                         phi[0][i*NY+j] = 1.0;
+                        /* nonconstant density to make things more interesting */
+                        phi[0][i*NY+j] = 0.5 + density_mod*module/amp;
+                        phi[1][i*NY+j] = -sign*module*(xy[1]-y)/vabs(scale);
+                        phi[2][i*NY+j] = sign*module*(xy[0]-x)/vabs(scale);   
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 1.0;
+                        phi[1][i*NY+j] = 0.0;
+                        phi[2][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+    }
 }
 
-void add_vortex_state(double x, double y, double scale, double *phi[NFIELDS], short int xy_in[NX*NY])
+void add_vortex_state(double amp, double x, double y, double scale, double density_mod, double *phi[NFIELDS], short int xy_in[NX*NY])
 /* add vortex at position (x,y) with variance scale to field */
-/* phi[0] is stream function, phi[1] is vorticity */
+/* for incompressible Euler, phi[0] is stream function, phi[1] is vorticity */
+/* for compressible Euler, phi[0] is the density, phi[1] and phi[2] are velocity components */
 {
     int i, j;
     double xy[2], dist2, module, phase, scale2, sign;    
 
 //     scale2 = scale*scale;
-    for (i=0; i<NX; i++)
-        for (j=0; j<NY; j++)
+    switch (RDE_EQUATION) {
+        case (E_EULER_INCOMP): 
         {
-            ij_to_xy(i, j, xy);
-	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
 
-            if (xy_in[i*NY+j])
-            {
-                dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
-                module = exp(-dist2/vabs(scale));
+                    if (xy_in[i*NY+j])
+                    {
+                        dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+                        module = amp*exp(-dist2/vabs(scale));
                 
-                if (scale > 0.0) sign = 1.0;
-                else sign = -1.0;
+                        if (scale > 0.0) sign = 1.0;
+                        else sign = -1.0;
                 
-                phi[1][i*NY+j] += sign*module;
-                phi[0][i*NY+j] -= sign*module;    /* approximate, stream function should solve Poisson equation */
-            }
-            else
-            {
-                phi[0][i*NY+j] = 0.0;
-                phi[1][i*NY+j] = 0.0;
-            }
+                        phi[1][i*NY+j] -= sign*module;
+                        phi[0][i*NY+j] = sign*module;    /* approximate, stream function should solve Poisson equation */
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 0.0;
+                        phi[1][i*NY+j] = 0.0;
+                    }
+                }
+            break;
         }
+        case (E_EULER_COMP):
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+
+                    if (xy_in[i*NY+j])
+                    {
+                        dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+                        module = amp*exp(-dist2/vabs(scale));
+                
+                        if (scale > 0.0) sign = 1.0;
+                        else sign = -1.0;
+                
+//                         phi[0][i*NY+j] = 1.0;
+                        /* nonconstant density to make things more interesting */
+                        phi[0][i*NY+j] += 0.5 + density_mod*sign*module/amp;
+                        phi[1][i*NY+j] += sign*module*(xy[1]-y)/vabs(scale);
+                        phi[2][i*NY+j] -= sign*module*(xy[0]-x)/vabs(scale);   
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 1.0;
+                        phi[1][i*NY+j] = 0.0;
+                        phi[2][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+    }
 }
 
 
@@ -421,17 +498,20 @@ void init_shear_flow(double amp, double delta, double rho, int nx, int ny, doubl
                     phi[1][i*NY+j] = amp*(f - 1.0/(rho*cplus*cplus));
                     phi[0][i*NY+j] = amp*(f/(a*a) - rho/(cplus*cplus));    
                 }
+                
+                phi[2][i*NY+j] = 0.0;
             }
             else
             {
                 phi[0][i*NY+j] = 0.0;
                 phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
             }
         }
 }
 
-void init_laminar_flow(double amp, double modulation, double period, double yshift, double *phi[NFIELDS], short int xy_in[NX*NY])
-/* initialise field with a laminar flow in x direction */
+void set_boundary_laminar_flow(double amp, double modulation, double period, double yshift, double *phi[NFIELDS], short int xy_in[NX*NY], int imin, int imax, int jmin, int jmax)
+/* enfoce laminar flow in x direction on top and bottom boundaries */
 /* phi[0] is stream function, phi[1] is vorticity */
 /* amp is global amplitude */
 {
@@ -439,30 +519,120 @@ void init_laminar_flow(double amp, double modulation, double period, double yshi
     double xy[2], y1, a, b, f, cplus, cminus;    
     
     a = period*PI/YMAX;
-//     a = PID/YMAX;
     
-    for (i=0; i<NX; i++)
-        for (j=0; j<NY; j++)
+    for (i=imin; i<imax; i++)
+        for (j=jmin; j<jmax; j++)
         {
             ij_to_xy(i, j, xy);
 	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
             y1 = xy[1] + yshift;
-
             if (xy_in[i*NY+j])
             {
                 phi[0][i*NY+j] = amp*(y1 + modulation*sin(a*y1)/a);
                 phi[1][i*NY+j] = amp*modulation*a*sin(a*y1);
-//                 phi[0][i*NY+j] = amp*sin(a*xy[1]);
-//                 phi[1][i*NY+j] = a*a*amp*sin(a*xy[1]);
-            }
-            else
-            {
-                phi[0][i*NY+j] = 0.0;
-                phi[1][i*NY+j] = 0.0;
             }
         }
 }
 
+
+void init_laminar_flow(double amp, double xmodulation, double ymodulation, double xperiod, double yperiod, double yshift, double density_mod, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise field with a laminar flow in x direction */
+/* phi[0] is stream function, phi[1] is vorticity */
+/* amp is global amplitude */
+{
+    int i, j;
+    double xy[2], y1, a, b, f, cplus, cminus;    
+    
+    a = xperiod*PI/YMAX;
+    b = yperiod*PI/XMAX;
+    
+    switch (RDE_EQUATION) {
+        case (E_EULER_INCOMP): 
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+                    y1 = xy[1] + yshift;
+
+                    if (xy_in[i*NY+j])
+                    {
+                        phi[0][i*NY+j] = amp*(y1 + xmodulation*sin(a*y1)/a);
+                        phi[1][i*NY+j] = amp*xmodulation*a*sin(a*y1);
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 0.0;
+                        phi[1][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+        case (E_EULER_COMP):
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+                    y1 = xy[1] + yshift;
+
+                    if (xy_in[i*NY+j])
+                    {
+                        phi[0][i*NY+j] = 1.0 + density_mod*cos(a*y1);
+                        phi[1][i*NY+j] = amp*(1.0 + xmodulation*cos(a*y1));
+                        phi[2][i*NY+j] = ymodulation*sin(b*xy[0]);
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 1.0;
+                        phi[1][i*NY+j] = 0.0;
+                        phi[2][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+    }
+}
+
+void initialize_bcfield(double bc_field[NX*NY])
+/* apply smooth modulation to adapt initial state to obstacles */ 
+{
+    int i, j;
+    double xy[2], r, f;
+    
+    switch (OBSTACLE_GEOMETRY) {
+        case (D_SINAI): 
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    r = module2(xy[0], xy[1]);
+                    f = 0.5*(1.0 + tanh(BC_STIFFNESS*(r - 1.0*LAMBDA))); 
+                    bc_field[i*NY+j] = f;
+                }
+            break;
+        }
+    }
+}
+
+
+void adapt_state_to_bc(double *phi[NFIELDS], double bc_field[NX*NY], short int xy_in[NX*NY])
+/* apply smooth modulation to adapt initial state to obstacles */ 
+{
+    int i, j, field;
+    double xy[2], r, f;
+    
+    #pragma omp parallel for private(i,j)
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++) if (xy_in[i*NY+j])
+            {
+                for (field = 1; field < NFIELDS; field++) 
+                    phi[field][i*NY+j] *= bc_field[i*NY+j];
+            }         
+}
 
 /*********************/
 /* animation part    */
@@ -736,6 +906,105 @@ void compute_gradient_euler(double phi[NX*NY], double gradient[2*NX*NY], double 
     gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus] - yshift);
 }
 
+
+void compute_gradient_euler_test(double phi[NX*NY], double gradient[2*NX*NY], short int xy_in[NX*NY])
+/* compute the gradient of the field */
+{
+    int i, j, iplus, iminus, jplus, jminus, padding = 0; 
+    double deltaphi, maxgradient = 1.0e10;
+    double dx = (XMAX-XMIN)/((double)NX);
+    
+    dx = (XMAX-XMIN)/((double)NX);
+    
+    #pragma omp parallel for private(i)
+    for (i=0; i<2*NX*NY; i++) gradient[i] = 0.0;
+    
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus)
+    for (i=1; i<NX-1; i++)
+    {
+        for (j=1; j<NY-1; j++) 
+        {
+            iplus = i+1;
+            iminus = i-1;
+            jplus = j+1;
+            jminus = j-1;
+            
+            if ((xy_in[iplus*NY+j])&&(xy_in[iminus*NY+j]))
+                gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+            if ((xy_in[i*NY+jplus])&&(xy_in[i*NY+jminus]))
+                gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+        }
+    }
+        
+    /* boundaries */
+    for (i=1; i<NX-1; i++)
+    {
+        iplus = i+1;    
+        iminus = i-1;   
+        
+        j = 0;
+        jplus = 1;
+        jminus = NY-1;
+            
+        gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+        
+//         if (i == 1) printf("psi+ = %.5lg, psi- = %.5lg, gradient = %.5lg\n", phi[i*NY+jplus], phi[i*NY+jminus], gradient[NX*NY+i*NY+j]);
+        
+        j = NY-1;
+        jplus = 0;
+        jminus = NY-2;
+        
+        gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+    }
+    
+    for (j=1; j<NY-1; j++)
+    {
+        jplus = j+1;
+        jminus = j-1;
+
+        i = 0;
+        iplus = 1; 
+        iminus = NX-1; 
+
+        gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+        
+//         printf("j = %i, psi+ = %.5lg, psi- = %.5lg, gradient = %.5lg\n", j, phi[i*NY+jplus], phi[i*NY+jminus], gradient[NX*NY+i*NY+j]);
+
+            
+        i = NX-1;
+        iplus = 0;
+        iminus = NX-2;
+        
+        gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+    }
+    
+    /* corners */
+    i = 0;  iplus = 1;  iminus = NX-1;
+    
+    j = 0;  jplus = 1;  jminus = NY-1;
+    gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+    
+    j = NY-1;  jplus = 0;  jminus = NY-2;
+    gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+    
+    i = NX-1;  iplus = 0;  iminus = NX-2;
+    
+    j = 0;  jplus = 1;  jminus = NY-1;
+    gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+    
+    j = NY-1;  jplus = 0;  jminus = NY-2;
+    gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+}
+
+
 void compute_gradient_rde(double phi[NX*NY], t_rde rde[NX*NY])
 /* compute the gradient of the field */
 {
@@ -751,7 +1020,7 @@ void compute_gradient_rde(double phi[NX*NY], t_rde rde[NX*NY])
         {
             iplus = i+1;  if (iplus == NX) iplus = 0;
             iminus = i-1; if (iminus == -1) iminus = NX-1;
-            jplus = j+1;  if (jplus == NX) jplus = 0;
+            jplus = j+1;  if (jplus == NY) jplus = 0;
             jminus = j-1; if (jminus == -1) jminus = NY-1;
             
             deltaphi = phi[iplus*NY+j] - phi[iminus*NY+j];
@@ -787,7 +1056,7 @@ void compute_gradient_theta(t_rde rde[NX*NY])
         {
             iplus = i+1;  if (iplus == NX) iplus = 0;
             iminus = i-1; if (iminus == -1) iminus = NX-1;
-            jplus = j+1;  if (jplus == NX) jplus = 0;
+            jplus = j+1;  if (jplus == NY) jplus = 0;
             jminus = j-1; if (jminus == -1) jminus = NY-1;
             
             deltaphi = rde[iplus*NY+j].theta - rde[iminus*NY+j].theta;
@@ -819,7 +1088,7 @@ void compute_curl(t_rde rde[NX*NY])
         {
             iplus = i+1;  if (iplus == NX) iplus = 0;
             iminus = i-1; if (iminus == -1) iminus = NX-1;
-            jplus = j+1;  if (jplus == NX) jplus = 0;
+            jplus = j+1;  if (jplus == NY) jplus = 0;
             jminus = j-1; if (jminus == -1) jminus = NY-1;
             
             delta = (rde[i*NY+jplus].nablay - rde[i*NY+jminus].nablay - (rde[iplus*NY+j].nablax - rde[iminus*NY+j].nablax))/dx;
@@ -878,7 +1147,7 @@ void compute_field_argument(double *phi[NFIELDS], t_rde rde[NX*NY])
 }
 
 void compute_field_log(double *phi[NFIELDS], t_rde rde[NX*NY])
-/* compute the norm squared of first two fields */
+/* compute the log of a field */
 {
     int i, j; 
     double value;
@@ -892,6 +1161,217 @@ void compute_field_log(double *phi[NFIELDS], t_rde rde[NX*NY])
             rde[i*NY+j].log_vorticity = LOG_SHIFT + LOG_SCALE*log(value);
         }
 }
+
+void compute_pressure(double *phi[NFIELDS], t_rde rde[NX*NY])
+/* compute the Laplacian of the pressure */
+{
+    int i, j, iplus, iminus, jplus, jminus; 
+    double value, dx, psixx, psiyy, psixy;
+    static double dx4;
+    static int first = 1;
+    
+    if (first)
+    {
+        dx = (XMAX-XMIN)/((double)NX);
+        dx4 = dx*dx;
+        dx4 = dx4*dx4;
+        first = 0;
+    }
+    
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,psixx,psiyy,psixy)
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            iplus = i+1;  if (iplus == NX) iplus = 0;
+            iminus = i-1; if (iminus == -1) iminus = NX-1;
+            jplus = j+1;  if (jplus == NY) jplus = 0;
+            jminus = j-1; if (jminus == -1) jminus = NY-1;
+            
+            psixx = phi[0][iplus*NY+j] - 2.0*phi[0][i*NY+j] + phi[0][iminus*NY+j];
+            psiyy = phi[0][i*NY+jplus] - 2.0*phi[0][i*NY+j] + phi[0][i*NY+jminus];
+            psixy = phi[0][iplus*NY+jplus] - phi[0][iplus*NY+jminus] - phi[0][iminus*NY+jplus] + phi[0][iminus*NY+jminus];
+            
+            rde[i*NY+j].Lpressure = (psixx*psiyy - psixy*psixy)/dx4;
+        }
+}
+
+
+void compute_pressure_laplacian(double *phi[NFIELDS], double *l_pressure)
+/* compute the Laplacian of the pressure */
+{
+    int i, j, iplus, iminus, jplus, jminus; 
+    double value, dx, psixx, psiyy, psixy, dx4;
+    static double scaling;
+    static int first = 1;
+    
+    if (first)
+    {
+        dx = (XMAX-XMIN)/((double)NX);
+        dx4 = dx*dx;
+        scaling = 1.0/(2.0*dx4*dx4);
+        first = 0;
+    }
+    
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,psixx,psiyy,psixy)
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            iplus = i+1;  if (iplus == NX) iplus = 0;
+            iminus = i-1; if (iminus == -1) iminus = NX-1;
+            jplus = j+1;  if (jplus == NY) jplus = 0;
+            jminus = j-1; if (jminus == -1) jminus = NY-1;
+            
+            psixx = phi[0][iplus*NY+j] - 2.0*phi[0][i*NY+j] + phi[0][iminus*NY+j];
+            psiyy = phi[0][i*NY+jplus] - 2.0*phi[0][i*NY+j] + phi[0][i*NY+jminus];
+            psixy = phi[0][iplus*NY+jplus] - phi[0][iplus*NY+jminus] - phi[0][iminus*NY+jplus] + phi[0][iminus*NY+jminus];
+            
+            l_pressure[i*NY+j] = (psixx*psiyy - psixy*psixy)*scaling;
+        }
+}
+
+
+void compute_speed(double *phi[NFIELDS], t_rde rde[NX*NY])
+/* compute the log of a field */
+{
+    int i, j; 
+    double value;
+    
+    #pragma omp parallel for private(i,j,value)
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            value = module2(phi[1][i*NY+j], phi[2][i*NY+j]);
+            rde[i*NY+j].field_norm = value;
+        }
+}
+
+void compute_vorticity(t_rde rde[NX*NY])
+/* compute the log of a field */
+{
+    int i, j; 
+    double value;
+    
+    #pragma omp parallel for private(i,j,value)
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            rde[i*NY+j].curl = rde[i*NY+j].dxv - rde[i*NY+j].dyu + VORTICITY_SHIFT;
+        }
+}
+
+void compute_velocity_gradients(double *phi[NFIELDS], t_rde rde[NX*NY])
+/* compute the gradients of the velocity field (for Euler equation) */
+{
+    int i, j, k, iplus, iminus, jplus, jminus, padding = 0; 
+    double deltaphi, maxgradient = 1.0e10;
+//     double dx = (XMAX-XMIN)/((double)NX);
+    
+//     dx = (XMAX-XMIN)/((double)NX);
+        
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus)
+    for (i=1; i<NX-1; i++)
+        for (j=1; j<NY-1; j++) 
+        {
+            iplus = i+1;
+            iminus = i-1;
+            jplus = j+1;
+            jminus = j-1;
+            
+            rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+            rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+           
+            rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+        }
+        
+    /* boundaries */
+    for (i=1; i<NX-1; i++)
+    {
+        iplus = i+1;    
+        iminus = i-1;   
+        
+        j = 0;
+        jplus = 1;
+        jminus = NY-1;
+            
+        rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+        rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+        rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+        rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+        
+        j = NY-1;
+        jplus = 0;
+        jminus = NY-2;
+        
+        rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+        rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+        rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+        rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+    }
+    
+    for (j=1; j<NY-1; j++)
+    {
+        jplus = j+1;
+        jminus = j-1;
+
+        i = 0;
+        iplus = 1; 
+        iminus = NX-1; 
+
+        rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+        rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+        rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+        rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                    
+        i = NX-1;
+        iplus = 0;
+        iminus = NX-2;
+        
+        rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+        rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+        rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+        rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+    }
+    
+    /* corners */
+    i = 0;  iplus = 1;  iminus = NX-1;
+    
+    j = 0;  jplus = 1;  jminus = NY-1;
+    rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+    rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+    rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+    rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+    
+    j = NY-1;  jplus = 0;  jminus = NY-2;
+    rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+    rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+    rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+    rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+    
+    i = NX-1;  iplus = 0;  iminus = NX-2;
+    
+    j = 0;  jplus = 1;  jminus = NY-1;
+    rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+    rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+    rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+    rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+    
+    j = NY-1;  jplus = 0;  jminus = NY-2;
+    rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+    rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+    rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+    rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+}
+
+
 
 void compute_probabilities(t_rde rde[NX*NY], short int xy_in[NX*NY], double probas[2])
 /* compute probabilities for Ehrenfest urns */
@@ -1216,6 +1696,36 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
             color_scheme_palette(COLOR_SCHEME, palette, VSCALE_AMPLITUDE*value, 1.0, 0, rgb);
             break;
         }
+        case (Z_EULER_LPRESSURE): 
+        {
+            color_scheme_palette(COLOR_SCHEME, palette, VSCALE_AMPLITUDE*value, 1.0, 0, rgb);
+            break;
+        }
+        case (Z_EULER_PRESSURE): 
+        {
+            if (value + PRESSURE_SHIFT < 1.0e-10) value = 1.0e-10 - PRESSURE_SHIFT;
+            color_scheme_palette(COLOR_SCHEME, palette, VSCALE_PRESSURE*log(value + PRESSURE_SHIFT) + PRESSURE_LOG_SHIFT, 1.0, 0, rgb);
+//             color_scheme_palette(COLOR_SCHEME, palette, VSCALE_PRESSURE*(value - AVERAGE_PRESSURE), 1.0, 0, rgb);
+            break;
+        }
+        case (Z_EULER_DENSITY): 
+        {
+            color_scheme_palette(COLOR_SCHEME, palette, VSCALE_DENSITY*(value-1.0), 1.0, 0, rgb);
+            break;
+        }
+        case (Z_EULER_SPEED): 
+        {
+            if (ASYM_SPEED_COLOR) 
+                color_scheme_asym_palette(COLOR_SCHEME, palette, VSCALE_SPEED*value, 1.0, 0, rgb);
+            else 
+                color_scheme_palette(COLOR_SCHEME, palette, VSCALE_SPEED*(value-VMEAN_SPEED), 1.0, 0, rgb);
+            break;
+        }
+        case (Z_EULERC_VORTICITY): 
+        {
+            color_scheme_palette(COLOR_SCHEME, palette, VSCALE_VORTICITY*(value-VORTICITY_SHIFT), 1.0, 0, rgb);
+            break;
+        }
     }
 }
 
@@ -1374,6 +1884,16 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
         {
             if ((zplot == Z_EULER_LOG_VORTICITY)||(cplot == Z_EULER_LOG_VORTICITY))
                 compute_field_log(phi, rde);
+            if ((zplot == Z_EULER_LPRESSURE)||(cplot == Z_EULER_LPRESSURE))
+                compute_pressure(phi, rde);
+            break;
+        }
+        case (E_EULER_COMP):
+        {
+            if ((zplot == Z_EULER_SPEED)||(cplot == Z_EULER_SPEED))
+                compute_speed(phi, rde);
+            if ((zplot == Z_EULERC_VORTICITY)||(cplot == Z_EULERC_VORTICITY))
+                compute_vorticity(rde);
             break;
         }
         default : break;
@@ -1494,6 +2014,36 @@ void init_zfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &phi[1][i*NY+j];
             break;
         }
+        case (Z_EULER_LPRESSURE):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].Lpressure;
+            break;
+        }
+        case (Z_EULER_PRESSURE):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &phi[2][i*NY+j];
+            break;
+        }
+        case (Z_EULER_DENSITY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &phi[0][i*NY+j];
+            break;
+        }
+        case (Z_EULER_SPEED):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].field_norm;
+            break;
+        }
+        case (Z_EULERC_VORTICITY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].curl;
+            break;
+        }
     }
 }
 
@@ -1611,6 +2161,36 @@ void init_cfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int cplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &phi[1][i*NY+j];
             break;
         }
+        case (Z_EULER_LPRESSURE):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].Lpressure;
+            break;
+        }
+        case (Z_EULER_PRESSURE):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &phi[2][i*NY+j];
+            break;
+        }
+        case (Z_EULER_DENSITY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &phi[0][i*NY+j];
+            break;
+        }
+        case (Z_EULER_SPEED):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].field_norm;
+            break;
+        }
+        case (Z_EULERC_VORTICITY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].curl;
+            break;
+        }
     }
 }
 
@@ -1667,8 +2247,7 @@ void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY])
 }
 
 
-void draw_wave_3d_ij_rde(int i, int j, int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], 
-                         double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
+void draw_wave_3d_ij_rde(int i, int j, int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
 {
     int k, l, draw = 1;
     double xy[2], xy_screen[2], rgb[3], pos[2], ca, rgb_e[3], rgb_w[3], rgb_n[3], rgb_s[3]; 
@@ -1871,8 +2450,8 @@ void draw_periodicised_wave_3d(int movie, double *phi[NFIELDS], short int xy_in[
 }
 
 
-void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], 
-                   int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
+void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY],
+                   double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
 {
     int i, j, k, l, draw = 1;
     double xy[2], xy_screen[2], rgb[3], pos[2], ca, rgb_e[3], rgb_w[3], rgb_n[3], rgb_s[3]; 

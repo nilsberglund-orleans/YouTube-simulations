@@ -57,7 +57,7 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
     p += width * sizeof(GLubyte) * 3;
   }
   TIFFClose(file);
-//   free(image);
+  if (SAVE_MEMORY) free(image);
   return 0;
 }
 
@@ -367,6 +367,7 @@ void draw_polygon(double x, double y, double r, int nsides, double angle)
     
     dalpha = DPI/(double)nsides;
     
+    glColor3f(1.0, 1.0, 1.0);
     glBegin(GL_LINE_LOOP);
     for (i=0; i<=nsides; i++)
     {
@@ -462,6 +463,49 @@ void draw_colored_sector(double xc, double yc, double r1, double r2, double angl
         glVertex2d(xc + r1*cos(angle), yc + r1*sin(angle));
     }
     glEnd();   
+}
+
+double type_hue(int type)
+{
+    int hue;
+    double t2;
+    static double b, hmax;
+    static int first = 1;
+    
+    if (first)
+    {
+        hmax = 360.0;
+        b = 16.0*(hmax - HUE_TYPE3);
+        first = 0;
+    }
+    
+    switch (type) {
+        case (0): return(HUE_TYPE0);
+        case (1): return(HUE_TYPE0);
+        case (2): return(HUE_TYPE1);
+        case (3): return(HUE_TYPE2);
+        default:
+        {
+            t2 = (double)(type*type);
+            hue = (hmax*t2 - b)/t2;
+//             b = 4.0*hmax - 4.0*HUE_TYPE3;
+//             hue = (hmax*t - b)/t;
+//             hue = (hmax*t - b)/(t+1.0);
+//             hue = HUE_TYPE3 + 30.0*(double)(type - 4);
+//             if (hue > 360.0) hue = 360.0;
+            return(hue);
+        }
+    }
+}
+
+
+void set_type_color(int type, double lum, double rgb[3])
+{
+    int hue;
+    
+    hue = type_hue(type);
+    hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE);
+    glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
 }
 
 
@@ -946,6 +990,14 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
             add_obstacle(BCXMIN - width, BCYMIN + lpocket, radius, obstacle);
             add_obstacle(BCXMIN - width, BCYMAX - lpocket, radius, obstacle);
             
+            break;
+        }
+        case (O_HLINE_HOLE_SPOKES):
+        {
+            radius = 2.0*MU;
+            
+            for (i=-3; i<4; i+=2)
+                add_obstacle(0.5*(double)i, YMIN + 0.3, radius, obstacle);
             break;
         }
         default: 
@@ -1838,6 +1890,51 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             
             break;
         }
+        case (S_HLINE_HOLE_SPOKES):
+        {
+            x = 0.15;
+            x1 = XMAX + 1.0;
+            y1 = 0.0;
+            width = 0.05;
+            
+            add_rectangle_to_segments(x1, y1 - width, x, y1, segment, 0);
+            add_rectangle_to_segments(-x, y1 - width, -x1, y1, segment, 0);
+            
+            /* closing segment */
+            segment[nsegments].x1 = -x;
+            segment[nsegments].y1 = y1 - 0.5*width;
+            segment[nsegments].x2 = x;
+            segment[nsegments].y2 = y1 - 0.5*width;
+            nsegments++;
+                        
+            /* spokes */
+            for (i=-3; i<4; i+=2)
+            {
+                x = 0.5*(double)i;
+                segment[nsegments].x1 = x - 0.1;
+                segment[nsegments].y1 = BCYMIN - 0.1;
+                segment[nsegments].x2 = x;
+                segment[nsegments].y2 = YMIN + 0.3;
+                nsegments++;
+                segment[nsegments].x1 = x;
+                segment[nsegments].y1 = YMIN + 0.3;
+                segment[nsegments].x2 = x + 0.1;
+                segment[nsegments].y2 = BCYMIN - 0.1;
+                nsegments++;
+            }
+        
+            
+            cycle = 0;
+            concave = 0;    /* add_rectangle_to_segments already deals with concave corners */
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].inactivate = 0;
+            }
+            segment[8].inactivate = 1;
+            
+            break;
+        }
         case (S_EXT_CIRCLE_RECT):
         {
             width = 0.1*LAMBDA;
@@ -1857,6 +1954,22 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 segment[i].inactivate = 0;
             }
             
+            break;
+        }
+        case (S_BIN_OPENING):
+        {
+            add_rectangle_to_segments(LAMBDA, 1.0 - LAMBDA, LAMBDA - MU, YMAX + 1.0, segment, 0);
+            add_rectangle_to_segments(-LAMBDA + MU, 1.0 - LAMBDA, -LAMBDA, YMAX + 1.0, segment, 0);
+            add_rectangle_to_segments(LAMBDA, 1.0 - LAMBDA, -LAMBDA, 1.0 - LAMBDA + MU, segment, 0);
+            
+            cycle = 0;
+            concave = 0;    /* add_rectangle_to_segments already deals with concave corners */
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 1;
+            }
             break;
         }
         default: 
@@ -2139,6 +2252,13 @@ int in_segment_region(double x, double y)
             if ((vabs(x - SEGMENTS_X0) < LAMBDA + padding)&&(vabs(y - SEGMENTS_Y0) < 0.1*LAMBDA + padding)) return(0);
             else if (module2(x + SEGMENTS_X0, y - SEGMENTS_Y0) < 0.5*LAMBDA + padding) return(0);
             else return(1);
+        }
+        case (S_BIN_OPENING):
+        {
+            padding = 3.0*MU;
+            if (y < 0.0) return(1);
+            if ((y > 1.0 - LAMBDA + padding)&&(vabs(x) < LAMBDA - padding)) return(1);
+            return(0);
         }
         default: return(1);
     }
@@ -2848,7 +2968,7 @@ int compute_repelling_force(int i, int j, double force[2], double *torque, t_par
     double distance, ca, sa, cj, sj, ca_rel, sa_rel, f[2], ff[2], torque1, ck, sk, ck_rel, sk_rel;
     static double distmin = 10.0*((XMAX - XMIN)/HASHX + (YMAX - YMIN)/HASHY);
     int interact, k;
-    
+        
     if (BOUNDARY_COND == BC_GENUS_TWO) distmin *= 2.0;
     
     k = particle[i].hashneighbour[j];
@@ -3147,10 +3267,7 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
         }
         case (P_TYPE):
         {
-            if (particle.type <= 1) hue = HUE_TYPE0;
-            else if (particle.type == 2) hue = HUE_TYPE1;
-            else if (particle.type == 3) hue = HUE_TYPE2;
-            else hue = HUE_TYPE3;
+            hue = type_hue(particle.type);
             *radius = particle.radius;
             *width = BOUNDARY_WIDTH;
             break;
@@ -3287,7 +3404,6 @@ void set_segment_group_color(int group, double lum, double rgb[3])
     glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
 }
 
-
 void draw_altitude_lines()
 {
     int i, i1, i2;
@@ -3371,10 +3487,7 @@ void draw_triangles(t_particle particle[NMAXCIRCLES], int plot)
         {
             if (plot == P_TYPE)
             {
-                if (t0 <= 1) hue = HUE_TYPE0;
-                else if (t0 == 2) hue = HUE_TYPE1;
-                else if (t0 == 3) hue = HUE_TYPE2;
-                else hue = HUE_TYPE3;
+                hue = type_hue(t0);
                 hsl_to_rgb(hue, 0.9, 0.3, rgb);
             }
             else
@@ -3423,11 +3536,143 @@ void draw_one_particle_links(t_particle particle)
     }
 }
 
+
+int draw_special_particle(t_particle particle, double xc1, double yc1, double radius, double angle, int nsides, double rgb[3], short int fill)
+/* draw special particles shapes, for chemical reactions */
+{
+    double x1, y1, omega;
+    int wsign, i;
+    
+    switch(RD_REACTION)
+    {
+        case (CHEM_AAB):
+        {
+            if (particle.type == 2) for (wsign = -1; wsign <= 1; wsign+=2)
+            {
+                x1 = xc1 + (double)wsign*0.7*radius*cos(particle.angle);
+                y1 = yc1 + (double)wsign*0.7*radius*sin(particle.angle);
+                if (fill) draw_colored_polygon(x1, y1, 0.7*radius, nsides, angle + APOLY*PID, rgb);
+                else draw_polygon(x1, y1, 0.7*radius, nsides, angle + APOLY*PID);
+                return(0);
+            }
+            break;
+        }
+        case (CHEM_ABC):
+        {
+            if (particle.type == 3) for (wsign = -1; wsign <= 1; wsign+=2)
+            {
+                x1 = xc1 + (double)wsign*0.7*radius*cos(particle.angle);
+                y1 = yc1 + (double)wsign*0.7*radius*sin(particle.angle);
+                if (wsign == 1) 
+                {
+                    if (fill) draw_colored_polygon(x1, y1, 1.2*MU_B, nsides, angle + APOLY*PID, rgb);
+                    else draw_polygon(x1, y1, 1.2*MU_B, nsides, angle + APOLY*PID);
+                }
+                else 
+                {
+                    if (fill) draw_colored_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID, rgb);
+                    else draw_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID);
+                }
+                return(0);
+            }
+            break;
+        }
+        case (CHEM_A2BC):
+        {
+            if (particle.type == 3) 
+            {
+                draw_colored_polygon(xc1, yc1, 1.2*MU_B, nsides, angle + APOLY*PID, rgb);
+                for (wsign = -1; wsign <= 1; wsign+=2)
+                {
+                    x1 = xc1 + 1.5*radius*cos(particle.angle + 0.6*(double)wsign*PI);
+                    y1 = yc1 + 1.5*radius*sin(particle.angle + 0.6*(double)wsign*PI);
+                    if (fill) draw_colored_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID, rgb);
+                    else draw_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID);
+                    return(0);
+                }
+            }
+            break;
+        }
+        case (CHEM_CATALYSIS):
+        {
+            if (particle.type == 3) for (wsign = -1; wsign <= 1; wsign+=2)
+            {
+                x1 = xc1 + (double)wsign*0.7*radius*cos(particle.angle);
+                y1 = yc1 + (double)wsign*0.7*radius*sin(particle.angle);
+                if (fill) draw_colored_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID, rgb);
+                else draw_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID);
+                return(0);
+            }
+            break;
+        }
+        case (CHEM_BAA):
+        {
+            if (particle.type == 2) for (wsign = -1; wsign <= 1; wsign+=2)
+            {
+                x1 = xc1 + (double)wsign*1.2*radius*cos(particle.angle);
+                y1 = yc1 + (double)wsign*1.2*radius*sin(particle.angle);
+                if (fill) draw_colored_polygon(x1, y1, 0.9*radius, nsides, angle + APOLY*PID, rgb);
+                else draw_polygon(x1, y1, 0.9*radius, nsides, angle + APOLY*PID);
+                return(0);
+            }
+            break;
+        }
+        case (CHEM_AABAA):
+        {
+            if (particle.type == 2) for (wsign = -1; wsign <= 1; wsign+=2)
+            {
+                x1 = xc1 + (double)wsign*1.2*radius*cos(particle.angle);
+                y1 = yc1 + (double)wsign*1.2*radius*sin(particle.angle);
+                if (fill) draw_colored_polygon(x1, y1, 0.9*radius, nsides, angle + APOLY*PID, rgb);
+                else draw_polygon(x1, y1, 0.9*radius, nsides, angle + APOLY*PID);
+                return(0);
+            }
+            break;
+        }
+        case (CHEM_POLYMER):
+        {
+            if (particle.type >= 3) 
+            {
+                omega = DPI/(double)(particle.type - 2);
+                draw_colored_polygon(xc1, yc1, 1.2*MU_B, nsides, angle + APOLY*PID, rgb);
+                for (i=0; i<particle.type-2; i++)
+                {
+                    x1 = xc1 + 1.5*MU_B*cos(particle.angle + (double)i*omega);
+                    y1 = yc1 + 1.5*MU_B*sin(particle.angle + (double)i*omega);
+                    if (fill) draw_colored_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID, rgb);
+                    else draw_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID);
+                }
+                return(0);
+            }
+            break;
+        }
+        case (CHEM_POLYMER_DISS):
+        {
+            if (particle.type >= 3) 
+            {
+                omega = DPI/(double)(particle.type - 2);
+                draw_colored_polygon(xc1, yc1, 1.2*MU_B, nsides, angle + APOLY*PID, rgb);
+                for (i=0; i<particle.type-2; i++)
+                {
+                    x1 = xc1 + 1.5*MU_B*cos(particle.angle + (double)i*omega);
+                    y1 = yc1 + 1.5*MU_B*sin(particle.angle + (double)i*omega);
+                    if (fill) draw_colored_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID, rgb);
+                    else draw_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID);
+                }
+                return(0);
+            }
+            break;
+        }
+        return(1);
+    }
+    
+}
+
 void draw_one_particle(t_particle particle, double xc, double yc, double radius, double angle, int nsides, double width, double rgb[3])
 /* draw one of the particles */ 
 {
-    double ca, sa, x1, x2, y1, y2, xc1, yc1, wangle;
-    int wsign;
+    double ca, sa, x1, x2, y1, y2, xc1, yc1, wangle, newradius = radius;
+    int wsign, cont = 1;
     
     if (CENTER_VIEW_ON_OBSTACLE) xc1 = xc - xshift;
     else xc1 = xc;
@@ -3438,9 +3683,13 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     }
     else yc1 = yc;
     glColor3f(rgb[0], rgb[1], rgb[2]);
+    
+    /* specific shapes for chemical reactions */
+    if (REACTION_DIFFUSION) draw_special_particle(particle, xc1, yc1, radius, angle, nsides, rgb, 1);    
+   
     if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)) 
         draw_colored_rhombus(xc1, yc1, radius, angle + APOLY*PID, rgb);
-    else draw_colored_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID, rgb);
+    else if (cont) draw_colored_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID, rgb);
         
     /* draw crosses on particles of second type */
     if ((TWO_TYPES)&&(DRAW_CROSS))
@@ -3466,9 +3715,11 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
         
     glLineWidth(width);
     glColor3f(1.0, 1.0, 1.0);
+    if (REACTION_DIFFUSION) draw_special_particle(particle, xc1, yc1, radius, angle, nsides, rgb, 0);
+
     if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)) 
         draw_rhombus(xc1, yc1, radius, angle + APOLY*PID);
-    else draw_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID); 
+    else if (cont) draw_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID); 
     
     if (particle.interaction == I_LJ_WATER) for (wsign = -1; wsign <= 1; wsign+=2)
     {
@@ -3481,6 +3732,22 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     }
 }
 
+void draw_collisions(t_collision *collisions, int ncollisions)
+/* draw discs where collisions happen */
+{
+    int i, j;
+    double rgb[3], lum;
+    
+    for (i=0; i<ncollisions; i++) if (collisions[i].time > 0)
+    {
+        lum = (double)collisions[i].time/(double)COLLISION_TIME;
+        if (collisions[i].color == 0.0) for (j=0; j<3; j++) rgb[j] = lum;
+        else hsl_to_rgb_palette(collisions[i].color, 0.9, lum, rgb, COLOR_PALETTE);
+        draw_colored_polygon(collisions[i].x, collisions[i].y, 5.0*MU, NSEG, 0.0, rgb);
+        collisions[i].time--;
+    }
+    
+}
 
 void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], int traj_position, int traj_length)
 /* draw tracer particle trajectory */
@@ -3488,15 +3755,16 @@ void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
     int i, j, time;
     double x1, x2, y1, y2, rgb[3], lum;
     
-    blank();
+//     blank();
     glLineWidth(TRAJECTORY_WIDTH);
     printf("drawing trajectory\n");
     
     for (j=0; j<N_TRACER_PARTICLES; j++)
     {
-        if (j == 0) hsl_to_rgb(HUE_TYPE1, 0.9, 0.5, rgb);
-        else if (j == 1) hsl_to_rgb(HUE_TYPE2, 0.9, 0.5, rgb);
-        else hsl_to_rgb(HUE_TYPE3, 0.9, 0.5, rgb);
+//         if (j == 0) hsl_to_rgb(HUE_TYPE1, 0.9, 0.5, rgb);
+//         else if (j == 1) hsl_to_rgb(HUE_TYPE2, 0.9, 0.5, rgb);
+//         else hsl_to_rgb(HUE_TYPE3, 0.9, 0.5, rgb);
+        set_type_color(j+2, 0.5, rgb);
         glColor3f(rgb[0], rgb[1], rgb[2]);
     
         if (traj_length < TRAJECTORY_LENGTH) 
@@ -3548,13 +3816,13 @@ void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
 }
     
 
-void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta)
+void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_collision *collisions, int ncollisions)
 {
     int i, j, k, m, width, nnbg, nsides;
     double ej, hue, huex, huey, rgb[3], rgbx[3], rgby[3], radius, x1, y1, x2, y2, angle, ca, sa, length, linkcolor, sign = 1.0, angle1, signy = 1.0, periodx, periody, x, y, lum, logratio;
     char message[100];
     
-    if (!TRACER_PARTICLE) blank();
+//     if (!TRACER_PARTICLE) blank();
     glColor3f(1.0, 1.0, 1.0);
     
     /* show region of partial thermostat */
@@ -3586,6 +3854,8 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta)
     /* fill triangles between particles */
     if (FILL_TRIANGLES) draw_triangles(particle, plot);
     
+    /* draw collision discs */
+    if ((REACTION_DIFFUSION)&&(ncollisions > 0)) draw_collisions(collisions, ncollisions);
     
     /* determine particle color and size */
     for (j=0; j<ncircles; j++) if (particle[j].active)
@@ -4243,6 +4513,20 @@ void print_ehrenfest_parameters(t_particle particle[NMAXCIRCLES], double pleft, 
 
 }
 
+void count_particle_number(t_particle *particle, int *particle_numbers, int time)
+{
+    int type, i, n;
+    
+    n = time*(RD_TYPES+1);
+    
+    for (type = 0; type < RD_TYPES+1; type++)
+        particle_numbers[n + type] = 0;
+    
+    for (i=0; i<ncircles; i++)
+        if (particle[i].active) 
+            particle_numbers[n + particle[i].type]++;
+}
+
 void print_particle_number(int npart)
 {
     char message[100];
@@ -4262,6 +4546,37 @@ void print_particle_number(int npart)
     if (npart > 1) sprintf(message, "%i particles", npart);
     else sprintf(message, "%i particle", npart);
     write_text(xlefttext + 0.28, y, message);
+}
+
+void print_particle_types_number(t_particle *particle, int ntypes)
+{
+    int i, ntype[10];
+    char message[100];
+    double y = YMAX - 0.1, rgb[3];
+    static double xleftbox, xlefttext;
+    static int first = 1;
+    
+    if (first)
+    {
+        xleftbox = XMAX - 0.5;
+        xlefttext = xleftbox - 0.45;
+        first = 0;
+    }
+    
+    for (i=0; i<10; i++) ntype[i] = 0;
+    
+    for (i=0; i<ncircles; i++)
+        if (particle[i].active) ntype[particle[i].type]++;
+    
+    for (i=1; i<ntypes+1; i++)
+    {
+        erase_area_hsl(xleftbox, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+        set_type_color(i, 0.5, rgb);
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+        sprintf(message, "%i particles", ntype[i]);
+        write_text(xlefttext + 0.28, y, message);
+        y -= 0.12;
+    }
 }
 
 void print_entropy(double entropy[2])
@@ -4984,7 +5299,9 @@ void compute_particle_force(int j, double krepel, t_particle particle[NMAXCIRCLE
     particle[j].neighb = 0;
     if (REACTION_DIFFUSION) particle[j].diff_neighb = 0;
 
-    for (k=0; k<particle[j].hash_nneighb; k++)
+    /* NEW */
+    for (k=0; k<particle[j].hash_nneighb; k++) 
+        if (particle[particle[j].hashneighbour[k]].active)
     {
         close = compute_repelling_force(j, k, force, &torque_ij, particle, krepel);
         fx += force[0];
@@ -5064,7 +5381,7 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
     {
         /* set particle type */
         particle[i].type = 0;
-        if ((TWO_TYPES)&&((double)rand()/RAND_MAX > TPYE_PROPORTION)) 
+        if ((TWO_TYPES)&&((double)rand()/RAND_MAX > TYPE_PROPORTION)) 
         {
             particle[i].type = 2;
             particle[i].radius = MU_B;
@@ -5280,10 +5597,66 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
             if (!in_segment_region(particle[i].xc, particle[i].yc)) 
                 particle[i].active = 0;
             
-    /* case of reaction-diffusion equation */
+    /* case of reaction-diffusion equation/chemical reactions */
     if (REACTION_DIFFUSION) for (i=0; i< ncircles; i++)
     {
-        particle[i].type = 1 + (int)(RD_TYPES*(double)rand()/(double)RAND_MAX);
+        switch (RD_INITIAL_COND) {
+            case (IC_UNIFORM):
+            {
+                particle[i].type = 1;
+                break;
+            }
+            case (IC_UNIFORM2):
+            {
+                particle[i].type = 2;
+                particle[i].radius = MU_B;
+                particle[i].omega = OMEGA_INITIAL*gaussian();
+                break;
+            }
+            case (IC_RANDOM_UNIF):
+            {
+                particle[i].type = 1 + (int)(RD_TYPES*(double)rand()/(double)RAND_MAX);
+                break;
+            }
+            case (IC_RANDOM_TWO):
+            {
+                if ((double)rand()/(double)RAND_MAX < TYPE_PROPORTION) particle[i].type = 1;
+                else 
+                {
+                    particle[i].type = 2;
+                    particle[i].radius = MU_B;
+                    particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
+                }
+                break;
+            }
+            case (IC_CIRCLE):
+            {
+                if (module2(particle[i].xc,particle[i].yc) < LAMBDA) particle[i].type = 1;
+                else 
+                {
+                    particle[i].type = 2;
+                    particle[i].radius = MU_B;
+                    particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
+                }
+                break;
+            }
+            case (IC_CATALYSIS):
+            {
+                if ((particle[i].xc > 0.0)||((double)rand()/(double)RAND_MAX < TYPE_PROPORTION))
+                {
+                    particle[i].type = 1;
+                    particle[i].radius = MU;
+                    particle[i].mass_inv = 1.0/PARTICLE_MASS;
+                }
+                else 
+                {
+                    particle[i].type = 2;
+                    particle[i].radius = MU_B;
+                    particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
+                }
+                break;
+            }
+        }
     }   
     
     /* keep only active particles */
@@ -5303,6 +5676,8 @@ int add_particles(t_particle particle[NMAXCIRCLES], double px[NMAXCIRCLES], doub
 /* add several particles to the system */
 {
     static int i = 0;
+    double x, y; 
+    
 //             add_particle(XMIN + 0.1, 0.0, 50.0, 0.0, 3.0, 0, particle);
 //             px[ncircles - 1] = particle[ncircles - 1].vx;
 //             py[ncircles - 1] = particle[ncircles - 1].vy;
@@ -5330,9 +5705,15 @@ int add_particles(t_particle particle[NMAXCIRCLES], double px[NMAXCIRCLES], doub
      
 //     add_particle(XMIN - 0.5*MU, 0.0, 50.0 + 5.0*(double)i, 0.0, 2.0*PARTICLE_MASS, 0, particle);
     
+//     x = INITXMIN + (INITXMAX - INITXMIN)*(double)rand()/(double)RAND_MAX;
+//     y = INITYMIN + (INITYMAX - INITYMIN)*(double)rand()/(double)RAND_MAX;
+    
     printf("Adding a particle\n\n");
     
-    add_particle(BCXMIN + 0.1, 0.5*(BCYMIN + BCYMAX), 200.0, 0.0, PARTICLE_MASS, 0, particle);
+    x = BCXMIN + (BCXMAX - BCXMIN)*(double)rand()/(double)RAND_MAX;
+    y = YMAX + 0.5*(BCYMAX - YMAX)*(double)rand()/(double)RAND_MAX;
+    add_particle(x, y, 0.0, 0.0, PARTICLE_MASS, 0, particle);
+//     add_particle(BCXMIN + 0.1, 0.5*(BCYMIN + BCYMAX), 200.0, 0.0, PARTICLE_MASS, 0, particle);
 //     i++;
     
     particle[ncircles - 1].radius = MU;
@@ -5432,23 +5813,499 @@ double compute_mean_energy(t_particle particle[NMAXCIRCLES])
     return(total_energy/(double)nactive);
 }
 
-void update_types(t_particle particle[NMAXCIRCLES])
+
+void compute_inverse_masses(double inv_masses[RD_TYPES+1])
+/* compute inverse masses of molecules in chemical reactions */
+{
+    int type; 
+    double mass;
+    
+    /* default values that apply in most cases */
+    inv_masses[1] = 1.0/PARTICLE_MASS;
+    inv_masses[2] = 1.0/PARTICLE_MASS_B;
+    
+    switch (RD_REACTION) {
+        case (CHEM_AAB): 
+        {
+            inv_masses[2] = 0.5/PARTICLE_MASS;
+            break;
+        }
+        case (CHEM_ABC): 
+        {
+            inv_masses[3] = 1.0/(PARTICLE_MASS + PARTICLE_MASS_B);
+            break;
+        }
+        case (CHEM_A2BC): 
+        {
+            inv_masses[3] = 1.0/(2.0*PARTICLE_MASS + PARTICLE_MASS_B);
+            break;
+        }
+        case (CHEM_CATALYSIS): 
+        {
+            inv_masses[3] = 0.5/PARTICLE_MASS;
+            break;
+        }
+        case (CHEM_BAA): 
+        {
+            inv_masses[1] = 2.0/PARTICLE_MASS_B;
+            break;
+        }
+        case (CHEM_AABAA): 
+        {
+            inv_masses[2] = 0.5/PARTICLE_MASS;
+            break;
+        }
+        case (CHEM_POLYMER):
+        {
+            for (type = 3; type < RD_TYPES+1; type++)
+            {
+                mass = PARTICLE_MASS_B + (double)(type-2)*PARTICLE_MASS;
+                inv_masses[type] = 1.0/(1.0/PARTICLE_MASS + 1.0/mass);
+            }
+            break;
+        }
+        case (CHEM_POLYMER_DISS):
+        {
+            for (type = 3; type < RD_TYPES+1; type++)
+            {
+                mass = PARTICLE_MASS_B + (double)(type-2)*PARTICLE_MASS;
+                inv_masses[type] = 1.0/(1.0/PARTICLE_MASS + 1.0/mass);
+            }
+            break;
+        }
+    }
+}
+
+int chem_merge_AAB(int i, int newtype, t_particle particle[NMAXCIRCLES], t_collision *collisions, int ncollisions, double inv_masses[RD_TYPES+1])
+/* merging particle i with a particle of same type into a particle of type newtype */
+/* particular case of chem_merge */
+{
+    int j, k, type1;
+    short int search = 1;
+    double distance, rx, ry, mr, newmass_inv;
+    
+    type1 = particle[i].type;
+    newmass_inv = inv_masses[newtype];
+    mr = inv_masses[newtype]/inv_masses[type1];
+    
+    for (j=0; j<particle[i].hash_nneighb; j++) 
+    {
+        search = 1;
+        k = particle[i].hashneighbour[j];
+        if ((search)&&(particle[k].active)&&(particle[k].type == type1))
+        {
+            distance  = module2(particle[i].deltax[j], particle[i].deltay[j]);
+            if ((distance < REACION_DIST*MU)&&((double)rand()/RAND_MAX < REACTION_PROB))
+            {
+                particle[i].type = newtype;
+                particle[i].radius *= sqrt(2.0);
+                rx = particle[i].xc - particle[k].xc;
+                ry = particle[i].yc - particle[k].yc;
+                particle[i].angle = argument(rx, ry);
+                particle[i].omega = rx*particle[i].vy - ry*particle[i].vx;
+                particle[i].omega -= rx*particle[k].vy - ry*particle[k].vx;
+                if (CENTER_COLLIDED_PARTICLES)
+                {
+                    particle[i].xc = 0.5*(particle[i].xc + particle[k].xc);
+                    particle[i].yc = 0.5*(particle[i].yc + particle[k].yc);
+                }
+                particle[i].vx = mr*(particle[i].vx + particle[k].vx);
+                particle[i].vy = mr*(particle[i].vy + particle[k].vy);
+                particle[i].mass_inv = newmass_inv;
+                
+                particle[k].active = 0;
+                
+                collisions[ncollisions].x = particle[i].xc;
+                collisions[ncollisions].y = particle[i].yc;
+                collisions[ncollisions].time = COLLISION_TIME;
+                collisions[ncollisions].color = 0.0;
+                
+                if (ncollisions < NMAXCIRCLES - 1) ncollisions++;
+                else printf("Too many collisions\n");
+                
+                search = 0;
+            }
+        }
+    }
+    return(ncollisions); 
+}
+
+int chem_merge(int i, int type2, int newtype, t_particle particle[NMAXCIRCLES], t_collision *collisions, int ncollisions, double inv_masses[RD_TYPES+1])
+/* merging of particle i and a particle of type type2 into a particle of type newtype */
+{
+    int j, k, type1;
+    short int search = 1;
+    double distance, rx, ry, m2, mr1, mr2, newmass_inv;
+        
+    type1 = particle[i].type;
+    newmass_inv = inv_masses[newtype];
+    mr1 = newmass_inv/inv_masses[type1];
+    mr2 = newmass_inv/inv_masses[type2];
+    
+    for (j=0; j<particle[i].hash_nneighb; j++) 
+    {
+        k = particle[i].hashneighbour[j];
+        if ((particle[k].active)&&(particle[k].type == type2))
+        {
+            distance  = module2(particle[i].deltax[j], particle[i].deltay[j]);
+            if ((distance < REACION_DIST*MU)&&((double)rand()/RAND_MAX < REACTION_PROB))
+            {
+                particle[i].type = newtype;
+                particle[i].radius *= 1.5;
+                rx = particle[i].xc - particle[k].xc;
+                ry = particle[i].yc - particle[k].yc;
+                particle[i].angle = argument(rx, ry);
+                particle[i].omega = rx*particle[i].vy - ry*particle[i].vx;
+                particle[i].omega -= rx*particle[k].vy - ry*particle[k].vx;
+                if (CENTER_COLLIDED_PARTICLES)
+                {
+                    particle[i].xc = 0.5*(particle[i].xc + particle[k].xc);
+                    particle[i].yc = 0.5*(particle[i].yc + particle[k].yc);
+                }
+                particle[i].vx = mr1*particle[i].vx + mr2*particle[k].vx;
+                particle[i].vy = mr1*particle[i].vy + mr2*particle[k].vy;
+                particle[i].mass_inv = newmass_inv;
+                
+                particle[k].active = 0;
+                
+                collisions[ncollisions].x = particle[i].xc;
+                collisions[ncollisions].y = particle[i].yc;
+                collisions[ncollisions].time = COLLISION_TIME;
+                collisions[ncollisions].color = 0.0;
+                
+                if (ncollisions < 2*NMAXCIRCLES - 1) ncollisions++;
+                else printf("Too many collisions\n");
+            }
+        }
+    }
+    return(ncollisions); 
+}
+
+
+int chem_multi_merge(int i, int ni, int type2, int newtype, t_particle particle[NMAXCIRCLES], t_collision *collisions, int ncollisions, double inv_masses[RD_TYPES+1])
+/* merging of ni particles of the same type as particle i (including particle i) */
+/* and one particle of type type2 into a particle of type newtype */
+{
+    int j, k, type1, n1, n2, k1[10], k2;
+    short int search = 1;
+    double distance, xg, yg, rx, ry, rx1[10], ry1[10], rx2, ry2, mr1, mr2, newmass_inv;
+        
+    if (ni > 10)
+    {
+        printf("Error: need to increase size of k1 table in chem_multi_merge()\n");
+        exit(1);
+    }
+    
+    type1 = particle[i].type;
+    newmass_inv = inv_masses[newtype];
+    mr1 = newmass_inv/inv_masses[type1];
+    mr2 = newmass_inv/inv_masses[type2];
+    
+    n1 = 0;
+    n2 = 0;
+    for (j=0; j<particle[i].hash_nneighb; j++) 
+    {
+        k = particle[i].hashneighbour[j];
+        if ((particle[k].active)&&(particle[k].type == type1))
+        {
+            distance  = module2(particle[i].deltax[j], particle[i].deltay[j]);
+            if ((distance < REACION_DIST*MU)&&((double)rand()/RAND_MAX < REACTION_PROB))
+            {
+                k1[n1] = k;
+                n1++;
+            }
+        }
+        else if ((particle[k].active)&&(particle[k].type == type2))
+        {
+            distance  = module2(particle[i].deltax[j], particle[i].deltay[j]);
+            if ((distance < REACION_DIST*MU)&&((double)rand()/RAND_MAX < REACTION_PROB))
+            {
+                k2 = k;
+                n2 = 1;
+            }
+        }
+    }
+                
+    if ((n1 == ni-1)&&(n2 == 1))
+    {
+        particle[i].type = newtype;
+        particle[i].radius *= 1.5;
+        xg = particle[i].xc;
+        yg = particle[i].yc;
+        for (n1 = 0; n1 < ni-1; n1++)
+        {
+            xg += particle[k1[n1]].xc;
+            yg += particle[k1[n1]].yc;
+        }
+        xg = xg*mr1 + particle[k2].xc*mr2;
+        yg = yg*mr1 + particle[k2].yc*mr2;
+        
+        rx = particle[i].xc - xg;
+        ry = particle[i].yc - yg;
+        for (n1 = 0; n1 < ni-1; n1++)
+        {
+            rx1[n1] = particle[k1[n1]].xc - xg;
+            ry1[n1] = particle[k1[n1]].yc - yg;
+        }
+        rx2 = particle[k2].xc - xg;
+        ry2 = particle[k2].yc - yg;
+        particle[i].angle = argument(rx2, ry2);
+        for (n1 = 0; n1 < ni-1; n1++) particle[i].angle += argument(rx1[n1], ry1[n1]);
+        if (CENTER_COLLIDED_PARTICLES)
+        {
+            particle[i].xc = xg;
+            particle[i].yc = yg;
+        }
+        particle[i].vx = mr1*particle[i].vx + mr2*particle[k2].vx;
+        particle[i].vy = mr1*particle[i].vy + mr2*particle[k2].vy;
+        for (n1 = 0; n1 < ni-1; n1++)
+        {
+            particle[i].vx += mr1*particle[k1[n1]].vx; 
+            particle[i].vy += mr1*particle[k1[n1]].vx;
+        }
+        
+        particle[i].omega = mr1*(rx*particle[i].vy - ry*particle[i].vx);
+        for (n1 = 0; n1 < ni-1; n1++) 
+            particle[i].omega += mr1*(rx1[n1]*particle[k1[n1]].vy - ry1[n1]*particle[k1[n1]].vx);
+        particle[i].omega += mr2*(rx2*particle[k2].vy - ry2*particle[k2].vx);
+        particle[i].mass_inv = newmass_inv;
+                
+        for (k==0; k<ni; k++) particle[k1[k]].active = 0;
+                
+        collisions[ncollisions].x = particle[i].xc;
+        collisions[ncollisions].y = particle[i].yc;
+        collisions[ncollisions].time = COLLISION_TIME;
+        collisions[ncollisions].color = 0.0;
+                            
+        if (ncollisions < 2*NMAXCIRCLES - 1) ncollisions++;
+        else printf("Too many collisions\n");
+    }
+            
+    return(ncollisions); 
+}
+
+
+int chem_catalytic_merge(int i, int type_catalyst, int newtype, t_particle particle[NMAXCIRCLES], t_collision *collisions, int ncollisions, double inv_masses[RD_TYPES+1])
+/* merging of 2 particles of the same type as particle i (including particle i) */
+/* into a particle of type newtype, provided a particle of type type_catalyst is present */
+{
+    int j, k, type1, n1, n2, k1, k2;
+    short int search = 1;
+    double distance, xg, yg, rx, rx1, ry, ry1, mr, newmass_inv;
+        
+    type1 = particle[i].type;
+    newmass_inv = inv_masses[newtype];
+    mr = inv_masses[newtype]/inv_masses[type1];
+    
+    n1 = 0;
+    n2 = 0;
+    for (j=0; j<particle[i].hash_nneighb; j++) 
+    {
+        k = particle[i].hashneighbour[j];
+        if ((particle[k].active)&&(particle[k].type == type1))
+        {
+            distance  = module2(particle[i].deltax[j], particle[i].deltay[j]);
+            if ((distance < REACION_DIST*MU)&&((double)rand()/RAND_MAX < REACTION_PROB))
+            {
+                k1 = k;
+                n1 = 1;
+            }
+        }
+        else if ((particle[k].active)&&(particle[k].type == type_catalyst))
+        {
+            distance  = module2(particle[i].deltax[j], particle[i].deltay[j]);
+            if ((distance < REACION_DIST*MU)&&((double)rand()/RAND_MAX < REACTION_PROB))
+            {
+                k2 = k;
+                n2 = 1;
+            }
+        }
+    }
+                
+    if ((n1 == 1)&&(n2 == 1))
+    {
+        particle[i].type = newtype;
+        particle[i].radius *= 1.2;
+        xg = 0.5*(particle[i].xc + particle[k1].xc + particle[k2].xc);
+        yg = 0.5*(particle[i].yc + particle[k1].yc + particle[k2].yc);
+        rx = particle[i].xc - xg;
+        ry = particle[i].yc - yg;
+        rx1 = particle[k1].xc - xg;
+        ry1 = particle[k1].yc - yg;
+        particle[i].angle = argument(rx1, ry1);
+        if (CENTER_COLLIDED_PARTICLES)
+        {
+            particle[i].xc = xg;
+            particle[i].yc = yg;
+        }
+        particle[i].vx = mr*(particle[i].vx + particle[k1].vx);
+        particle[i].vy = mr*(particle[i].vy + particle[k1].vy);
+        particle[i].omega = mr*(rx*particle[i].vy - ry*particle[i].vx);
+        particle[i].omega += mr*(rx1*particle[k1].vy - ry1*particle[k1].vx);
+        particle[i].mass_inv = newmass_inv;
+                
+        particle[k1].active = 0;
+                
+        collisions[ncollisions].x = particle[i].xc;
+        collisions[ncollisions].y = particle[i].yc;
+        collisions[ncollisions].time = COLLISION_TIME;
+        collisions[ncollisions].color = 0.0;
+                            
+        if (ncollisions < 2*NMAXCIRCLES - 1) ncollisions++;
+        else printf("Too many collisions\n");
+    }
+            
+    return(ncollisions); 
+}
+
+
+int chem_split(int i, int newtype1, int newtype2, t_particle particle[NMAXCIRCLES], t_collision *collisions, int ncollisions, double inv_masses[RD_TYPES+1])
+/* split particle i into particles of type newtype1 and newtype2 */
+{
+    int j, k, oldtype;
+    short int success;
+    double distance, rx, ry, xg, yg, normv;
+    
+    normv = module2(particle[i].vx, particle[i].vy); 
+    rx = -MU*particle[i].vy/normv;
+    ry = MU*particle[i].vx/normv;
+                    
+    xg = particle[i].xc;
+    yg = particle[i].yc;
+    particle[i].xc += rx;
+    particle[i].yc += ry;
+    oldtype = particle[i].type;
+       
+    /* test whether there is room to put two particles */
+    success = add_particle(xg - rx, yg - ry, particle[i].vx, particle[i].vy, 1.0/inv_masses[newtype1], newtype1, particle);
+    if (success)
+    {
+        particle[i].type = newtype2;
+        particle[i].mass_inv = inv_masses[newtype2];
+        particle[i].radius = MU;
+        
+        particle[ncircles-1].radius = MU;
+        
+        collisions[ncollisions].x = particle[i].xc;
+        collisions[ncollisions].y = particle[i].yc;
+        collisions[ncollisions].time = COLLISION_TIME;
+        collisions[ncollisions].color = type_hue(oldtype);
+            
+        if (ncollisions < NMAXCIRCLES - 1) ncollisions++;
+        else printf("Too many collisions\n");
+    }
+    else
+    {
+        particle[i].xc -= rx;
+        particle[i].yc -= ry;
+    }
+    
+    return(ncollisions);
+}
+
+int update_types(t_particle particle[NMAXCIRCLES], t_collision *collisions, int ncollisions)
 /* update the types in case of reaction-diffusion equation */
 {
     int i, j, k;
     double distance;
+    static double inv_masses[RD_TYPES+1];
+    static int first = 1;
     
-    for (i=0; i<ncircles; i++)
-        for (j=0; j<particle[i].hash_nneighb; j++)
+    if (first)  /* compute total mass and mass ratios */
+    {
+        compute_inverse_masses(inv_masses);
+        first = 0;
+    }
+    
+    switch (RD_REACTION) {
+        case (CHEM_RPS): 
         {
-            k = particle[i].hashneighbour[j];
-            if ((particle[k].type == particle[i].type + 1)||((particle[i].type == RD_TYPES)&&(particle[k].type == 1)))
-            {
-                distance  = module2(particle[i].deltax[j], particle[i].deltay[j]);
-                if ((distance < EQUILIBRIUM_DIST)&&((double)rand()/RAND_MAX < REACTION_PROB))
-                    particle[k].type = particle[i].type;
-            }
+            for (i=0; i<ncircles; i++)
+                for (j=0; j<particle[i].hash_nneighb; j++)
+                {
+                    k = particle[i].hashneighbour[j];
+                    if ((particle[k].type == particle[i].type + 1)||((particle[i].type == RD_TYPES)&&(particle[k].type == 1)))
+                    {
+                        distance  = module2(particle[i].deltax[j], particle[i].deltay[j]);
+                        if ((distance < EQUILIBRIUM_DIST)&&((double)rand()/RAND_MAX < REACTION_PROB))
+                            particle[k].type = particle[i].type;
+//                         printf("Changed particle type to %i\n", particle[k].type);
+                    }
+                }
+            return(0);
         }
+        case (CHEM_AAB):
+        {
+            for (i=0; i<ncircles; i++) 
+                if ((particle[i].active)&&(particle[i].type == 1))
+                    ncollisions = chem_merge_AAB(i, 2, particle, collisions, ncollisions, inv_masses);
+            return(ncollisions);
+        }
+        case (CHEM_ABC):
+        {
+            for (i=0; i<ncircles; i++) if ((particle[i].active)&&(particle[i].type == 1))
+                ncollisions = chem_merge(i, 2, 3, particle, collisions, ncollisions, inv_masses);
+            printf("%i collisions\n", ncollisions);
+            return(ncollisions);
+        }
+        case (CHEM_A2BC):
+        {
+            for (i=0; i<ncircles; i++) if ((particle[i].active)&&(particle[i].type == 1))
+                ncollisions = chem_multi_merge(i, 2, 2, 3, particle, collisions, ncollisions, inv_masses);
+            printf("%i collisions\n", ncollisions);
+            return(ncollisions);
+        }
+        case (CHEM_CATALYSIS):
+        {
+            for (i=0; i<ncircles; i++) if ((particle[i].active)&&(particle[i].type == 1))
+                ncollisions = chem_catalytic_merge(i, 2, 3, particle, collisions, ncollisions,  inv_masses);
+            printf("%i collisions\n", ncollisions);
+            return(ncollisions);
+        }
+        case (CHEM_BAA):
+        {
+            for (i=0; i<ncircles; i++) 
+                if ((particle[i].active)&&(particle[i].type == 2)&&((double)rand()/RAND_MAX < DISSOCIATION_PROB))
+                    ncollisions = chem_split(i, 1, 1, particle, collisions, ncollisions, inv_masses);
+            printf("%i collisions\n", ncollisions);
+            return(ncollisions);
+        }
+        case (CHEM_AABAA):
+        {
+            for (i=0; i<ncircles; i++)
+            {
+                if ((particle[i].active)&&(particle[i].type == 1))
+                    ncollisions = chem_merge_AAB(i, 2, particle, collisions, ncollisions, inv_masses);
+                else if ((particle[i].active)&&(particle[i].type == 2)&&((double)rand()/RAND_MAX < DISSOCIATION_PROB))
+                    ncollisions = chem_split(i, 1, 1, particle, collisions, ncollisions, inv_masses);
+            }
+
+            printf("%i collisions\n", ncollisions);
+            return(ncollisions);
+        }
+        case (CHEM_POLYMER):
+        {
+            for (i=0; i<ncircles; i++)  if ((particle[i].active)&&(particle[i].type == 1))
+                for (k=2; k<RD_TYPES; k++)
+                    ncollisions = chem_merge(i, k, k+1, particle, collisions, ncollisions, inv_masses);   
+
+            printf("%i collisions\n", ncollisions);
+            return(ncollisions);            
+        }
+        case (CHEM_POLYMER_DISS):
+        {
+            for (i=0; i<ncircles; i++)  if (particle[i].active)
+            {
+                if (particle[i].type == 1) for (k=2; k<RD_TYPES; k++)
+                    ncollisions = chem_merge(i, k, k+1, particle, collisions, ncollisions, inv_masses);
+                else if ((particle[i].type > 2)&&((double)rand()/RAND_MAX < DISSOCIATION_PROB)) 
+                    ncollisions = chem_split(i, 1, particle[i].type - 1, particle, collisions, ncollisions, inv_masses);
+            }
+            
+            printf("%i collisions\n", ncollisions);
+            return(ncollisions);            
+        }
+    }
 }
     
     
@@ -5657,6 +6514,101 @@ void draw_trajectory_plot(t_group_data *group_speeds, int i)
     write_text_fixedwidth(plotxmax - 0.1, plotymin - 0.1, message);
 }
 
+void draw_particle_nb_plot(int *particle_numbers, int i)
+/* draw plot of number of particles as a function of time */
+{
+    int j, type, power;
+    char message[100];
+    static double xmin, xmax, ymin, ymax, xmid, ymid, dx, dy, plotxmin, plotxmax, plotymin, plotymax;
+    double pos[2], x1, y1, x2, y2, rgb[3];
+    static int first = 1, gshift = INITIAL_TIME + NSTEPS, nmax, ygrad;
+    
+    if (first)
+    {                
+        xmin = XMAX - 1.05;
+        xmax = XMAX - 0.05;
+        ymin = YMAX - 1.0;
+        ymax = YMAX - 0.05;
+
+        xmid = 0.5*(xmin + xmax);
+        ymid = 0.5*(ymin + ymax);
+        
+        dx = 0.5*(xmax - xmin);
+        dy = 0.5*(ymax - ymin);
+        
+        plotxmin = xmin + 0.18;
+        plotxmax = xmax - 0.1;
+        plotymin = ymin + 0.07;
+        plotymax = ymax - 0.15;
+        
+        nmax = 0;
+        for (j=1; j<RD_TYPES+1; j++) 
+            if (particle_numbers[RD_TYPES+1+j] > nmax) nmax = particle_numbers[RD_TYPES+1+j];
+        
+        nmax *= PARTICLE_NB_PLOT_FACTOR;
+            
+        power = (int)(log((double)nmax)/log(10.0)) - 1.0;
+        ygrad = (int)ipow(10.0, power);
+        
+        first = 0;
+    }
+    
+    erase_area_hsl(xmid, ymid, dx, dy, 0.0, 0.9, 0.0);
+    
+    glLineWidth(2);
+    
+    /* plot particle number */
+    for (type=1; type<RD_TYPES+1; type++)
+    {
+        set_type_color(type, 1.0, rgb);
+        x1 = plotxmin;
+        y1 = plotymin;
+        for (j=1; j<i; j++)
+        {
+            x2 = plot_coord((double)j/(double)NSTEPS, plotxmin, plotxmax);
+            y2 = plot_coord(particle_numbers[(RD_TYPES+1)*j+type]/(double)nmax, plotymin, plotymax);
+            
+            draw_line(x1, y1, x2, y2);
+            x1 = x2;
+            y1 = y2;
+        }
+        
+        sprintf(message, "%5d particles", particle_numbers[(RD_TYPES+1)*i+type]);
+        write_text_fixedwidth(xmax - 0.5, ymax - 0.06*(double)type, message);
+//         write_text(xmax - 0.5, ymax - 0.1 - 0.1*(double)type, message);
+    }
+    
+    glColor3f(1.0, 1.0, 1.0);
+    
+    /* axes and labels */
+    draw_line(plotxmin, plotymin, plotxmax + 0.05, plotymin);
+    draw_line(plotxmin, plotymin, plotxmin, plotymax + 0.1);
+    
+    glLineWidth(1);
+    j = 1;
+    while (j*ygrad <= nmax + 5)
+    {
+        y1 = plot_coord((double)(j*ygrad)/(double)nmax, plotymin, plotymax);
+        draw_line(plotxmin - 0.02, y1, plotxmin + 0.02, y1);
+        
+        if (j%10 == 0)
+        {
+            draw_line(plotxmin - 0.035, y1, plotxmin + 0.035, y1);
+            sprintf(message, "%i", j*ygrad);
+            write_text_fixedwidth(plotxmin - 0.17, y1 - 0.015, message);
+        }
+        else if ((j%5 == 0)&&(nmax<5*ygrad))
+        {
+            sprintf(message, "%i", j*ygrad);
+            if (j*ygrad >= 1000) write_text_fixedwidth(plotxmin - 0.17, y1 - 0.015, message);
+            else write_text_fixedwidth(plotxmin - 0.14, y1 - 0.015, message);
+        }
+        j++;
+    }
+    
+    sprintf(message, "time");
+    write_text_fixedwidth(plotxmax - 0.1, plotymin - 0.05, message);
+}
 
 void init_segment_group(t_segment segment[NMAXSEGMENTS], int group, t_group_segments segment_group[NMAXGROUPS])
 /* initialize center of mass and similar data of grouped segments */

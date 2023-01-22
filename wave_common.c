@@ -721,7 +721,8 @@ void draw_wave_highres_diss(int size, double *phi[NX], double *psi[NX], double *
 }
 
 
-void draw_wave_epalette(double *phi[NX], double *psi[NX], double *total_energy[NX], double *total_flux, double *color_scale[NX], 
+void draw_wave_epalette(double *phi[NX], double *psi[NX], double *total_energy[NX], double *total_flux,
+                        double *color_scale[NX], 
                         short int *xy_in[NX], double scale, int time, int plot, int palette, int fade, double fade_value)
 /* same as draw_wave_e, but with color scheme specification */
 {
@@ -920,9 +921,10 @@ void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], doubl
                     case (P_ENERGY_FLUX):
                     {
                         compute_energy_flux(phi, psi, xy_in, i, j, &gx, &gy, &arg, &mod);
-                        color_scheme_palette(C_ONEDIM_LINEAR, palette, arg/DPI, 1.0, 1, rgb);
-                        flux_factor = tanh(mod*E_SCALE);
-                        for (k=0; k<3; k++) rgb[k] *= flux_factor;
+//                         color_scheme_palette(C_ONEDIM_LINEAR, palette, arg/DPI, 1.0, 1, rgb);
+//                         flux_factor = tanh(mod*E_SCALE);
+//                         for (k=0; k<3; k++) rgb[k] *= flux_factor;
+                        color_scheme_asym_palette(COLOR_SCHEME, palette, mod*FLUX_SCALE, scale, time, rgb);
                         break;
                     }
                     case (P_TOTAL_ENERGY_FLUX):
@@ -1118,6 +1120,60 @@ double compute_energy_mod(double phi[NX*NY], double psi[NX*NY], short int xy_in[
     else if (TWOSPEEDS) return(E_SCALE*E_SCALE*(velocity*velocity + 0.5*COURANTB*COURANTB*(gradientx2+gradienty2)));
     else return(0.0);
 }
+
+void compute_energy_flux_mod(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], int i, int j, double *gx, double *gy, double *arg, double *module)
+/* computes energy flux given by c^2 norm(nabla u) du/dt*/
+{
+    double velocity, energy, gradientx, gradienty, max = 1.0e5, current_mod, current_arg;
+    int iplus, iminus, jplus, jminus;
+    
+    if ((i == 0)||(i == NX-1)||(j == 0)||(j == NY-1))
+    {
+        current_mod = 0.0;
+        current_arg = PI;
+        *gx = 0.0;
+        *gy = 0.0;
+    }
+    else if ((xy_in[i*NY+j])||(TWOSPEEDS)) 
+    {
+        velocity = vabs(phi[i*NY+j] - psi[i*NY+j]);
+                    
+//         iplus = (i+1);   /*if (iplus == NX) iplus = NX-1;*/
+//         iminus = (i-1);  /*if (iminus == -1) iminus = 0;*/
+//         jplus = (j+1);   /*if (jplus == NY) jplus = NY-1;*/
+//         jminus = (j-1);  /*if (jminus == -1) jminus = 0;*/
+                        
+        gradientx = (phi[(i+1)*NY+j] - phi[(i-1)*NY+j]);
+        gradienty = (phi[i*NY+j+1] - phi[i*NY+j-1]);
+    
+        if (gradientx > max) gradientx = max;
+        else if (gradientx < -max) gradientx = -max;
+        if (gradienty > max) gradienty = max;
+        else if (gradienty < -max) gradienty = -max;
+    
+        current_mod = velocity*module2(gradientx, gradienty);
+        if (current_mod > 1.0e-10)
+        {
+            current_arg = argument(gradientx,gradienty);
+            if (current_arg < 0.0) current_arg += DPI;
+            if (current_arg >= DPI) current_arg -= DPI;
+        }
+        else current_arg = PI;
+        *gx = velocity*gradientx;
+        *gy = velocity*gradienty;
+    }
+    else 
+    {
+        current_mod = 0.0;
+        current_arg = PI;
+        *gx = 0.0;
+        *gy = 0.0;
+    }
+    
+    *module = current_mod;
+    *arg = current_arg;
+}
+
 
 double compute_phase(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], int i, int j)
 {

@@ -4,6 +4,7 @@
 // int circlecolor[NMAXCIRCLES];          /* color of circular scatterer */
 int ncircles = NMAXCIRCLES;            /* actual number of circles, can be decreased e.g. for random patterns */
 int nsides = NMAXPOLY;                 /* actual number of sides of polygonal line */
+int narcs = NMAXCIRCLES;              /* actual number of arcs */
 
 typedef struct
 {
@@ -18,8 +19,20 @@ typedef struct
     int color;
 } t_segment;
 
+typedef struct
+{
+    double xc, yc, radius, angle1, dangle;
+    int color;
+} t_arc;
+
+typedef struct
+{
+    short int left, right;
+} t_exit;
+
 t_circle circles[NMAXCIRCLES];
 t_segment polyline[NMAXPOLY];
+t_arc arcs[NMAXCIRCLES];
 
 double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;    
 /* shooter and target positions for "laser in room of mirrors" simulations, with default values for square domain */
@@ -67,7 +80,8 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define C_LASER 11          /* laser fight in a room of mirrors */
 #define C_LASER_GENUSN 12   /* laser fight in a translation surface */
 
-#define D_POLYLINE 30     /* general polygon */
+#define D_POLYLINE 30       /* polygonal line */
+#define D_POLYLINE_ARCS 31  /* polygonal line and circular arcs */
 
 #define P_RECTANGLE 0     /* rectangle (for test purposes) */
 #define P_TOKARSKY 1      /* Tokarsky unilluminable room */
@@ -80,6 +94,10 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define P_TOKA_NONSELF 8  /* Tokarsky non-self-unilluminable room */
 #define P_MAZE 10         /* maze */
 #define P_MAZE_DIAG 11    /* maze with 45 degrees angles */
+#define P_MAZE_RANDOM 12  /* maze with randomized wall positions */
+#define P_MAZE_CIRCULAR 13  /* circular maze */
+#define P_MAZE_CIRC_SCATTERER 14  /* circular maze with scatterers */
+#define P_MAZE_HEX 15     /* hexagonal maze */
 
 /* Color palettes */
 

@@ -42,6 +42,7 @@
 #define O_GALTON_BOARD 1    /* Galton board pattern */
 #define O_GENUS_TWO 2       /* obstacles in corners of L-shape domeain (for genus 2 b.c.) */
 #define O_POOL_TABLE 3      /* obstacles around pockets of pool table */
+#define O_HLINE_HOLE_SPOKES 181    /* tips of spokes for S_HLINE_HOLE_SPOKES segment pattern */
 
 /* pattern of additional repelling segments */
 #define S_RECTANGLE 0       /* segments forming a rectangle */
@@ -65,7 +66,9 @@
 #define S_EXT_RECTANGLE 16  /* particles outside a rectangle */
 #define S_DAM_BRICKS 17     /* dam made of several bricks */
 #define S_HLINE_HOLE 18    /* horizontal line with a hole in the bottom */
+#define S_HLINE_HOLE_SPOKES 181    /* horizontal line with a hole in the bottom and extra spokes */
 #define S_EXT_CIRCLE_RECT 19    /* particles outside a circle and a rectangle */
+#define S_BIN_OPENING 20        /* bin containing particles opening at deactivation time */
 
 /* particle interaction */
 
@@ -123,6 +126,27 @@
 #define NZ_TRUMPET 4    /* trumpet-shaped nozzle */
 #define NZ_BROAD 5      /* broad straight nozzle */
 #define NZ_NONE 99      /* no nozzle */
+
+/* Types of chemical reactions */
+
+#define CHEM_RPS 0      /* rock-paper-scissors reaction */
+#define CHEM_AAB 1      /* reaction A + A -> B */
+#define CHEM_ABC 2      /* reaction A + B -> C */
+#define CHEM_A2BC 3      /* reaction 2A + B -> C */
+#define CHEM_CATALYSIS 4    /* reaction 2A + C -> B + C */
+#define CHEM_BAA 5      /* reaction B -> A + A (dissociation) */
+#define CHEM_AABAA 6    /* reaction A + A <-> B (reversible) */
+#define CHEM_POLYMER 7  /* reaction A + B -> C, A + C -> D, etc */
+#define CHEM_POLYMER_DISS 8  /* polimerisation with dissociation */
+
+/* Initial conditions for chemical reactions */
+
+#define IC_UNIFORM 0       /* all particles have type 1 */
+#define IC_UNIFORM2 20     /* all particles have type 2 */
+#define IC_RANDOM_UNIF 1   /* particle type chosen uniformly at random */
+#define IC_RANDOM_TWO 2    /* particle type chosen randomly between 1 and 2, with TYPE_PROPORTION */
+#define IC_CIRCLE 3        /* type 1 in a disc */
+#define IC_CATALYSIS 4     /* mix of 1 and 2 in left half, only 1 in right half */
 
 /* Plot types */
 
@@ -194,6 +218,7 @@ typedef struct
     double spin_range;          /* range of spin-spin interaction */
     double spin_freq;           /* angular frequency of spin-spin interaction */
     double color_hue;           /* color hue of particle, for P_INITIAL_POS plot type */
+    int color_rgb[3];           /* RGB colors code of particle, for use in ljones_movie.c */
 } t_particle;
 
 typedef struct
@@ -270,6 +295,13 @@ typedef struct
     double omega;               /* angular velocity */
 } t_group_data;
 
+
+typedef struct
+{
+    double x, y;                /* location of collision */
+    int time;                   /* time since collision */
+    int color;                  /* color hue in case of different collisions */
+} t_collision;
 
 int ncircles, nobstacles, nsegments, ngroups = 1, counter = 0;
 

@@ -1491,6 +1491,18 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
                 color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
                 break;
             }
+            case (Z_EULER_LPRESSURE):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            default:
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
        }
         if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
         glColor3f(rgb[0], rgb[1], rgb[2]);

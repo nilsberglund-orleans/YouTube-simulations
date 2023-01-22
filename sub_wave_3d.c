@@ -961,9 +961,9 @@ void draw_billiard_3d_front(int fade, double fade_value)
 void compute_energy_field(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], t_wave wave[NX*NY])
 /* computes cosine of angle between normal vector and vector light */
 {
-    int i, j;
+    int i, j, k;
     static int first = 1;
-    double energy, logenergy;
+    double energy, logenergy, gx, gy, arg, mod, sum;
     
 //     printf("computing energy field\n");
 //     printf("COMPUTE_MEAN_ENERGY = %i\n", COMPUTE_MEAN_ENERGY);
@@ -1008,6 +1008,20 @@ void compute_energy_field(double phi[NX*NY], double psi[NX*NY], short int xy_in[
                     if (logenergy > LOG_ENERGY_FLOOR) wave[i*NY+j].log_mean_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*logenergy;
                     else wave[i*NY+j].mean_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*LOG_ENERGY_FLOOR;
                 }
+                
+                if (COMPUTE_ENERGY_FLUX)
+                {
+                    compute_energy_flux_mod(phi, psi, xy_in, i, j, &gx, &gy, &arg, &mod);
+                    wave[i*NY+j].flux_direction = arg/DPI;
+                    
+                    /* compute time-averaged flux intensity */
+                    wave[i*NY+j].flux_int_table[wave[i*NY+j].flux_counter] = mod*FLUX_SCALE;
+                    sum = 0.0;
+                    for (k = 0; k < FLUX_WINDOW; k++) sum += wave[i*NY+j].flux_int_table[k];
+                    wave[i*NY+j].flux_intensity = sum/(double)FLUX_WINDOW;
+                    wave[i*NY+j].flux_counter++;
+                    if (wave[i*NY+j].flux_counter == FLUX_WINDOW) wave[i*NY+j].flux_counter = 0;
+                }
             }
             else if (first)
             {
@@ -1016,6 +1030,8 @@ void compute_energy_field(double phi[NX*NY], double psi[NX*NY], short int xy_in[
                 wave[i*NY+j].log_total_energy = LOG_ENERGY_FLOOR;
                 wave[i*NY+j].mean_energy = 0.0;
                 wave[i*NY+j].log_mean_energy = LOG_ENERGY_FLOOR;
+                wave[i*NY+j].flux_intensity = 0.0;
+                wave[i*NY+j].flux_direction = 0.0;
             }
         }
         
@@ -1099,9 +1115,12 @@ void compute_light_angle(short int xy_in[NX*NY], t_wave wave[NX*NY], int movie)
 }
 
 
-void compute_field_color(double value, int cplot, int palette, double rgb[3])
+void compute_field_color(double value, double value2, int cplot, int palette, double rgb[3])
 /* compute the color depending on the field value and color palette */
+/* value2 is only used for flux representation */
 {
+    int k;
+    
     switch (cplot) {
         case (P_3D_AMP_ANGLE): 
         {
@@ -1110,7 +1129,7 @@ void compute_field_color(double value, int cplot, int palette, double rgb[3])
         }
         case (P_3D_ENERGY):
         {
-            if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, VSCALE_ENERGY*value, 1.0, 0, rgb);
             else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
             break;
         }
@@ -1121,7 +1140,7 @@ void compute_field_color(double value, int cplot, int palette, double rgb[3])
         }
         case (P_3D_TOTAL_ENERGY):
         {
-            if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, VSCALE_ENERGY*value, 1.0, 0, rgb);
             else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
             break;
         }
@@ -1132,7 +1151,7 @@ void compute_field_color(double value, int cplot, int palette, double rgb[3])
         }
         case (P_3D_MEAN_ENERGY):
         {
-            if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, VSCALE_ENERGY*value, 1.0, 0, rgb);
             else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
             break;
         }
@@ -1146,16 +1165,27 @@ void compute_field_color(double value, int cplot, int palette, double rgb[3])
             amp_to_rgb_palette(value, rgb, palette);
             break;
         }
+        case (P_3D_FLUX_INTENSITY):
+        {
+            color_scheme_asym_palette(COLOR_SCHEME, palette, value*FLUX_SCALE, 1.0, 0, rgb);
+            break;
+        }
+        case (P_3D_FLUX_DIRECTION):
+        {
+            amp_to_rgb_palette(value, rgb, palette);
+            for (k=0; k<3; k++) rgb[k] *= tanh(value2*FLUX_CSCALE); 
+            break;
+        }
     }
 }
 
 
-double compute_interpolated_colors_wave(int i, int j, short int xy_in[NX*NY], t_wave wave[NX*NY], double palette, int cplot, 
-                                 double rgb_e[3], double rgb_w[3], double rgb_n[3], double rgb_s[3],
-                                 int fade, double fade_value, int movie)
+double compute_interpolated_colors_wave(int i, int j, short int xy_in[NX*NY], t_wave wave[NX*NY], 
+                                        double palette, int cplot, double rgb_e[3], double rgb_w[3], double rgb_n[3], double rgb_s[3], int fade, double fade_value, int movie)
 {
     int k;
     double cw, ce, cn, cs, c_sw, c_se, c_nw, c_ne, c_mid, ca, z_mid;
+    double cw2, ce2, cn2, cs2;
     double *z_sw, *z_se, *z_nw, *z_ne;
     
     z_sw = wave[i*NY+j].p_zfield[movie];
@@ -1177,10 +1207,26 @@ double compute_interpolated_colors_wave(int i, int j, short int xy_in[NX*NY], t_
     cs = (c_sw + c_se + c_mid)/3.0;
     cn = (c_nw + c_ne + c_mid)/3.0;
     
-    compute_field_color(ce, cplot, palette, rgb_e);
-    compute_field_color(cw, cplot, palette, rgb_w);
-    compute_field_color(cn, cplot, palette, rgb_n);
-    compute_field_color(cs, cplot, palette, rgb_s);
+    /* data for second color parameter */
+    if (CHANGE_LUMINOSITY)
+    {
+        c_sw = *wave[i*NY+j].p_cfield[movie+2];
+        c_se = *wave[(i+1)*NY+j].p_cfield[movie+2];
+        c_nw = *wave[i*NY+j+1].p_cfield[movie+2];
+        c_ne = *wave[(i+1)*NY+j+1].p_cfield[movie+2];
+    
+        c_mid = 0.25*(c_sw + c_se + c_nw + c_ne);
+                                
+        cw2 = (c_sw + c_nw + c_mid)/3.0;
+        ce2 = (c_se + c_ne + c_mid)/3.0;
+        cs2 = (c_sw + c_se + c_mid)/3.0;
+        cn2 = (c_nw + c_ne + c_mid)/3.0;
+    }
+    
+    compute_field_color(ce, ce2, cplot, palette, rgb_e);
+    compute_field_color(cw, cw2, cplot, palette, rgb_w);
+    compute_field_color(cn, cn2, cplot, palette, rgb_n);
+    compute_field_color(cs, cs2, cplot, palette, rgb_s);
     
     if (SHADE_3D)
     {
@@ -1229,9 +1275,9 @@ void compute_wave_fields(double phi[NX*NY], double psi[NX*NY], short int xy_in[N
 void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY])
 /* initialise fields for wave speed and dissipation */
 {
-    int i, j, k;
-    double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB;
-    double u, v, u1, x, y, xy[2], norm2, speed, r2, c;
+    int i, j, k, inlens;
+    double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
+    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1;
     
     if (VARIABLE_IOR)
     {
@@ -1327,6 +1373,47 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
                 }
                 break;
             }
+            case (IOR_EXPLO_LENSING):
+            {
+                salpha = DPI/(double)NPOLY;
+//                 lambda1 = LAMBDA;
+//                 mu1 = LAMBDA;
+                lambda1 = 0.5*LAMBDA;
+                mu1 = 0.5*LAMBDA;
+                h = lambda1*tan(PI/(double)NPOLY);
+                if (h < mu1) ll = sqrt(mu1*mu1 - h*h);
+                else ll = 0.0;
+                
+//                 #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++) if (xy_in[i*NY+j]) {
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        inlens = 0;
+                        for (k=0; k<NPOLY; k++)
+                        {
+                            ca = cos(((double)k+0.5)*salpha + APOLY*PID);
+                            sa = sin(((double)k+0.5)*salpha + APOLY*PID);
+                            x1 = x*ca + y*sa;
+                            y1 = -x*sa + y*ca;
+                            if ((module2(x1 - lambda1 - ll, y1) < mu1)&&(module2(x1 - lambda1 + ll, y1) < mu1)) inlens = 1; 
+                        }
+                        if (inlens) c = COURANTB;
+                        else c = COURANT;
+                        tc[i*NY+j] = c;
+                        tcc[i*NY+j] = c*c;
+                        tgamma[i*NY+j] = GAMMA;
+                    }
+                    else
+                    {
+                        tc[i*NY+j] = 0.0;
+                        tcc[i*NY+j] = 0.0;
+                        tgamma[i*NY+j] = 0.0;
+                    }
+                }
+                break;
+            }
             default:
             {
                 for (i=0; i<NX; i++){
@@ -1417,6 +1504,18 @@ void init_zfield(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], i
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &wave[i*NY+j].phase;
             break;
         }
+        case (P_3D_FLUX_INTENSITY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &wave[i*NY+j].flux_intensity;
+            break;
+        }
+        case (P_3D_FLUX_DIRECTION):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_zfield[movie] = &wave[i*NY+j].flux_direction;
+            break;
+        }        
     }
 }
 
@@ -1474,6 +1573,30 @@ void init_cfield(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], i
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield[movie] = &wave[i*NY+j].phase;
             break;
         }
+        case (P_3D_FLUX_INTENSITY):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) wave[i*NY+j].p_cfield[movie] = &wave[i*NY+j].flux_intensity;
+            break;
+        }
+        case (P_3D_FLUX_DIRECTION):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) 
+            {
+                wave[i*NY+j].p_cfield[movie] = &wave[i*NY+j].flux_direction;
+                wave[i*NY+j].p_cfield[movie+2] = &wave[i*NY+j].flux_intensity;
+                /* information on intensity stored in second pointer to adjust luminosity */
+            }
+            break;
+        }        
+    }
+    
+    if (cplot != P_3D_FLUX_DIRECTION)
+    {
+        #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) 
+                wave[i*NY+j].p_cfield[movie+2] = wave[i*NY+j].p_cfield[movie];
     }
 }
 
@@ -1487,7 +1610,7 @@ void compute_cfield(short int xy_in[NX*NY], int cplot, int palette, t_wave wave[
     #pragma omp parallel for private(i,j,ca)
     for (i=0; i<NX; i++) for (j=0; j<NY; j++)
     {
-        compute_field_color(*wave[i*NY+j].p_cfield[movie], cplot, palette, wave[i*NY+j].rgb);
+        compute_field_color(*wave[i*NY+j].p_cfield[movie], *wave[i*NY+j].p_cfield[movie+2], cplot, palette, wave[i*NY+j].rgb);
         if (SHADE_3D)
         {
             ca = wave[i*NY+j].cos_angle;
@@ -1613,8 +1736,7 @@ void draw_wave_3d_ij(int i, int j, int movie, double phi[NX*NY], double psi[NX*N
 }
 
 
-void draw_wave_3d(int movie, double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], t_wave wave[NX*NY], 
-                  int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
+void draw_wave_3d(int movie, double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], t_wave wave[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
 {
     int i, j;
     double observer_angle;
@@ -1671,11 +1793,13 @@ void draw_wave_3d(int movie, double phi[NX*NY], double psi[NX*NY], short int xy_
     if (DRAW_BILLIARD_FRONT) draw_billiard_3d_front(fade, fade_value);
 }
 
-void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, int plot, double min, double max, 
-                                  int palette, int fade, double fade_value)
+void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, int plot, 
+                                  double min, double max, int palette, int fade, double fade_value)
 {
     int j, k, ij_botleft[2], ij_topright[2], imin, imax, jmin, jmax;
     double y, dy, dy_e, dy_phase, rgb[3], value, lum, amp;
+    
+    printf("Drawing color bar\n");
     
     xy_to_ij(x1, y1, ij_botleft);
     xy_to_ij(x2, y2, ij_topright);
@@ -1770,6 +1894,19 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
                 break;
             }
+            case (P_3D_FLUX_INTENSITY):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_FLUX_DIRECTION):
+            {
+                value = 2.0*dy_phase*(double)(j - jmin);
+                color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
             case (Z_EULER_VORTICITY):
             {
                 value = min + 1.0*dy*(double)(j - jmin);
@@ -1788,6 +1925,20 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
                 color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
                 break;
             }
+            case (Z_EULER_LPRESSURE):
+            {
+                value = min + 1.0*dy*(double)(j - jmin);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULERC_VORTICITY):
+             {
+                value = min + 1.0*dy*(double)(j - jmin);
+                printf("Palette value %.3lg\n", value);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+               
         }
         if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
         glColor3f(rgb[0], rgb[1], rgb[2]);
@@ -1837,3 +1988,18 @@ void print_speed_3d(double speed, int fade, double fade_value)
     write_text(xlefttext + 0.28, y, message);
 }
 
+void init_wave_fields(t_wave wave[NX*NY])
+/* initialize some auxiliary fields */
+{
+    int i, k;
+    
+    #pragma omp parallel for private(i)
+    for (i=0; i<NX*NY; i++)
+    {
+        wave[i].total_energy = 0.0;
+        wave[i].flux_counter = 0;
+        for (k=0; k<FLUX_WINDOW; k++)
+            wave[i].flux_int_table[k] = 0.0;
+    }
+    
+}

@@ -41,57 +41,64 @@
 
 #define MOVIE 0         /* set to 1 to generate movie */
 #define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
-#define SAVE_MEMORY 0           /* set to 1 to save memory when writing tiff images */
+#define SAVE_MEMORY 1           /* set to 1 to save memory when writing tiff images */
+#define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
 /* General geometrical parameters */
 
-#define WINWIDTH 	1920  /* window width */
-#define WINHEIGHT 	1000  /* window height */
-#define NX 960          /* number of grid points on x axis */
-#define NY 500          /* number of grid points on y axis */
-// #define NX 480          /* number of grid points on x axis */
-// #define NY 250          /* number of grid points on y axis */
- 
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
-#define YMIN -1.041666667
-#define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
+// #define WINWIDTH 	1920  /* window width */
+// #define WINHEIGHT 	1150  /* window height */
+// #define NX 960          /* number of grid points on x axis */
+// #define NY 575          /* number of grid points on y axis */
+// // #define NX 480          /* number of grid points on x axis */
+// // #define NY 250          /* number of grid points on y axis */
+// 
+// #define XMIN -1.0
+// #define XMAX 3.0	/* x interval */
+// #define YMIN -1.197916667
+// #define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
 
-// #define WINWIDTH 	1280  /* window width */
-// #define WINHEIGHT 	720   /* window height */
-// 
-// // #define NX 320          /* number of grid points on x axis */
-// // #define NY 180          /* number of grid points on y axis */
-// #define NX 640          /* number of grid points on x axis */
-// #define NY 360          /* number of grid points on y axis */
-// // #define NX 960          /* number of grid points on x axis */
-// // #define NY 540          /* number of grid points on y axis */
-// 
-// // #define NX 1280          /* number of grid points on x axis */
-// // #define NY 720          /* number of grid points on y axis */
-// 
-// #define XMIN -2.0
-// #define XMAX 2.0	/* x interval */
-// #define YMIN -1.125
-// #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+#define WINWIDTH 	1280  /* window width */
+#define WINHEIGHT 	720   /* window height */
+
+// #define NX 320          /* number of grid points on x axis */
+// #define NY 180          /* number of grid points on y axis */
+#define NX 640          /* number of grid points on x axis */
+#define NY 360          /* number of grid points on y axis */
+// #define NX 960          /* number of grid points on x axis */
+// #define NY 540          /* number of grid points on y axis */
+
+// #define NX 1280          /* number of grid points on x axis */
+// #define NY 720          /* number of grid points on y axis */
+
+#define XMIN -1.0
+#define XMAX 3.0	/* x interval */
+#define YMIN -1.125
+#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
 /* Choice of simulated equation */
 
-#define RDE_EQUATION 6  /* choice of reaction term, see list in global_3d.c */
-#define NFIELDS 2       /* number of fields in reaction-diffusion equation */
-#define NLAPLACIANS 1   /* number of fields for which to compute Laplacian */
+#define RDE_EQUATION 7  /* choice of reaction term, see list in global_3d.c */
+#define NFIELDS 3       /* number of fields in reaction-diffusion equation */
+#define NLAPLACIANS 0   /* number of fields for which to compute Laplacian */
 
 #define ADD_POTENTIAL 0 /* set to 1 to add a potential (for Schrodinger equation) */
 #define ADD_MAGNETIC_FIELD 0    /* set to 1 to add a magnetic field (for Schrodinger equation) - then set POTENTIAL 1 */
-#define POTENTIAL 7     /* type of potential or vector potential, see list in global_3d.c  */
+#define ADD_FORCE_FIELD 1   /* set to 1 to add a foce field (for compressible Euler equation) */
+#define POTENTIAL 7         /* type of potential or vector potential, see list in global_3d.c  */
+#define FORCE_FIELD 1       /* type of force field, see list in global_3d.c  */
 
 #define ANTISYMMETRIZE_WAVE_FCT 0   /* set tot 1 to make wave function antisymmetric */
+#define ADAPT_STATE_TO_BC 1     /* set to 1 to smoothly adapt initial state to obstacles */
+#define OBSTACLE_GEOMETRY 3     /* geometry of obstacles, as in B_DOMAIN */
+#define BC_STIFFNESS 50.0       /* controls region of boundary condition control */
 
 #define JULIA_SCALE 0.5 /* scaling for Julia sets */
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 197       /* choice of domain shape, see list in global_pdes.c  */
+// #define B_DOMAIN 3          /* choice of domain shape, see list in global_pdes.c  */
+#define B_DOMAIN 999          /* choice of domain shape, see list in global_pdes.c  */
 
 #define CIRCLE_PATTERN 99    /* pattern of circles, see list in global_pdes.c */
 
@@ -99,8 +106,8 @@
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 0.7	    /* parameter controlling the dimensions of domain */
-#define MU 0.15	            /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.2	    /* parameter controlling the dimensions of domain */
+#define MU 0.3	            /* parameter controlling the dimensions of domain */
 #define NPOLY 5             /* number of sides of polygon */
 #define APOLY 2.0          /* angle by which to turn polygon, in units of Pi/2 */
 #define MDEPTH 7            /* depth of computation of Menger gasket */
@@ -127,10 +134,11 @@
 
 /* Physical patameters of wave equation */
 
+#define DT 0.00000025
 // #define DT 0.00000002
 // #define DT 0.00000003
 // #define DT 0.000000011
-#define DT 0.0000012
+// #define DT 0.0000012
 // #define DT 0.000001
 
 #define VISCOSITY 2.0
@@ -148,17 +156,21 @@
 #define BZQ 0.0008      /* parameter in BZ equation */
 #define BZF 1.2         /* parameter in BZ equation */
 #define B_FIELD 10.0    /* magnetic field */
+#define G_FIELD 0.01    /* gravity */
 #define AB_RADIUS 0.2   /* radius of region with magnetic field for Aharonov-Bohm effect */
 #define K_EULER 50.0    /* constant in stream function integration of Euler equation */
+#define K_EULER_INC 0.5    /* constant in incompressible Euler equation */
 
-#define SMOOTHEN_VORTICITY 1    /* set to 1 to smoothen vorticity field in Euler equation */
+#define SMOOTHEN_VORTICITY 0    /* set to 1 to smoothen vorticity field in Euler equation */
+#define SMOOTHEN_VELOCITY 1     /* set to 1 to smoothen velocity field in Euler equation */
+// #define SMOOTHEN_PERIOD 5      /* period between smoothenings */
 #define SMOOTHEN_PERIOD 10      /* period between smoothenings */
-// #define SMOOTH_FACTOR 0.05      /* factor by which to smoothen */
-#define SMOOTH_FACTOR 0.03      /* factor by which to smoothen */
+#define SMOOTH_FACTOR 0.1       /* factor by which to smoothen */
+// #define SMOOTH_FACTOR 0.035      /* factor by which to smoothen */
 // #define SMOOTH_FACTOR 0.015     /* factor by which to smoothen */
 // #define SMOOTH_FACTOR 0.01     /* factor by which to smoothen */
 
-#define ADD_TRACERS 1    /* set to 1 to add tracer particles (for Euler equations) */
+#define ADD_TRACERS 0    /* set to 1 to add tracer particles (for Euler equations) */
 #define N_TRACERS 1000    /* number of tracer particles */
 
 #define T_OUT 2.0       /* outside temperature */
@@ -183,25 +195,33 @@
 #define RPSLZB_INITIAL_TIME 0   /* initial time during which rpslzb remains constant */
 #define RPSLZB_FINAL_TIME 500   /* final time during which rpslzb remains constant */
                                       
+#define CHANGE_FLOW_SPEED 0     /* set to 1 to change speed of laminar flow */
+#define IN_OUT_FLOW_BC 4          /* type of in-flow/out-flow boundary conditions for Euler equation */
+                                  /* see list in global_pdes.c */
+#define IN_OUT_FLOW_MIN_AMP 0.05  /* amplitude of in-flow/out-flow boundary conditions (for Euler equation) */
+#define IN_OUT_FLOW_AMP 0.3       /* amplitude of in-flow/out-flow boundary conditions (for Euler equation) */
+#define LAMINAR_FLOW_MODULATION 0.05     /* asymmetry of laminar flow */
+#define LAMINAR_FLOW_YPERIOD 1.0    /* period of laminar flow in y direction */
+
+#define EULER_GRADIENT_YSHIFT 0.0    /* y-shift in computation of gradient in Euler equation */
 
 /* Boundary conditions, see list in global_pdes.c  */
 
 #define B_COND 1
 
-#define EULER_GRADIENT_YSHIFT 0.0    /* y-shift in computation of gradient in Euler equation */
-
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 2250       /* number of frames of movie */
-// #define NSTEPS 500       /* number of frames of movie */
+// #define NSTEPS 1000       /* number of frames of movie */
+#define NSTEPS 2200           /* number of frames of movie */
 // #define NVID 90           /* number of iterations between images displayed on screen */
-#define NVID 120          /* number of iterations between images displayed on screen */
+#define NVID 100          /* number of iterations between images displayed on screen */
+// #define NVID 200          /* number of iterations between images displayed on screen */
 // #define NVID 1100          /* number of iterations between images displayed on screen */
 #define ACCELERATION_FACTOR 1.0 /* factor by which to increase NVID in course of simulation */
 #define DT_ACCELERATION_FACTOR 1.0 /* factor by which to increase time step in course of simulation  */
 #define MAX_DT 0.024     /* maximal value of integration step */
 #define NSEG 100         /* number of segments of boundary */
-#define BOUNDARY_WIDTH 5    /* width of billiard boundary */
+#define BOUNDARY_WIDTH 2    /* width of billiard boundary */
 
 #define PAUSE 100       /* number of frames after which to pause */
 #define PSLEEP 2         /* sleep time during pause */
@@ -214,23 +234,23 @@
 
 /* Visualisation */
 
-#define PLOT_3D 0    /* controls whether plot is 2D or 3D */
+#define PLOT_3D 1    /* controls whether plot is 2D or 3D */
 
 #define ROTATE_VIEW 0       /* set to 1 to rotate position of observer */
 #define ROTATE_ANGLE 360.0  /* total angle of rotation during simulation */
 
-#define DRAW_PERIODICISED 1     /* set to 1 to repeat wave periodically in x and y directions */
+#define DRAW_PERIODICISED 0     /* set to 1 to repeat wave periodically in x and y directions */
 
 /* Plot type - color scheme */
 
-#define CPLOT 52
-#define CPLOT_B 51
+#define CPLOT 62
+#define CPLOT_B 61
 
 /* Plot type - height of 3D plot */
 
-#define ZPLOT 52     /* z coordinate in 3D plot */
+#define ZPLOT 62     /* z coordinate in 3D plot */
 // #define ZPLOT 32     /* z coordinate in 3D plot */
-#define ZPLOT_B 51    /* z coordinate in second 3D plot */
+#define ZPLOT_B 61    /* z coordinate in second 3D plot */
 
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of P_3D_AMPLITUDE plot */
 #define SHADE_3D 1              /* set to 1 to change luminosity according to normal vector */
@@ -248,6 +268,7 @@
 #define PRINT_RPSLZB 0      /* set to 1 to print rpslzb parameter */
 #define PRINT_PROBABILITIES 0   /* set to 1 to print probabilities (for Ehrenfest urn configuration) */
 #define PRINT_NOISE 0       /* set to 1 to print noise intensity */
+#define PRINT_FLOW_SPEED 0      /* set to 1 to print speed of flow */
 
 #define DRAW_FIELD_LINES 0  /* set to 1 to draw field lines */
 #define FIELD_LINE_WIDTH 1  /* width of field lines */
@@ -266,8 +287,8 @@
 
 /* Color schemes, see list in global_pdes.c  */
 
-#define COLOR_PALETTE 14       /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 13     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 10       /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 11     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
 
@@ -277,12 +298,15 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
-#define VSCALE_AMPLITUDE 1.5      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSCALE_AMPLITUDE 15.0      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define CURL_SCALE 0.000015   /* scaling factor for curl representation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 #define SLOPE_SCHROD_LUM 50.0       /* sensitivity of luminosity on module, for color scheme Z_ARGUMENT */
 #define MIN_SCHROD_LUM 0.2       /* minimal luminosity in color scheme Z_ARGUMENT*/
+#define VSCALE_PRESSURE 0.5      /* additional scaling factor for color scheme Z_EULER_PRESSURE */
+#define PRESSURE_SHIFT 25.0        /* shift for color scheme Z_EULER_PRESSURE */
+#define PRESSURE_LOG_SHIFT -2.5     /* shift for color scheme Z_EULER_PRESSURE */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
@@ -295,6 +319,11 @@
 #define LOG_SCALE 0.5    /* scaling factor for energy log representation */
 #define LOG_SHIFT 1.0   
 #define LOG_MIN 1.0e-3   /* floor value for log vorticity plot */
+#define VSCALE_SPEED 1.5      /* additional scaling factor for color scheme Z_EULER_SPEED */
+#define VMEAN_SPEED 0.0       /* mean value around which to scale for color scheme Z_EULER_SPEED */
+#define VSCALE_DENSITY 10.0      /* additional scaling factor for color scheme Z_EULER_DENSITY */
+#define VSCALE_VORTICITY 50.0     /* additional scaling factor for color scheme Z_EULERC_VORTICITY */
+#define VORTICITY_SHIFT 0.3     /* vertical shift of vorticity */
 
 #define NXMAZE 7      /* width of maze */
 #define NYMAZE 7      /* height of maze */
@@ -303,8 +332,8 @@
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 
 #define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 3.0      /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 3.0   /* scale of color scheme bar for 2nd part */
+#define COLORBAR_RANGE 2.0      /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 3.0    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 
 /* only for compatibility with wave_common.c */
@@ -316,6 +345,8 @@
 #define INITIAL_VARIANCE 0.0002  /* variance of initial condition */
 #define INITIAL_WAVELENGTH  0.1  /* wavelength of initial condition */
 #define VSCALE_ENERGY 200.0       /* additional scaling factor for color scheme P_3D_ENERGY */
+// #define VSCALE_SPEED 5.0      /* additional scaling factor for color scheme Z_EULER_SPEED */
+// #define VMEAN_SPEED 0.0      /* mean value around which to scale for color scheme Z_EULER_SPEED */
 #define PHASE_FACTOR 20.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define OSCILLATION_SCHEDULE 0  /* oscillation schedule, see list in global_pdes.c */
@@ -325,6 +356,7 @@
 #define COMPARISON 0        /* set to 1 to compare two different patterns (beta) */
 #define B_DOMAIN_B 20       /* second domain shape, for comparisons */
 #define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
+#define FLUX_WINDOW 20      /* averaging window for energy flux */
 /* end of constants added only for compatibility with wave_common.c */
 
 
@@ -335,21 +367,24 @@ double light[3] = {0.816496581, -0.40824829, 0.40824829};      /* vector of "lig
 double observer[3] = {8.0, 8.0, 8.0};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
-#define Z_SCALING_FACTOR 0.08  /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define Z_SCALING_FACTOR 2.4  /* overall scaling factor of z axis for REP_PROJ_3D representation */
 #define XY_SCALING_FACTOR 1.7  /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0        /* max value of z coordinate for REP_PROJ_3D representation */
-#define XSHIFT_3D -0.1         /* overall x shift for REP_PROJ_3D representation */
-#define YSHIFT_3D 0.1          /* overall y shift for REP_PROJ_3D representation */
+#define XSHIFT_3D 0.0         /* overall x shift for REP_PROJ_3D representation */
+#define YSHIFT_3D 0.0          /* overall y shift for REP_PROJ_3D representation */
 #define BORDER_PADDING 0       /* distance from boundary at which to plot points, to avoid boundary effects due to gradient */
 
 /* For debugging purposes only */
 #define FLOOR 1         /* set to 1 to limit wave amplitude to VMAX */
-#define VMAX 10.0        /* max value of wave amplitude */
+#define VMAX 1000.0        /* max value of wave amplitude */
 #define TEST_GRADIENT 0 /* print norm squared of gradient */
 
 #define REFRESH_B (ZPLOT_B != ZPLOT)||(CPLOT_B != CPLOT)    /* to save computing time, to be improved */
 #define COMPUTE_WRAP_ANGLE ((WRAP_ANGLE)&&((cplot == Z_ANGLE_GRADIENT)||(cplot == Z_ANGLE_GRADIENTX)||(cplot == Z_ARGUMENT)||(cplot == Z_ANGLE_GRADIENTX)))
-#define PRINT_PARAMETERS ((PRINT_TIME)||(PRINT_VISCOSITY)||(PRINT_RPSLZB)||(PRINT_PROBABILITIES)||(PRINT_NOISE))
+#define PRINT_PARAMETERS ((PRINT_TIME)||(PRINT_VISCOSITY)||(PRINT_RPSLZB)||(PRINT_PROBABILITIES)||(PRINT_NOISE)||(PRINT_FLOW_SPEED))
+#define COMPUTE_PRESSURE ((ZPLOT == Z_EULER_PRESSURE)||(CPLOT == Z_EULER_PRESSURE)||(ZPLOT_B == Z_EULER_PRESSURE)||(CPLOT_B == Z_EULER_PRESSURE))
+
+#define ASYM_SPEED_COLOR (VMEAN_SPEED == 0.0)
 
 #include "global_pdes.c"
 #include "global_3d.c"          /* constants and global variables */
@@ -473,7 +508,37 @@ void compute_vector_potential(int i, int j, double *ax, double *ay)
     }
 }
 
-
+void compute_gfield(int i, int j, double *gx, double *gy)
+/* initialize the exterior field, for the compressible Euler equation */
+{
+    double x, y, xy[2], r, f;
+    
+    ij_to_xy(i, j, xy);
+    x = xy[0];
+    y = xy[1];
+    
+    switch (FORCE_FIELD) {
+        case (GF_VERTICAL):
+        {
+            *gx = 0.0;
+            *gy = -G_FIELD;
+            break;
+        }
+        case (GF_CIRCLE):
+        {
+            r = module2(x,y) + 1.0e-2;
+            f = 0.5*(1.0 - tanh(BC_STIFFNESS*(r - LAMBDA))); 
+            *gx = G_FIELD*f*x/r;
+            *gy = G_FIELD*f*y/r;
+            break;
+        }
+        default:
+        {
+            *gx = 0.0;
+            *gy = 0.0;
+        }
+    }
+}
 void initialize_potential(double potential_field[NX*NY])
 /* initialize the potential field, e.g. for the Schrödinger equation */
 {
@@ -500,20 +565,68 @@ void initialize_vector_potential(double vpotential_field[2*NX*NY])
     }
 }
 
-void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short int xy_in[NX*NY], double potential_field[NX*NY],         double vector_potential_field[2*NX*NY])
+void initialize_gfield(double gfield[2*NX*NY])
+/* initialize the exterior field, e.g. for the compressible Euler equation */
+{
+    int i, j;
+    
+    #pragma omp parallel for private(i,j)
+    for (i=0; i<NX; i++){
+        for (j=0; j<NY; j++){
+            compute_gfield(i, j, &gfield[i*NY+j], &gfield[NX*NY+i*NY+j]);
+        }
+    }
+}
+
+void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short int xy_in[NX*NY], 
+                      double potential_field[NX*NY], double vector_potential_field[2*NX*NY], 
+                      double gfield[2*NX*NY], t_rde rde[NX*NY])
 /* time step of field evolution */
 {
-    int i, j, k, iplus, iminus, jplus, jminus;
-    double x, y, z, deltax, deltay, deltaz, rho, pot, vx, vy, test = 0.0, dx;
-    double *delta_phi[NLAPLACIANS], *nabla_phi, *nabla_psi, *nabla_omega, *delta_vorticity;
+    int i, j, k, iplus, iminus, jplus, jminus, ropening;
+    double x, y, z, deltax, deltay, deltaz, rho, rhox, rhoy, pot, u, v, ux, uy, vx, vy, test = 0.0, dx, dy, xy[2], padding;
+    double *delta_phi[NLAPLACIANS], *nabla_phi, *nabla_psi, *nabla_omega, *delta_vorticity, *delta_pressure, *delta_p, *delta_u, *delta_v, *nabla_rho, *nabla_u, *nabla_v;
+//     double u_bc[NY], v_bc[NY]; 
     static double invsqr3 = 0.577350269;    /* 1/sqrt(3) */
     static double stiffness = 2.0;     /* stiffness of Poisson equation solver */
-    static int smooth = 0;
+    static int smooth = 0, y_maze_entry, imin, imax, first = 1;
+    
+    if (first)  /* for D_MAZE_CHANNELS boundary conditions in Euler equation */
+    {
+        ropening = (NYMAZE+1)/2;
+        padding = 0.02;
+        dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+        y = YMIN + 0.02 + dy*((double)ropening);
+        x = YMAX - padding + MAZE_XSHIFT;
+        xy_to_pos(x, y, xy);
+        y_maze_entry = xy[1] + 3;
+        if ((RDE_EQUATION == E_EULER_INCOMP)&&(IN_OUT_FLOW_BC == BCE_CHANNELS)&&(B_DOMAIN == D_MAZE_CHANNELS))
+        {
+            imax = xy[0] + 2;
+            x = YMIN + padding + MAZE_XSHIFT;
+            xy_to_pos(x, y, xy);
+            imin = xy[0] - 2;
+        }
+        else
+        {
+            imin = 0;
+            imax = NX;
+        }
+        first = 0;
+    }
     
     for (i=0; i<NLAPLACIANS; i++) delta_phi[i] = (double *)malloc(NX*NY*sizeof(double));
     
+    if (COMPUTE_PRESSURE) 
+    {
+        delta_pressure = (double *)malloc(NX*NY*sizeof(double));
+        delta_p = (double *)malloc(NX*NY*sizeof(double));
+    }
+    
     /* compute the Laplacian of phi */
     for (i=0; i<NLAPLACIANS; i++) compute_laplacian_rde(phi_in[i], delta_phi[i], xy_in);
+    
+    if (COMPUTE_PRESSURE) compute_laplacian_rde(phi_in[2], delta_pressure, xy_in);
     
     /* compute the gradient of phi if there is a magnetic field */
     if (ADD_MAGNETIC_FIELD) 
@@ -531,7 +644,11 @@ void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short i
         nabla_omega = (double *)malloc(2*NX*NY*sizeof(double));
         compute_gradient_euler(phi_in[0], nabla_psi, EULER_GRADIENT_YSHIFT);
         compute_gradient_euler(phi_in[1], nabla_omega, 0.0);
+        
+        if (COMPUTE_PRESSURE) compute_pressure_laplacian(phi_in, delta_p);
+        
         dx = (XMAX-XMIN)/((double)NX);
+        dy = (YMAX-YMIN)/((double)NY);
         
         if (SMOOTHEN_VORTICITY)     /* beta: try to reduce formation of ripples */
         {
@@ -539,6 +656,7 @@ void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short i
             {
                 delta_vorticity = (double *)malloc(NX*NY*sizeof(double));
                 compute_laplacian_rde(phi_in[1], delta_vorticity, xy_in); 
+//                 #pragma omp parallel for private(i,delta_vorticity)
                 for (i=0; i<NX*NY; i++) phi_in[1][i] += intstep*SMOOTH_FACTOR*delta_vorticity[i];
                 free(delta_vorticity);
             }
@@ -547,17 +665,50 @@ void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short i
         }
     }
     
+    /* compute gradients of fields for compressible Euler equation */
+    else if (RDE_EQUATION == E_EULER_COMP)
+    {
+        nabla_rho = (double *)malloc(2*NX*NY*sizeof(double));
+//         nabla_u = (double *)malloc(2*NX*NY*sizeof(double));
+//         nabla_v = (double *)malloc(2*NX*NY*sizeof(double));
+        compute_gradient_euler_test(phi_in[0], nabla_rho, xy_in);
+        compute_velocity_gradients(phi_in, rde);
+//         compute_gradient_euler_test(phi_in[1], nabla_u, xy_in);
+//         compute_gradient_euler_test(phi_in[2], nabla_v, xy_in);
+        
+        if (SMOOTHEN_VELOCITY)     /* beta: try to reduce formation of ripples */
+        {
+            if (smooth == 0)
+            {
+                delta_u = (double *)malloc(NX*NY*sizeof(double));
+                delta_v = (double *)malloc(NX*NY*sizeof(double));
+                compute_laplacian_rde(phi_in[1], delta_u, xy_in); 
+                compute_laplacian_rde(phi_in[2], delta_v, xy_in); 
+                #pragma omp parallel for private(i)
+                for (i=0; i<NX*NY; i++) phi_in[1][i] += intstep*SMOOTH_FACTOR*delta_u[i];
+                #pragma omp parallel for private(i)
+                for (i=0; i<NX*NY; i++) phi_in[2][i] += intstep*SMOOTH_FACTOR*delta_v[i];
+                free(delta_u);
+                free(delta_v);
+            }
+            smooth++;
+            if (smooth >= SMOOTHEN_PERIOD) smooth = 0;
+        }
+    } 
+    
     if (TEST_GRADIENT) {
+        test = 0.0;
         for (i=0; i<2*NX*NY; i++){
-            test += nabla_omega[i]*nabla_omega[i];
-            test += nabla_psi[i]*nabla_psi[i];
+            test += nabla_v[i]*nabla_v[i];
+//             test += nabla_omega[i]*nabla_omega[i];
+//             test += nabla_psi[i]*nabla_psi[i];
         }
         printf("nabla square = %.5lg\n", test/((double)NX*NY));
     }
     
     
     #pragma omp parallel for private(i,j,k,x,y,z,deltax,deltay,deltaz,rho)
-    for (i=0; i<NX; i++){
+    for (i=imin; i<imax; i++){
         for (j=0; j<NY; j++){
             if (xy_in[i*NY+j]) switch (RDE_EQUATION){
                 case (E_HEAT):
@@ -637,14 +788,44 @@ void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short i
                 }
                 case (E_EULER_INCOMP):
                 {
-//                     if ((j > 1)&&(j < NY - 1))
-                    {
-                        phi_out[0][i*NY+j] = phi_in[0][i*NY+j] + intstep*stiffness*(delta_phi[0][i*NY+j] + phi_in[1][i*NY+j]*dx*dx);
+                    phi_out[0][i*NY+j] = phi_in[0][i*NY+j] + intstep*stiffness*(delta_phi[0][i*NY+j] + phi_in[1][i*NY+j]*dx*dx);
 //                     phi_out[0][i*NY+j] += intstep*EULER_GRADIENT_YSHIFT;
-                        phi_out[1][i*NY+j] = phi_in[1][i*NY+j] - intstep*K_EULER*(nabla_omega[i*NY+j]*nabla_psi[NX*NY+i*NY+j]);
-                        phi_out[1][i*NY+j] += intstep*K_EULER*(nabla_omega[NX*NY+i*NY+j]*nabla_psi[i*NY+j]);
+                    phi_out[1][i*NY+j] = phi_in[1][i*NY+j] - intstep*K_EULER*(nabla_omega[i*NY+j]*nabla_psi[NX*NY+i*NY+j]);
+                    phi_out[1][i*NY+j] += intstep*K_EULER*(nabla_omega[NX*NY+i*NY+j]*nabla_psi[i*NY+j]);
                         
-//                         if ((i == 0)&&(j%10 == 0)) printf("j = %i, psi = %.5lg\n", j, phi_out[0][i*NY+j]);
+                    if (COMPUTE_PRESSURE)
+                    {
+                        phi_out[2][i*NY+j] = phi_in[2][i*NY+j] + intstep*stiffness*(delta_pressure[i*NY+j] - delta_p[i*NY+j]);
+                        phi_out[2][i*NY+j] *= exp(-2.0e-3);
+                    }
+                    break;
+                }
+                case (E_EULER_COMP):
+                {
+                    rho = phi_in[0][i*NY+j];
+                    if (rho == 0.0) rho = 1.0e-1;
+                    u = phi_in[1][i*NY+j];
+                    v = phi_in[2][i*NY+j];
+                    rhox = nabla_rho[i*NY+j];
+                    rhoy = nabla_rho[NX*NY+i*NY+j];
+//                     ux = nabla_u[i*NY+j];
+//                     uy = nabla_u[NX*NY+i*NY+j];
+//                     vx = nabla_v[i*NY+j];
+//                     vy = nabla_v[NX*NY+i*NY+j];
+                    
+                    ux = rde[i*NY+j].dxu;
+                    uy = rde[i*NY+j].dyu;
+                    vx = rde[i*NY+j].dxv;
+                    vy = rde[i*NY+j].dyv;
+                    
+                    phi_out[0][i*NY+j] = rho - intstep*(u*rhox + v*rhoy + rho*(ux + vy));
+                    phi_out[1][i*NY+j] = u - intstep*(u*ux + v*uy + K_EULER_INC*rhox/rho);
+                    phi_out[2][i*NY+j] = v - intstep*(u*vx + v*vy + K_EULER_INC*rhoy/rho);
+                    
+                    if (ADD_FORCE_FIELD)
+                    {
+                        phi_out[1][i*NY+j] += intstep*gfield[i*NY+j];
+                        phi_out[2][i*NY+j] += intstep*gfield[NX*NY+i*NY+j];
                     }
                     break;
                 }
@@ -652,12 +833,45 @@ void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short i
         }
     }
     
-    if (TEST_GRADIENT) {
-        test = 0.0;
-        for (i=0; i<NX*NY; i++){
-            test += delta_phi[0][i] + phi_out[1][i]*dx*dx;
+    /* in-flow/out-flow b.c. for incompressible Euler equation */
+    if ((RDE_EQUATION == E_EULER_INCOMP)&&(IN_OUT_FLOW_BC > 0))
+    {
+        switch (IN_OUT_FLOW_BC) {
+            case (BCE_TOPBOTTOM):
+            {
+                set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, -0.1, phi_out, xy_in, 0, NX, 0, 10);
+                set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, -0.1, phi_out, xy_in, 0, NX, NY-10, NY);
+                break;
+            }
+            case (BCE_TOPBOTTOMLEFT):
+            {
+                set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, -0.1, phi_out, xy_in, 0, NX, 0, 10);
+                set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, -0.1, phi_out, xy_in, 0, NX, NY-10, NY);
+                set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, -0.1, phi_out, xy_in, 0, 2, 0, NY); 
+                break;
+            }
+            case (BCE_CHANNELS):
+            {
+                set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, 0.0, phi_out, xy_in, imin-5, imin+10, NY - y_maze_entry, y_maze_entry);  
+                set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, 0.0, phi_out, xy_in, imax-10, imax+5, NY- y_maze_entry, y_maze_entry); 
+                break;
+            }
+            case (BCE_MIDDLE_STRIP):
+            {
+                set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, 0.0, phi_out, xy_in, 0, NX, NY/2 - 10, NY/2 + 10);
+                set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, 0.0, phi_out, xy_in, 0, 2, 0, NY); 
+                set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, 0.0, phi_out, xy_in, NX-2, NX, 0, NY); 
+                break;
+            }
         }
-        printf("Delta psi + omega = %.5lg\n", test/((double)NX*NY));
+    }
+        
+    if (TEST_GRADIENT) {
+//         test = 0.0;
+//         for (i=0; i<NX*NY; i++){
+//             test += delta_phi[0][i] + phi_out[1][i]*dx*dx;
+//         }
+//         printf("Delta psi + omega = %.5lg\n", test/((double)NX*NY));
     }
                 
     if (FLOOR) for (i=0; i<NX; i++){
@@ -683,13 +897,27 @@ void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short i
         free(nabla_psi);
         free(nabla_omega);
     }
+    else if (RDE_EQUATION == E_EULER_COMP)
+    {
+        free(nabla_rho);
+//         free(nabla_u);
+//         free(nabla_v);
+    }
+    
+    if (COMPUTE_PRESSURE) 
+    {
+        free(delta_pressure);
+        free(delta_p);
+    }
 }
 
-void evolve_wave(double *phi[NFIELDS], double *phi_tmp[NFIELDS], short int xy_in[NX*NY], double potential_field[NX*NY], double vector_potential_field[2*NX*NY])
+void evolve_wave(double *phi[NFIELDS], double *phi_tmp[NFIELDS], short int xy_in[NX*NY], 
+                 double potential_field[NX*NY], double vector_potential_field[2*NX*NY], 
+                 double gfield[2*NX*NY], t_rde rde[NX*NY])
 /* time step of field evolution */
 {
-    evolve_wave_half(phi, phi_tmp, xy_in, potential_field, vector_potential_field);
-    evolve_wave_half(phi_tmp, phi, xy_in, potential_field, vector_potential_field);
+    evolve_wave_half(phi, phi_tmp, xy_in, potential_field, vector_potential_field, gfield, rde);
+    evolve_wave_half(phi_tmp, phi, xy_in, potential_field, vector_potential_field, gfield, rde);
 }
 
 
@@ -699,7 +927,7 @@ void evolve_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], in
     int tracer, i, j, t, ij[2], iplus, jplus;
     double x, y, xy[2], vx, vy; 
     
-    step = 0.2;
+    step = 0.01;
     
     for (tracer = 0; tracer < N_TRACERS; tracer++)
     {
@@ -713,14 +941,27 @@ void evolve_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], in
             xy_to_ij_safe(x, y, ij);
             i = ij[0];
             j = ij[1];
-            iplus = i + 1;  if (iplus == NX) iplus = 0;
-            jplus = j + 1;  if (jplus == NY) jplus = 0;
-        
-            vx = phi[0][i*NY+jplus] - phi[0][i*NY+j];
-            vy = -(phi[0][iplus*NY+j] - phi[0][i*NY+j]);
             
-            if (j == 0) vx += EULER_GRADIENT_YSHIFT;
-            else if (j == NY-1) vx -= EULER_GRADIENT_YSHIFT;
+            switch (RDE_EQUATION) {
+                case (E_EULER_INCOMP): 
+                {
+                    iplus = i + 1;  if (iplus == NX) iplus = 0;
+                    jplus = j + 1;  if (jplus == NY) jplus = 0;
+        
+                    vx = phi[0][i*NY+jplus] - phi[0][i*NY+j];
+                    vy = -(phi[0][iplus*NY+j] - phi[0][i*NY+j]);
+            
+                    if (j == 0) vx += EULER_GRADIENT_YSHIFT;
+                    else if (j == NY-1) vx -= EULER_GRADIENT_YSHIFT;
+                    break;
+                }
+                case (E_EULER_COMP):
+                {
+                    vx = phi[1][i*NY+j];
+                    vy = phi[2][i*NY+j];
+                    break;
+                }
+            }
             
 //             v = module2(vx, vy);
 //             if ((v > 0.0)&&(v < 0.1)) 
@@ -783,8 +1024,10 @@ void print_parameters(t_rde rde[NX*NY], short int xy_in[NX*NY], double time, sho
             }
             else
             {
-                xbox = XMAX - 0.39;
-                xtext = XMAX - 0.55;
+                xbox = XMAX - 0.49;
+                xtext = XMAX - 0.65;
+//                 xbox = XMAX - 0.39;
+//                 xtext = XMAX - 0.55;
             }
         }
         else
@@ -798,8 +1041,10 @@ void print_parameters(t_rde rde[NX*NY], short int xy_in[NX*NY], double time, sho
             }
             else
             {
-                xbox = XMAX - 0.39;
-                xtext = XMAX - 0.61;
+                xbox = XMAX - 0.49;
+                xtext = XMAX - 0.71;
+//                 xbox = XMAX - 0.39;
+//                 xtext = XMAX - 0.61;
             }
         }
          
@@ -834,6 +1079,7 @@ void print_parameters(t_rde rde[NX*NY], short int xy_in[NX*NY], double time, sho
         else if (PRINT_VISCOSITY) sprintf(message, "Viscosity %.3f", viscosity);
         else if (PRINT_RPSLZB) sprintf(message, "b = %.3f", rpslzb);
         else if (PRINT_NOISE) sprintf(message, "noise %.3f", noise);
+        else if (PRINT_FLOW_SPEED) sprintf(message, "Speed %.3f", flow_speed);
         if (PLOT_3D) write_text(xtext, y, message);
         else
         {
@@ -851,14 +1097,16 @@ void draw_color_bar_palette(int plot, double range, int palette, int fade, doubl
     if (PLOT_3D)
     {
         if (ROTATE_COLOR_SCHEME) 
-            draw_color_scheme_palette_3d(-1.0, -0.8, XMAX - 0.1, -1.0, plot, -range, range, palette, fade, fade_value);
+            draw_color_scheme_palette_3d(XMIN + 0.3, YMIN + 0.1, XMAX - 0.3, YMIN + 0.1 + width, plot, -range, range, palette, fade, fade_value);
+//             draw_color_scheme_palette_3d(-1.0, -0.8, XMAX - 0.1, -1.0, plot, -range, range, palette, fade, fade_value);
         else 
             draw_color_scheme_palette_3d(XMAX - 1.5*width, YMIN + 0.1, XMAX - 0.5*width, YMAX - 0.1, plot, -range, range, palette, fade, fade_value);
     }
     else
     {
         if (ROTATE_COLOR_SCHEME) 
-            draw_color_scheme_palette_fade(-1.0, -0.8, XMAX - 0.1, -1.0, plot, -range, range, palette, fade, fade_value);
+            draw_color_scheme_palette_fade(XMIN + 0.8, YMIN + 0.1, XMAX - 0.8, YMIN + 0.1 + width, plot, -range, range, palette, fade, fade_value);
+//             draw_color_scheme_palette_fade(-1.0, -0.8, XMAX - 0.1, -1.0, plot, -range, range, palette, fade, fade_value);
         else 
             draw_color_scheme_palette_fade(XMAX - 1.5*width, YMIN + 0.1, XMAX - 0.5*width, YMAX - 0.1, plot, -range, range, palette, fade, fade_value);
     }
@@ -902,6 +1150,14 @@ double rpslzb_schedule(int i)
     }
 }
 
+double flow_speed_schedule(int i)
+{
+    double ratio;
+    
+    ratio = (double)i/(double)NSTEPS;
+    return (IN_OUT_FLOW_MIN_AMP + (IN_OUT_FLOW_AMP - IN_OUT_FLOW_MIN_AMP)*ratio);
+}
+
 
 void viewpoint_schedule(int i)
 /* change position of observer */
@@ -930,7 +1186,7 @@ void animation()
 {
     double time = 0.0, scale, dx, var, jangle, cosj, sinj, sqrintstep, 
         intstep0, viscosity_printed, fade_value, noise = NOISE_INTENSITY;
-    double *phi[NFIELDS], *phi_tmp[NFIELDS], *potential_field, *vector_potential_field, *tracers;
+    double *phi[NFIELDS], *phi_tmp[NFIELDS], *potential_field, *vector_potential_field, *tracers, *gfield, *bc_field;
     short int *xy_in;
     int i, j, k, s, nvid, field;
     static int counter = 0;
@@ -965,7 +1221,20 @@ void animation()
         initialize_vector_potential(vector_potential_field);
     }
     
-    if (ADD_TRACERS) tracers = (double *)malloc(2*NSTEPS*N_TRACERS*sizeof(double));
+    if (ADD_FORCE_FIELD)
+    {
+        gfield = (double *)malloc(2*NX*NY*sizeof(double));
+        initialize_gfield(gfield);
+    }
+    if (ADAPT_STATE_TO_BC)
+    {
+        bc_field = (double *)malloc(NX*NY*sizeof(double));
+        initialize_bcfield(bc_field);
+    }
+        
+    
+//     if (ADD_TRACERS) tracers = (double *)malloc(2*NSTEPS*N_TRACERS*sizeof(double));
+    if (ADD_TRACERS) tracers = (double *)malloc(4*NSTEPS*N_TRACERS*sizeof(double));
 
     dx = (XMAX-XMIN)/((double)NX);
     intstep = DT/(dx*dx);
@@ -987,11 +1256,18 @@ void animation()
 //     add_coherent_state(-0.75, -0.75, 0.0, 5.0, 0.1, phi, xy_in);
 //     init_fermion_state(-0.5, 0.5, 2.0, 0.0, 0.1, phi, xy_in);
 //     init_boson_state(-0.5, 0.5, 2.0, 0.0, 0.1, phi, xy_in);
+
+//     init_vortex_state(0.1, 0.4, 0.0, 0.3, -0.1, phi, xy_in);
+//     add_vortex_state(0.1, -0.4, 0.0, 0.3, 0.1, phi, xy_in);
     
 //     init_shear_flow(1.0, 0.02, 0.15, 1, 1, phi, xy_in);
-//     init_laminar_flow(1.0, 0.1, 0.5, 0.0, phi, xy_in);
+//     init_laminar_flow(flow_speed_schedule(0), LAMINAR_FLOW_MODULATION, LAMINAR_FLOW_YPERIOD, 0.0, phi, xy_in);
+    init_laminar_flow(IN_OUT_FLOW_AMP, LAMINAR_FLOW_MODULATION, 0.02, 0.1, 1.0, 0.0, 0.1, phi, xy_in);
     
-    init_shear_flow(-1.0, 0.0, 0.1, 1, 1, 0.0, phi, xy_in);
+//     init_shear_flow(-1.0, 0.1, 0.2, 1, 1, 0.2, phi, xy_in);
+//     init_shear_flow(1.0, 0.02, 0.15, 1, 1, 0.0, phi, xy_in);
+    
+    if (ADAPT_STATE_TO_BC) adapt_state_to_bc(phi, bc_field, xy_in);
     
     init_cfield_rde(phi, xy_in, CPLOT, rde, 0);
     if (PLOT_3D) init_zfield_rde(phi, xy_in, ZPLOT, rde, 0);
@@ -1043,6 +1319,8 @@ void animation()
             }
         }
         if (CHANGE_RPSLZB) rpslzb = rpslzb_schedule(i);
+        if (CHANGE_FLOW_SPEED) flow_speed = flow_speed_schedule(i); 
+        else flow_speed = IN_OUT_FLOW_AMP;
         
         if (ROTATE_VIEW) 
         {
@@ -1065,7 +1343,9 @@ void animation()
 //         printf("Integration step %.5lg\n", intstep);
         
         printf("Evolving wave\n");
-        for (j=0; j<nvid; j++) evolve_wave(phi, phi_tmp, xy_in, potential_field, vector_potential_field);
+        for (j=0; j<nvid; j++) evolve_wave(phi, phi_tmp, xy_in, potential_field, vector_potential_field, gfield, rde);
+
+        if (ADAPT_STATE_TO_BC) adapt_state_to_bc(phi, bc_field, xy_in);
         
         if (ADD_TRACERS)
         {
@@ -1073,6 +1353,7 @@ void animation()
             evolve_tracers(phi, tracers, i, 10, 0.1);
 //             for (j=0; j<N_TRACERS; j++) 
 //                 printf("Tracer %i position (%.2f, %.2f)\n", j, tracers[2*N_TRACERS*i + 2*j], tracers[2*N_TRACERS*i + 2*j + 1]);
+            printf("Drawing tracer particles\n");
             draw_tracers(phi, tracers, i, 0, 1.0);
         }
         
@@ -1118,14 +1399,19 @@ void animation()
 //         print_level(MDEPTH);
 //         print_Julia_parameters(i);
 
-	glutSwapBuffers();
+        if (!((NO_EXTRA_BUFFER_SWAP)&&(MOVIE))) glutSwapBuffers();
+        
+//         glutSwapBuffers();
+//         save_frame();
         
         /* modify Julia set */
 //         set_Julia_parameters(i, phi, xy_in);
 
 	if (MOVIE)
+//         if (0)
         {
             printf("Saving frame %i\n", i);
+//             if (NO_EXTRA_BUFFER_SWAP) glutSwapBuffers();
             save_frame();
             
             if ((i >= INITIAL_TIME)&&(DOUBLE_MOVIE))
@@ -1136,9 +1422,14 @@ void animation()
                 if (PRINT_PARAMETERS) print_parameters(rde, xy_in, time, 0, viscosity_printed, noise);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 0, 1.0);  
                 glutSwapBuffers();
+//                 if (NO_EXTRA_BUFFER_SWAP) glutSwapBuffers();
                 save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter);
                 counter++;
             }
+            else if (NO_EXTRA_BUFFER_SWAP) glutSwapBuffers();
+            
+            /* TEST */
+//              if (ADAPT_STATE_TO_BC) adapt_state_to_bc(phi, bc_field, xy_in);
 
             /* it seems that saving too many files too fast can cause trouble with the file system */
             /* so this is to make a pause from time to time - parameter PAUSE may need adjusting   */
@@ -1161,7 +1452,8 @@ void animation()
             if (ADD_TRACERS) draw_tracers(phi, tracers, NSTEPS, 0, 1.0);
 //             draw_billiard();
             if (PRINT_PARAMETERS) print_parameters(rde, xy_in, time, 0, viscosity_printed, noise);
-            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, 0, 1.0);   
+            if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, 0, 1.0); 
+//             if (!NO_EXTRA_BUFFER_SWAP) glutSwapBuffers();
             glutSwapBuffers();
             
             if (!FADE) for (i=0; i<MID_FRAMES; i++) save_frame();
@@ -1173,11 +1465,12 @@ void animation()
 //                 draw_billiard();
                 if (PRINT_PARAMETERS) print_parameters(rde, xy_in, time, 0, viscosity_printed, noise);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, 1, fade_value);   
-                glutSwapBuffers();
+                if (!NO_EXTRA_BUFFER_SWAP) glutSwapBuffers();
                 save_frame_counter(NSTEPS + i + 1);
             }
             draw_wave_rde(1, phi, xy_in, rde, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 0, 1.0, REFRESH_B);
             if (ADD_TRACERS) draw_tracers(phi, tracers, NSTEPS, 0, 1.0);
+            if (PRINT_PARAMETERS) print_parameters(rde, xy_in, time, 0, viscosity_printed, noise);
             if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 0, 1.0); 
             glutSwapBuffers();
             
@@ -1187,6 +1480,7 @@ void animation()
                 fade_value = 1.0 - (double)i/(double)END_FRAMES;
                 draw_wave_rde(1, phi, xy_in, rde, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 1, fade_value, 0);
                 if (ADD_TRACERS) draw_tracers(phi, tracers, NSTEPS, 1, fade_value);
+                if (PRINT_PARAMETERS) print_parameters(rde, xy_in, time, 0, viscosity_printed, noise);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 1, fade_value);   
                 glutSwapBuffers();
                 save_frame_counter(NSTEPS + MID_FRAMES + 1 + counter + i);
@@ -1222,6 +1516,8 @@ void animation()
         free(vector_potential_field);
     }
     if (ADD_TRACERS) free(tracers);
+    if (ADD_FORCE_FIELD) free(gfield);
+    if (ADAPT_STATE_TO_BC) free(bc_field);
     
     printf("Time %.5lg\n", time);
 

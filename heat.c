@@ -76,7 +76,7 @@
 #define MU 0.8	            /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */
-#define MDEPTH 6            /* depth of computation of Menger gasket */
+#define MDEPTH 1           /* depth of computation of Menger gasket */
 #define MRATIO 5            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0     /* limit value for approximation of Mandelbrot set */

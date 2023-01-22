@@ -1,8 +1,9 @@
 #include "colormaps.c"
 
 #define DUMMY_ABSORBING 100000.0  /* dummy value of config[0] for absorbing circles */
-#define BOUNDARY_SHIFT 100000.0    /* shift of boundary parametrisation for circles in domain */
+#define BOUNDARY_SHIFT 10000.0    /* shift of boundary parametrisation for circles in domain */
 #define DUMMY_SIDE_ABS -100000      /* dummy value of returned side for absorbing circles */
+#define MAZE_VERTICAL_EXTENSION 1.0e10  /* extension of vertical lines in some mazes */
 
 long int global_time = 0;    /* counter to keep track of global time of simulation */
 int nparticles=NPART; 
@@ -68,7 +69,17 @@ int nparticles=NPART;
 	return(im);
  }
 
-
+ double ipow(double x, int n)
+ {
+    double y;
+    int i;
+    
+    y = x;
+    for (i=1; i<n; i++) y *= x;
+    
+    return(y);
+ }
+ 
 /*********************/
 /* Graphics routines */
 /*********************/
@@ -124,13 +135,13 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
   TIFFClose(file);
   
   /* to avoid RAM overflow */
-  mem_counter++;
-  if (mem_counter >= 12)
-  {
-        free(image);
-        mem_counter = 0;
-  }
-  
+  if (SAVE_MEMORY) free(image);
+//   mem_counter++;
+//   if (mem_counter >= 12)
+//   {
+//         free(image);
+//         mem_counter = 0;
+//   }
   return 0;
 }
 
@@ -159,6 +170,52 @@ void rgb_color_scheme(int i, double rgb[3]) /* color scheme */
   
     hsl_to_rgb(hue, r, 0.5, rgb);
     /* saturation = r, luminosity = 0.5 */ 
+}
+
+
+void rgb_color_scheme_minmax(int i, double rgb[3]) 
+/* color scheme with specified color interval */
+{
+    double hue, y, r;
+    int delta_hue;
+    
+    delta_hue = COLOR_HUEMAX - COLOR_HUEMIN;
+  
+    hue = (double)(COLOR_HUEMIN + i*delta_hue/NCOLORS);
+    r = 0.9;
+  
+    while (hue < COLOR_HUEMIN) hue += delta_hue;
+    while (hue >= COLOR_HUEMAX) hue -= delta_hue;
+  
+    hsl_to_rgb(hue, r, 0.5, rgb);
+    /* saturation = r, luminosity = 0.5 */ 
+}
+
+void rgb_color_scheme_density(int part_number, double rgb[3], double minprop) 
+/* color scheme with specified color interval */
+{
+    int k;
+    double hue, y, r, logprop, logmin;
+    
+    if (part_number < 0) for (k=0; k<3; k++) rgb[k] = 0.25;  /* visited cells */
+    else 
+    {
+        if (part_number<=1) hue = COLOR_HUEMAX;
+        else
+        {
+            logmin = log(minprop*(double)NPART);
+            if (logmin > 0.0) logprop = log((double)part_number)/logmin + 0.01;
+            else (logprop = 0.0);
+        
+            if (logprop > 1.0) logprop = 1.0;
+            if (logprop < 0.0) logprop = 0.0;
+        
+            hue = COLOR_HUEMAX + (COLOR_HUEMIN - COLOR_HUEMAX)*logprop;
+        }
+        r = 0.9;
+        hsl_to_rgb(hue, r, 0.5, rgb);
+        /* saturation = r, luminosity = 0.5 */
+    }
 }
 
 
@@ -344,6 +401,28 @@ void draw_colored_circle(double x, double y, double r, int nseg, double rgb[3])
     }
     
     glEnd();
+}
+
+
+void draw_filled_sector(double x, double y, double rmin, double rmax, double phi1, double dphi, int nseg, double rgb[3])
+{
+    int i;
+    double alpha, dalpha;
+    
+    dalpha = dphi/(double)nseg;
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    for (i=0; i<=nseg; i++)
+    {
+        alpha = phi1 + (double)i*dalpha;
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex2d(x + rmin*cos(alpha), y + rmin*sin(alpha));
+        glVertex2d(x + rmax*cos(alpha), y + rmax*sin(alpha));
+        glVertex2d(x + rmax*cos(alpha+dalpha), y + rmax*sin(alpha+dalpha));
+        glVertex2d(x + rmin*cos(alpha+dalpha), y + rmin*sin(alpha+dalpha));
+        glEnd();
+    }
+    
 }
 
 
@@ -579,7 +658,7 @@ void draw_billiard()      /* draws the billiard boundary */
             }
             break; 
         }
-        case D_STADIUM:
+        case (D_STADIUM):
         {
             glBegin(GL_LINE_LOOP);
             for (i=0; i<=NSEG; i++)
@@ -613,7 +692,7 @@ void draw_billiard()      /* draws the billiard boundary */
             
             break; 
         }
-        case D_SINAI:
+        case (D_SINAI):
         {
             glColor3f(0.5, 0.5, 0.5);
             glBegin(GL_TRIANGLE_FAN);
@@ -643,7 +722,7 @@ void draw_billiard()      /* draws the billiard boundary */
 
             break; 
         }
-        case D_DIAMOND:
+        case (D_DIAMOND):
         {
             alpha = atan(1.0 - 1.0/LAMBDA);
             dphi = (PID - 2.0*alpha)/(double)NSEG;
@@ -1351,6 +1430,67 @@ void draw_billiard()      /* draws the billiard boundary */
                 glVertex2d(polyline[k].x2, polyline[k].y2);
                 glEnd();
             }
+            
+            if (FOCI)
+            {
+                switch (POLYLINE_PATTERN) {
+                    case (P_TOKARSKY):
+                    {
+                        glLineWidth(2);
+                        rgb[0] = 1.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+                        draw_colored_circle(-0.95, 0.0, r, NSEG, rgb);
+                        rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
+                        draw_colored_circle(0.95, 0.0, r, NSEG, rgb);
+                        break;
+                    }
+                    case (P_TOKA_PRIME):
+                    {
+                        glLineWidth(2);
+                        rgb[0] = 1.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+                        draw_colored_circle(-polyline[84].x1, polyline[84].y1, r, NSEG, rgb);
+                        rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
+                        draw_colored_circle(polyline[84].x1, polyline[84].y1, r, NSEG, rgb);
+                        break;
+                    }
+                    case (P_TOKA_NONSELF):
+                    {
+                        glLineWidth(2);
+                        rgb[0] = 0.0;   rgb[1] = 0.8;   rgb[2] = 0.2;
+                        draw_colored_circle(0.0, 0.0, r, NSEG, rgb);
+                        break;
+                    }
+                }
+            }
+            if (ABSORBING_CIRCLES)
+            {
+                rgb[0] = 0.7;   rgb[1] = 0.7;   rgb[2] = 0.7;
+                for (k=0; k<ncircles; k++) draw_colored_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG, rgb);
+            }
+            break; 
+        }        
+        case (D_POLYLINE_ARCS):
+        {
+            for (k=0; k<nsides; k++)
+            {
+                glBegin(GL_LINE_STRIP);    
+                glVertex2d(polyline[k].x1, polyline[k].y1);
+                glVertex2d(polyline[k].x2, polyline[k].y2);
+                glEnd();
+            }
+            
+            for (k=0; k<narcs; k++)
+            {
+                glBegin(GL_LINE_STRIP); 
+                for (i=0; i<=NSEG; i++)
+                {
+                    phi = arcs[k].angle1 + (double)i*(arcs[k].dangle)/(double)NSEG;
+                    x = arcs[k].xc + arcs[k].radius*cos(phi);
+                    y = arcs[k].yc + arcs[k].radius*sin(phi);
+                    glVertex2d(x, y);
+                }
+                glEnd();
+            }
+            
             if (FOCI)
             {
                 switch (POLYLINE_PATTERN) {
@@ -4784,6 +4924,234 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
  }
  
 /****************************************************************************************/
+/* billiard in poylgonal line with additional circular arcs */
+/****************************************************************************************/
+
+ int pos_polyline_arc(double conf[2], double pos[2], double *alpha)
+ /* determine position on boundary of domain */
+ /* position varies between 0 and nsides */
+ /* returns number of hit setment */
+ {
+	double len, angle, rlarge = 1.0e8;
+        int nside, narc;
+        
+        nside = (int)conf[0];
+        
+        if (nside < BOUNDARY_SHIFT) 
+        {
+            return (pos_polyline(conf, pos, alpha));    /* position is on a line segment */
+        }
+        else    /* position is on a circular arc */
+        {
+            narc = nside - BOUNDARY_SHIFT;
+            if (narc > narcs) return(0);
+            
+            len = conf[0] - (double)nside;
+            angle = arcs[narc].angle1 + len*(arcs[narc].dangle);
+            
+            pos[0] = arcs[narc].xc + arcs[narc].radius*cos(angle);
+            pos[1] = arcs[narc].yc + arcs[narc].radius*sin(angle);
+            
+            *alpha = angle + PID + conf[1];
+            
+            return(narc + BOUNDARY_SHIFT);
+        }
+ }
+ 
+ 
+ int vpolyline_arc_xy(double config[8], double alpha, double pos[2])
+ /* determine initial configuration for start at point pos = (x,y) */
+ {
+	double c0, s0, x1, y1, a, b, c, t, dx, delta, s, xi, yi, angle, margin = 1.0e-12, tmin, rlarge = 1.0e8;
+        double tval[nsides + ncircles], xint[nsides + ncircles], yint[nsides + ncircles], sint[nsides + ncircles], 
+        aint[nsides + ncircles];
+	int i, nt = 0, nsegment[nsides + ncircles], narc[nsides + ncircles], ntmin, sign, type[nsides + ncircles];
+
+        c0 = cos(alpha);
+        s0 = sin(alpha);
+        
+        /* look for intersections with line segments */
+        for (i=0; i<nsides; i++) 
+        {
+//             printf("testing side %i\n", i);
+            
+            a = polyline[i].y2 - polyline[i].y1;
+            b = - polyline[i].x2 + polyline[i].x1;
+            c = -a*polyline[i].x1 - b*polyline[i].y1;
+            
+//             printf("a = %.2f, b = %.2f, c = %.2f\n", a, b, c);
+            
+            delta = a*c0 + b*s0;
+            if (vabs(delta) > margin)     /* there is an intersection with the line containing segment i */
+            {
+                t = -(a*pos[0] + b*pos[1] + c)/delta; 
+                if (t > margin) 
+                {
+                    xi = pos[0] + t*c0;
+                    yi = pos[1] + t*s0;
+                    dx = polyline[i].x2 - polyline[i].x1;
+                    
+                    if (vabs(dx) > margin) s = (xi - polyline[i].x1)/dx; 
+                    else s = (yi - polyline[i].y1)/(polyline[i].y2 - polyline[i].y1); 
+//                     printf("s = %.2f\n", s);
+                    
+                    if ((s >= 0.0)&&(s <= 1.0))     
+                    /* the intersection is on the segment */
+                    {
+                        nsegment[nt] = i;
+                        tval[nt] = t;
+                        sint[nt] = s;
+//                         xint[nt] = pos[0] + t*c0;
+//                         yint[nt] = pos[1] + t*s0;
+                        xint[nt] = xi;
+                        yint[nt] = yi;
+                        type[nt] = 0;
+//                         printf("s = %.2f, x = %.2f, y = %.2f\n", s, xint[nt], yint[nt]);
+                        nt++;                        
+                    }
+                }
+            }
+        }
+        
+        /* look for intersections with arcs */
+        for (i=0; i<narcs; i++)
+        {
+            x1 = pos[0] - arcs[i].xc;
+            y1 = pos[1] - arcs[i].yc;
+            
+            b = x1*c0 + y1*s0;
+            c = x1*x1 + y1*y1 - arcs[i].radius*arcs[i].radius;
+            
+            if (b*b - c > margin) for (sign=-1; sign<=1; sign+=2)
+            {
+                t = -b + (double)sign*sqrt(b*b - c);
+                if (t > margin)
+                {
+                    xi = pos[0] + t*c0;
+                    yi = pos[1] + t*s0;
+                    
+                    angle = argument(xi - arcs[i].xc, yi - arcs[i].yc);
+                    if (angle < 0.0) angle += DPI;
+                    
+                    if ((angle > arcs[i].angle1)&&(angle < arcs[i].angle1 + arcs[i].dangle))
+                    {
+                        narc[nt] = i;
+                        tval[nt] = t;
+                        sint[nt] = (angle - arcs[i].angle1)/(arcs[i].dangle);
+                        xint[nt] = xi;
+                        yint[nt] = yi;
+                        aint[nt] = angle;
+                        type[nt] = 1;
+//                         printf("s = %.2f, x = %.2f, y = %.2f\n", sint[nt], xint[nt], yint[nt]);
+                        nt++;
+                    }
+                }
+            }
+        }
+        
+        if (ABSORBING_CIRCLES) for (i=0; i<ncircles; i++) 
+        {
+            b = (pos[0]-circles[i].xc)*c0 + (pos[1]-circles[i].yc)*s0;
+            c = (pos[0]-circles[i].xc)*(pos[0]-circles[i].xc) + (pos[1]-circles[i].yc)*(pos[1]-circles[i].yc) - circles[i].radius*circles[i].radius;
+        
+            delta = b*b - c;
+            if (delta > margin)     /* there is an intersection with circle i */
+            {
+                t = -b - sqrt(delta);            
+                if (t > margin) 
+                {
+                    nsegment[nt] = -1-i;
+                
+                    tval[nt] = t;
+                    xint[nt] = pos[0] + t*c0;
+                    yint[nt] = pos[1] + t*s0;
+                    sint[nt] = argument(xint[nt] - circles[i].xc, yint[nt] - circles[i].yc);
+
+                    nt++;
+                }
+            }
+        }
+        
+        if (nt > 0)     /* there is at least one intersection */
+        {
+            /* find earliest intersection */
+            tmin = tval[0];
+            ntmin = 0;
+            for (i=1; i<nt; i++) 
+            if (tval[i] < tmin) 
+            {
+                tmin = tval[i];
+                ntmin = i;
+            }
+            
+//             printf("ntmin = %i\n", ntmin); 
+            if ((nsegment[ntmin] >= 0)&&(type[ntmin] == 0))     /* first intersection is with a segment */
+            {
+                config[0] = (double)nsegment[ntmin] + sint[ntmin];
+                config[1] = polyline[nsegment[ntmin]].angle - alpha;        
+                if (config[1] < 0.0) config[1] += DPI;
+                if (config[1] >= PI) config[1] -= DPI;
+            }
+//             else if ((narc[ntmin] >= 0)&&(type[ntmin] == 1))    /* first intersection is with a segment */
+            else if ((type[ntmin] == 1))    /* first intersection is with an arc */
+            {
+                config[0] = BOUNDARY_SHIFT + (double)narc[ntmin] + sint[ntmin]; 
+                config[1] = PID + aint[ntmin] - alpha;        
+                if (config[1] < 0.0) config[1] += DPI;
+                if (config[1] >= DPI) config[1] -= DPI;
+                
+//                 printf("s = %.2f, alpha = %.2f, normal = %.2f, theta = %.2f\n", config[0], alpha*180.0/PI, aint[ntmin]*180.0/PI, config[1]*180.0/PI);
+            }
+            /* set dummy coordinates if circles are absorbing */
+            else if ((ABSORBING_CIRCLES)&&(nsegment[ntmin] < 0))
+            {
+                config[0] = DUMMY_ABSORBING;
+                config[1] = PI;
+            }
+            config[2] = 0.0;	/* running time */ 
+            config[3] = module2(xint[ntmin]-pos[0], yint[ntmin]-pos[1]);     /* distance to collision */
+            config[4] = pos[0];    /* start position */
+            config[5] = pos[1];
+            config[6] = xint[ntmin];        /* position of collision */
+            config[7] = yint[ntmin];
+            
+            
+//             print_config(config);
+            
+            /* returned value should be positive for end of trajectory detection */
+            if (nsegment[ntmin] > 0) return(nsegment[ntmin]);
+            else return(BOUNDARY_SHIFT-nsegment[ntmin]);
+        }
+        else    /* there is no intersection - set dummy values */
+        {
+            config[0] = DUMMY_ABSORBING;
+            config[1] = PI;
+            config[2] = 0.0;
+            config[3] = rlarge;
+            config[4] = pos[0];    /* start position */
+            config[5] = pos[1];
+            config[6] = rlarge*cos(alpha);
+            config[7] = rlarge*sin(alpha);
+            
+            return(-1);
+        }
+ }
+
+ int vpolyline_arc(double config[8])
+ /* determine initial configuration when starting from boundary */
+  {
+	double pos[2], alpha;
+	int c;
+
+        c = pos_polyline_arc(config, pos, &alpha);
+        
+        vpolyline_arc_xy(config, alpha, pos);
+//         c = vpolyline_xy(config, alpha, pos);
+	
+	return(c);
+ }
+ 
+/****************************************************************************************/
 /* general billiard */
 /****************************************************************************************/
  
@@ -4889,6 +5257,11 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         case (D_POLYLINE):
         {
             return(pos_polyline(conf, pos, alpha));
+            break;
+        }
+        case (D_POLYLINE_ARCS):
+        {
+            return(pos_polyline_arc(conf, pos, alpha));
             break;
         }
         default: 
@@ -5002,6 +5375,11 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         case (D_POLYLINE):
         {
             return(vpolyline_xy(config, alpha, pos));
+            break;
+        }
+        case (D_POLYLINE_ARCS):
+        {
+            return(vpolyline_arc_xy(config, alpha, pos));
             break;
         }
         default: 
@@ -5158,6 +5536,13 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             c = pos_polyline(config, pos, &alpha);
         
             return(vpolyline(config));
+            break;
+        }
+        case (D_POLYLINE_ARCS):
+        {
+            c = pos_polyline_arc(config, pos, &alpha);
+        
+            return(vpolyline_arc(config));
             break;
         }
         default: 
@@ -5378,7 +5763,21 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         {
             /* not easy to implement for non-convex polygons */
             if (POLYLINE_PATTERN == P_MAZE) return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
-            else if (POLYLINE_PATTERN == P_MAZE_DIAG) return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
+            else if ((POLYLINE_PATTERN == P_MAZE_DIAG)||(POLYLINE_PATTERN == P_MAZE_RANDOM)) 
+                return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
+            else if ((POLYLINE_PATTERN == P_MAZE_CIRCULAR)||(POLYLINE_PATTERN == P_MAZE_HEX))
+                return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
+            else return(1);
+            break;
+        }
+        case D_POLYLINE_ARCS:
+        {
+            /* not easy to implement for non-convex polygons */
+            if (POLYLINE_PATTERN == P_MAZE) return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
+            else if ((POLYLINE_PATTERN == P_MAZE_DIAG)||(POLYLINE_PATTERN == P_MAZE_RANDOM)) 
+                return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
+            else if (POLYLINE_PATTERN == P_MAZE_CIRCULAR) 
+                return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
             else return(1);
             break;
         }
@@ -5744,13 +6143,402 @@ int axial_symmetry_tsegment(t_segment z1, t_segment z2, t_segment z, t_segment *
     return(1);
 }
 
-void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
+
+void init_polyline_circular_maze(t_segment* polyline, t_circle* circles, t_arc* arcs, t_maze* maze)
 {
-    int i, j, k, l, n, z, ii, jj, terni[SDEPTH], ternj[SDEPTH], quater[SDEPTH], cond;
+    int nblocks, block, i, j, n, p, q;
+    double rmin, rmax, angle, r, dr, phi, dphi, ww; 
+            
+    /* build walls of maze */
+    nblocks = NYMAZE/NXMAZE;
+    rmin = 0.15;
+    rmax = 1.0;
+    angle = DPI/(double)nblocks;
+        
+    dr = (rmax - rmin)/(double)(NXMAZE);
+        
+    nsides = 0;
+    ncircles = 0;
+    
+    /* add straight walls */
+    for (block = 0; block < nblocks; block++)
+    {
+        dphi = angle;
+        
+        /* first circle */
+        n = nmaze(0, block*NXMAZE);
+        r = rmin;
+        phi = (double)block*angle;
+        
+        if (maze[n].south)
+        {
+            polyline[nsides].x1 = r*cos(phi) + MAZE_XSHIFT;
+            polyline[nsides].y1 = r*sin(phi);
+            polyline[nsides].x2 = (r+dr)*cos(phi) + MAZE_XSHIFT;
+            polyline[nsides].y2 = (r+dr)*sin(phi);
+            polyline[nsides].angle = phi;
+            nsides++;
+        }
+                
+        /* second circle */
+        r = rmin + dr;
+        dphi *= 0.5;
+        for (q=0; q<2; q++)
+        {
+            n = nmaze(1, block*NXMAZE + q);
+            phi = (double)(block)*angle + (double)q*dphi;
+            
+            if (maze[n].south)
+            {
+                polyline[nsides].x1 = r*cos(phi) + MAZE_XSHIFT;
+                polyline[nsides].y1 = r*sin(phi);
+                polyline[nsides].x2 = (r+dr)*cos(phi) + MAZE_XSHIFT;
+                polyline[nsides].y2 = (r+dr)*sin(phi);
+                polyline[nsides].angle = phi;
+                nsides++;
+            }
+        }
+                
+        /* other circles */
+        ww = 2;
+        i = 2;
+        while (ww < NXMAZE)
+        {
+            dphi *= 0.5;
+            for (p = 0; p < ww; p++)
+            {
+                r = rmin + (double)i*dr;
+//                 printf("Segment, i = %i, dphi = %.2lg, r = %.2lg\n", i, dphi, r);
+                for (q = 0; q < 2*ww; q++)
+                {
+                    j = block*NXMAZE + q;
+                    n = nmaze(i,j);
+                    phi = (double)(block)*angle + (double)q*dphi;
+                    
+                    if (maze[n].south)
+                    {
+                        polyline[nsides].x1 = r*cos(phi) + MAZE_XSHIFT;
+                        polyline[nsides].y1 = r*sin(phi);
+                        polyline[nsides].x2 = (r+dr)*cos(phi) + MAZE_XSHIFT;
+                        polyline[nsides].y2 = (r+dr)*sin(phi);
+                        polyline[nsides].angle = phi;
+                        nsides++;
+                    }
+                }
+                i++;
+            }
+            ww *= 2;
+        }
+                
+    }
+            
+    /* add circular arcs */
+    narcs = 0;
+    
+    for (block = 0; block < nblocks; block++)
+    {
+        dphi = angle;
+        
+        /* first circle */
+        n = nmaze(0, block*NXMAZE);
+        r = rmin;
+        phi = (double)block*angle;
+        
+        if ((block > 0)&&(maze[n].west))
+        {
+            arcs[narcs].xc = MAZE_XSHIFT;
+            arcs[narcs].yc = 0.0;
+            arcs[narcs].radius = r;
+            arcs[narcs].angle1 = phi;
+            arcs[narcs].dangle = dphi;
+            narcs++;
+        }
+                
+        /* second circle */
+        r = rmin + dr;
+        dphi *= 0.5;
+        for (q=0; q<2; q++)
+        {
+            n = nmaze(1, block*NXMAZE + q);
+            phi = (double)(block)*angle + (double)q*dphi;
+            
+            if (maze[n].west)
+            {
+                arcs[narcs].xc = MAZE_XSHIFT;
+                arcs[narcs].yc = 0.0;
+                arcs[narcs].radius = r;
+                arcs[narcs].angle1 = phi;
+                arcs[narcs].dangle = dphi;
+                narcs++;
+            }
+        }
+                
+        /* other circles */
+        ww = 2;
+        i = 2;
+        while (ww < NXMAZE)
+        {
+            dphi *= 0.5;
+            for (p = 0; p < ww; p++)
+            {
+                r = rmin + (double)i*dr;
+                printf("Circle, i = %i, dphi = %.2lg, r = %.2lg\n", i, dphi, r);
+                for (q = 0; q < 2*ww; q++)
+                {
+                    j = block*NXMAZE + q;
+                    n = nmaze(i,j);
+                    phi = (double)(block)*angle + (double)q*dphi;
+                    
+                    if (maze[n].west)
+                    {
+                        arcs[narcs].xc = MAZE_XSHIFT;
+                        arcs[narcs].yc = 0.0;
+                        arcs[narcs].radius = r;
+                        arcs[narcs].angle1 = phi;
+                        arcs[narcs].dangle = dphi;
+                        narcs++;
+                    }
+                }
+                i++;
+            }
+            ww *= 2;
+        }
+    }
+    
+    /* outer boundary of maze */
+    arcs[narcs].xc = MAZE_XSHIFT;
+    arcs[narcs].yc = 0.0;
+    arcs[narcs].radius = rmax;
+    arcs[narcs].angle1 = dphi;
+    arcs[narcs].dangle = DPI - dphi;
+    narcs++;
+            
+}
+
+void init_polyline_hex_maze(t_segment* polyline, t_circle* circles, t_maze* maze)
+{
+    int i, j, n;
+    double r, r1, x1, y1, padding = 0.02, h; 
+            
+    r = 2.0*(YMAX - YMIN)/(3.0*((double)(NXMAZE)-0.5));
+    r1 = (YMAX - YMIN)/(sqrt(3.0)*(double)(NYMAZE+1));
+    if (r1 < r) r = r1;
+    h = 0.5*sqrt(3.0)*r;
+    
+    for (i = 0; i < NXMAZE; i++)
+        for (j = 0; j < NYMAZE; j++)
+        {
+            n = nmaze(i, j);
+            x1 = YMIN + padding + 1.5*(double)i*r + MAZE_XSHIFT;
+            y1 = YMIN + padding + h + 2.0*(double)j*h;
+            if (i%2 == 0) y1 += h;
+            
+            if (((i>0)||(j!=NYMAZE/2))&&(maze[n].southwest)) 
+            {
+                polyline[nsides].x1 = x1 - 0.5*r;
+                polyline[nsides].y1 = y1 - h;
+                polyline[nsides].x2 = x1 - r;
+                polyline[nsides].y2 = y1;
+                polyline[nsides].angle = DPI/3.0;
+                nsides++;
+            }
+            
+            if (maze[n].south) 
+            {
+                polyline[nsides].x1 = x1 - 0.5*r;
+                polyline[nsides].y1 = y1 - h;
+                polyline[nsides].x2 = x1 + 0.5*r;
+                polyline[nsides].y2 = y1 - h;
+                polyline[nsides].angle = 0.0;
+                nsides++;
+            }
+            
+            if (maze[n].northwest)
+            {
+                polyline[nsides].x1 = x1 - r;
+                polyline[nsides].y1 = y1;
+                polyline[nsides].x2 = x1 - 0.5*r;
+                polyline[nsides].y2 = y1 + h;
+                polyline[nsides].angle = PI/3.0;
+                nsides++;
+            }
+            
+            if (((j==0)||(i==NXMAZE-1))&&(maze[n].southeast))
+            {
+                polyline[nsides].x1 = x1 + 0.5*r;
+                polyline[nsides].y1 = y1 - h;
+                polyline[nsides].x2 = x1 + r;
+                polyline[nsides].y2 = y1;
+                polyline[nsides].angle = PI/3.0;
+                nsides++;
+            }
+            
+            if ((j==NYMAZE-1)&&(maze[n].north))
+            {
+                polyline[nsides].x1 = x1 - 0.5*r;
+                polyline[nsides].y1 = y1 + h;
+                polyline[nsides].x2 = x1 + 0.5*r;
+                polyline[nsides].y2 = y1 + h;
+                polyline[nsides].angle = 0.0;
+                nsides++;
+            }
+            
+            if (((j==NYMAZE-1)||((i==NXMAZE-1)&&(j!=NYMAZE/2-1)))&&(maze[n].northeast))
+            {
+                polyline[nsides].x1 = x1 + r;
+                polyline[nsides].y1 = y1;
+                polyline[nsides].x2 = x1 + 0.5*r;
+                polyline[nsides].y2 = y1 + h;
+                polyline[nsides].angle = DPI/3.0;
+                nsides++;
+            }
+        }
+    /* left side of maze */
+    x1 = YMIN + padding + MAZE_XSHIFT - 0.5*r;
+    y1 = YMIN + padding + h;
+    polyline[nsides].x1 = x1 + 1.5*r;
+    polyline[nsides].y1 = YMIN - MAZE_VERTICAL_EXTENSION;
+    polyline[nsides].x2 = x1 + 1.5*r;
+    polyline[nsides].y2 = y1 - h;
+    polyline[nsides].angle = PID;
+    nsides++;
+            
+    y1 = YMIN + padding + 3.0*h + 2.0*(double)(NYMAZE-1)*h;
+    polyline[nsides].x1 = x1;
+    polyline[nsides].y1 = y1;
+    polyline[nsides].x2 = x1;
+    polyline[nsides].y2 = YMAX + MAZE_VERTICAL_EXTENSION;
+    polyline[nsides].angle = PID;
+    nsides++;
+            
+    /* right side of maze */
+    x1 = YMIN + padding + 1.5*(double)(NXMAZE-1)*r + MAZE_XSHIFT + 0.5*r;
+    y1 = YMIN + padding;
+    polyline[nsides].x1 = x1;
+    polyline[nsides].y1 = YMIN - MAZE_VERTICAL_EXTENSION;
+    polyline[nsides].x2 = x1;
+    polyline[nsides].y2 = y1;
+    polyline[nsides].angle = PID;
+    nsides++;
+            
+    y1 = YMIN + padding + 2.0*h + 2.0*(double)(NYMAZE-1)*h;
+    polyline[nsides].x1 = x1 - 1.5*r;
+    polyline[nsides].y1 = y1 + h;
+    polyline[nsides].x2 = x1 - 1.5*r;
+    polyline[nsides].y2 = YMAX + MAZE_VERTICAL_EXTENSION;
+    polyline[nsides].angle = PID;
+    nsides++;
+    
+    /* add circular arcs in corners */
+    if (B_DOMAIN == D_POLYLINE_ARCS)
+    {
+        narcs = 0;
+        
+        for (i=0; i<NXMAZE; i++)
+            for (j=0; j<NYMAZE; j++)
+            {
+                n = nmaze(i, j);
+                x1 = YMIN + padding + 1.5*(double)i*r + MAZE_XSHIFT;
+                y1 = YMIN + padding + h + 2.0*(double)j*h;
+                if (i%2 == 0) y1 += h;
+                    
+                if (((i < NXMAZE-1)||(j!=NYMAZE/2-1))&&(maze[n].northeast)&&(maze[n].north)) 
+                {
+                    arcs[narcs].xc = x1;
+                    arcs[narcs].yc = y1;
+                    arcs[narcs].radius = h;
+                    arcs[narcs].dangle = PI/3.0;
+                    arcs[narcs].angle1 = PI/6.0;
+                    narcs++;
+                }
+                if (((i > 0)||(j!=NYMAZE/2))&&(maze[n].north)&&(maze[n].northwest)) 
+                {
+                    arcs[narcs].xc = x1;
+                    arcs[narcs].yc = y1;
+                    arcs[narcs].radius = h;
+                    arcs[narcs].dangle = PI/3.0;
+                    arcs[narcs].angle1 = PID;
+                    narcs++;
+                }        
+                if (((i > 0)||(j!=NYMAZE/2))&&(maze[n].northwest)&&(maze[n].southwest)) 
+                {
+                    arcs[narcs].xc = x1;
+                    arcs[narcs].yc = y1;
+                    arcs[narcs].radius = h;
+                    arcs[narcs].dangle = PI/3.0;
+                    arcs[narcs].angle1 = 5.0*PI/6.0;
+                    narcs++;
+                }        
+                if (((i > 0)||(j!=NYMAZE/2))&&(maze[n].southwest)&&(maze[n].south)) 
+                {
+                    arcs[narcs].xc = x1;
+                    arcs[narcs].yc = y1;
+                    arcs[narcs].radius = h;
+                    arcs[narcs].dangle = PI/3.0;
+                    arcs[narcs].angle1 = 7.0*PI/6.0;
+                    narcs++;
+                }        
+                if (((i > 0)||(j!=NYMAZE/2))&&(maze[n].south)&&(maze[n].southeast)) 
+                {
+                    arcs[narcs].xc = x1;
+                    arcs[narcs].yc = y1;
+                    arcs[narcs].radius = h;
+                    arcs[narcs].dangle = PI/3.0;
+                    arcs[narcs].angle1 = 3.0*PID;
+                    narcs++;
+                }        
+                if (((i < NXMAZE-1)||(j!=NYMAZE/2-1))&&(maze[n].southeast)&&(maze[n].northeast)) 
+                {
+                    arcs[narcs].xc = x1;
+                    arcs[narcs].yc = y1;
+                    arcs[narcs].radius = h;
+                    arcs[narcs].dangle = PI/3.0;
+                    arcs[narcs].angle1 = 11.0*PI/6.0;
+                    narcs++;
+                }        
+            }
+    }
+}
+
+// (()||())&&
+
+void compute_maze_boundaries(int type, double *xmin, double *xmax)
+{
+    double r, r1, h, padding = 0.02;
+    
+    switch (type) {
+        case (P_MAZE_HEX):
+        {
+            r = 2.0*(YMAX - YMIN)/(3.0*((double)(NXMAZE)-0.5));
+            r1 = 2.0*(YMAX - YMIN)/(sqrt(3.0)*(double)(NYMAZE));
+            if (r1 < r) r = r1;
+            
+            *xmin = YMIN + padding + MAZE_XSHIFT - 2.0*r;
+            *xmax = YMIN + padding + 1.5*(double)(NXMAZE-1)*r + MAZE_XSHIFT + 2.0*r;
+            
+            printf("xmin = %.3lg, xmax = %.3lg\n", *xmin, *xmax);
+            break;
+        }
+        default:
+        {
+            *xmin = YMIN + MAZE_XSHIFT; 
+            *xmax = YMAX + MAZE_XSHIFT;
+            break;
+        }
+    }
+    
+}
+
+void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], t_arc arcs[NMAXCIRCLES])
+{
+    int i, j, k, l, n, z, ii, jj, terni[SDEPTH], ternj[SDEPTH], quater[SDEPTH], cond, p, q, block, nblocks, ww;
     short int vkoch[NMAXCIRCLES], turnright; 
-    double ratio, omega, angle, sw, length, dist, x, y, ta, tb, a, b,
-    x1, y1, x2, y2, dx, dy, padding = 0.02, width = 0.01;
+    double ratio, omega, angle, sw, length, dist, x, y, ta, tb, a, b, ra, rb, r, 
+    x1, y1, x2, y2, dx, dy, padding = 0.02, width = 0.01, xright, yright, xtop, ytop, rand_factor, rmin, rmax, dr, phi, dphi, rscat;
+    double *maze_coords;
     t_maze* maze;
+    
+    narcs = 0;      /* default value */
     
     switch (POLYLINE_PATTERN) {
         case (P_RECTANGLE):
@@ -6203,10 +6991,8 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
                         polyline[nsides].x2 = x1;
                         polyline[nsides].y2 = y1 + dy;
                         polyline[nsides].angle = PID;
-                        
-//                         add_rectangle_to_segments(x1, y1, x1 - width, y1 + dy, segment, 0);
+                        nsides++;
                     }
-                    nsides++;
                     
                     if (maze[n].south) 
                     {
@@ -6215,11 +7001,8 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
                         polyline[nsides].x2 = x1 + dx;
                         polyline[nsides].y2 = y1;
                         polyline[nsides].angle = 0.0;
-
-//                         add_rectangle_to_segments(x1, y1, x1 + dx, y1 - width, segment, 0);
+                        nsides++;
                     }
-                    
-                    nsides++;
                 }
     
             /* top side of maze */
@@ -6262,6 +7045,63 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
             polyline[nsides].y2 = YMAX + 1000.0;
             polyline[nsides].angle = PID;
             nsides++;
+            
+            /* add circular arcs in corners */
+            if (B_DOMAIN == D_POLYLINE_ARCS)
+            {
+                narcs = 0;
+                
+                for (i=0; i<NXMAZE; i++)
+                    for (j=0; j<NYMAZE; j++)
+                    {
+                        n = nmaze(i, j);
+                        x1 = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
+                        y1 = YMIN + padding + (double)j*dy;
+                        
+                        ra = MAZE_CORNER_RADIUS;
+                        rb = 1.0 - MAZE_CORNER_RADIUS;
+            
+                        if (((i>0)||(j!=NYMAZE/2))&&(maze[n].south)&&(maze[n].west)) 
+                        {
+                            arcs[narcs].xc = x1 + ra*dx;
+                            arcs[narcs].yc = y1 + ra*dy;
+                            arcs[narcs].radius = ra*dx;
+                            arcs[narcs].angle1 = PI;
+                            arcs[narcs].dangle = PID;
+                            narcs++;
+                        }
+                        
+                        if (((i<NXMAZE-1)||(j!=NYMAZE/2-1))&&(maze[n].south)&&(maze[n].east)) 
+                        {
+                            arcs[narcs].xc = x1 + rb*dx;
+                            arcs[narcs].yc = y1 + ra*dy;
+                            arcs[narcs].radius = ra*dx;
+                            arcs[narcs].angle1 = 3.0*PID;
+                            arcs[narcs].dangle = PID;
+                            narcs++;
+                        }
+                    
+                        if (((i<NXMAZE-1)||(j!=NYMAZE/2-1))&&(maze[n].north)&&(maze[n].east)) 
+                        {
+                            arcs[narcs].xc = x1 + rb*dx;
+                            arcs[narcs].yc = y1 + rb*dy;
+                            arcs[narcs].radius = ra*dx;
+                            arcs[narcs].angle1 = 0.0;
+                            arcs[narcs].dangle = PID;
+                            narcs++;
+                        }
+                    
+                        if (((i>0)||(j!=NYMAZE/2))&&(maze[n].north)&&(maze[n].west)) 
+                        {
+                            arcs[narcs].xc = x1 + ra*dx;
+                            arcs[narcs].yc = y1 + rb*dy;
+                            arcs[narcs].radius = ra*dx;
+                            arcs[narcs].angle1 = PID;
+                            arcs[narcs].dangle = PID;
+                            narcs++;
+                        }
+                    }
+            }
     
             free(maze);
             break;
@@ -6278,6 +7118,9 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
             
             nsides = 0;
             ncircles = 0;
+            
+            /* deactivate sides for openings */
+            maze[nmaze(0,NYMAZE/2)].west = 0;
     
             for (i=0; i<NXMAZE; i++)
                 for (j=0; j<NYMAZE; j++)
@@ -6317,7 +7160,7 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
                     x1 = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
                     y1 = YMIN + padding + (double)j*dy;
             
-                    if ((maze[n].south)&&(maze[n].west)) 
+                    if (((i>0)||(j!=NYMAZE/2))&&(maze[n].south)&&(maze[n].west)) 
                     {
                         polyline[nsides].x1 = x1 + 0.25*dx;
                         polyline[nsides].y1 = y1;
@@ -6327,8 +7170,8 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
                         nsides++;
                     }
                     
-                    if ((maze[n].south)&&(maze[n].east)) 
-                    {
+//                     if ((maze[n].south)&&(maze[n].east)) 
+                    if (((i<NXMAZE-1)||(j!=NYMAZE/2-1))&&(maze[n].south)&&(maze[n].east)) {
                         polyline[nsides].x1 = x1 + 0.75*dx;
                         polyline[nsides].y1 = y1;
                         polyline[nsides].x2 = x1 + dx;
@@ -6337,8 +7180,9 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
                         nsides++;
                     }
                     
-                    if ((maze[n].north)&&(maze[n].east)) 
-                    {
+//                     if ((maze[n].north)&&(maze[n].east)) 
+                    if (((i<NXMAZE-1)||(j!=NYMAZE/2-1))&&(maze[n].north)&&(maze[n].east)) 
+                        {
                         polyline[nsides].x1 = x1 + dx;
                         polyline[nsides].y1 = y1 + 0.75*dy;
                         polyline[nsides].x2 = x1 + 0.75*dx;
@@ -6347,7 +7191,7 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
                         nsides++;
                     }
                     
-                    if ((maze[n].north)&&(maze[n].west)) 
+                    if (((i>0)||(j!=NYMAZE/2))&&(maze[n].north)&&(maze[n].west)) 
                     {
                         polyline[nsides].x1 = x1;
                         polyline[nsides].y1 = y1 + 0.75*dy;
@@ -6402,6 +7246,249 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES])
             free(maze);
             break;
         }
+        case (P_MAZE_RANDOM):
+        {
+            maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+            maze_coords = (double *)malloc(2*NXMAZE*NYMAZE*sizeof(double));
+    
+            init_maze_exit(0, NYMAZE/2, maze);
+            
+            /* build walls of maze */
+            dx = (YMAX - YMIN - 2.0*padding)/(double)(NXMAZE);
+            dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+            
+            /* compute maze coordinates with random shift */
+            for (i=0; i<NXMAZE; i++)
+                for (j=0; j<NYMAZE; j++)
+                {
+                    n = nmaze(i, j);
+                    maze_coords[2*n] = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
+                    maze_coords[2*n+1] = YMIN + padding + (double)j*dy;
+                }  
+                
+            for (i=1; i<NXMAZE-1; i++)
+                for (j=1; j<NYMAZE-1; j++)
+                {
+                    n = nmaze(i, j);
+                    maze_coords[2*n] += MAZE_RANDOM_FACTOR*dx*rand()/RAND_MAX;
+                    maze_coords[2*n+1] += MAZE_RANDOM_FACTOR*dy*rand()/RAND_MAX;
+                }  
+                
+//             for (j=0; j<NYMAZE; j++) for (i=0; i<NXMAZE; i++)
+//             {
+//                 n = nmaze(i, j);
+//                 printf("i=%i, j=%i, coord[%i]=%.2lg, coord[%i]=%.2lg\n", i, j, 2*n, maze_coords[2*n], 2*n+1, maze_coords[2*n+1]);
+//             }
+//             sleep(3);
+            
+            nsides = 0;
+            ncircles = 0;
+    
+            for (i=0; i<NXMAZE; i++)
+                for (j=0; j<NYMAZE; j++)
+                {
+                    n = nmaze(i, j);
+                    x1 = maze_coords[2*n];
+                    y1 = maze_coords[2*n+1];
+                    xright = x1 + dx;
+                    yright = y1;
+                    xtop = x1;
+                    ytop = y1 + dy;
+//                     printf("i=%i, j=%i, x1=%.3lg, y1=%.3lg, x1+=%.3lg, y1+=%.3lg\n", i, j, x1, y1, xright, yright);
+                    if (i<NXMAZE-1) 
+                    {
+                        xright = maze_coords[2*nmaze(i+1, j)];
+                        yright = maze_coords[2*nmaze(i+1, j)+1];
+                    }
+                    if (j<NYMAZE-1) 
+                    {
+                        xtop = maze_coords[2*nmaze(i, j+1)];
+                        ytop = maze_coords[2*nmaze(i, j+1)+1];
+                    }
+//                     printf("i=%i, j=%i, x1=%.3lg, y1=%.3lg, x1+=%.3lg, y1+=%.3lg\n\n", i, j, x1, y1, xright, yright);
+            
+                    if (((i>0)||(j!=NYMAZE/2))&&(maze[n].west)) 
+                    {
+                        polyline[nsides].x1 = x1;
+                        polyline[nsides].y1 = y1;
+                        polyline[nsides].x2 = xtop;
+                        polyline[nsides].y2 = ytop;
+                        polyline[nsides].angle = PID;
+                        nsides++;
+                    }
+                    
+                    if (maze[n].south) 
+                    {
+                        polyline[nsides].x1 = x1;
+                        polyline[nsides].y1 = y1;
+                        polyline[nsides].x2 = xright;
+                        polyline[nsides].y2 = yright;
+                        polyline[nsides].angle = 0.0;
+                        nsides++;
+                    }
+                }
+//             sleep(3);
+    
+            /* top side of maze */
+            polyline[nsides].x1 = YMIN + padding + MAZE_XSHIFT;
+            polyline[nsides].y1 = YMAX - padding;
+            polyline[nsides].x2 = YMAX - padding + MAZE_XSHIFT;
+            polyline[nsides].y2 = YMAX - padding;
+            polyline[nsides].angle = 0.0;
+            nsides++;
+    
+            /* right side of maze */
+            y1 = YMIN + padding + dy*((double)NYMAZE/2);
+            x1 = YMAX - padding + MAZE_XSHIFT;
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = YMIN - 1000.0;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = y1 - dy;
+            polyline[nsides].angle = PID;
+            nsides++;
+            
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = y1;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = YMAX + 1000.0;
+            polyline[nsides].angle = PID;
+            nsides++;
+    
+            /* left side of maze */
+            x1 = YMIN + padding + MAZE_XSHIFT;
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = YMIN - 1000.0;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = YMIN + padding;
+            polyline[nsides].angle = PID;
+            nsides++;
+            
+            polyline[nsides].x1 = x1;
+            polyline[nsides].y1 = YMAX - padding;
+            polyline[nsides].x2 = x1;
+            polyline[nsides].y2 = YMAX + 1000.0;
+            polyline[nsides].angle = PID;
+            nsides++;
+            
+//             ncircles = nsides;
+//             for (i=0; i<ncircles; i++)
+//             {
+//                 circles[i].xc = polyline[i].x1;
+//                 circles[i].yc = polyline[i].y1;
+//                 circles[i].radius = MU;
+//                 circles[i].active = 1;
+//             }
+    
+            free(maze);
+            free(maze_coords);
+            break;
+        }
+        case (P_MAZE_CIRCULAR):
+        {
+            maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+            
+            init_circular_maze(maze);
+            
+            init_polyline_circular_maze(polyline, circles, arcs, maze);
+            
+            free(maze);
+            
+            break;
+        }
+        case (P_MAZE_CIRC_SCATTERER):
+        {
+            
+            maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+    
+            init_circular_maze(maze);
+            
+            init_polyline_circular_maze(polyline, circles, arcs, maze);
+            
+            /* add scatterers */
+            nblocks = NYMAZE/NXMAZE;
+            rmin = 0.15;
+            rmax = 1.0;
+            angle = DPI/(double)nblocks;
+            dphi = angle;
+            
+            dr = (rmax - rmin)/(double)(NXMAZE);
+            rscat = 0.15*dr;
+                        
+            for (block = 0; block < nblocks; block++)
+            {
+                dphi = angle;
+                
+                /* first circle */
+                r = rmin;
+                phi = (double)block*angle;
+                
+                arcs[narcs].xc = rmin*cos(phi) + MAZE_XSHIFT;
+                arcs[narcs].yc = rmin*sin(phi);
+                arcs[narcs].radius = rscat;
+                arcs[narcs].angle1 = 0.0;
+                arcs[narcs].dangle = DPI;
+                narcs++;
+                
+                /* second circle */
+                dphi *= 0.5;
+                for (q=0; q<2; q++)
+                {
+                    r = rmin + dr;
+                    phi = (double)block*angle + (double)q*dphi;
+                    
+                    arcs[narcs].xc = r*cos(phi) + MAZE_XSHIFT;
+                    arcs[narcs].yc = r*sin(phi);
+                    arcs[narcs].radius = rscat;
+                    arcs[narcs].angle1 = 0.0;
+                    arcs[narcs].dangle = DPI;
+                    narcs++;
+                }
+                
+                /* other circles */
+                ww = 2;
+                i = 2;
+                while (ww < NXMAZE)
+                {
+                    dphi *= 0.5;
+                    for (p = 0; p < ww; p++)
+                    {
+                        r = rmin + (double)i*dr;
+                        for (q = 0; q < 2*ww; q++)
+                        {
+                            phi = (double)block*angle + (double)q*dphi;
+                            
+                            arcs[narcs].xc = r*cos(phi) + MAZE_XSHIFT;
+                            arcs[narcs].yc = r*sin(phi);
+                            arcs[narcs].radius = rscat;
+                            arcs[narcs].angle1 = 0.0;
+                            arcs[narcs].dangle = DPI;
+                            narcs++;
+                        }
+                        i++;
+                    }
+                    ww *= 2;
+                }
+            }
+
+            free(maze);
+            break;
+        }
+        case (P_MAZE_HEX):
+        {
+            maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+            
+            init_hex_maze(maze);
+            
+            nsides = 0;
+            ncircles = 0;
+    
+            init_polyline_hex_maze(polyline, circles, maze);
+            
+            free(maze);
+            
+            break;
+        }
+        
     }
 }
 
@@ -6566,3 +7653,319 @@ int test_initial_condition(double *configs[NPARTMAX], int active[NPARTMAX], int 
     return(counter);
 }
 
+int maze_type(int polyline_pattern)
+/* group polyline pattern by type of maze */
+{
+    switch (POLYLINE_PATTERN) {
+        case (P_MAZE): return(0);
+        case (P_MAZE_DIAG): return(0);
+        case (P_MAZE_CIRCULAR): return(1);
+        case (P_MAZE_CIRC_SCATTERER): return(1);
+        case (P_MAZE_HEX): return(2);
+        default: return(0);
+    }
+    
+}
+
+int find_maze_cell(double x, double y)
+/* return maze cell number for coordinates (x, y) */
+{
+    int i, j, n, block, q, w, k, l;
+    double padding = 0.02, x1, y1, u, v, r, phi, phi1, angle1, dphi, r1, tolerance = 0.025;
+    static double dx, dy, rmin, rmax, angle, rr, rrtol, h, dr, dphi_table[5], x0, y0;
+    static int first = 1, nblocks;
+    
+    if (first)
+    {
+        switch (maze_type(POLYLINE_PATTERN)) {
+            case (0):   /* maze with square or rectangular cells */
+            {
+                dx = (YMAX - YMIN - 2.0*padding)/(double)(NXMAZE);
+                dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+                break;
+            }
+            case (1):   /* circular maze */
+            {
+                nblocks = NYMAZE/NXMAZE;
+                rmin = 0.15;
+                rmax = 1.0;
+                angle = DPI/(double)nblocks;
+                dphi_table[0] = angle;
+                for (i=1; i<5; i++) dphi_table[i] = 0.5*dphi_table[i-1];
+        
+                dr = (rmax - rmin)/(double)(NXMAZE);
+                
+                break;
+            }
+            case (2):   /* honeycomb maze */
+            {
+                rr = 2.0*(YMAX - YMIN)/(3.0*((double)(NXMAZE)-0.5));
+                r1 = (YMAX - YMIN)/(sqrt(3.0)*(double)(NYMAZE+1));
+                if (r1 < rr) rr = r1;
+                h = 0.5*sqrt(3.0)*rr;
+                rrtol = rr*(1.0 - tolerance);
+                
+                x0 = YMIN + padding + MAZE_XSHIFT;
+                y0 = YMIN + padding + h;
+                
+                break;
+            }
+        }
+        first = 0;
+    }
+    
+    switch (maze_type(POLYLINE_PATTERN)) {
+        case (0):   /* maze with square or rectangular cells */
+        {
+            if (x < YMIN + MAZE_XSHIFT) return (-1);
+            
+            i = (int)((x - YMIN - padding - MAZE_XSHIFT)/dx);
+            j = (int)((y - YMIN - padding)/dy);
+            
+            if (i < 0) return(-1);
+            if (i > NXMAZE-1) return(-1);
+            if (j < 0) return(-1);
+            if (j > NYMAZE-1) return(-1);
+            
+            x1 = x - YMIN - padding - MAZE_XSHIFT - (double)i*dx;
+            y1 = y - YMIN - padding - (double)j*dy;
+            
+            /* avoid finding wrong cell for particles close to wall */
+            if (x1 < tolerance*dx) return(-10);
+            if (x1 > dx - tolerance*dx) return(-10);
+            if (y1 < tolerance*dy) return(-10);
+            if (y1 > dy - tolerance*dy) return(-10);
+             
+            n = nmaze(i, j);
+            
+            if (n < NXMAZE*NYMAZE) return(n);
+            else return(-1);
+        }
+        case (1):   /* circular maze */
+        {
+            r = module2(x - MAZE_XSHIFT,y);
+            phi = argument(x - MAZE_XSHIFT,y);
+            if (phi < 0.0) phi += DPI;
+            if (phi >= DPI) phi -= DPI;
+                        
+            if (r < rmin*(1.0 - tolerance)) return(NXMAZE*NYMAZE);
+            if (r < rmin*(1.0 + tolerance)) return(-10);
+            if (r > rmax) return(-2);
+            
+            i = (int)((r - rmin)/dr);
+            if (i > NXMAZE-1) return(-1);
+            
+            /* avoid finding wrong cell for particles close to wall */
+            if (r - rmin - (double)i*dr < tolerance*dr) return(-10);
+            if (r - rmin - (double)(i+1)*dr > -tolerance*dr) return(-10);
+            
+            block = (int)(phi/angle);
+            phi1 = phi - (double)block*angle;
+            
+            /* avoid finding wrong cell for particles close to wall */
+            if (phi1 < tolerance*angle)
+                return(-10);
+            if (phi1 - angle > -tolerance*angle)
+                return(-10);
+            
+            if (i == 0) j = block*NXMAZE;
+            else
+            {
+                w = 1 + (int)(log((double)i)/log(2.0));
+//                 dphi = angle/ipow(2.0, w);
+                dphi = dphi_table[w];
+                q = (int)(phi1/dphi);
+                j = block*NXMAZE + q;
+                
+                /* avoid finding wrong cell for particles close to wall */
+                if (phi1 - (double)q*dphi < tolerance*dphi)
+                    return(-1);
+                if (phi1 - (double)(q+1)*dphi > - tolerance*dphi)
+                    return(-1);
+            }
+            
+            n = nmaze(i, j);
+            
+            if (n < NXMAZE*NYMAZE) return(n);
+            else return(-1);
+        }
+        case (2):   /* honeycomb maze */
+        {
+             /* transformation to coordinate system along hexagon centers */
+            u = (x-x0)/(1.5*rr);
+            v = 0.5*(u + (y-y0)/h);
+            
+            i = (int)u;
+            j = (int)v;
+            
+            j -= i/2;
+            
+            if (i < 0) return(-1);
+            if (i > NXMAZE-1) return(-1);
+            if (j < 0) return(-1);
+            if (j > NYMAZE-1) return(-1);
+            
+            for (k=-1; k<2; k++) if ((i+k >= 0)&&(i+k < NXMAZE))
+                for (l=-1; l<2; l++) if ((j+l >= 0)&&(j+l < NYMAZE))
+                {
+                    x1 = x0 + 1.5*(double)(i+k)*rr;
+                    y1 = y0 + 2.0*(double)(j+l)*h;
+                    if ((i+k)%2 == 0) y1 += h;
+                    if (in_polygon(x - x1, y - y1, rrtol, 6, 0.0))
+                    {
+                        n = nmaze(i+k, j+l);
+                        
+                        if (i+k < 0) return(-1);
+                        if (i+k > NXMAZE-1) return(-1);
+                        if (j+l < 0) return(-1);
+                        if (j+l > NYMAZE-1) return(-1);
+                        
+                        if (n < NXMAZE*NYMAZE) return(n);
+                        else return(-1);
+                    }
+                }
+           return(-10);
+        }
+    }
+}
+
+void draw_maze_cell(int n, int part_number, double minprop)
+/* give specified color to maze cell */
+{
+    int i, j, block, q;
+    double x, y, padding = 0.02, rgb[3], w;
+    static double dx, dy, rmin, rmax, angle, r, r1, dr, phi1, dphi, h, x0, y0;
+    static int first = 1, nblocks;
+    
+    if (first) switch (maze_type(POLYLINE_PATTERN)) {
+        case (0):   /* maze with square or rectangular cells */
+        {
+            dx = (YMAX - YMIN - 2.0*padding)/(double)(NXMAZE);
+            dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+            break;
+        }
+        case (1):   /* circular maze */
+        {
+            nblocks = NYMAZE/NXMAZE;
+            rmin = 0.15;
+            rmax = 1.0;
+            angle = DPI/(double)nblocks;
+    
+            dr = (rmax - rmin)/(double)(NXMAZE);
+            
+            break;
+        }
+        case (2):   /* honeycomb maze */
+        {
+            r = 2.0*(YMAX - YMIN)/(3.0*((double)(NXMAZE)-0.5));
+            r1 = (YMAX - YMIN)/(sqrt(3.0)*(double)(NYMAZE+1));
+            if (r1 < r) r = r1;
+            h = 0.5*sqrt(3.0)*r;                
+            x0 = YMIN + padding + MAZE_XSHIFT;
+            y0 = YMIN + padding + h;
+            break;
+        }
+        first = 0;
+    }
+    
+    if (part_number != 0) switch (maze_type(POLYLINE_PATTERN)) {
+        case (0):   /* maze with square or rectangular cells */
+        {
+            i = n%NXMAZE;
+            j = n/NXMAZE;
+            
+            x = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
+            y = YMIN + padding + (double)j*dy;
+            
+            rgb_color_scheme_density(part_number, rgb, minprop); 
+            erase_rectangle(x, y, x + dx, y + dy, rgb);
+            break;
+        }
+        case (1):   /* circular maze */
+        {
+            if (n == NXMAZE*NYMAZE) /* inner circle */
+            {
+                rgb_color_scheme_density(part_number, rgb, minprop); 
+                draw_filled_sector(MAZE_XSHIFT, 0.0, 0.0, rmin, 0.0, DPI, NSEG, rgb);
+                break;
+            }
+            
+            i = n%NXMAZE;
+            j = n/NXMAZE;
+            block = j/NXMAZE;
+            
+            r = rmin + (double)i*dr;
+            r1 = r + dr;
+                if (i == 0)    /* first circle */
+            {
+                dphi = angle;
+                phi1 = (double)block*dphi;
+            }
+            else                /* other circles */
+            {
+                w = 1 + (int)(log((double)i)/log(2.0));
+                dphi = angle*ipow(0.5, w);
+                q = j - block*NXMAZE;
+                phi1 = (double)block*angle + (double)q*dphi;
+            }
+            rgb_color_scheme_density(part_number, rgb, minprop); 
+            draw_filled_sector(MAZE_XSHIFT, 0.0, r, r1, phi1, dphi, NSEG, rgb);
+            break;
+        }
+        case (2):   /* honeycomb maze */
+        {
+            i = n%NXMAZE;
+            j = n/NXMAZE;
+            
+            x = x0 + 1.5*(double)i*r;
+            y = y0 + 2.0*(double)j*h;
+            if (i%2 == 0) y += h;
+            
+            rgb_color_scheme_density(part_number, rgb, minprop); 
+            draw_colored_circle(x, y, r, 6, rgb);
+            break;
+        }
+    }
+        
+}
+
+
+/* can probably be removed */
+void print_left_right_part_number_old(double *configs[NPARTMAX], int active[NPARTMAX], double xl, double yl, double xr, double yr, double xmin, double xmax)
+{
+    char message[50];
+    int i, nleft = 0, nright = 0;
+    double rgb[3], x1, y1, cosphi, sinphi;
+    static int maxnleft = 0, maxnright = 0;
+    
+    /* count active particles, using the fact that absorbed particles have been given dummy coordinates */
+    for (i=0; i<nparticles; i++) if ((configs[i][0] >= DUMMY_ABSORBING))
+    {
+        cosphi = (configs[i][6] - configs[i][4])/configs[i][3];
+        sinphi = (configs[i][7] - configs[i][5])/configs[i][3];
+        x1 = configs[i][4] + configs[i][2]*cosphi;
+        y1 = configs[i][5] + configs[i][2]*cosphi;
+        if (x1 < xmin) nleft++;
+//         else if ((x1 > xmax)&&(y1 <= YMAX)&&(y1 >= YMIN))
+        else if ((x1 > xmax))
+        {
+            nright++;
+            printf("Detected leaving particle %i at (%.2f, %2f)\n", i, x1, y1);
+        }
+    }
+    if (nleft > maxnleft) maxnleft = nleft;
+    if (nright > maxnright) maxnright = nright;
+        
+    hsl_to_rgb(0.0, 0.0, 0.0, rgb);
+    
+    erase_area(xl, yl - 0.03, 0.45, 0.12, rgb);
+    erase_area(xr, yr - 0.03, 0.35, 0.12, rgb);
+    
+    glColor3f(1.0, 1.0, 1.0);
+    if (maxnleft > 1) sprintf(message, "%i particles", maxnleft);
+    else sprintf(message, "%i particle", maxnleft);
+    write_text(xl, yl, message);
+    if (maxnright > 1) sprintf(message, "%i particles", maxnright);
+    else sprintf(message, "%i particle", maxnright);
+    write_text(xr, yr, message);
+}

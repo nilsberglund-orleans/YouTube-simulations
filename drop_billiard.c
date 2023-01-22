@@ -29,6 +29,7 @@
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 
 #define MOVIE 0         /* set to 1 to generate movie */
+#define SAVE_MEMORY 1           /* set to 1 to save memory when writing tiff images */
 
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
@@ -104,6 +105,8 @@
 
 #define NCOLORS 16           /* number of colors */
 #define COLORSHIFT 3        /* hue of initial color */ 
+#define COLOR_HUEMIN 0   /* minimal color hue */
+#define COLOR_HUEMAX 360 /* maximal color hue */
 #define RAINBOW_COLOR 0     /* set to 1 to use different colors for all particles */
 #define NSEG 100            /* number of segments of boundary */
 #define BILLIARD_WIDTH 4    /* width of billiard */
@@ -127,6 +130,8 @@
 #define MAZE_MAX_NGBH 4     /* max number of neighbours of maze cell */
 #define RAND_SHIFT 58       /* seed of random number generator */
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
+#define MAZE_RANDOM_FACTOR 0.1     /* randomization factor for S_MAZE_RANDOM */
+#define MAZE_CORNER_RADIUS 0.5     /* radius of tounded corners in maze */
 
 
 
