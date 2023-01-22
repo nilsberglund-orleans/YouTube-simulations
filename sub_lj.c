@@ -5860,7 +5860,7 @@ void compute_inverse_masses(double inv_masses[RD_TYPES+1])
             for (type = 3; type < RD_TYPES+1; type++)
             {
                 mass = PARTICLE_MASS_B + (double)(type-2)*PARTICLE_MASS;
-                inv_masses[type] = 1.0/(1.0/PARTICLE_MASS + 1.0/mass);
+                inv_masses[type] = 1.0/(PARTICLE_MASS + mass);
             }
             break;
         }
@@ -5869,7 +5869,7 @@ void compute_inverse_masses(double inv_masses[RD_TYPES+1])
             for (type = 3; type < RD_TYPES+1; type++)
             {
                 mass = PARTICLE_MASS_B + (double)(type-2)*PARTICLE_MASS;
-                inv_masses[type] = 1.0/(1.0/PARTICLE_MASS + 1.0/mass);
+                inv_masses[type] = 1.0/(PARTICLE_MASS + mass);
             }
             break;
         }
