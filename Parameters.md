@@ -1372,6 +1372,18 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 **Program:** `lennardjones.c` postprocessed with `ljones_movie.c` 
 
 ```
+#define MOVIE 0         /* set to 1 to generate movie */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define SAVE_MEMORY 1   /* set to 1 to save memory while saving frames */
+#define NO_EXTRA_BUFFER_SWAP 0    /* some OS require one less buffer swap when recording images */
+
+#define TIME_LAPSE 1     /* set to 1 to add a time-lapse movie at the end */
+                         /* so far incompatible with double movie */
+#define TIME_LAPSE_FACTOR 3    /* factor of time-lapse movie */
+#define TIME_LAPSE_FIRST 1  /* set to 1 to show time-lapse version first */
+
+#define SAVE_TIME_SERIES 1  /* set to 1 to save time series of particle positions */
+
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
