@@ -493,7 +493,7 @@ int find_maze_path(t_maze maze[NXMAZE*NYMAZE], int n0, int *path, int *pathlengt
 /* returns 0 or 1 depending on whether path reaches a tested cell or a deadend */
 {
     int active_counter = 0, i, n = n0, npaths, inext, nextcell, trial, nnext, deadend = 1, length = 0;
-    int next_table[4];
+    int next_table[MAZE_MAX_NGBH];
     
     /* contruct random walk */
     npaths = maze[n].nneighb;
