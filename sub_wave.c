@@ -294,6 +294,36 @@ void write_text( double x, double y, char *st)
  }
  
  
+double gaussian()
+/* returns standard normal random variable, using Box-Mueller algorithm */
+{
+    static double V1, V2, S;
+    static int phase = 0;
+    double X;
+
+    if (phase == 0) 
+    {
+        do 
+        {
+        double U1 = (double)rand() / RAND_MAX;
+        double U2 = (double)rand() / RAND_MAX;
+        V1 = 2 * U1 - 1;
+        V2 = 2 * U2 - 1;
+        S = V1 * V1 + V2 * V2;
+        } 
+        while(S >= 1 || S == 0);
+        X = V1 * sqrt(-2 * log(S) / S);
+    } 
+    else X = V2 * sqrt(-2 * log(S) / S);
+
+    phase = 1 - phase;
+
+    return X;
+}
+
+
+ 
+ 
 // int in_polygon(double x, double y, double r, int npoly, double apoly)
 // /* test whether (x,y) is in regular polygon of npoly sides inscribed in circle of radious r, turned by apoly Pi/2 */
 // {
@@ -1635,7 +1665,7 @@ int compute_maze_coordinates(t_rectangle polyrect[NMAXPOLY], int type)
 {
     t_maze* maze;
     int i, j, n, nsides = 0, ropening;
-    double dx, dy, x1, y1, x0, padding = 0.02, pos[2], width = 0.02;
+    double dx, dy, x1, y1, x0, padding = 0.02, pos[2], width = MAZE_WIDTH;
     
     maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
     
@@ -1756,7 +1786,7 @@ int compute_maze_coordinates(t_rectangle polyrect[NMAXPOLY], int type)
         polyrect[nsides].x2 = XMAX + padding;
         polyrect[nsides].y2 = YMAX + padding;
         nsides++;
-    
+        
         /* left channel */
         x1 = YMIN + padding + MAZE_XSHIFT;
         polyrect[nsides].x1 = XMIN - padding;
@@ -2056,6 +2086,26 @@ int init_polyrect(t_rectangle polyrect[NMAXPOLY])
         }
     }
 }
+
+int init_polyrect_euler(t_rectangle polyrect[NMAXPOLY], int domain)
+/* initialise variable polyrect, for certain polygonal domain shapes */
+{
+    switch (domain) {
+        case (D_MAZE):
+        {
+            return(compute_maze_coordinates(polyrect, 0));
+        }
+        case (D_MAZE_CLOSED):
+        {
+            return(compute_maze_coordinates(polyrect, 1));
+        }
+        case (D_MAZE_CHANNELS):
+        {
+            return(compute_maze_coordinates(polyrect, 2));
+        }
+     }
+}
+
 
 void init_polyrect_arc(t_rect_rotated polyrectrot[NMAXPOLY], t_arc polyarc[NMAXPOLY], int *npolyrect, int *npolyarc)
 /* initialise variables polyrectrot and polyarc, for certain domain shapes */
@@ -4744,7 +4794,7 @@ void draw_color_scheme_palette(double x1, double y1, double x2, double y2, int p
             }
             case (P_LOG_ENERGY):
             {
-                value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+                value = LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
 //                 if (value <= 0.0) value = 0.0;
                 color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
                 break;
@@ -4874,7 +4924,7 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
             }
             case (P_LOG_ENERGY):
             {
-                value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+                value = LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
 //                 printf("value = %.2lg\n", value);
 //                 if (value <= 0.0) value = 0.0;
                 color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
@@ -5475,3 +5525,589 @@ double oscillating_bc(int time)
     }
 }
 
+void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
+/* compute variable index of refraction */
+/* should be at some point merged with 3D version in suv_wave_3d.c */
+{
+    int i, j, k, n, inlens;
+    double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
+    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
+    double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
+    static double xc_stat[NGRIDX*NGRIDY], yc_stat[NGRIDX*NGRIDY], sigma_stat;
+    static int first = 1;
+    
+    rgb[0] = 1.0;
+    rgb[1] = 1.0;
+    rgb[2] = 1.0;
+    
+    if (VARIABLE_IOR)
+    {
+        switch (IOR) {
+            case (IOR_MANDELBROT):
+            {
+                #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        u = 0.0;
+                        v = 0.0;
+                        k = 0;
+                        while ((k<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+                        {
+                            u1 = u*u - v*v + x;
+                            v = 2.0*u*v + y;
+                            u = u1;
+                            k++;
+                        }
+                        norm2 = u*u + v*v;
+                        if (norm2 < MANDELLIMIT)
+                        {
+//                             tc[i*NY+j] = COURANT;
+                            tcc_table[i][j] = courant2;
+//                             tgamma[i*NY+j] = GAMMA;
+                        }
+                        else 
+                        {
+                            speed = 1.0 + MANDEL_IOR_SCALE*log(1.0 + norm2/MANDELLIMIT);
+                            if (speed < 0.01) speed = 0.01;
+                            tcc_table[i][j] = courant2*speed;
+//                             tc[i*NY+j] = COURANT*sqrt(speed);
+//                             tgamma[i*NY+j] = GAMMA;
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_MANDELBROT_LIN):
+            {
+                #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        u = 0.0;
+                        v = 0.0;
+                        k = 0;
+                        while ((k<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+                        {
+                            u1 = u*u - v*v + x;
+                            v = 2.0*u*v + y;
+                            u = u1;
+                            k++;
+                        }
+                        if (k >= MANDELLEVEL)
+                        {
+//                             tc[i*NY+j] = COURANT;
+                            tcc_table[i][j] = courant2;
+//                             tgamma[i*NY+j] = GAMMA;
+                        }
+                        else 
+                        {
+                            speed = (double)k/(double)MANDELLEVEL;
+                            if (speed < 1.0e-10) speed = 1.0e-10;
+                            else if (speed > 10.0) speed = 10.0;
+                            tcc_table[i][j] = courant2*speed;
+//                             tc[i*NY+j] = COURANT*sqrt(speed);
+//                             tgamma[i*NY+j] = GAMMA;
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_EARTH):
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        r2 = xy[0]*xy[0] + xy[1]*xy[1];
+                        if (r2 > 1.0) c = 0.0;
+                        else if (r2 < 0.25*0.25) c = 0.8*COURANT;
+                        else if (r2 < 0.58*0.58) c = COURANT*(0.68 - 0.55*r2);
+                        else c = COURANT*(1.3 - 0.9*r2);
+//                         tc[i*NY+j] = c;
+                        tcc_table[i][j] = c;
+//                         tgamma[i*NY+j] = GAMMA;
+                    }
+                }
+                break;
+            }
+            case (IOR_EXPLO_LENSING):
+            {
+                salpha = DPI/(double)NPOLY;
+//                 lambda1 = LAMBDA;
+//                 mu1 = LAMBDA;
+                lambda1 = 0.5*LAMBDA;
+                mu1 = 0.5*LAMBDA;
+                h = lambda1*tan(PI/(double)NPOLY);
+                if (h < mu1) ll = sqrt(mu1*mu1 - h*h);
+                else ll = 0.0;
+                
+//                 #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++) if (xy_in[i*NY+j]) {
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        inlens = 0;
+                        for (k=0; k<NPOLY; k++)
+                        {
+                            ca = cos(((double)k+0.5)*salpha + APOLY*PID);
+                            sa = sin(((double)k+0.5)*salpha + APOLY*PID);
+                            x1 = x*ca + y*sa;
+                            y1 = -x*sa + y*ca;
+                            if ((module2(x1 - lambda1 - ll, y1) < mu1)&&(module2(x1 - lambda1 + ll, y1) < mu1)) inlens = 1; 
+                        }
+                        if (inlens) c = COURANTB;
+                        else c = COURANT;
+//                         tc[i*NY+j] = c;
+                        tcc_table[i][j] = c*c;
+//                         tgamma[i*NY+j] = GAMMA;
+                    }
+                    else
+                    {
+//                         tc[i*NY+j] = 0.0;
+                        tcc_table[i][j] = 0.0;
+//                         tgamma[i*NY+j] = 0.0;
+                    }
+                }
+                break;
+            }
+            case (IOR_PERIODIC_WELLS):
+            {
+                dx = (XMAX - XMIN)/(double)NGRIDX;
+                dy = (YMAX - YMIN)/(double)NGRIDY;
+                sigma = 0.2*dx*dx;
+                for (i=0; i<NGRIDX; i++)
+                    for (j=0; j<NGRIDY; j++)
+                    {
+                        
+                        n = j*NGRIDX + i;
+                        xc[n] = XMIN + dx*((double)i + 0.5);
+                        yc[n] = YMIN + dy*((double)j + 0.5);
+                        if (j%2 == 1) yc[n] += 0.5*dx;
+                    }
+                    
+//                 #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        sum = 0.0;
+                        for (n = 0; n<NGRIDX*NGRIDY; n++)
+                        {
+                            r2 = (x - xc[n])*(x - xc[n]) + (y - yc[n])*(y - yc[n]);
+                            sum += exp(-r2/(sigma));
+                        }
+//                         sum = tanh(sum);
+//                         printf("%.3lg\n", sum);
+                        tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                    }
+                }
+                break;
+            }
+            case (IOR_RANDOM_WELLS):
+            {
+                dx = (XMAX - XMIN)/(double)NGRIDX;
+                dy = (YMAX - YMIN)/(double)NGRIDY;
+                sigma = 0.2*dx*dx;
+                for (i=0; i<NGRIDX; i++)
+                    for (j=0; j<NGRIDY; j++)
+                    {
+                        
+                        n = j*NGRIDX + i;
+                        xc[n] = XMIN + dx*((double)i + 0.5 + 0.1*gaussian());
+                        yc[n] = YMIN + dy*((double)j + 0.5 + 0.1*gaussian());
+//                         if (j%2 == 1) yc[n] += 0.5*dx;
+                        height[n] = 0.5 + 0.5*gaussian();
+                        if (height[n] > 1.0) height[n] = 1.0;
+                        if (height[n] < 0.0) height[n] = 0.0;
+                    }
+                    
+//                 #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        sum = 0.0;
+                        for (n = 0; n<NGRIDX*NGRIDY; n++)
+                        {
+                            r2 = (x - xc[n])*(x - xc[n]) + (y - yc[n])*(y - yc[n]);
+                            sum += exp(-r2/(sigma))*height[n];
+                        }
+                        sum = tanh(sum);
+//                         printf("%.3lg\n", sum);
+                        tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                    }
+                }
+                break;
+            }
+            case (IOR_PERIODIC_WELLS_ROTATING):
+            {
+                if (first)
+                {
+                    dx = (XMAX - XMIN)/(double)NGRIDX;
+                    dy = (YMAX - YMIN)/(double)NGRIDY;
+                    sigma_stat = 0.2*dx*dx;
+                    for (i=0; i<NGRIDX; i++)
+                        for (j=0; j<NGRIDY; j++)
+                        {
+                            n = j*NGRIDX + i;
+                            xc_stat[n] = XMIN + dx*((double)i + 0.5);
+                            yc_stat[n] = YMIN + dy*((double)j + 0.5);
+                            if (j%2 == 1) yc_stat[n] += 0.5*dx;
+                        }
+                    first = 0;
+                }
+                ca = cos(ior_angle);
+                sa = sin(ior_angle);
+                for (n=0; n<NGRIDX*NGRIDY; n++)
+                {
+                    xc[n] = xc_stat[n]*ca + yc_stat[n]*sa;
+                    yc[n] = -xc_stat[n]*sa + yc_stat[n]*ca;
+//                     printf("center[%i] at (%.5lg, %.5lg)\n", n, xc[n], yc[n]);
+//                     draw_colored_circle(xc[n], yc[n], 0.05, 10, rgb);
+                }
+                    
+//                 #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+//                     if (i%100 == 0) printf("initializing column %i of %i\n", i, NX);
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        sum = 0.0;
+                        for (n = 0; n<NGRIDX*NGRIDY; n++)
+                        {
+                            r2 = (x - xc[n])*(x - xc[n]) + (y - yc[n])*(y - yc[n]);
+                            sum += exp(-r2/(sigma_stat));
+                        }
+//                         sum = tanh(sum);
+//                         printf("%.3lg\n", sum);
+                        tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                    }
+                }
+                break;
+            }
+            case (IOR_PERIODIC_WELLS_ROTATING_LARGE):
+            {
+                if (first)
+                {
+                    dx = (1.5*XMAX - 1.5*XMIN)/(double)NGRIDX;
+                    dy = (1.5*YMAX - 1.5*YMIN)/(double)NGRIDY;
+                    sigma_stat = 0.2*dx*dx;
+                    for (i=0; i<NGRIDX; i++)
+                        for (j=0; j<NGRIDY; j++)
+                        {
+                            n = j*NGRIDX + i;
+                            xc_stat[n] = 1.5*XMIN + dx*((double)i + 0.5);
+                            yc_stat[n] = 1.5*YMIN + dy*((double)j + 0.5);
+                            if (j%2 == 1) yc_stat[n] += 0.5*dx;
+                        }
+                    first = 0;
+                }
+                ca = cos(ior_angle);
+                sa = sin(ior_angle);
+                for (n=0; n<NGRIDX*NGRIDY; n++)
+                {
+                    xc[n] = xc_stat[n]*ca + yc_stat[n]*sa;
+                    yc[n] = -xc_stat[n]*sa + yc_stat[n]*ca;
+                }
+                    
+//                 #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+//                     if (i%100 == 0) printf("initializing column %i of %i\n", i, NX);
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        sum = 0.0;
+                        for (n = 0; n<NGRIDX*NGRIDY; n++)
+                        {
+                            r2 = (x - xc[n])*(x - xc[n]) + (y - yc[n])*(y - yc[n]);
+                            sum += exp(-r2/(sigma_stat));
+                        }
+                        tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                    }
+                }
+                break;
+            }
+            default:
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+//                         tc[i*NY+j] = COURANT;
+                        tcc_table[i][j] = COURANT;
+//                         tgamma[i*NY+j] = GAMMA;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        #pragma omp parallel for private(i,j)
+        for (i=0; i<NX; i++){
+            for (j=0; j<NY; j++){
+                if (xy_in[i*NY+j] != 0)
+                {
+//                     tc[i*NY+j] = COURANT;
+                    tcc_table[i][j] = courant2;
+//                     if (xy_in[i*NY+j] == 1) tgamma[i*NY+j] = GAMMA;
+//                     else tgamma[i*NY+j] = GAMMAB;
+                }
+                else if (TWOSPEEDS)
+                {
+//                     tc[i*NY+j] = COURANTB;
+                    tcc_table[i][j] = courantb2;
+//                     tgamma[i*NY+j] = GAMMAB;
+                }
+            }
+        }
+    }
+}
+
+
+double ior_angle_schedule(int i)
+/* angle of rotation for variable index of refraction IOR_PERIODIC_WELLS_ROTATING */
+{
+    return(IOR_TOTAL_TURNS*DPI*(double)i/(double)NSTEPS);
+}
+
+
+int phased_array_schedule(int i)
+/* returns time-dependent dephasing in phased array */
+{
+    int phase;
+    
+    phase = i*11/NSTEPS;
+    
+    switch (phase) {
+        case (0): return(4);
+        case (1): return(3);
+        case (2): return(2);
+        case (3): return(-2);
+        case (4): return(-3);
+        case (5): return(-4); 
+        case (6): return(-3); 
+        case (7): return(-2); 
+        case (8): return(2); 
+        case (9): return(3); 
+        case (10): return(4); 
+        default: return(4);
+    }
+    
+}   
+
+void init_wave_packets(t_wave_packet *packet, int radius)
+/* initialise table of wave packets */
+{
+    int i, j, k, ij[2], nx, ny;
+    double dx, dy;
+    
+    printf("Initialising wave packets\n");
+    switch (WAVE_PACKET_SOURCE_TYPE) {
+        case (0): 
+        {
+            nx = (int)sqrt((double)N_WAVE_PACKETS);
+            ny = N_WAVE_PACKETS/nx;
+            dx = 0.2*(XMAX - XMIN)/(double)nx;
+            dy = 0.4*(YMAX - YMIN)/(double)ny;
+            for (i=0; i<N_WAVE_PACKETS; i++)
+            {
+                j = i/nx;
+                k = i%nx;
+                packet[i].xc = XMIN + (double)(j+1)*dx + 0.5*dx*(double)rand()/RAND_MAX;
+                packet[i].yc = (double)(k-ny/2)*dy + 0.5*dy*(double)rand()/RAND_MAX;
+                packet[i].period = 20.0*(1.0 + 0.5*(double)rand()/RAND_MAX);
+                packet[i].amp = INITIAL_AMP;
+                packet[i].phase = DPI*(double)rand()/RAND_MAX;
+                packet[i].var_envelope = 5.0e5;
+                packet[i].time_shift = 10 + rand()%200;
+                
+                xy_to_ij(packet[i].xc, packet[i].yc, ij);
+                if(ij[0] <= radius) ij[0] = radius+1;
+                packet[i].ix = ij[0];
+                packet[i].iy = ij[1]; 
+            }
+            
+            break;
+        }
+        case (1): 
+        {
+            for (i=0; i<N_WAVE_PACKETS; i++)
+            {
+//                 j = i/nx;
+//                 k = i%nx;
+                packet[i].xc = XMIN + 0.15*(XMAX - XMIN)*(double)rand()/RAND_MAX;
+                packet[i].yc = 0.4*(YMAX - YMIN)*((double)rand()/RAND_MAX - 0.5);
+//                 packet[i].period = 30.0*(1.0 + 0.5*(double)rand()/RAND_MAX);
+                packet[i].period = 50.0*(1.0 + 0.5*(double)rand()/RAND_MAX);
+                packet[i].amp = INITIAL_AMP;
+                packet[i].phase = DPI*(double)rand()/RAND_MAX;
+                packet[i].var_envelope = 1500.0 + 500.0*(double)rand()/RAND_MAX;
+                packet[i].time_shift = 10 + rand()%200;
+                
+                xy_to_ij(packet[i].xc, packet[i].yc, ij);
+                if(ij[0] <= radius) ij[0] = radius+1;
+                packet[i].ix = ij[0];
+                packet[i].iy = ij[1]; 
+            }
+            
+            break;
+        }
+    }
+}
+
+double wave_packet_height(double t, t_wave_packet packet, int type_envelope)
+/* determines height of wave packet at time t */
+{
+    double cwave, envelope;
+    
+    cwave = packet.amp*cos(DPI*t/packet.period + packet.phase);
+    
+    switch (type_envelope) {
+        case (0): 
+        {
+            envelope = 0.1 + sin(DPI*t/packet.var_envelope);
+            envelope = envelope*envelope;
+            break;
+        }
+        case (1): 
+        {
+            if (t < (double)packet.var_envelope) envelope = 1.0;
+            else envelope = 0.0;
+            break;
+        }
+    }
+    
+    return(cwave*envelope);
+}
+
+void add_wave_packets_locally(double *phi[NX], double *psi[NX], t_wave_packet *packet, int time, int radius, int add_period, int type_envelope)
+/* add some wave packet sources - this local version leads to numerical artifacts */
+{
+    int i, ij[2], t, j, k, envelope, irad2, rmin2, rmax2;
+    double cwave, wave_height, wave_height1, r2, variance;
+    
+    variance = (double)(radius*radius);
+    rmin2 = radius*radius/2;
+    rmax2 = radius*radius + 1;
+    if (time%add_period == 0) for (i=0; i<N_WAVE_PACKETS; i++)
+    {
+        t = (double)(time - packet[i].time_shift);
+        wave_height = wave_packet_height(t, packet[i], type_envelope);
+
+        for (j=0; j<radius+1; j++) 
+            for (k=0; k<radius+1; k++)
+            {
+                irad2 = j*j + k*k;
+                if ((irad2 < rmax2)&&(irad2 > rmin2))
+                {
+                    r2 = (double)(irad2);
+                    wave_height1 = wave_height*exp(-r2/variance);
+                    phi[packet[i].ix + j][packet[i].iy + k] = wave_height1;
+                    phi[packet[i].ix - j][packet[i].iy + k] = wave_height1;
+                    phi[packet[i].ix + j][packet[i].iy - k] = wave_height1;
+                    phi[packet[i].ix - j][packet[i].iy - k] = wave_height1;
+                }
+                else if (irad2 <= rmin2)
+                {
+                    phi[packet[i].ix + j][packet[i].iy + k] = 0.0;
+                    phi[packet[i].ix - j][packet[i].iy + k] = 0.0;
+                    phi[packet[i].ix + j][packet[i].iy - k] = 0.0;
+                    phi[packet[i].ix - j][packet[i].iy - k] = 0.0;
+                }
+                
+            }
+//         printf("Adding wave packet %i with value %.3lg\n", i, wave_height); 
+        
+//         if (add==0)
+        {
+//             t -= 1.0/(double)NVID;
+            t -= 0.1/(double)NVID;
+            wave_height = wave_packet_height(t, packet[i], type_envelope);
+            for (j=0; j<radius+1; j++) 
+                for (k=0; k<radius+1; k++) 
+                {
+                    irad2 = j*j + k*k;
+                    if ((irad2 < rmax2)&&(irad2 > rmin2))
+                    {
+                        r2 = (double)(irad2);
+                        wave_height1 = wave_height*exp(-r2/variance);
+                        psi[packet[i].ix + j][packet[i].iy + k] = wave_height1;
+                        psi[packet[i].ix - j][packet[i].iy + k] = wave_height1;
+                        psi[packet[i].ix + j][packet[i].iy - k] = wave_height1;
+                        psi[packet[i].ix - j][packet[i].iy - k] = wave_height1;
+                    }
+                    else if (irad2 <= rmin2)
+                    {
+                        psi[packet[i].ix + j][packet[i].iy + k] = 0.0;
+                        psi[packet[i].ix - j][packet[i].iy + k] = 0.0;
+                        psi[packet[i].ix + j][packet[i].iy - k] = 0.0;
+                        psi[packet[i].ix - j][packet[i].iy - k] = 0.0;
+                    }
+                }
+        }
+    }
+}
+
+void add_circular_wave_loc(double factor, double x, double y, double *phi[NX], double *psi[NX], short int * xy_in[NX], int xmin, int xmax, int ymin, int ymax)
+/* add drop at (x,y) to the field with given prefactor */
+{
+    int i, j;
+    double xy[2], dist2;
+    
+//     for (i=0; i<NX; i++)
+//         for (j=0; j<NY; j++)
+    #pragma omp parallel for private(i,j,xy,dist2)
+    for (i=xmin; i<xmax; i++)
+        for (j=ymin; j<ymax; j++)
+        {
+            ij_to_xy(i, j, xy);
+            dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+            if ((xy_in[i][j])||(TWOSPEEDS)) 
+                phi[i][j] += INITIAL_AMP*factor*exp(-dist2/INITIAL_VARIANCE)*cos(-sqrt(dist2)/INITIAL_WAVELENGTH);
+        }
+}
+
+void add_wave_packets_globally(double *phi[NX], double *psi[NX], short int * xy_in[NX], t_wave_packet *packet, int time)
+/* add some wave packet sources */
+{
+    int i, ij[2];
+    double amp, t, omega;
+    static int xmin, xmax, ymin, ymax, first=1;
+    
+    if (first)
+    {
+        xy_to_ij(XMIN, -0.2*(YMAX - YMIN), ij);
+        xmin = ij[0];
+        ymin = ij[1];
+        xy_to_ij(XMIN + 0.15*(XMAX - XMIN), 0.2*(YMAX - YMIN), ij);
+        xmax = ij[0];
+        ymax = ij[1];
+        first = 0;
+    }
+    
+    for (i=0; i<N_WAVE_PACKETS; i++)
+    {
+        t = (double)(time - packet[i].time_shift);
+        omega = DPI/packet[i].period;
+        amp = packet[i].amp*omega*sin(omega*t + packet[i].phase);
+        if (t > (double)packet[i].var_envelope) amp *= exp(-0.1*(t - (double)packet[i].var_envelope));
+        if (t < (double)packet[i].var_envelope + 100.0)
+            add_circular_wave_loc(amp, packet[i].xc, packet[i].yc, phi, psi, xy_in, xmin, xmax, ymin, ymax);
+    }
+}
+
+
+void add_wave_packets(double *phi[NX], double *psi[NX], short int * xy_in[NX], t_wave_packet *packet, int time, int radius, int local, int add_period, int type_envelope)
+/* add some wave packet sources */
+{
+    if (local) add_wave_packets_locally(phi, psi, packet, time, radius, add_period, type_envelope);
+    else add_wave_packets_globally(phi, psi, xy_in, packet, time);
+}

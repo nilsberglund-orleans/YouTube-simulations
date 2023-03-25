@@ -77,6 +77,9 @@
 #define D_LENSES_RING 59        /* several lenses forming a ring */
 #define D_MAZE_CIRCULAR 60      /* circular maze */
 
+#define D_WING 70               /* complement of wing-shaped domain */
+#define D_TESLA 71              /* Tesla valve */
+
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
 
@@ -119,6 +122,10 @@
 #define IOR_MANDELBROT_LIN 100    /* index of refraction depends on escape time in Mandelbrot set (linear) */
 #define IOR_EARTH 2         /* index of refraction models speed of seismic waves */
 #define IOR_EXPLO_LENSING 3 /* explosive lensing */
+#define IOR_PERIODIC_WELLS 4  /* periodic superposition of "wells" */
+#define IOR_RANDOM_WELLS 5  /* random superposition of "wells" */
+#define IOR_PERIODIC_WELLS_ROTATING 6   /* periodic superposition rotating in time */
+#define IOR_PERIODIC_WELLS_ROTATING_LARGE 7   /* periodic superposition rotating in time, larger area */
 
 /* Boundary conditions */
 
@@ -221,15 +228,18 @@
 #define Z_EULER_PRESSURE 54         /* pressure */
 
 /* for Euler compressible Euler equation */
-#define Z_EULER_DENSITY 60          /* density */
-#define Z_EULER_SPEED 61            /* norm of velocity */
+#define Z_EULER_DENSITY 60           /* density */
+#define Z_EULER_SPEED 61             /* norm of velocity */
 #define Z_EULERC_VORTICITY 62        /* vorticity of velocity */
+#define Z_EULER_DIRECTION 63         /* direction of velocity */
+#define Z_EULER_DIRECTION_SPEED 64   /* hut for direction of velocity, luminosity for speed */
 
 /* special boundary conditions for Euler equation */
 #define BCE_TOPBOTTOM 1         /* laminar flow at top and bottom */
 #define BCE_TOPBOTTOMLEFT 2     /* laminar flow at top, bottom and left side */
 #define BCE_CHANNELS 3          /* laminar flow in channels at left and right */
 #define BCE_MIDDLE_STRIP 4      /* laminar flow in horizontal strip in the middle */
+#define BCE_LEFT 5              /* laminar flow at left side */
 
 typedef struct
 {
@@ -278,6 +288,18 @@ typedef struct
     int nneighb;    /* number of neighbours to compute Laplacian */
     double *nghb[4];    /* pointers to neighbours */ 
 } t_laplacian;
+
+
+typedef struct
+{
+    double xc, yc;           /* (x,y) coordinates of center */
+    int ix, iy;              /* lattice coordinates of center */
+    double period, amp;      /* period and amplitude */
+    double phase;            /* phase shift */
+    double var_envelope;     /* variance of Gaussian envelope */
+    int time_shift;          /* time shift */
+} t_wave_packet;
+
 
 
 int ncircles = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */

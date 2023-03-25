@@ -132,6 +132,7 @@
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_RANDOM_FACTOR 0.1     /* randomization factor for S_MAZE_RANDOM */
 #define MAZE_CORNER_RADIUS 0.5     /* radius of tounded corners in maze */
+#define CLOSE_MAZE 0        /* set to 1 to close maze exits */
 
 
 

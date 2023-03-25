@@ -14,6 +14,9 @@
 /*  gcc -o particle_billiard particle_billiard.c                                 */
 /*  -O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut                */
 /*                                                                               */
+/*  OMP acceleration may be more effective after executing, e.g.,                */
+/*  export OMP_NUM_THREADS=2 in the shell before running the program             */
+/*                                                                               */
 /*  To make a video, set MOVIE to 1 and create subfolder tif_part                */
 /*  It may be possible to increase parameter PAUSE                               */
 /*                                                                               */
@@ -33,24 +36,16 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define SAVE_MEMORY 1           /* set to 1 to save memory when writing tiff images */
+#define SAVE_MEMORY 1       /* set to 1 to save memory when writing tiff images */
+#define INVERT_COUNTER 0    /* set to 1 to save frames in inverse order */
 
 #define WINWIDTH 	1280  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
+#define XMIN -1.5
+#define XMAX 2.5	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
-
-// #define WINWIDTH 	1920  /* window width */
-// #define WINHEIGHT 	1000  /* window height */
-// 
-// #define XMIN -2.0
-// #define XMAX 2.0	/* x interval  */
-// #define YMIN -1.041666667
-// #define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
-
 
 #define SCALING_FACTOR 1.0       /* scaling factor of drawing, needed for flower billiards, otherwise set to 1.0 */
 
@@ -59,14 +54,12 @@
 #define B_DOMAIN 31     /* choice of domain shape */
 
 #define CIRCLE_PATTERN 1    /* pattern of circles */
-#define POLYLINE_PATTERN 15  /* pattern of polyline */
+#define POLYLINE_PATTERN 10  /* pattern of polyline */
 
 #define ABSORBING_CIRCLES 0 /* set to 1 for circular scatterers to be absorbing */
 
 #define NMAXCIRCLES 100000     /* total number of circles (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 100000        /* total number of sides of polygonal line */   
-// #define NCX 10            /* number of circles in x direction */
-// #define NCY 10            /* number of circles in y direction */
 #define NCX 30            /* number of circles in x direction */
 #define NCY 20            /* number of circles in y direction */
 #define NPOISSON 500        /* number of points for Poisson C_RAND_POISSON arrangement */
@@ -89,37 +82,35 @@
 
 /* Simulation parameters */
 
-// #define NPART 1    /* number of particles */
-#define NPART 20000    /* number of particles */
-// #define NPART 10000      /* number of particles */
+// #define NPART 10      /* number of particles */
+#define NPART 5000      /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
 #define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
 #define HEATMAP 1       /* set to 1 to show heat map of particles */
+#define DRAW_FINAL_HEATMAP 1       /* set to 1 to show final heat map of particles */
+#define DRAW_HEATMAP_HISTOGRAM 1   /* set to 1 to draw a histogram of particle distribution in heat map */
+#define NBIN_FACTOR 8.0             /* constant controlling number of bins in histogram */
 #define DRAW_HEATMAP_PARTICLES 1    /* set to 1 to draw particles in heat map */
-#define HEATMAP_MAX_PART_BY_CELL 0     /* to draw only limited number of particles in cell */
-#define PLOT_HEATMAP_AVERAGE 0      /* set to 1 to plot average number of particles in heat map */
+#define HEATMAP_MAX_PART_BY_CELL 5     /* set to positive value to draw only limited number of particles in cell */
+#define PLOT_HEATMAP_AVERAGE 1      /* set to 1 to plot average number of particles in heat map */
 #define SHOWZOOM 0      /* set to 1 to show zoom on specific area */
 #define PRINT_PARTICLE_NUMBER 0 /* set to 1 to print number of particles */
-#define PRINT_LEFT_RIGHT_PARTICLE_NUMBER 1 /* set to 1 to print number of particles on left and right side */
+#define PRINT_LEFT_RIGHT_PARTICLE_NUMBER 0 /* set to 1 to print number of particles on left and right side */
 #define PRINT_CIRCLE_PARTICLE_NUMBER 0 /* set to 1 to print number of particles outside circular maze */
 #define PRINT_COLLISION_NUMBER 0 /* set to 1 to print number of collisions */
 #define TEST_ACTIVE 1   /* set to 1 to test whether particle is in billiard */
 
 #define TEST_INITIAL_COND 0     /* set to 1 to allow only initial conditions that pass a test */
 
-#define NSTEPS 12300     /* number of frames of movie */
-// #define NSTEPS 6500     /* number of frames of movie */
-#define TIME 1500        /* time between movie frames, for fluidity of real-time simulation */ 
-// #define TIME 750         /* time between movie frames, for fluidity of real-time simulation */ 
+#define NSTEPS 22000      /* number of frames of movie */
+#define TIME 2000        /* time between movie frames, for fluidity of real-time simulation */ 
+// #define DPHI 0.000002     /* integration step */
 #define DPHI 0.00002     /* integration step */
-// #define DPHI 0.00005     /* integration step */
-// #define DPHI 0.00001     /* integration step */
 #define NVID 25          /* number of iterations between images displayed on screen */
-// #define NVID 100         /* number of iterations between images displayed on screen */
-#define END_FRAMES 100    /* number of still frames at the end of the movie */
+#define END_FRAMES 50    /* number of still frames at the end of the movie */
 
 /* Decreasing TIME accelerates the animation and the movie                               */
 /* For constant speed of movie, TIME*DPHI should be kept constant                        */
@@ -131,15 +122,14 @@
 
 #define COLOR_PALETTE 17     /* Color palette, see list in global_pdes.c  */
 
-#define NCOLORS 1000     /* number of colors */
+#define NCOLORS 500      /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
 #define COLOR_HUEMIN 0   /* minimal color hue */
-#define COLOR_HUEMAX 150 /* maximal color hue */
-#define RAINBOW_COLOR 0  /* set to 1 to use different colors for all particles */
+#define COLOR_HUEMAX 160 /* maximal color hue */
+#define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
 #define LENGTH 0.025       /* length of velocity vectors */
-// #define LENGTH 0.04       /* length of velocity vectors */
 #define BILLIARD_WIDTH 2    /* width of billiard */
 #define PARTICLE_WIDTH 2    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
@@ -155,14 +145,14 @@
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1       /* final sleeping time */
 
-#define NXMAZE 24      /* width of maze */
-#define NYMAZE 20      /* height of maze */
-#define MAZE_MAX_NGBH 6     /* max number of neighbours of maze cell */
-#define RAND_SHIFT 11    /* seed of random number generator */
-// #define RAND_SHIFT 0        /* seed of random number generator */
+#define NXMAZE 36       /* width of maze */
+#define NYMAZE 36      /* height of maze */
+#define MAZE_MAX_NGBH 8     /* max number of neighbours of maze cell */
+#define RAND_SHIFT 15        /* seed of random number generator */
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_RANDOM_FACTOR 0.1     /* randomization factor for S_MAZE_RANDOM */
 #define MAZE_CORNER_RADIUS 0.5     /* radius of tounded corners in maze */
+#define CLOSE_MAZE 1        /* set to 1 to close maze exits */
 
 #include "global_particles.c"
 #include "sub_maze.c"
@@ -563,7 +553,8 @@ void draw_config_heatmap(double *configs[NPARTMAX], int active[NPARTMAX], int he
             {
                 drawtable[i] = ((n == -2)||((n >= -1)&&(heatmap_number[n] <= HEATMAP_MAX_PART_BY_CELL)));
             }
-            else drawtable[i] = (n >= -1);
+            else drawtable[i] = 1;
+//             else drawtable[i] = (n >= -1);
         }
         
 //         printf("Particle %i is in maze cell %i\n", i, n);
@@ -594,6 +585,156 @@ void draw_config_heatmap(double *configs[NPARTMAX], int active[NPARTMAX], int he
     free(xtable);
     free(ytable);
     free(drawtable);
+}
+
+double plot_coord(double x, double xmin, double xmax)
+{
+    return(xmin + x*(xmax - xmin));
+}
+
+void draw_chosen_heatmap_histogram(int heatmap_number[NXMAZE*NYMAZE+1], int normalisation)
+{
+    int i, j, k, n, bin, nbins, binwidth, maxpart, part_number, maxhist = 0, *histo;
+    double xmin, xmax, ymin, ymax, xmid, ymid, dx, dy, plotxmin, plotxmax, plotymin, plotymax, c; 
+    double x1, x2, y, y1, y2, hue, rgb[3];
+    static int first = 1, prevmaxhist, prevmaxpart;
+    static double minprop = 0.01;
+    char message[100];
+    
+    if (first)
+    {
+        xmin = XMAX - 1.25;
+        xmax = XMAX - 0.05;
+        ymin = YMAX - 1.25;
+        ymax = YMAX - 0.05;
+                
+        xmid = 0.5*(xmin + xmax);
+        ymid = 0.5*(ymin + ymax);
+        
+        dx = 0.5*(xmax - xmin);
+        dy = 0.5*(ymax - ymin);
+        
+        plotxmin = xmin + 0.15;
+        plotxmax = xmax - 0.1;
+        plotymin = ymin + 0.07;
+        plotymax = ymax - 0.1;
+        
+        prevmaxhist = 1010;
+        prevmaxpart = 10;
+        
+        first = 0;
+    }
+    
+//     nbins = NXMAZE;
+//     nbins = (int)(2.0*sqrt((double)NPART/(double)NXMAZE));
+    nbins = (int)(NBIN_FACTOR*sqrt((double)NPART/(double)(NXMAZE*NYMAZE)));
+    
+    histo = (int *)malloc(nbins*sizeof(int));
+    
+    for (i=0; i<nbins; i++) histo[i] = 0;
+    
+    maxpart = 0;
+    for (j=0; j<NXMAZE*NYMAZE+1; j++) 
+        if (heatmap_number[j]/normalisation > maxpart) maxpart = heatmap_number[j]/normalisation;
+    
+    if (maxpart < 1010) maxpart = 1010;
+        
+    c = log((double)maxpart)/(double)nbins;
+    
+    for (j=0; j<NXMAZE*NYMAZE+1; j++) 
+    {
+        n = heatmap_number[j]/normalisation;
+        if (n > 0)
+        {
+            i = (int)(log((double)n)/c) - 2;
+            if (i < 0) i = 0;
+            histo[i]++;
+        }
+    }
+    
+//     for (i=0; i<nbins; i++) printf("%i cells in bin %i\n", histo[i], i);
+    
+    for (i=0; i<nbins; i++) if (histo[i] > maxhist) maxhist = histo[i];
+    if (maxhist < 10) maxhist = 10;
+    
+    /* some smoothing in time */
+    maxpart = (maxpart + 3*prevmaxpart)/4;
+    prevmaxpart = maxpart;
+    maxhist = (maxhist + 3*prevmaxhist)/4;
+    prevmaxhist = maxhist;
+    
+    glColor3f(0.0, 0.0, 0.0);
+    glLineWidth(1);
+    
+    x1 = plotxmin;
+    y1 = plotymin;
+    
+    for (i=0; i<nbins; i++)
+    {
+        x2 = plot_coord((double)i/(double)nbins, plotxmin, plotxmax);
+        y = log((double)(histo[i]+1))/log((double)(maxhist+1));
+//         y = (double)(histo[i]+1)/(double)(maxhist+1);
+        y2 = plot_coord(y, plotymin, plotymax);
+        
+        part_number = (int)(exp(c*(double)i));
+        rgb_color_scheme_density(part_number, rgb, minprop);
+//         printf("Bin %i, part nb %i, cell nb %i\n", i, part_number, histo[i]);
+        draw_colored_rectangle_rgb(x1, y1, x2, y2, rgb);
+        x1 = x2;
+    }
+    
+    glColor3f(1.0, 1.0, 1.0);
+    glLineWidth(2);
+    
+    draw_line(plotxmin, plotymin, plotxmax + 0.05, plotymin);
+    draw_line(plotxmin, plotymin, plotxmin, plotymax + 0.1);
+            
+    /* graduation of x axis */
+    for (j=1; j < (int)(log((double)maxpart)/log(10.0)) + 1; j++)
+    {
+        n = (int)ipow(10.0, j);
+        
+        i = (int)(log((double)n)/c) - 2;
+        x2 = plot_coord((double)i/(double)nbins, plotxmin, plotxmax);
+        
+        draw_line(x2, plotymin - 0.02, x2, plotymin + 0.02);
+        
+        if (n <= 1000) sprintf(message, "%i", n); 
+        else sprintf(message, "1e%i", j);
+        write_text_fixedwidth(x2 - 0.015 - 0.01*(double)j, plotymin - 0.08, message);  
+    }
+    
+    sprintf(message, "Particles");
+    write_text_fixedwidth(plotxmax - 0.2, plotymin - 0.15, message); 
+    
+    /* graduation of y axis */
+    for (j=0; j < (int)(log((double)maxhist)/log(10.0)) + 1; j++) for (k=1; k<10; k++)
+    {
+        if (j==0) n = k;
+        else n = k*(int)ipow(10.0, j);
+        y = log((double)(n+1))/log((double)(maxhist+1));
+        y2 = plot_coord(y, plotymin, plotymax);
+        
+        if (y < plotymax) draw_line(plotxmin - 0.02, y2, plotxmin + 0.02, y2);
+        
+        if (((k < 3)||(k == 5))&&(y < plotymax))
+        {
+            if (n <= 1000) sprintf(message, "%4d", n); 
+            else sprintf(message, "1e%i", j);
+            write_text_fixedwidth(plotxmin - 0.18, y2 - 0.015, message);  
+        }
+    }
+    
+    sprintf(message, "Cells");
+    write_text_fixedwidth(plotxmin + 0.05, plotymax + 0.05, message); 
+    
+    free(histo); 
+}
+
+void draw_heatmap_histogram(int heatmap_number[NXMAZE*NYMAZE+1], int heatmap_total[NXMAZE*NYMAZE+1], int time)
+{
+    if (PLOT_HEATMAP_AVERAGE) draw_chosen_heatmap_histogram(heatmap_total, time+1);
+    else draw_chosen_heatmap_histogram(heatmap_number, 1);
 }
 
 void draw_config(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTMAX])
@@ -813,16 +954,19 @@ void print_left_right_part_number(double *configs[NPARTMAX], int active[NPARTMAX
     
     hsl_to_rgb(0.0, 0.0, 0.0, rgb);
     
-    erase_area(xl, yl - 0.03, 0.45, 0.12, rgb);
+    erase_area(xl, yl - 0.03, 0.3, 0.12, rgb);
+//     erase_area(xl, yl - 0.03, 0.25, 0.12, rgb);
     erase_area(xr, yr - 0.03, 0.35, 0.12, rgb);
     
     glColor3f(1.0, 1.0, 1.0);
-    if (nleft > 1) sprintf(message, "%i particles", nleft);
-    else sprintf(message, "%i particle", nleft);
-    write_text(xl, yl, message);
+//     if (nleft > 1) sprintf(message, "%i particles", nleft);
+//     else sprintf(message, "%i particle", nleft);
+    if (nleft > 1) sprintf(message, "%i part.", nleft);
+    else sprintf(message, "%i part.", nleft);
+    write_text_fixedwidth(xl, yl, message);
     if (nright > 1) sprintf(message, "%i particles", nright);
     else sprintf(message, "%i particle", nright);
-    write_text(xr, yr, message);
+    write_text_fixedwidth(xr, yr, message);
 }
 
 void print_circle_part_number(double *configs[NPARTMAX], int active[NPARTMAX], double xr, double yr)
@@ -864,6 +1008,7 @@ void animation()
     int i, j, resamp = 1, s, i1, i2, c, lengthmax;
     int *color, *newcolor, *active, *heatmap_number, *heatmap_total;
     short int *heatmap_visited;
+    char message[100];
     t_exit *exits; 
 //     t_circle *circles;      /* experimental */
     
@@ -948,13 +1093,9 @@ void animation()
 //     alphamax = 2.50949;
 //     init_drop_config(x_shooter, y_shooter, alphamax, alphamax + DPI, configs);
     
-    init_drop_config(-0.05, 0.05, 0.0, 0.3*PID, configs);
-//     init_drop_config(-0.5, 0.0, 0.2, 0.4, configs);    
-//     init_drop_config(0.0, 0.05, 0.0, DPI, configs);   
+    init_drop_config(0.05, 0.05, 0.0, DPI, configs);   
+//     init_drop_config(-0.95, 0.95, 0.0, DPI, configs);   
     
-//     init_drop_config(-1.3, -0.1, 0.0, DPI, configs);    
-//     init_drop_config(1.4, 0.1, 0.0, DPI, configs);    
-//     init_drop_config(0.5, 0.5, -1.0, 1.0, configs);    
 //     init_sym_drop_config(-1.0, 0.5, -PID, PID, configs);
 //     init_drop_config(-0.999, 0.0, -alpha, alpha, configs);
 
@@ -972,7 +1113,7 @@ void animation()
     if (DRAW_BILLIARD) draw_billiard();
     if (PRINT_PARTICLE_NUMBER) print_part_number(configs, active, XMIN + 0.1, YMIN + 0.1);
     else if (PRINT_LEFT_RIGHT_PARTICLE_NUMBER) 
-        print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.05, XMAX - 0.45, YMIN + 0.05, exits);
+        print_left_right_part_number(configs, active, XMIN + 0.05, YMIN + 0.05, XMAX - 0.35, YMIN + 0.05, exits);
     else if (PRINT_CIRCLE_PARTICLE_NUMBER) print_circle_part_number(configs, active, XMAX - 0.45, YMIN + 0.05);
     else if (PRINT_COLLISION_NUMBER) print_collision_number(ncollisions, XMIN + 0.1, YMIN + 0.1);
     
@@ -1029,6 +1170,7 @@ void animation()
         else if (HEATMAP) 
         {
             draw_config_heatmap(configs, active, heatmap_number, heatmap_total, heatmap_visited, DRAW_HEATMAP_PARTICLES);
+            if (DRAW_HEATMAP_HISTOGRAM) draw_heatmap_histogram(heatmap_number, heatmap_total, i);
 //             draw_config(newcolor, configs, active);
         }
         else draw_config(newcolor, configs, active);
@@ -1036,7 +1178,7 @@ void animation()
         if (DRAW_BILLIARD) draw_billiard();
         if (PRINT_PARTICLE_NUMBER) print_part_number(configs, active, XMIN + 0.1, YMIN + 0.1);
         else if (PRINT_LEFT_RIGHT_PARTICLE_NUMBER) 
-            print_left_right_part_number(configs, active, XMIN + 0.1, YMIN + 0.05, XMAX - 0.45, YMIN + 0.05, exits);
+            print_left_right_part_number(configs, active, XMIN + 0.05, YMIN + 0.05, XMAX - 0.35, YMIN + 0.05, exits);
         else if (PRINT_CIRCLE_PARTICLE_NUMBER) print_circle_part_number(configs, active, XMAX - 0.45, YMIN + 0.05);
 //             print_left_right_part_number(configs, XMIN + 0.1, YMIN + 0.1, XMAX - 0.45, YMIN + 0.1, YMIN + MAZE_XSHIFT, YMAX + MAZE_XSHIFT);
         else if (PRINT_COLLISION_NUMBER) print_collision_number(ncollisions, XMIN + 0.1, YMIN + 0.1);
@@ -1050,7 +1192,8 @@ void animation()
         
 	if (MOVIE) 
         {
-            save_frame();
+            if (INVERT_COUNTER) save_frame_counter(NSTEPS+1-i);
+            else save_frame();
             
             /* it seems that saving too many files too fast can cause trouble with the file system */
             /* so this is to make a pause from time to time - parameter PAUSE may need adjusting   */
@@ -1066,9 +1209,23 @@ void animation()
  
     if (MOVIE)
     {
-        if (HEATMAP) 
+        if (DRAW_FINAL_HEATMAP) 
             draw_config_heatmap(configs, active, heatmap_number, heatmap_total, heatmap_visited, 0);
-        for (i=0; i<END_FRAMES; i++) save_frame();
+        if (DRAW_HEATMAP_HISTOGRAM) draw_heatmap_histogram(heatmap_number, heatmap_total, NSTEPS);
+        for (i=0; i<END_FRAMES; i++) 
+        {
+            if (INVERT_COUNTER) 
+            {
+                if (i == 0)
+                {
+                    sprintf(message, "mv part.%05i.tif tif_part/", NSTEPS+1);
+                    s = system(message);
+                }
+                sprintf(message, "cp tif_part/part.%05i.tif tif_part/part.%05i.tif", NSTEPS+1, NSTEPS+i+2);
+                s = system(message); 
+            }
+            else save_frame();
+        }
         s = system("mv part*.tif tif_part/");
     }
     

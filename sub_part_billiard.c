@@ -233,6 +233,24 @@ void rgb_color_scheme_lum(int i, double lum, double rgb[3]) /* color scheme */
     /* saturation = r */ 
 }
 
+void rgb_color_scheme_minmax_lum(int i, double lum, double rgb[3]) 
+/* color scheme with specified color interval */
+{
+    double hue, y, r;
+    int delta_hue;
+    
+    delta_hue = COLOR_HUEMAX - COLOR_HUEMIN;
+  
+    hue = (double)(COLOR_HUEMIN + i*delta_hue/NCOLORS);
+    r = 0.9;
+  
+    while (hue < COLOR_HUEMIN) hue += delta_hue;
+    while (hue >= COLOR_HUEMAX) hue -= delta_hue;
+  
+    hsl_to_rgb(hue, r, lum, rgb);
+    /* saturation = r */ 
+}
+
 void blank()
 {
     double rgb[3];
@@ -402,6 +420,54 @@ void draw_colored_circle(double x, double y, double r, int nseg, double rgb[3])
     
     glEnd();
 }
+
+void draw_colored_octahedron(double x, double y, double r, double rgb[3])
+{
+    int i, ij[2];
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI*0.125;
+        
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(x,y);
+    for (i=0; i<=8; i++)
+    {
+        alpha = ((double)i+0.5)*dalpha;
+        glVertex2d(x + r*cos(alpha), y + r*sin(alpha));
+    }
+    
+    glEnd();
+}
+
+void draw_colored_rectangle_rgb(double x1, double y1, double x2, double y2, double rgb[3])
+{
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    
+    glBegin(GL_QUADS);
+    glVertex2d(x1, y1);
+    glVertex2d(x2, y1);
+    glVertex2d(x2, y2);
+    glVertex2d(x1, y2);
+    glEnd();    
+
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINE_LOOP);
+    glVertex2d(x1, y1);
+    glVertex2d(x2, y1);
+    glVertex2d(x2, y2);
+    glVertex2d(x1, y2);
+    glEnd();    
+}
+
+void draw_colored_rectangle(double x1, double y1, double x2, double y2, double hue)
+{
+    double rgb[3];
+    
+    hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE);
+    draw_colored_rectangle_rgb(x1, y1, x2, y2, rgb);
+}
+
 
 
 void draw_filled_sector(double x, double y, double rmin, double rmax, double phi1, double dphi, int nseg, double rgb[3])
@@ -5765,7 +5831,7 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
             if (POLYLINE_PATTERN == P_MAZE) return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
             else if ((POLYLINE_PATTERN == P_MAZE_DIAG)||(POLYLINE_PATTERN == P_MAZE_RANDOM)) 
                 return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
-            else if ((POLYLINE_PATTERN == P_MAZE_CIRCULAR)||(POLYLINE_PATTERN == P_MAZE_HEX))
+            else if ((POLYLINE_PATTERN == P_MAZE_CIRCULAR)||(POLYLINE_PATTERN == P_MAZE_HEX)||(POLYLINE_PATTERN == P_MAZE_OCT))
                 return ((vabs(x) < 1.1*XMAX)&&(vabs(y) < 1.1*YMAX));
             else return(1);
             break;
@@ -6309,8 +6375,16 @@ void init_polyline_circular_maze(t_segment* polyline, t_circle* circles, t_arc* 
     arcs[narcs].xc = MAZE_XSHIFT;
     arcs[narcs].yc = 0.0;
     arcs[narcs].radius = rmax;
-    arcs[narcs].angle1 = dphi;
-    arcs[narcs].dangle = DPI - dphi;
+    if (CLOSE_MAZE) 
+    {
+        arcs[narcs].angle1 = 0.0;
+        arcs[narcs].dangle = DPI;
+    }
+    else 
+    {
+        arcs[narcs].angle1 = dphi;
+        arcs[narcs].dangle = DPI - dphi;
+    }
     narcs++;
             
 }
@@ -6500,7 +6574,191 @@ void init_polyline_hex_maze(t_segment* polyline, t_circle* circles, t_maze* maze
     }
 }
 
-// (()||())&&
+void init_polyline_oct_maze(t_segment* polyline, t_circle* circles, t_maze* maze)
+{
+    int i, j, n;
+    double a, b, a2, c, dx, x1, y1, padding = 0.02; 
+            
+    dx = (YMAX - YMIN - 2.0*padding)/((double)NYMAZE+0.5);    
+    a = dx*(2.0 - sqrt(2.0));
+    b = a/sqrt(2.0); 
+    a2 = 0.5*a;
+    c = a2 + b;
+    
+    for (i = 0; i < NXMAZE; i++)
+        for (j = 0; j < NYMAZE; j++)
+        {
+            n = nmaze(i, j);
+            x1 = YMIN + padding + ((double)i + 0.5)*dx + MAZE_XSHIFT;
+            y1 = YMIN + padding + ((double)j + 0.75)*dx;
+            
+            if ((i+j)%2 == 0)
+            {
+                if (((i>0)||(j!=NYMAZE/2))&&(maze[n].west))
+                {
+                    polyline[nsides].x1 = x1 - c;
+                    polyline[nsides].y1 = y1 - a2;
+                    polyline[nsides].x2 = x1 - c;
+                    polyline[nsides].y2 = y1 + a2;
+                    polyline[nsides].angle = PID;
+                    nsides++;                    
+                }
+                
+                if (maze[n].south)
+                {
+                    polyline[nsides].x1 = x1 - a2;
+                    polyline[nsides].y1 = y1 - c;
+                    polyline[nsides].x2 = x1 + a2;
+                    polyline[nsides].y2 = y1 - c;
+                    polyline[nsides].angle = 0.0;                    
+                    nsides++;                    
+                }
+                
+                if (maze[n].southwest)
+                {
+                    polyline[nsides].x1 = x1 - a2;
+                    polyline[nsides].y1 = y1 - c;
+                    polyline[nsides].x2 = x1 - c;
+                    polyline[nsides].y2 = y1 - a2;
+                    polyline[nsides].angle = 1.5*PID;                    
+                    nsides++;                    
+                }
+
+                if (maze[n].northwest)
+                {
+                    polyline[nsides].x1 = x1 - c;
+                    polyline[nsides].y1 = y1 + a2;
+                    polyline[nsides].x2 = x1 - a2;
+                    polyline[nsides].y2 = y1 + c;
+                    polyline[nsides].angle = 0.5*PID;                    
+                    nsides++;                    
+                }
+            }
+            else
+            {
+                if (((i>0)||(j!=NYMAZE/2))&&(maze[n].west))
+                {
+                    polyline[nsides].x1 = x1 - a2;
+                    polyline[nsides].y1 = y1 - a2;
+                    polyline[nsides].x2 = x1 - a2;
+                    polyline[nsides].y2 = y1 + a2;
+                    polyline[nsides].angle = PID;
+                    nsides++;                    
+                }
+                
+                if (maze[n].south)
+                {
+                    polyline[nsides].x1 = x1 - a2;
+                    polyline[nsides].y1 = y1 - a2;
+                    polyline[nsides].x2 = x1 + a2;
+                    polyline[nsides].y2 = y1 - a2;
+                    polyline[nsides].angle = 0.0;                    
+                    nsides++;                    
+                }
+                
+                
+            }
+        }
+        
+        /* bottom of maze */
+        for (i=0; i<NXMAZE; i+=2)
+        {
+            n = nmaze(i, 0);
+            x1 = YMIN + padding + ((double)i + 0.5)*dx + MAZE_XSHIFT;
+            y1 = YMIN + padding + 0.75*dx;
+            
+            polyline[nsides].x1 = x1 + a2;
+            polyline[nsides].y1 = y1 - c;
+            polyline[nsides].x2 = x1 + c;
+            polyline[nsides].y2 = y1 - a2;
+            polyline[nsides].angle = 0.5*PID;                    
+            nsides++;                    
+        }
+        
+        /* top of maze */
+        for (i=0; i<NXMAZE; i++) 
+        {
+            n = nmaze(i, NYMAZE-1);
+            x1 = YMIN + padding + ((double)i + 0.5)*dx + MAZE_XSHIFT;
+            y1 = YMIN + padding + ((double)(NYMAZE-1) + 0.75)*dx;
+            
+            if ((i+NYMAZE-1)%2 == 0)
+            {
+                polyline[nsides].x1 = x1 + c;
+                polyline[nsides].y1 = y1 + a2;
+                polyline[nsides].x2 = x1 + a2;
+                polyline[nsides].y2 = y1 + c;
+                polyline[nsides].angle = 1.5*PID;                    
+                nsides++;   
+                
+                polyline[nsides].x1 = x1 + a2;
+                polyline[nsides].y1 = y1 + c;
+                polyline[nsides].x2 = x1 - a2;
+                polyline[nsides].y2 = y1 + c;
+                polyline[nsides].angle = 0.0;                    
+                nsides++;                    
+            }
+            else
+            {
+                polyline[nsides].x1 = x1 + a2;
+                polyline[nsides].y1 = y1 + a2;
+                polyline[nsides].x2 = x1 - a2;
+                polyline[nsides].y2 = y1 + a2;
+                polyline[nsides].angle = 0.0;                    
+                nsides++;                    
+            }
+        }
+        
+        /* right side of maze */
+        for (j=0; j<NYMAZE; j++)
+        {
+            n = nmaze(NXMAZE-1, j);
+            x1 = YMIN + padding + ((double)(NXMAZE-1) + 0.5)*dx + MAZE_XSHIFT;
+            y1 = YMIN + padding + ((double)j + 0.75)*dx;
+            
+            if ((NXMAZE-1+j)%2 == 0)
+            {
+                polyline[nsides].x1 = x1 + a2;
+                polyline[nsides].y1 = y1 - c;
+                polyline[nsides].x2 = x1 + c;
+                polyline[nsides].y2 = y1 - a2;
+                polyline[nsides].angle = 0.5*PID;                    
+                nsides++; 
+                polyline[nsides].x1 = x1 + c;
+                polyline[nsides].y1 = y1 + a2;
+                polyline[nsides].x2 = x1 + a2;
+                polyline[nsides].y2 = y1 + c;
+                polyline[nsides].angle = 1.5*PID;                    
+                nsides++; 
+                if ((j!=NYMAZE/2)&&(j!=NYMAZE/2+1))
+                {
+                    polyline[nsides].x1 = x1 + c;
+                    polyline[nsides].y1 = y1 - a2;
+                    polyline[nsides].x2 = x1 + c;
+                    polyline[nsides].y2 = y1 + a2;
+                    polyline[nsides].angle = PID;                    
+                    nsides++;
+                }
+            }
+            else
+            {
+                polyline[nsides].x1 = x1 + a2;
+                polyline[nsides].y1 = y1 - a2;
+                polyline[nsides].x2 = x1 + a2;
+                polyline[nsides].y2 = y1 + a2;
+                polyline[nsides].angle = PID;                    
+                nsides++;
+            }
+        }
+            
+    /* add circular arcs in corners */
+    if (B_DOMAIN == D_POLYLINE_ARCS)
+    {
+        narcs = 0;
+        
+        
+    }
+}
 
 void compute_maze_boundaries(int type, double *xmin, double *xmax)
 {
@@ -6984,7 +7242,7 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], 
                     x1 = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
                     y1 = YMIN + padding + (double)j*dy;
             
-                    if (((i>0)||(j!=NYMAZE/2))&&(maze[n].west)) 
+                    if (((i>0)||(j!=NYMAZE/2)||(CLOSE_MAZE))&&(maze[n].west)) 
                     {
                         polyline[nsides].x1 = x1;
                         polyline[nsides].y1 = y1;
@@ -7019,7 +7277,8 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], 
             polyline[nsides].x1 = x1;
             polyline[nsides].y1 = YMIN - 1000.0;
             polyline[nsides].x2 = x1;
-            polyline[nsides].y2 = y1 - dy;
+            if (CLOSE_MAZE) polyline[nsides].y2 = y1;
+            else polyline[nsides].y2 = y1 - dy;
             polyline[nsides].angle = PID;
             nsides++;
             
@@ -7488,7 +7747,21 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], 
             
             break;
         }
-        
+        case (P_MAZE_OCT):
+        {
+            maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+            
+            init_oct_maze(maze);
+            
+            nsides = 0;
+            ncircles = 0;
+    
+            init_polyline_oct_maze(polyline, circles, maze);
+            
+            free(maze);
+            
+            break;
+        }
     }
 }
 
@@ -7662,6 +7935,7 @@ int maze_type(int polyline_pattern)
         case (P_MAZE_CIRCULAR): return(1);
         case (P_MAZE_CIRC_SCATTERER): return(1);
         case (P_MAZE_HEX): return(2);
+        case (P_MAZE_OCT): return(3);
         default: return(0);
     }
     
@@ -7671,8 +7945,8 @@ int find_maze_cell(double x, double y)
 /* return maze cell number for coordinates (x, y) */
 {
     int i, j, n, block, q, w, k, l;
-    double padding = 0.02, x1, y1, u, v, r, phi, phi1, angle1, dphi, r1, tolerance = 0.025;
-    static double dx, dy, rmin, rmax, angle, rr, rrtol, h, dr, dphi_table[5], x0, y0;
+    double padding = 0.02, x1, y1, u, v, r, phi, phi1, angle1, dphi, r1, tolerance = 0.025, x2, y2;
+    static double dx, dy, rmin, rmax, angle, rr, rrtol, h, dr, dphi_table[5], x0, y0, a, b, d, a2, a2tol;
     static int first = 1, nblocks;
     
     if (first)
@@ -7707,6 +7981,22 @@ int find_maze_cell(double x, double y)
                 
                 x0 = YMIN + padding + MAZE_XSHIFT;
                 y0 = YMIN + padding + h;
+                
+                break;
+            }
+            case (3):   /* octahedron-square maze */
+            {
+                dx = (YMAX - YMIN - 2.0*padding)/((double)NYMAZE+0.5);    
+                a = dx*(2.0 - sqrt(2.0));
+                a2 = 0.5*a;
+                b = a/sqrt(2.0);
+                d = 2.0*dx;
+    
+                x0 = YMIN + padding + MAZE_XSHIFT - 0.5*b;
+                y0 = YMIN + padding + 0.25*dx - 0.5*b;
+                rr = sqrt((b+a2)*(b+a2) + a2*a2);
+                rrtol = rr*(1.0 - tolerance);
+                a2tol = a2*(1.0 - tolerance);
                 
                 break;
             }
@@ -7826,6 +8116,69 @@ int find_maze_cell(double x, double y)
                 }
            return(-10);
         }
+        case (3):   /* octahedron-square maze */
+        {
+            i = 2*(int)((x-x0)/d);
+            j = 2*(int)((y-y0)/d);
+            
+            x1 = x - x0 - (double)(i)*dx;
+            y1 = y - y0 - (double)(j)*dx;
+            
+//             printf("(x,y) = (%.3lg,%.3lg), (i,j) = (%i,%i), (x1,y1) = (%.3lg,%.3lg)\n", x, y, i, j, x1/d, y1/d);
+            
+            if (i < 0) return(-1);
+            if (i > NXMAZE-1) return(-1);
+            if (j < 0) return(-1);
+            if (j > NYMAZE-1) return(-1);
+            
+            if (x1 < b)
+            {
+                if (x1 + y1 < b) i--;
+                else if (y1 - x1 > dx) i--; 
+            }
+            else if ((x1 > dx)&&(x1 < a + 2.0*b))
+            {
+                if (y1 - x1 < - dx) i++;
+                else if (x1 + y1 > 3.0*a + 2.0*b) i++;
+            }
+            else if (x1 >= a + 2.0*b) i++; 
+            
+            if (y1 < b)
+            {
+                if (x1 + y1 < b) j--;
+                else if (x1 - y1 > a + b) j--;
+            }
+            else if ((y1 > a + b)&&(y1 < a + 2.0*b))
+            {
+                if (x1 - y1 < - dx) j++;
+                else if (x1 + y1 > 3.0*a + 2.0*b) j++;
+            }
+            else if (y1 >= a + 2.0*b) j++;
+            
+            if (i < 0) return(-1);
+            if (i > NXMAZE-1) return(-1);
+            if (j < 0) return(-1);
+            if (j > NYMAZE-1) return(-1);
+
+            
+            /* avoid finding wrong cell for particles close to wall */
+            x2 = x - x0 - (double)i*dx - b - a2;
+            y2 = y - y0 - (double)j*dx - b - a2;
+            if ((i+j)%2 == 0)
+            {
+                if (!in_polygon(x2, y2, rrtol, 8, 0.25)) return(-10);
+            }
+            else
+            {
+                if (vabs(x2) > a2tol) return(-10);
+                if (vabs(y2) > a2tol) return(-10);
+            }
+            
+            n = nmaze(i, j);
+            
+            if (n < NXMAZE*NYMAZE) return(n);
+            else return(-1);
+        }
     }
 }
 
@@ -7834,7 +8187,7 @@ void draw_maze_cell(int n, int part_number, double minprop)
 {
     int i, j, block, q;
     double x, y, padding = 0.02, rgb[3], w;
-    static double dx, dy, rmin, rmax, angle, r, r1, dr, phi1, dphi, h, x0, y0;
+    static double dx, dy, rmin, rmax, angle, r, r1, dr, phi1, dphi, h, x0, y0, a, b, a2, square_prop;
     static int first = 1, nblocks;
     
     if (first) switch (maze_type(POLYLINE_PATTERN)) {
@@ -7863,6 +8216,21 @@ void draw_maze_cell(int n, int part_number, double minprop)
             h = 0.5*sqrt(3.0)*r;                
             x0 = YMIN + padding + MAZE_XSHIFT;
             y0 = YMIN + padding + h;
+            break;
+        }
+        case (3):   /* octahedron-square maze */
+        {
+            dx = (YMAX - YMIN - 2.0*padding)/((double)NYMAZE+0.5);    
+            a = dx*(2.0 - sqrt(2.0));
+            b = a/sqrt(2.0);
+            a2 = 0.5*a;
+            
+            r = sqrt((b+a2)*(b+a2) + a2*a2);
+            square_prop = 2.0*(sqrt(2.0) + 1.0); 
+
+            x0 = YMIN + padding + MAZE_XSHIFT;
+            y0 = YMIN + padding + 0.25*dx;
+                
             break;
         }
         first = 0;
@@ -7923,6 +8291,22 @@ void draw_maze_cell(int n, int part_number, double minprop)
             
             rgb_color_scheme_density(part_number, rgb, minprop); 
             draw_colored_circle(x, y, r, 6, rgb);
+            break;
+        }
+        case (3):   /* octahedron-square maze */
+        {
+            i = n%NXMAZE;
+            j = n/NXMAZE;
+            
+            x = x0 + ((double)i + 0.5)*dx;
+            y = y0 + ((double)j + 0.5)*dx;
+            
+            /* adapt particle number in square to have constant density */
+            if ((i+j)%2 == 1) part_number = (int)(square_prop*(double)part_number);
+            
+            rgb_color_scheme_density(part_number, rgb, minprop); 
+            if ((i+j)%2 == 0) draw_colored_octahedron(x, y, r,rgb);
+            else erase_rectangle(x-a2, y-a2, x+a2, y+a2, rgb);
             break;
         }
     }

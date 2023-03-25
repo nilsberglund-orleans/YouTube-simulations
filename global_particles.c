@@ -98,6 +98,7 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define P_MAZE_CIRCULAR 13  /* circular maze */
 #define P_MAZE_CIRC_SCATTERER 14  /* circular maze with scatterers */
 #define P_MAZE_HEX 15     /* hexagonal maze */
+#define P_MAZE_OCT 16     /* maze with octagonal and square cells */
 
 /* Color palettes */
 

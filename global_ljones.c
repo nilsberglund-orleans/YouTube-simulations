@@ -11,11 +11,12 @@
 #define D_CIRCLES 20    /* several circles */
 #define D_CIRCLES_IN_RECT 201   /* several circles in a rectangle */
 
-#define NMAXCIRCLES 20000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
+#define NMAXCIRCLES 100000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define MAXNEIGH 20         /* max number of neighbours kept in memory */
 #define NMAXOBSTACLES 100   /* max number of obstacles */
 #define NMAXSEGMENTS 1000   /* max number of repelling segments */
 #define NMAXGROUPS 50       /* max number of groups of segments */
+#define NMAXCOLLISIONS 200000   /* max number of collisions */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -105,6 +106,8 @@
 #define TH_VERTICAL 0       /* only particles at the right of x = PARTIAL_THERMO_SHIFT are coupled */
 #define TH_INSEGMENT 1      /* only particles in region defined by segments are coupled */
 #define TH_INBOX 2          /* only particles in a given box are coupled */
+#define TH_LAYER 3          /* only particles above -LAMBDA are coupled */
+#define TH_LAYER_TYPE2 4    /* only particles above highest type 2 particle are coupled */
 
 /* Gravity schedules */
 
@@ -138,6 +141,13 @@
 #define CHEM_AABAA 6    /* reaction A + A <-> B (reversible) */
 #define CHEM_POLYMER 7  /* reaction A + B -> C, A + C -> D, etc */
 #define CHEM_POLYMER_DISS 8  /* polimerisation with dissociation */
+#define CHEM_POLYMER_STEP 9  /* step growth polimerisation with dissociation */
+#define CHEM_AUTOCATALYSIS 10   /* autocatalytic reaction 2A + B -> 2B */
+#define CHEM_CATALYTIC_A2D 11   /* catalytic reaction A + B -> C, A + C -> B + D */
+#define CHEM_ABCAB 12       /* reaction A + B <-> C (reversible) */
+#define CHEM_ABCDABC 13     /* reactions A + B <-> C, A + C <-> D */
+#define CHEM_BZ 14          /* simplified Belousov-Zhabotinski reaction with 6 types (Oregonator) */
+#define CHEM_BRUSSELATOR 15 /* Brusselator oscillating reaction */
 
 /* Initial conditions for chemical reactions */
 
@@ -147,6 +157,8 @@
 #define IC_RANDOM_TWO 2    /* particle type chosen randomly between 1 and 2, with TYPE_PROPORTION */
 #define IC_CIRCLE 3        /* type 1 in a disc */
 #define IC_CATALYSIS 4     /* mix of 1 and 2 in left half, only 1 in right half */
+#define IC_LAYERS 5        /* layer of 2 below 1 */
+#define IC_BZ 6            /* initial state for BZ reaction */
 
 /* Plot types */
 

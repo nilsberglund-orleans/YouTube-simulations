@@ -1106,6 +1106,13 @@ void compute_light_angle(short int xy_in[NX*NY], t_wave wave[NX*NY], int movie)
             {
                 gradx = (*wave[(i+1)*NY+j].p_zfield[movie] - *wave[(i-1)*NY+j].p_zfield[movie])/dx;
                 grady = (*wave[i*NY+j+1].p_zfield[movie] - *wave[i*NY+j-1].p_zfield[movie])/dy;
+                
+                if (ADD_POTENTIAL)
+                {
+                    gradx -= (*wave[(i+1)*NY+j].potential - *wave[(i-1)*NY+j].potential)*POT_FACT/dx;
+                    grady -= (*wave[i*NY+j+1].potential - *wave[i*NY+j-1].potential)*POT_FACT/dy;
+                }
+                
                 norm = sqrt(1.0 + gradx*gradx + grady*grady);
                 pscal = -gradx*light[0] - grady*light[1] + 1.0;
                 
@@ -1185,14 +1192,14 @@ double compute_interpolated_colors_wave(int i, int j, short int xy_in[NX*NY], t_
 {
     int k;
     double cw, ce, cn, cs, c_sw, c_se, c_nw, c_ne, c_mid, ca, z_mid;
-    double cw2, ce2, cn2, cs2;
+    double cw2, ce2, cn2, cs2, factor;
     double *z_sw, *z_se, *z_nw, *z_ne;
     
     z_sw = wave[i*NY+j].p_zfield[movie];
     z_se = wave[(i+1)*NY+j].p_zfield[movie];
     z_nw = wave[i*NY+j+1].p_zfield[movie];
     z_ne = wave[(i+1)*NY+j+1].p_zfield[movie];
-                            
+
     z_mid = 0.25*(*z_sw + *z_se + *z_nw + *z_ne);
     
     c_sw = *wave[i*NY+j].p_cfield[movie];
@@ -1251,6 +1258,16 @@ double compute_interpolated_colors_wave(int i, int j, short int xy_in[NX*NY], t_
             rgb_s[k] *= fade_value;
         }
     
+//     if (ADD_POTENTIAL) 
+//     {
+//         factor = 0.25*POT_FACT;
+//         z_mid += *wave[i*NY+j].potential*factor;
+//         z_mid += *wave[(i+1)*NY+j].potential*factor;
+//         z_mid += *wave[i*NY+j+1].potential*factor;
+//         z_mid += *wave[(i+1)*NY+j+1].potential*factor;
+//     }
+
+    
     return(z_mid);
 }
 
@@ -1275,9 +1292,10 @@ void compute_wave_fields(double phi[NX*NY], double psi[NX*NY], short int xy_in[N
 void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY])
 /* initialise fields for wave speed and dissipation */
 {
-    int i, j, k, inlens;
+    int i, j, k, n, inlens;
     double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
-    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1;
+    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
+    double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
     
     if (VARIABLE_IOR)
     {
@@ -1410,6 +1428,44 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
                         tc[i*NY+j] = 0.0;
                         tcc[i*NY+j] = 0.0;
                         tgamma[i*NY+j] = 0.0;
+                    }
+                }
+                break;
+            }
+            case (IOR_RANDOM_WELLS):
+            {
+                dx = (XMAX - XMIN)/(double)NGRIDX;
+                dy = (YMAX - YMIN)/(double)NGRIDY;
+                sigma = 0.2*dx*dx;
+                for (i=0; i<NGRIDX; i++)
+                    for (j=0; j<NGRIDY; j++)
+                    {
+                        
+                        n = j*NGRIDX + i;
+                        xc[n] = XMIN + dx*((double)i + 0.5 + 0.1*gaussian());
+                        yc[n] = YMIN + dy*((double)j + 0.5 + 0.1*gaussian());
+//                         if (j%2 == 1) yc[n] += 0.5*dx;
+                        height[n] = 0.5 + 0.5*gaussian();
+                        if (height[n] > 1.0) height[n] = 1.0;
+                        if (height[n] < 0.0) height[n] = 0.0;
+                    }
+                    
+//                 #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        sum = 0.0;
+                        for (n = 0; n<NGRIDX*NGRIDY; n++)
+                        {
+                            r2 = (x - xc[n])*(x - xc[n]) + (y - yc[n])*(y - yc[n]);
+                            sum += exp(-r2/(sigma))*height[n];
+                        }
+                        sum = tanh(sum);
+                        tc[i*NY+j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tcc[i*NY+j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tgamma[i*NY+j] = GAMMA;
                     }
                 }
                 break;
@@ -1624,8 +1680,7 @@ void compute_cfield(short int xy_in[NX*NY], int cplot, int palette, t_wave wave[
 }
 
 
-void draw_wave_3d_ij(int i, int j, int movie, double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], t_wave wave[NX*NY], 
-                  int zplot, int cplot, int palette, int fade, double fade_value)
+void draw_wave_3d_ij(int i, int j, int movie, double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], t_wave wave[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
 /* draw wave at simulation grid point (i,j) */
 {
     int k, l, draw = 1;
@@ -1651,26 +1706,56 @@ void draw_wave_3d_ij(int i, int j, int movie, double phi[NX*NY], double psi[NX*N
             ij_to_xy(i+1, j, xy_se);
             ij_to_xy(i, j+1, xy_nw);
             ij_to_xy(i+1, j+1, xy_ne);
+            
+//             if (ADD_POTENTIAL) 
+//             {
+//                 z_mid += *wave[i*NY+j].potential*POT_FACT*0.25;
+//                 z_mid += *wave[(i+1)*NY+j].potential*POT_FACT*0.25;
+//                 z_mid += *wave[i*NY+j+1].potential*POT_FACT*0.25;
+//                 z_mid += *wave[(i+1)*NY+j+1].potential*POT_FACT*0.25;
+//             }
                     
             for (k=0; k<2; k++) xy_mid[k] = 0.25*(xy_sw[k] + xy_se[k] + xy_nw[k] + xy_ne[k]);
                        
             if (AMPLITUDE_HIGH_RES == 1)
             {
-                glBegin(GL_TRIANGLE_FAN);
-                glColor3f(rgb_w[0], rgb_w[1], rgb_w[2]);
-                draw_vertex_xyz(xy_mid, z_mid);
-                draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield[movie]);
-                draw_vertex_xyz(xy_sw, *wave[i*NY+j].p_zfield[movie]);
+                if (ADD_POTENTIAL)
+                {
+                    glBegin(GL_TRIANGLE_FAN);
+                    glColor3f(rgb_w[0], rgb_w[1], rgb_w[2]);
+//                     draw_vertex_xyz(xy_mid, z_mid);
+                    draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield[movie] - *wave[i*NY+j+1].potential*POT_FACT);
+                    draw_vertex_xyz(xy_sw, *wave[i*NY+j].p_zfield[movie] - *wave[i*NY+j].potential*POT_FACT);
             
-                glColor3f(rgb_s[0], rgb_s[1], rgb_s[2]);
-                draw_vertex_xyz(xy_se, *wave[(i+1)*NY+j].p_zfield[movie]);
+                    glColor3f(rgb_s[0], rgb_s[1], rgb_s[2]);
+                    draw_vertex_xyz(xy_se, *wave[(i+1)*NY+j].p_zfield[movie] - *wave[(i+1)*NY+j].potential*POT_FACT);
                 
-                glColor3f(rgb_e[0], rgb_e[1], rgb_e[2]);
-                draw_vertex_xyz(xy_ne, *wave[(i+1)*NY+j+1].p_zfield[movie]);
+                    glColor3f(rgb_e[0], rgb_e[1], rgb_e[2]);
+                    draw_vertex_xyz(xy_ne, *wave[(i+1)*NY+j+1].p_zfield[movie] - *wave[(i+1)*NY+j+1].potential*POT_FACT);
                     
-                glColor3f(rgb_n[0], rgb_n[1], rgb_n[2]);
-                draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield[movie]);
-                glEnd ();
+                    glColor3f(rgb_n[0], rgb_n[1], rgb_n[2]);
+                    draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield[movie] - *wave[i*NY+j].potential*POT_FACT);
+                    glEnd ();
+                    
+                }
+                else
+                {
+                    glBegin(GL_TRIANGLE_FAN);
+                    glColor3f(rgb_w[0], rgb_w[1], rgb_w[2]);
+                    draw_vertex_xyz(xy_mid, z_mid);
+                    draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield[movie]);
+                    draw_vertex_xyz(xy_sw, *wave[i*NY+j].p_zfield[movie]);
+            
+                    glColor3f(rgb_s[0], rgb_s[1], rgb_s[2]);
+                    draw_vertex_xyz(xy_se, *wave[(i+1)*NY+j].p_zfield[movie]);
+                
+                    glColor3f(rgb_e[0], rgb_e[1], rgb_e[2]);
+                    draw_vertex_xyz(xy_ne, *wave[(i+1)*NY+j+1].p_zfield[movie]);
+                    
+                    glColor3f(rgb_n[0], rgb_n[1], rgb_n[2]);
+                    draw_vertex_xyz(xy_nw, *wave[i*NY+j+1].p_zfield[movie]);
+                    glEnd ();
+                }
             }
             else /* experimental */
             {

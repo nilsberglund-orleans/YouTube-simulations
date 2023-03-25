@@ -6,32 +6,32 @@ double viscosity; /* viscosity (parameter in front of Laplacian) */
 double rpslzb;    /* second parameter in Rock-Paper-Scissors-Lizard-Spock equation */
 double flow_speed;  /* flow speed for laminar boundary conditions in Euler equation */
 
-double gaussian()
-/* returns standard normal random variable, using Box-Mueller algorithm */
-{
-    static double V1, V2, S;
-    static int phase = 0;
-    double X;
-
-    if (phase == 0) 
-    {
-        do 
-        {
-        double U1 = (double)rand() / RAND_MAX;
-        double U2 = (double)rand() / RAND_MAX;
-        V1 = 2 * U1 - 1;
-        V2 = 2 * U2 - 1;
-        S = V1 * V1 + V2 * V2;
-        } 
-        while(S >= 1 || S == 0);
-        X = V1 * sqrt(-2 * log(S) / S);
-    } 
-    else X = V2 * sqrt(-2 * log(S) / S);
-
-    phase = 1 - phase;
-
-    return X;
-}
+// double gaussian()
+// /* returns standard normal random variable, using Box-Mueller algorithm */
+// {
+//     static double V1, V2, S;
+//     static int phase = 0;
+//     double X;
+// 
+//     if (phase == 0) 
+//     {
+//         do 
+//         {
+//         double U1 = (double)rand() / RAND_MAX;
+//         double U2 = (double)rand() / RAND_MAX;
+//         V1 = 2 * U1 - 1;
+//         V2 = 2 * U2 - 1;
+//         S = V1 * V1 + V2 * V2;
+//         } 
+//         while(S >= 1 || S == 0);
+//         X = V1 * sqrt(-2 * log(S) / S);
+//     } 
+//     else X = V2 * sqrt(-2 * log(S) / S);
+// 
+//     phase = 1 - phase;
+// 
+//     return X;
+// }
 
 void init_random(double mean, double amplitude, double *phi[NFIELDS], short int xy_in[NX*NY])
 /* initialise field with gaussian at position (x,y) */
@@ -510,28 +510,63 @@ void init_shear_flow(double amp, double delta, double rho, int nx, int ny, doubl
         }
 }
 
-void set_boundary_laminar_flow(double amp, double modulation, double period, double yshift, double *phi[NFIELDS], short int xy_in[NX*NY], int imin, int imax, int jmin, int jmax)
+void set_boundary_laminar_flow(double amp, double xmodulation, double ymodulation, double xperiod, double yperiod, double yshift, double density_mod, double *phi[NFIELDS], short int xy_in[NX*NY], int imin, int imax, int jmin, int jmax, double factor)
 /* enfoce laminar flow in x direction on top and bottom boundaries */
 /* phi[0] is stream function, phi[1] is vorticity */
 /* amp is global amplitude */
 {
     int i, j;
-    double xy[2], y1, a, b, f, cplus, cminus;    
+    double xy[2], y1, a, b, f, cplus, cminus, comp_factor;    
     
-    a = period*PI/YMAX;
+    a = xperiod*PI/YMAX;
+    b = yperiod*PI/XMAX;
+    comp_factor = 1.0 - factor;
     
-    for (i=imin; i<imax; i++)
-        for (j=jmin; j<jmax; j++)
+    switch (RDE_EQUATION) {
+        case (E_EULER_INCOMP): 
         {
-            ij_to_xy(i, j, xy);
-	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
-            y1 = xy[1] + yshift;
-            if (xy_in[i*NY+j])
-            {
-                phi[0][i*NY+j] = amp*(y1 + modulation*sin(a*y1)/a);
-                phi[1][i*NY+j] = amp*modulation*a*sin(a*y1);
-            }
+            for (i=imin; i<imax; i++)
+                for (j=jmin; j<jmax; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+                    y1 = xy[1] + yshift;
+                    if (xy_in[i*NY+j])
+                    {
+                        phi[0][i*NY+j] = amp*(y1 + xmodulation*sin(a*y1)/a);
+                        phi[1][i*NY+j] = amp*xmodulation*a*sin(a*y1);
+                    }
+                }
+            break;
         }
+        case (E_EULER_COMP):
+        {
+            for (i=imin; i<imax; i++)
+                for (j=jmin; j<jmax; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+                    y1 = xy[1] + yshift;
+
+                    if (xy_in[i*NY+j])
+                    {
+                        phi[0][i*NY+j] *= comp_factor;
+                        phi[1][i*NY+j] *= comp_factor;
+                        phi[2][i*NY+j] *= comp_factor;
+                        phi[0][i*NY+j] += factor*(1.0 + density_mod*cos(a*y1));
+                        phi[1][i*NY+j] += factor*amp*(1.0 + xmodulation*cos(a*y1));
+                        phi[2][i*NY+j] += factor*ymodulation*sin(b*xy[0]);
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 1.0;
+                        phi[1][i*NY+j] = 0.0;
+                        phi[2][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+    }
 }
 
 
@@ -596,11 +631,85 @@ void init_laminar_flow(double amp, double xmodulation, double ymodulation, doubl
     }
 }
 
-void initialize_bcfield(double bc_field[NX*NY])
+double distance_to_segment(double x, double y, double x1, double y1, double x2, double y2)
+/* distance of (x,y) to segment from (x1,y1) to (x2,y2) */
+{
+    double xp, yp, angle, length, ca, sa;
+    
+    angle = argument(x2 - x1, y2 - y1);
+    length = module2(x2 - x1, y2 - y1);
+    
+    ca = cos(angle);
+    sa = sin(angle);
+    
+    xp = ca*(x - x1) + sa*(y - y1);
+    yp = -sa*(x - x1) + ca*(y - y1);
+    
+    if ((xp >= 0)&&(xp <= length)) return(vabs(yp));
+    else if (xp < 0) return(module2(xp, yp));
+    else return(module2(xp-length, yp));
+}
+
+
+double tesla_distance(double x, double y, double a, double l, double theta)
+/* distance to center of Tesla valve */
+{
+    double dmin, dist, ct, st, tt, b, c, d, l1, l2, angle;
+    double xa, ya, xb, yb, xc, yc, xd, yd, xe, ye;
+    
+    ct = cos(theta);
+    st = sin(theta);
+    tt = st/ct;
+    
+    b = a*ct;
+//     c = (l*st - a)*ct;
+    d = 0.5*a*tt;
+    
+    l1 = l*cos(2.0*theta);
+//     l2 = l - a/st;
+    l2 = 0.3*l;    /* TODO */
+    
+    /* upper segment */
+    xa = l1*ct + 0.5*b*st;
+    ya = a + l1*st - 0.5*b*ct;
+    dmin = distance_to_segment(x, y, -d, 0.0, xa, ya);
+    
+    /* lower segment */
+    xb = l*ct;
+    yb = -l*st - 0.5*a;
+    dist = distance_to_segment(x, y, -d, 0.0, xb, yb);
+    if (dist < dmin) dmin = dist;
+    
+    /* small segment */
+//     xc = xb;
+//     yc = -l*st + 0.5*a;
+//     dist = distance_to_segment(x, y, xc - 0.5*a/tt, -l*st, xc, yc);
+//     if (dist < dmin) dmin = dist;
+    
+    /* middle segment */
+    xd = l*ct - 1.0*a*st;
+    yd = -l*st + a + 1.0*a*ct;
+    dist = distance_to_segment(x, y, xd - l2*ct, yd - l2*st, xd, yd);
+    if (dist < dmin) dmin = dist;
+
+    /* circular part */
+    xe = 0.5*(xa + xd);
+    ye = 0.5*(ya + yd);
+    c = module2(xd - xe, yd - ye) - 0.5*b;
+    dist = vabs(module2(x - xe, y - ye) - c - 0.5*b*ct);
+    angle = argument(x - xe, y - ye);
+    angle += PID - theta;
+    if (angle > DPI) angle -= DPI;
+    if ((angle > 0.0)&&(angle < PI)&&(dist < dmin)) dmin = dist;
+    
+    return(dmin);
+}
+
+void initialize_bcfield(double bc_field[NX*NY], t_rectangle polyrect[NMAXPOLY])
 /* apply smooth modulation to adapt initial state to obstacles */ 
 {
-    int i, j;
-    double xy[2], r, f;
+    int i, j, nsides, s;
+    double xy[2], x, y, r, f, a, l, theta, x1, x2, y1, y2, distance, d, d0, length, height, mid, fmin, ct, st;
     
     switch (OBSTACLE_GEOMETRY) {
         case (D_SINAI): 
@@ -615,6 +724,171 @@ void initialize_bcfield(double bc_field[NX*NY])
                 }
             break;
         }
+        case (D_EXT_ELLIPSE): 
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    r = module2(xy[0]/LAMBDA,xy[1]/MU);
+                    f = 0.5*(1.0 + tanh(BC_STIFFNESS*(r - 1.0))); 
+                    bc_field[i*NY+j] = f;
+                }
+            break;
+        }
+        case (D_EXT_ELLIPSE_CURVED): 
+        {
+            a = 0.4;
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    y1 = xy[1] + a*xy[0]*xy[0];
+                    r = module2(xy[0]/LAMBDA,y1/MU);
+                    f = 0.5*(1.0 + tanh(BC_STIFFNESS*(r - 1.0))); 
+                    bc_field[i*NY+j] = f;
+                }
+            break;
+        }
+        case (D_WING): 
+        {
+            a = 0.4;
+//             a = 0.0;
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    y1 = xy[1] + a*xy[0]*xy[0];
+                    r = module2(xy[0]/LAMBDA,y1/(MU*(1.0 - xy[0]/LAMBDA)));
+                    f = 0.5*(1.0 + tanh(BC_STIFFNESS*(r - 1.0))); 
+                    bc_field[i*NY+j] = f;
+                }
+            break;
+        }
+        case (D_ONE_FUNNEL):
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    r = MU + LAMBDA*xy[0]*xy[0] - vabs(xy[1]);
+                    f = 0.5*(1.0 + tanh(BC_STIFFNESS*r)); 
+                    bc_field[i*NY+j] = f;
+                }
+            break;
+        }
+        case (D_MAZE):
+        {
+            nsides = init_polyrect_euler(polyrect, D_MAZE);
+            break;
+        }
+        case (D_MAZE_CHANNELS):
+        {
+            nsides = init_polyrect_euler(polyrect, D_MAZE_CHANNELS);
+            break;
+        }
+        case (D_TESLA):
+        {
+            a = 0.16;
+            l = 1.6;
+            theta = PID/5.0;
+            ct = cos(theta);
+            st = sin(theta);
+            
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy[1] -= 1.5*a;
+                    if (!REVERSE_TESLA_VALVE) xy[0] *= -1.0;
+                    
+                    d0 = tesla_distance(xy[0] +l*ct, xy[1], a, l, theta);
+                    
+                    d = tesla_distance(xy[0], -l*st-xy[1]-0.5*a, a, l, theta);
+                    if (d < d0) d0 = d;
+                    
+                    if (vabs(xy[0]) > l*ct)
+                    {
+                        d = vabs(xy[1]);
+                        if (d < d0) d0 = d;
+                    }
+                    
+                    r = a - d0;
+                    
+                    f = 0.5*(1.0 + tanh(BC_STIFFNESS*r)); 
+                    bc_field[i*NY+j] = f;
+                }
+            break;
+        }
+    }
+    
+    if ((OBSTACLE_GEOMETRY == D_MAZE)||(OBSTACLE_GEOMETRY == D_MAZE_CHANNELS))
+    {
+        d0 = 0.25*MAZE_WIDTH;
+        fmin = 0.5*(1.0 - tanh(d0*BC_STIFFNESS));
+        for (i=0; i<NX; i++)
+        {
+            if (i%100 == 0) printf("Initialising maze, column %i of %i\n", i, NX);
+            for (j=0; j<NY; j++)
+            {
+                ij_to_xy(i, j, xy);
+                x = xy[0];
+                y = xy[1];
+                distance = XMAX - XMIN;
+                /* determine distance of point to middle of walls */ 
+                for (s=0; s<nsides; s++)
+                {
+                    x1 = polyrect[s].x1 + MAZE_WIDTH;
+                    x2 = polyrect[s].x2 - MAZE_WIDTH;
+                    y1 = polyrect[s].y1 + MAZE_WIDTH;
+                    y2 = polyrect[s].y2 - MAZE_WIDTH;
+                    length = vabs(polyrect[s].x2 - polyrect[s].x1);
+                    height = vabs(polyrect[s].y2 - polyrect[s].y1);
+                    
+                    /* case of large rectangles for maze with channels */
+                    if ((length > 4.0*MAZE_WIDTH)&&(height > 4.0*MAZE_WIDTH))
+                    {
+                        if (x < x1)
+                        {
+                            if (y < y1) d = module2(x - x1, y - y1);
+                            else if (y > y2) d = module2(x - x1, y - y2);
+                            else d = x1 - x;
+                        }
+                        else if (x > x2)
+                        {
+                            if (y < y1) d = module2(x - x2, y - y1);
+                            else if (y > y2) d = module2(x - x2, y - y2);
+                            else d = x - x2;
+                        }
+                        else
+                        {
+                            if (y < y1) d = y1 - y;
+                            else if (y > y2) d = y - y2;
+                            else d = 0.0;
+                        }
+                    }
+                    else if (length > height)
+                    {
+                        mid = 0.5*(polyrect[s].y1 + polyrect[s].y2);
+                        if ((x > x1)&&(x < x2)) d = vabs(y - mid); 
+                        else if (x <= x1) d = module2(x - x1, y - mid);
+                        else d = module2(x - x2, y - mid);
+                    }
+                    else
+                    {
+                        mid = 0.5*(polyrect[s].x1 + polyrect[s].x2);
+                        if ((y > y1)&&(y < y2)) d = vabs(x - mid); 
+                        else if (y <= y1) d = module2(x - mid, y - y1);
+                        else d = module2(x - mid, y - y2);
+                    }
+                    if (d < distance) distance = d;
+                }
+                if (distance < d0) f = fmin*distance/d0;
+                else f = 0.5*(1.0 + tanh(BC_STIFFNESS*(distance - 1.25*MAZE_WIDTH))); 
+                bc_field[i*NY+j] = f;
+//                     printf("distance = %.5lg, bcfield = %.5lg\n", distance, f);
+            }
+        }
     }
 }
 
@@ -628,10 +902,10 @@ void adapt_state_to_bc(double *phi[NFIELDS], double bc_field[NX*NY], short int x
     #pragma omp parallel for private(i,j)
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++) if (xy_in[i*NY+j])
-            {
-                for (field = 1; field < NFIELDS; field++) 
-                    phi[field][i*NY+j] *= bc_field[i*NY+j];
-            }         
+        {
+            for (field = 1; field < NFIELDS; field++) 
+                phi[field][i*NY+j] *= bc_field[i*NY+j];
+        }
 }
 
 /*********************/
@@ -1231,7 +1505,7 @@ void compute_pressure_laplacian(double *phi[NFIELDS], double *l_pressure)
 
 
 void compute_speed(double *phi[NFIELDS], t_rde rde[NX*NY])
-/* compute the log of a field */
+/* compute the speed of a field */
 {
     int i, j; 
     double value;
@@ -1240,8 +1514,25 @@ void compute_speed(double *phi[NFIELDS], t_rde rde[NX*NY])
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
-            value = module2(phi[1][i*NY+j], phi[2][i*NY+j]);
+            value = ZSCALE_SPEED*module2(phi[1][i*NY+j], phi[2][i*NY+j]);
             rde[i*NY+j].field_norm = value;
+        }
+}
+
+void compute_direction(double *phi[NFIELDS], t_rde rde[NX*NY])
+/* compute the direction of a field */
+{
+    int i, j; 
+    double value;
+    
+    #pragma omp parallel for private(i,j,value)
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            value = argument(phi[1][i*NY+j], phi[2][i*NY+j]);
+            if (value < 0.0) value += DPI;
+            if (value > DPI) value -= DPI;
+            rde[i*NY+j].field_arg = value;
         }
 }
 
@@ -1255,7 +1546,7 @@ void compute_vorticity(t_rde rde[NX*NY])
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
-            rde[i*NY+j].curl = rde[i*NY+j].dxv - rde[i*NY+j].dyu + VORTICITY_SHIFT;
+            rde[i*NY+j].curl = VSCALE_VORTICITY*(rde[i*NY+j].dxv - rde[i*NY+j].dyu) + VORTICITY_SHIFT;
         }
 }
 
@@ -1710,7 +2001,7 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
         }
         case (Z_EULER_DENSITY): 
         {
-            color_scheme_palette(COLOR_SCHEME, palette, VSCALE_DENSITY*(value-1.0), 1.0, 0, rgb);
+            color_scheme_palette(COLOR_SCHEME, palette, VSCALE_DENSITY*(value-SHIFT_DENSITY), 1.0, 0, rgb);
             break;
         }
         case (Z_EULER_SPEED): 
@@ -1724,6 +2015,16 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
         case (Z_EULERC_VORTICITY): 
         {
             color_scheme_palette(COLOR_SCHEME, palette, VSCALE_VORTICITY*(value-VORTICITY_SHIFT), 1.0, 0, rgb);
+            break;
+        }
+        case (Z_EULER_DIRECTION): 
+        {
+            hsl_to_rgb_palette(360.0*value/DPI, 0.9, 0.5, rgb, palette);
+            break;
+        }
+        case (Z_EULER_DIRECTION_SPEED): 
+        {
+            hsl_to_rgb_palette(360.0*value/DPI, 0.9, 0.5, rgb, palette);
             break;
         }
     }
@@ -1890,8 +2191,10 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
         }
         case (E_EULER_COMP):
         {
-            if ((zplot == Z_EULER_SPEED)||(cplot == Z_EULER_SPEED))
+            if ((zplot == Z_EULER_SPEED)||(cplot == Z_EULER_SPEED)||(zplot == Z_EULER_DIRECTION_SPEED)||(cplot == Z_EULER_DIRECTION_SPEED))
                 compute_speed(phi, rde);
+            if ((zplot == Z_EULER_DIRECTION)||(cplot == Z_EULER_DIRECTION)||(zplot == Z_EULER_DIRECTION_SPEED)||(cplot == Z_EULER_DIRECTION_SPEED))
+                compute_direction(phi, rde);
             if ((zplot == Z_EULERC_VORTICITY)||(cplot == Z_EULERC_VORTICITY))
                 compute_vorticity(rde);
             break;
@@ -2044,6 +2347,19 @@ void init_zfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].curl;
             break;
         }
+        case (Z_EULER_DIRECTION):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].field_arg;
+            break;
+        }
+        case (Z_EULER_DIRECTION_SPEED):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].field_norm;
+            break;
+        }
+        
     }
 }
 
@@ -2191,6 +2507,18 @@ void init_cfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int cplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].curl;
             break;
         }
+        case (Z_EULER_DIRECTION):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].field_arg;
+            break;
+        }
+        case (Z_EULER_DIRECTION_SPEED):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].field_arg;
+            break;
+        }
     }
 }
 
@@ -2204,8 +2532,9 @@ void compute_cfield_rde(short int xy_in[NX*NY], int cplot, int palette, t_rde rd
     for (i=0; i<NX; i++) for (j=0; j<NY; j++)
     {
         compute_field_color_rde(*rde[i*NY+j].p_cfield[movie], cplot, palette, rde[i*NY+j].rgb);
+        
 //         if ((cplot == Z_ARGUMENT)||(cplot == Z_REALPART))
-        if (cplot == Z_ARGUMENT)
+        if ((cplot == Z_ARGUMENT)||(cplot == Z_EULER_DIRECTION_SPEED))
         {
             lum = tanh(SLOPE_SCHROD_LUM*rde[i*NY+j].field_norm);
             for (k=0; k<3; k++) rde[i*NY+j].rgb[k] *= lum;

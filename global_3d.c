@@ -37,6 +37,7 @@
 #define POT_FERMIONS 5      /* two interacting 1D fermions */
 #define POT_FERMIONS_PERIODIC 6      /* two interacting 1D fermions on the circle */
 #define POT_MAZE 7          /* higher potential on walls of a maze */
+#define POT_IOR 10          /* index of refraction, for z coordinate of wave equation */
 
 /* Choice of vector potential */
 
@@ -47,6 +48,10 @@
 
 #define GF_VERTICAL 0       /* gravity acting vertically */
 #define GF_CIRCLE 1         /* repelling circle */
+#define GF_ELLIPSE 2        /* repelling ellipse */
+#define GF_AIRFOIL 3        /* curved repelling ellipse */
+#define GF_WING 4           /* wing shape */
+#define GF_COMPUTE_FROM_BC 5    /* compute force field as gradient of bc_field */
 
 /* macros to avoid unnecessary computations in 3D plots */
 
@@ -88,6 +93,7 @@ typedef struct
     double flux_int_table[FLUX_WINDOW];   /* table of energy flux intensities (for averaging) */
     short int flux_counter;     /* counter for averaging of energy flux */
     double rgb[3];              /* RGB color code */
+    double *potential;          /* pointer to "potential" to add to z-coordinate */
     double *p_zfield[2];        /* pointers to z field (second pointer for option DOUBLE_MOVIE) */
     double *p_cfield[4];        /* pointers to color field (second pointer for option DOUBLE_MOVIE) */
                                 /* third and fourth pointer for color luminosity (for energy flux) */
