@@ -7204,7 +7204,7 @@ void draw_trajectory_plot(t_group_data *group_speeds, int i)
         scalex = 6.0;
         scaley = 3.0;
         
-        for (group = 0; group < ngroups; group++)
+        for (group = 1; group < ngroups; group++)
             yinitial[group] = group_speeds[(group-1)*gshift].yc;
         
         first = 0;
