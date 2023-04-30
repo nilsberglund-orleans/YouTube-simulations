@@ -511,6 +511,24 @@ void set_type_color(int type, double lum, double rgb[3])
     glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
 }
 
+double distance_to_segment(double x, double y, double x1, double y1, double x2, double y2)
+/* distance of (x,y) to segment from (x1,y1) to (x2,y2) */
+{
+    double xp, yp, angle, length, ca, sa;
+    
+    angle = argument(x2 - x1, y2 - y1);
+    length = module2(x2 - x1, y2 - y1);
+    
+    ca = cos(angle);
+    sa = sin(angle);
+    
+    xp = ca*(x - x1) + sa*(y - y1);
+    yp = -sa*(x - x1) + ca*(y - y1);
+    
+    if ((xp >= 0)&&(xp <= length)) return(vabs(yp));
+    else if (xp < 0) return(module2(xp, yp));
+    else return(module2(xp-length, yp));
+}
 
 
 void init_particle_config(t_particle particles[NMAXCIRCLES])
@@ -1207,7 +1225,7 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
         case (RCK_RECT_HAT):    /* rectangular chamber with a hat */
         {
             a = 0.5*LAMBDA;
-            b = 0.49*PI*LAMBDA;
+            b = (0.49*PI-0.25)*LAMBDA;
             add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, segment, 0);
             add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, segment, 0);
             add_rotated_angle_to_segments(x0+a, nozy+b, x0, nozy+b+a, 0.02, segment, 0);
@@ -1262,7 +1280,7 @@ int init_maze_segments(t_segment segment[NMAXSEGMENTS])
 {
     t_maze* maze;
     int i, j, n;
-    double x1, y1, x2, y2, dx, dy, padding = 0.02, width = 0.01;
+    double x1, y1, x2, y2, dx, dy, padding = 0.02, width = MAZE_WIDTH;
     
     maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
     
@@ -2085,7 +2103,8 @@ int in_rocket(double x, double y, int rocket_shape)
         {
             l = 0.7*LAMBDA;
             y1 = y - YMIN - 1.7*LAMBDA;
-            return ((x*x + y1*y1)/(l*l) + MU*MU < 0.925);
+            return ((x*x + y1*y1)/(l*l) + MU*MU < 0.875);
+//             return ((x*x + y1*y1)/(l*l) + MU*MU < 0.925*LAMBDA*LAMBDA);
         }
         case (RCK_RECT) :
         {
@@ -2096,20 +2115,23 @@ int in_rocket(double x, double y, int rocket_shape)
         }
         case (RCK_RECT_HAT) :
         {
+//             printf("(%.2lg,%.2lg) in rocket?\n", x, y);
             a = 0.5*LAMBDA;
-            b = 0.49*PI*LAMBDA;
+            b = (0.49*PI-0.25)*LAMBDA;
             y1 = y - YMIN - LAMBDA;
             if (vabs(x) > 0.95*a) return(0);
             if (y1 < 0.05) return(0);
             if (y1 < b - 0.05) return(1);
             return(y1 < a + b - 0.05 - vabs(x));
+//             return(1);
         }
     }
 }
 
-int in_segment_region(double x, double y)
+int in_segment_region(double x, double y, t_segment segment[NMAXSEGMENTS])
 /* returns 1 if (x,y) is inside region delimited by obstacle segments */
 {
+    int i;
     double angle, dx, height, width, theta, lx, ly, x1, y1, x2, y2, padding;
     
     if (x >= BCXMAX) return(0);
@@ -2231,8 +2253,8 @@ int in_segment_region(double x, double y)
             else if ((y1 > YMIN + 3.5*LAMBDA)&&(y2 > YMIN + 3.5*LAMBDA)) return(0);
             else 
             {
-                if (in_rocket(x - xsegments[0], y1, ROCKET_SHAPE)) return(1);
-                if (in_rocket(x - xsegments[1], y2, ROCKET_SHAPE_B)) return(1);
+                if (in_rocket(x - xsegments[0], y1, ROCKET_SHAPE_B)) return(1);
+                if (in_rocket(x - xsegments[1], y2, ROCKET_SHAPE)) return(1);
             }
             return(0);
         }
@@ -2262,6 +2284,14 @@ int in_segment_region(double x, double y)
             if (y < 0.0) return(1);
             if ((y > 1.0 - LAMBDA + padding)&&(vabs(x) < LAMBDA - padding)) return(1);
             return(0);
+        }
+        case (S_MAZE):
+        {
+            for (i=0; i<nsegments; i++)
+            {
+                if (distance_to_segment(x, y, segment[i].x1, segment[i].y1, segment[i].x2, segment[i].y2) < 5.0*MAZE_WIDTH) return(0);
+            }
+            return(1);
         }
         default: return(1);
     }
@@ -2406,6 +2436,45 @@ double lennard_jones_force(double r, t_particle particle)
         ratio = ratio*ratio;
         
         return((ratio - 2.0*ratio*ratio)/rplus);
+    }
+}
+
+double harmonic_force(double r, t_particle particle)
+{
+    int i;
+    double rmin = 0.01, rplus, ratio = 1.0;
+    
+    if (r > REPEL_RADIUS*particle.radius) return(0.0);
+    else
+    {
+//         if (r > rmin) rplus = r;
+//         else rplus = rmin;
+//         ratio = rplus/particle.eq_dist*particle.radius;
+    
+        ratio = r/particle.eq_dist*particle.radius;
+    
+        if (ratio < 1.0) return(ratio - 1.0);
+        else return(0.0);
+    }
+}
+
+double coulomb_force(double r, t_particle particle)
+{
+    int i;
+    double rmin = 0.01, rplus, ratio = 1.0;
+    
+    if (r > REPEL_RADIUS*particle.radius) return(0.0);
+    else
+    {
+//         if (r > rmin) rplus = r;
+//         else rplus = rmin;
+//         ratio = rplus/particle.eq_dist*particle.radius;
+    
+        ratio = r/particle.eq_dist*particle.radius;
+        
+        return(-1.0/(ratio*ratio + rmin*rmin));    
+//         if (ratio < 1.0) return(ratio - 1.0);
+//         else return(0.0);
     }
 }
 
@@ -2844,7 +2913,7 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
 {
     double x1, y1, x2, y2, r, f, angle, aniso, fx, fy, ff[2], dist_scaled, spin_f, ck, sk, ck_rel, sk_rel;
     static double dxhalf = 0.5*(BCXMAX - BCXMIN), dyhalf = 0.5*(BCYMAX - BCYMIN);
-    int wwrapx, wwrapy;
+    int wwrapx, wwrapy, twrapx, twrapy;
     
     if (BOUNDARY_COND == BC_GENUS_TWO)
     {
@@ -2859,6 +2928,8 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
         
     wwrapx = ((BOUNDARY_COND == BC_KLEIN)||(BOUNDARY_COND == BC_BOY)||(BOUNDARY_COND == BC_GENUS_TWO))&&(vabs(x2 - x1) > dxhalf);
     wwrapy = ((BOUNDARY_COND == BC_BOY)||(BOUNDARY_COND == BC_GENUS_TWO))&&(vabs(y2 - y1) > dyhalf);
+    twrapx = ((BOUNDARY_COND == BC_KLEIN)||(BOUNDARY_COND == BC_BOY))&&(vabs(x2 - x1) > dxhalf);
+    twrapy = (BOUNDARY_COND == BC_BOY)&&(vabs(y2 - y1) > dyhalf);
         
     switch (particle[k].interaction) {
         case (I_COULOMB):
@@ -2917,6 +2988,28 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
             force[1] = f*sa;   
             break;
         }
+        case (I_VICSEK):
+        {
+            force[0] = 0.0;
+            force[1] = 0.0;
+            break;
+        }
+        case (I_VICSEK_REPULSIVE):
+        {
+            f = krepel*coulomb_force(distance, particle[k]);
+//             f = krepel*harmonic_force(distance, particle[k]);
+//             f = krepel*lennard_jones_force(distance, particle[k]);
+            force[0] = f*ca;
+            force[1] = f*sa;   
+            break;
+        }
+        case (I_VICSEK_SPEED):
+        {
+            f = cos(0.5*(particle[k].angle - particle[i].angle));
+            force[0] = f*KSPRING_VICSEK*(particle[k].vx - particle[i].vx);
+            force[1] = f*KSPRING_VICSEK*(particle[k].vy - particle[i].vy);
+            break;
+        }
     }
 
     if (ROTATION) 
@@ -2939,10 +3032,31 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
 //                 printf("force = (%.3lg, %.3lg)\n", ff[0], ff[1]);
                 break;
             }
+            case (I_VICSEK):
+            {
+                if (dist_scaled > 1.0) *torque = 0.0;
+                else if (twrapx||twrapy) *torque = sin(-particle[k].angle - particle[i].angle);
+                else *torque = sin(particle[k].angle - particle[i].angle);
+                break;
+            }
+            case (I_VICSEK_REPULSIVE):
+            {
+                if (dist_scaled > 1.0) *torque = 0.0;
+                else if (twrapx||twrapy) *torque = sin(-particle[k].angle - particle[i].angle);
+                else *torque = sin(particle[k].angle - particle[i].angle);
+                break;
+            }
+            case (I_VICSEK_SPEED):
+            {
+                if (dist_scaled > 1.0) *torque = 0.0;
+                else if (twrapx||twrapy) *torque = sin(-particle[k].angle - particle[i].angle);
+                else *torque = sin(particle[k].angle - particle[i].angle);
+                break;
+            }
             default: 
             {
                 spin_f = particle[i].spin_freq;
-                if (wwrapx||wwrapy) *torque = sin(spin_f*(-particle[k].angle - particle[i].angle))/(1.0e-8 + dist_scaled*dist_scaled);
+                if (twrapx||twrapy) *torque = sin(spin_f*(-particle[k].angle - particle[i].angle))/(1.0e-8 + dist_scaled*dist_scaled);
                 else 
                 *torque = sin(spin_f*(particle[k].angle - particle[i].angle))/(1.0e-8 + dist_scaled*dist_scaled);
             }
@@ -3897,7 +4011,7 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     /* specific shapes for chemical reactions */
     if (REACTION_DIFFUSION) cont = draw_special_particle(particle, xc1, yc1, radius, angle, nsides, rgb, 1);    
    
-    if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)) 
+    if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)||(particle.interaction == I_VICSEK)||(particle.interaction == I_VICSEK_REPULSIVE)||(particle.interaction == I_VICSEK_SPEED)) 
         draw_colored_rhombus(xc1, yc1, radius, angle + APOLY*PID, rgb);
     else if (cont) draw_colored_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID, rgb);
         
@@ -3927,7 +4041,7 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     glColor3f(1.0, 1.0, 1.0);
     if (REACTION_DIFFUSION) cont = draw_special_particle(particle, xc1, yc1, radius, angle, nsides, rgb, 0);
 
-    if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)) 
+    if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)||(particle.interaction == I_VICSEK)||(particle.interaction == I_VICSEK_REPULSIVE)||(particle.interaction == I_VICSEK_SPEED)) 
         draw_rhombus(xc1, yc1, radius, angle + APOLY*PID);
     else if (cont) draw_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID); 
     
@@ -3946,14 +4060,28 @@ void draw_collisions(t_collision *collisions, int ncollisions)
 /* draw discs where collisions happen */
 {
     int i, j;
-    double rgb[3], lum;
+    double rgb[3], lum, x, y, x1, y1;
+    
+    
     
     for (i=0; i<ncollisions; i++) if (collisions[i].time > 0)
     {
         lum = (double)collisions[i].time/(double)COLLISION_TIME;
         if (collisions[i].color == 0.0) for (j=0; j<3; j++) rgb[j] = lum;
         else hsl_to_rgb_palette(collisions[i].color, 0.9, lum, rgb, COLOR_PALETTE);
-        draw_colored_polygon(collisions[i].x, collisions[i].y, 5.0*MU, NSEG, 0.0, rgb);
+        x = collisions[i].x;
+        y = collisions[i].y;
+        
+        if (CENTER_VIEW_ON_OBSTACLE) x1 = x - xshift;
+        else x1 = x;
+        if (TRACK_SEGMENT_GROUPS) 
+        {
+            x1 -= xtrack;
+            y1 = y - ytrack;
+        }
+        else y1 = y;
+    
+        draw_colored_polygon(x1, y1, 5.0*MU, NSEG, 0.0, rgb);
         collisions[i].time--;
     }
     
@@ -4939,8 +5067,16 @@ void print_segment_group_speeds(t_group_segments *segment_group)
         av_vy *= inv_t_window;
         av_omega *= inv_t_window;
         
-        xbox = xleftbox + (xrightbox - xleftbox)*(group-1)/(ngroups-2);
-        xtext = xlefttext + (xrighttext - xlefttext)*(group-1)/(ngroups-2);
+        if (ngroups > 2)
+        {
+            xbox = xleftbox + (xrightbox - xleftbox)*(group-1)/(ngroups-2);
+            xtext = xlefttext + (xrighttext - xlefttext)*(group-1)/(ngroups-2);
+        }
+        else
+        {
+            xbox = xrightbox - 0.2;
+            xtext = xrighttext - 0.2;            
+        }
         
 //         printf("xbox = %.2f, xtext = %.2f, av_vy = %.2f\n", xbox, xtext, av_vy);
         
@@ -5013,8 +5149,7 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                               double xleft, double xright, double *pleft, double *pright, double pressure[N_PRESSURES], int wall)
 {
     int i, k;
-    double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, f, fperp = 0.0, x, y, xtube, distance, dx, dy, 
-        width, ybin, angle, x1, x2, h, ytop, norm, dleft, dplus, dminus, tmp_pleft = 0.0, tmp_pright = 0.0, proj;
+    double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, f, fperp = 0.0, x, y, xtube, distance, dx, dy, width, ybin, angle, x1, x2, h, ytop, norm, dleft, dplus, dminus, tmp_pleft = 0.0, tmp_pright = 0.0, proj, pscal, pvect, pvmin;
     
     /* compute force from fixed circular obstacles */
     if (ADD_FIXED_OBSTACLES) for (i=0; i<nobstacles; i++)
@@ -5035,6 +5170,7 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
         }
     }
     /* compute force from fixed linear obstacles */
+    particle[j].close_to_boundary = 0;
     if (ADD_FIXED_SEGMENTS) for (i=0; i<nsegments; i++) if (segment[i].active)
     {
         x = particle[j].xc;
@@ -5042,19 +5178,34 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
         proj = (segment[i].ny*(x - segment[i].x1) - segment[i].nx*(y - segment[i].y1))/segment[i].length;
         if ((proj > 0.0)&&(proj < 1.0))
         {
+//             distance = segment[i].nx*x + segment[i].ny*y - segment[i].c;
             distance = segment[i].nx*x + segment[i].ny*y - segment[i].c;
             r = 1.5*particle[j].radius;
             if (vabs(distance) < r)
             {
+                particle[j].close_to_boundary = 1;
+                
                 f = KSPRING_OBSTACLE*(r - distance);
                 particle[j].fx += f*segment[i].nx;
                 particle[j].fy += f*segment[i].ny;
+                
+                
+            
                 if ((MOVE_BOUNDARY)||(MOVE_SEGMENT_GROUPS))
                 {
                     segment[i].fx -= f*segment[i].nx;
                     segment[i].fy -= f*segment[i].ny;
                     segment[i].torque -= (x - segment[i].xc)*f*segment[i].ny - (y - segment[i].yc)*f*segment[i].nx;
                 }
+            }
+            if ((VICSEK_INT)&&(vabs(distance) < 1.5*r))
+            {
+                pvmin = 2.0;
+                pvect = cos(particle[j].angle)*segment[i].ny - sin(particle[j].angle)*segment[i].nx;
+                if ((pvect > 0.0)&&(pvect < pvmin)) pvect = pvmin;
+                else if ((pvect < 0.0)&&(pvect > -pvmin)) pvect = -pvmin;
+//                 particle[j].torque += KTORQUE_BOUNDARY*pvect;
+                particle[j].torque += KTORQUE_BOUNDARY*pvect*(1.5*r - vabs(distance));
             }
         }
         
@@ -5531,7 +5682,7 @@ void compute_particle_force(int j, double krepel, t_particle particle[NMAXCIRCLE
 
 
 int reorder_particles(t_particle particle[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES])
-/* keep only active particles */
+/* keep only active particles, beta */
 {
     int i, k, new = 0, nactive = 0;
     
@@ -5580,7 +5731,8 @@ int reorder_particles(t_particle particle[NMAXCIRCLES], double py[NMAXCIRCLES], 
 
 
 int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY], 
-                             t_obstacle obstacle[NMAXOBSTACLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES], int tracer_n[N_TRACER_PARTICLES])
+                             t_obstacle obstacle[NMAXOBSTACLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES], int tracer_n[N_TRACER_PARTICLES],
+                             t_segment segment[NMAXSEGMENTS])
 /* initialize all particles, obstacles, and the hashgrid */
 {
     int i, j, k, n, nactive = 0;
@@ -5599,6 +5751,7 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
         particle[i].neighb = 0;
         particle[i].diff_neighb = 0;
         particle[i].thermostat = 1;
+        particle[i].close_to_boundary = 0;
 
 //         particle[i].energy = 0.0;
 //         y = particle[i].yc;
@@ -5671,6 +5824,7 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
         particle[i].eq_dist = EQUILIBRIUM_DIST;
         particle[i].spin_range = SPIN_RANGE;
         particle[i].spin_freq = SPIN_INTER_FREQUENCY;
+        particle[i].close_to_boundary = 0;
    }
     
     /* add particles at the bottom as seed */
@@ -5803,7 +5957,7 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
     
     /* case of segment obstacles */
     if (ADD_FIXED_SEGMENTS) for (i=0; i< ncircles; i++)
-            if (!in_segment_region(particle[i].xc, particle[i].yc)) 
+            if (!in_segment_region(particle[i].xc, particle[i].yc, segment)) 
                 particle[i].active = 0;
             
     /* case of reaction-diffusion equation/chemical reactions */
@@ -5910,6 +6064,27 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
                 }
                 break;
             }
+            case (IC_SIGNX):
+            {
+                if (particle[i].xc < 0.0) particle[i].type = 1;
+                else 
+                {
+                    particle[i].type = 2;
+                    particle[i].radius = MU_B;
+                    particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
+                }
+                break;
+            }case (IC_TWOROCKETS):
+            {
+                if (vabs(particle[i].xc) < SEGMENTS_X0) particle[i].type = 1;
+                else 
+                {
+                    particle[i].type = 2;
+                    particle[i].radius = MU_B;
+                    particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
+                }
+                break;
+            }
         }
     }   
     
@@ -6012,7 +6187,7 @@ int floor_momentum(double p[NMAXCIRCLES])
     return (floor); 
 }
 
-int partial_thermostat_coupling(t_particle particle[NMAXCIRCLES], double xmin)
+int partial_thermostat_coupling(t_particle particle[NMAXCIRCLES], double xmin, t_segment segment[NMAXSEGMENTS])
 /* only couple particles satisfying condition PARTIAL_THERMO_REGION to thermostat */
 {
     int condition, i, nthermo = 0;
@@ -6049,7 +6224,7 @@ int partial_thermostat_coupling(t_particle particle[NMAXCIRCLES], double xmin)
             }
             case (TH_INSEGMENT):
             {
-                condition = (in_segment_region(particle[i].xc, particle[i].yc));
+                condition = (in_segment_region(particle[i].xc, particle[i].yc, segment));
 //                 condition = (in_segment_region(particle[i].xc - xsegments[0], particle[i].yc - ysegments[0]));
 // //                 condition = (in_segment_region(particle[i].xc - xsegments[0], particle[i].yc - ysegments[0]));
 //                 if (TWO_OBSTACLES) 
@@ -6776,7 +6951,7 @@ int chem_catalytic_convert(int i, int type2, int newtype, t_particle particle[NM
 int update_types(t_particle particle[NMAXCIRCLES], t_collision *collisions, int ncollisions, int *particle_numbers, int time, double *delta_e)
 /* update the types in case of reaction-diffusion equation */
 {
-    int i, j, k, n, n3, n4, type, oldncollisions;
+    int i, j, k, n, n3, n4, type, oldncollisions, delta_n;
     double distance, rnd, p1, p2;
     static double inv_masses[RD_TYPES+1], radii[RD_TYPES+1];
     static int first = 1;
@@ -6819,7 +6994,10 @@ int update_types(t_particle particle[NMAXCIRCLES], t_collision *collisions, int 
             for (i=0; i<ncircles; i++) if ((particle[i].active)&&(particle[i].type == 1))
                 ncollisions = chem_merge(i, 2, 3, particle, collisions, ncollisions, inv_masses, radii);
             printf("%i collisions\n", ncollisions);
-            if (EXOTHERMIC) *delta_e = (double)(ncollisions - oldncollisions)*DELTA_EKIN;
+            delta_n = ncollisions - oldncollisions; 
+            printf("delta_n = %i\n", delta_n);
+//             if (delta_n > 1) delta_n = 1;
+            if (EXOTHERMIC) *delta_e = (double)(delta_n)*DELTA_EKIN;
             return(ncollisions);
         }
         case (CHEM_A2BC):
@@ -7222,6 +7400,8 @@ void draw_trajectory_plot(t_group_data *group_speeds, int i)
     }
     
     glLineWidth(2);
+    
+    printf("ngroups = %i\n", ngroups);
     
     /* plot trajectories */
     for (group=1; group<ngroups; group++)

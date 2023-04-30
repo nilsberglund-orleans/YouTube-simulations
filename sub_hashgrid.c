@@ -459,12 +459,14 @@ int wrap_particle(t_particle* particle, double *px, double *py)
                 x1 += BCXMAX - BCXMIN;
                 y1 = -y1;
                 *py *= -1.0;
+                particle->angle = DPI - particle->angle;
                 move++;
             }
             else if (x > BCXMAX) 
             {
                 x1 += BCXMIN - BCXMAX;
                 y1 = -y1;
+                particle->angle = DPI - particle->angle;
                 *py *= -1.0;
                 move++;
             }

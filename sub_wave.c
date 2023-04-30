@@ -5077,6 +5077,27 @@ void print_speed(double speed, int fade, double fade_value)
     write_text(pos[0], pos[1], message);
 }
 
+void print_frequency(double phase_shift, int fade, double fade_value)
+{
+    char message[100];
+    double y = YMAX - 0.1, pos[2];
+    static double xleftbox, xlefttext;
+    static int first = 1;
+    
+    if (first)
+    {
+        xleftbox = XMIN + 0.3;
+        xlefttext = xleftbox - 0.45;
+        first = 0;
+    }
+    
+    erase_area_hsl(xleftbox, y + 0.025, 0.22, 0.05, 0.0, 0.9, 0.0);
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    xy_to_pos(xlefttext + 0.28, y, pos);
+    sprintf(message, "Frequency %.2f", 25.0*phase_shift);
+    write_text(pos[0], pos[1], message);
+}
 
 void init_laplacian_coords(t_laplacian laplace[NX*NY], double phi[NX*NY])
 /* compute coordinates of neighbours to compute Laplacian */

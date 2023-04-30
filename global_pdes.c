@@ -79,6 +79,7 @@
 
 #define D_WING 70               /* complement of wing-shaped domain */
 #define D_TESLA 71              /* Tesla valve */
+#define D_TESLA_FOUR 72         /* four Tesla valves */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
@@ -120,6 +121,7 @@
 /* Variable index of refraction */
 #define IOR_MANDELBROT 1      /* index of refraction depends on escape time in Mandelbrot set (log) */
 #define IOR_MANDELBROT_LIN 100    /* index of refraction depends on escape time in Mandelbrot set (linear) */
+#define IOR_MANDELBROT_MOD 101    /* index of refraction depends on escape time in Mandelbrot set (linear) */
 #define IOR_EARTH 2         /* index of refraction models speed of seismic waves */
 #define IOR_EXPLO_LENSING 3 /* explosive lensing */
 #define IOR_PERIODIC_WELLS 4  /* periodic superposition of "wells" */
@@ -235,11 +237,16 @@
 #define Z_EULER_DIRECTION_SPEED 64   /* hut for direction of velocity, luminosity for speed */
 
 /* special boundary conditions for Euler equation */
-#define BCE_TOPBOTTOM 1         /* laminar flow at top and bottom */
-#define BCE_TOPBOTTOMLEFT 2     /* laminar flow at top, bottom and left side */
-#define BCE_CHANNELS 3          /* laminar flow in channels at left and right */
-#define BCE_MIDDLE_STRIP 4      /* laminar flow in horizontal strip in the middle */
-#define BCE_LEFT 5              /* laminar flow at left side */
+#define BCE_TOPBOTTOM 1         /* special flow at top and bottom */
+#define BCE_TOPBOTTOMLEFT 2     /* special flow at top, bottom and left side */
+#define BCE_CHANNELS 3          /* special flow in channels at left and right */
+#define BCE_MIDDLE_STRIP 4      /* special flow in horizontal strip in the middle */
+#define BCE_LEFT 5              /* special flow at left side */
+#define BCE_FOUR_CHANNELS 6     /* special flow in four channels at left and right */
+
+/* flow types for boundary conditions in Euler equation */
+#define BCF_LAMINAR 0           /* laminar flow */
+#define BCF_PRESSURE 1          /* laminar flow with pressure gradient */
 
 typedef struct
 {
@@ -299,6 +306,14 @@ typedef struct
     double var_envelope;     /* variance of Gaussian envelope */
     int time_shift;          /* time shift */
 } t_wave_packet;
+
+typedef struct
+{
+    double xc, yc;           /* (x,y) coordinates of center */
+    double phase;            /* phase of source */
+    double amp;              /* amplitude */
+    int sign;
+} t_wave_source;
 
 
 

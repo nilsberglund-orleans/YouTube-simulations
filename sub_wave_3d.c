@@ -1374,6 +1374,44 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
                 }
                 break;
             }
+            case (IOR_MANDELBROT_MOD):
+            {
+                #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        u = 0.0;
+                        v = 0.0;
+                        k = 0;
+                        while ((k<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+                        {
+                            u1 = u*u - v*v + x;
+                            v = 2.0*u*v + y;
+                            u = u1;
+                            k++;
+                        }
+                        if (k >= MANDELLEVEL)
+                        {
+                            tc[i*NY+j] = COURANT;
+                            tcc[i*NY+j] = courant2;
+                            tgamma[i*NY+j] = GAMMA;
+                        }
+                        else 
+                        {
+//                             speed = 5.0 - 4.0*pow((double)k/(double)MANDELLEVEL, 0.1);
+                            speed = 1.0 + 4.0*log(1.0 - 0.1*log((double)k/(double)MANDELLEVEL));
+                            if (speed < 1.0e-10) speed = 1.0e-10;
+                            else if (speed > 10.0) speed = 10.0;
+                            tcc[i*NY+j] = courantb2*speed;
+                            tc[i*NY+j] = COURANTB*sqrt(speed);
+                            tgamma[i*NY+j] = GAMMAB;
+                        }
+                    }
+                }
+                break;
+            }
             case (IOR_EARTH):
             {
                 for (i=0; i<NX; i++){
@@ -1428,6 +1466,39 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
                         tc[i*NY+j] = 0.0;
                         tcc[i*NY+j] = 0.0;
                         tgamma[i*NY+j] = 0.0;
+                    }
+                }
+                break;
+            }
+            case (IOR_PERIODIC_WELLS):
+            {
+                dx = (XMAX - XMIN)/(double)NGRIDX;
+                dy = (YMAX - YMIN)/(double)NGRIDY;
+                sigma = 0.2*dx*dx;
+                for (i=0; i<NGRIDX; i++)
+                    for (j=0; j<NGRIDY; j++)
+                    {
+                        
+                        n = j*NGRIDX + i;
+                        xc[n] = XMIN + dx*((double)i + 0.5);
+                        yc[n] = YMIN + dy*((double)j + 0.5);
+                        if (j%2 == 1) yc[n] += 0.5*dx;
+                    }
+                    
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        sum = 0.0;
+                        for (n = 0; n<NGRIDX*NGRIDY; n++)
+                        {
+                            r2 = (x - xc[n])*(x - xc[n]) + (y - yc[n])*(y - yc[n]);
+                            sum += exp(-r2/(sigma));
+                        }
+                        tc[i*NY+j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tcc[i*NY+j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tgamma[i*NY+j] = GAMMA;
                     }
                 }
                 break;
@@ -1884,7 +1955,7 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
     int j, k, ij_botleft[2], ij_topright[2], imin, imax, jmin, jmax;
     double y, dy, dy_e, dy_phase, rgb[3], value, lum, amp;
     
-    printf("Drawing color bar\n");
+//     printf("Drawing color bar\n");
     
     xy_to_ij(x1, y1, ij_botleft);
     xy_to_ij(x2, y2, ij_topright);
@@ -1988,7 +2059,7 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
             }
             case (P_3D_FLUX_DIRECTION):
             {
-                value = 2.0*dy_phase*(double)(j - jmin);
+                value = dy_phase*(double)(j - jmin);
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
                 break;
             }

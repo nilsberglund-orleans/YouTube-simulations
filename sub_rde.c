@@ -441,8 +441,8 @@ void add_vortex_state(double amp, double x, double y, double scale, double densi
 //                         phi[0][i*NY+j] = 1.0;
                         /* nonconstant density to make things more interesting */
                         phi[0][i*NY+j] += 0.5 + density_mod*sign*module/amp;
-                        phi[1][i*NY+j] += sign*module*(xy[1]-y)/vabs(scale);
-                        phi[2][i*NY+j] -= sign*module*(xy[0]-x)/vabs(scale);   
+                        phi[1][i*NY+j] -= sign*module*(xy[1]-y)/vabs(scale);
+                        phi[2][i*NY+j] += sign*module*(xy[0]-x)/vabs(scale);   
                     }
                     else
                     {
@@ -511,7 +511,7 @@ void init_shear_flow(double amp, double delta, double rho, int nx, int ny, doubl
 }
 
 void set_boundary_laminar_flow(double amp, double xmodulation, double ymodulation, double xperiod, double yperiod, double yshift, double density_mod, double *phi[NFIELDS], short int xy_in[NX*NY], int imin, int imax, int jmin, int jmax, double factor)
-/* enfoce laminar flow in x direction on top and bottom boundaries */
+/* enforce laminar flow in x direction in specified region */
 /* phi[0] is stream function, phi[1] is vorticity */
 /* amp is global amplitude */
 {
@@ -631,6 +631,74 @@ void init_laminar_flow(double amp, double xmodulation, double ymodulation, doubl
     }
 }
 
+void set_boundary_pressure_gradient_flow(double vx, double pmax, double pmin, double *phi[NFIELDS], short int xy_in[NX*NY], int imin, int imax, int jmin, int jmax, double factor)
+/* enforce laminar flow in x direction in specified region */
+/* pressure/density interpolates between maxamp and minamp */
+{
+    int i, j;
+    double xy[2], a, comp_factor, cutoff;    
+    
+    comp_factor = 1.0 - factor;
+
+    a = (pmax - pmin)/(XMAX - XMIN); 
+    
+     for (i=imin; i<imax; i++)
+        for (j=jmin; j<jmax; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy[0] < 0.0) cutoff = tanh(20.0*(xy[0] - XMIN));
+            else cutoff = tanh(10.0*(XMAX - xy[0]));
+                                           
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] *= 1.0 - cutoff*factor;
+                phi[1][i*NY+j] *= 1.0 - cutoff*factor;
+                phi[2][i*NY+j] *= 1.0 - cutoff*factor;
+                phi[0][i*NY+j] += cutoff*factor*(pmax - a*(xy[0] - XMIN));
+                phi[1][i*NY+j] += cutoff*factor*vx;
+            }
+            else
+            {
+                phi[0][i*NY+j] = 1.0;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+}
+
+void init_pressure_gradient_flow(double vx, double pmax, double pmin, double *phi[NFIELDS], short int xy_in[NX*NY], double bc_field[NX*NY])
+/* initialise field with a laminar flow in x direction */
+/* pressure/density interpolates between maxamp and minamp */
+{
+    int i, j;
+    double xy[2], a;
+    
+    a = (pmax - pmin)/(XMAX - XMIN); 
+    
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy_in[i*NY+j])
+            {
+//                 phi[0][i*NY+j] = pmax - a*(xy[0] - XMIN);
+                phi[0][i*NY+j] = (pmax - a*(xy[0] - XMIN))*bc_field[i*NY+j] + pmax*(1.0 - bc_field[i*NY+j]);
+                phi[1][i*NY+j] = vx;
+                phi[2][i*NY+j] = 0.0;
+            }
+            else
+            {
+                phi[0][i*NY+j] = 1.0;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+}
+
 double distance_to_segment(double x, double y, double x1, double y1, double x2, double y2)
 /* distance of (x,y) to segment from (x1,y1) to (x2,y2) */
 {
@@ -705,10 +773,10 @@ double tesla_distance(double x, double y, double a, double l, double theta)
     return(dmin);
 }
 
-void initialize_bcfield(double bc_field[NX*NY], t_rectangle polyrect[NMAXPOLY])
+void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_rectangle polyrect[NMAXPOLY])
 /* apply smooth modulation to adapt initial state to obstacles */ 
 {
-    int i, j, nsides, s;
+    int i, j, nsides, s, i1, j1, shiftx;
     double xy[2], x, y, r, f, a, l, theta, x1, x2, y1, y2, distance, d, d0, length, height, mid, fmin, ct, st;
     
     switch (OBSTACLE_GEOMETRY) {
@@ -817,6 +885,63 @@ void initialize_bcfield(double bc_field[NX*NY], t_rectangle polyrect[NMAXPOLY])
                     
                     f = 0.5*(1.0 + tanh(BC_STIFFNESS*r)); 
                     bc_field[i*NY+j] = f;
+                    bc_field2[i*NY+j] = f;
+                }
+            break;
+        }
+        case (D_TESLA_FOUR):
+        {
+            a = 0.16;
+            l = 1.7;
+            shiftx = NX/50;
+            theta = PID/5.0;
+            ct = cos(theta);
+            st = sin(theta);
+            
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    i1 = i - shiftx;
+                    i1 *= 2;
+                    
+                    j1 = j;
+                    if (j1 > NY/2) j1 -= NY/2;
+                    j1 *= 2;
+                    
+                    ij_to_xy(i1, j1, xy);
+                    xy[1] -= 1.5*a;
+                    if (j > NY/2) 
+                    {
+                        xy[0] *= -1.0;
+                        xy[0] += 2.0*l*ct;
+                    }
+                    
+                    d0 = tesla_distance(xy[0] +l*ct, xy[1], a, l, theta);
+                    
+                    d = tesla_distance(xy[0], -l*st-xy[1]-0.5*a, a, l, theta);
+                    if (d < d0) d0 = d;
+                    
+                    d = tesla_distance(xy[0] - l*ct -0.2*a, xy[1], a, l, theta);
+                    if (d < d0) d0 = d;
+                    
+                    d = tesla_distance(xy[0] - 2.0*l*ct -0.2*a, -l*st-xy[1]-0.5*a, a, l, theta);
+                    if (d < d0) d0 = d;
+                    
+                    if ((xy[0] < -l*ct)||(xy[0] > 3*l*ct))
+                    {
+                        d = vabs(xy[1]);
+                        if (d < d0) d0 = d;
+                    }
+                    
+                    r = a - d0;
+                    
+                    f = 0.5*(1.0 + tanh(BC_STIFFNESS*r)); 
+                    bc_field[i*NY+j] = f;
+                    
+                    r = 0.9*a - d0;
+                    
+                    f = 0.5*(1.0 + tanh(0.5*BC_STIFFNESS*r)); 
+                    bc_field2[i*NY+j] = f;
                 }
             break;
         }
@@ -886,6 +1011,9 @@ void initialize_bcfield(double bc_field[NX*NY], t_rectangle polyrect[NMAXPOLY])
                 if (distance < d0) f = fmin*distance/d0;
                 else f = 0.5*(1.0 + tanh(BC_STIFFNESS*(distance - 1.25*MAZE_WIDTH))); 
                 bc_field[i*NY+j] = f;
+                
+                if (distance >= d0) f = 0.5*(1.0 + tanh(BC_STIFFNESS*(distance - 1.5*MAZE_WIDTH))); 
+                bc_field2[i*NY+j] = f;
 //                     printf("distance = %.5lg, bcfield = %.5lg\n", distance, f);
             }
         }
@@ -897,12 +1025,15 @@ void adapt_state_to_bc(double *phi[NFIELDS], double bc_field[NX*NY], short int x
 /* apply smooth modulation to adapt initial state to obstacles */ 
 {
     int i, j, field;
-    double xy[2], r, f;
+    double xy[2], r, f; 
+//     double ratio = 1.0e-1;
     
     #pragma omp parallel for private(i,j)
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++) if (xy_in[i*NY+j])
         {
+//             phi[0][i*NY+j] = 1.3 - bc_field[i*NY+j] + bc_field[i*NY+j]*phi[0][i*NY+j];
+//             phi[0][i*NY+j] = (1.0 - bc_field[i*NY+j]) + bc_field[i*NY+j]*phi[0][i*NY+j];
             for (field = 1; field < NFIELDS; field++) 
                 phi[field][i*NY+j] *= bc_field[i*NY+j];
         }
@@ -1537,7 +1668,7 @@ void compute_direction(double *phi[NFIELDS], t_rde rde[NX*NY])
 }
 
 void compute_vorticity(t_rde rde[NX*NY])
-/* compute the log of a field */
+/* compute the vorticity of a field */
 {
     int i, j; 
     double value;
@@ -2835,5 +2966,152 @@ void draw_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], int 
             
 //             printf("time = %i, tracer = %i, coord = %i, x1 = %.2lg, y1 = %.2lg, x2 = %.2lg, y2 = %.2lg\n", t, tracer,2*t*N_TRACERS + 2*tracer, x1, y1, x2, y2);
         }
+    
+}
+
+void compute_average_speeds(double *phi[NFIELDS], t_rde rde[NX*NY], double *speed1, double *speed2)
+{
+    int i, j;
+    double sp1, sp2;
+    static double ratio;
+    static int first = 1;
+    
+    if (first)
+    {
+        ratio = 100.0/(double)(NX*NY);
+        first = 0;
+    }
+    
+    sp1 = 0.0;
+    sp2 = 0.0;
+    
+//     #pragma omp parallel for private(i,j)
+    for (i=0; i<NX; i++)
+    {
+        for (j=0; j<NY/2; j++) sp1 += phi[1][i*NY+j];
+        for (j=NY/2; j<NY; j++) sp2 += phi[1][i*NY+j];        
+//         for (j=0; j<NY/2; j++) *speed1 += rde[i*NY+j].field_norm;
+//         for (j=NY/2; j<NY; j++) *speed2 += rde[i*NY+j].field_norm;        
+    }
+    
+    *speed1 = sp1*ratio;
+    *speed2 = sp2*ratio;
+}
+
+void set_bc_flow(double flow_speed, double yshift, double *phi_out[NFIELDS], short int xy_in[NX*NY], int imin, int imax, int jmin, int jmax)
+/* set fields in given rectangular region */
+{
+    switch (BC_FLOW_TYPE) 
+    {
+        case (BCF_LAMINAR): 
+        {
+            set_boundary_laminar_flow(flow_speed, LAMINAR_FLOW_MODULATION, 0.02, yshift, 1.0, 0.0, 0.1, phi_out, xy_in, imin, imax, jmin, jmax, IN_OUT_BC_FACTOR); 
+            break;
+        }
+        case (BCF_PRESSURE):
+        {
+            set_boundary_pressure_gradient_flow(IN_OUT_FLOW_AMP, 1.0 + PRESSURE_GRADIENT, 1.0 - PRESSURE_GRADIENT, phi_out, xy_in, imin, imax, jmin, jmax, IN_OUT_BC_FACTOR); 
+            break;
+        }
+    }
+}
+
+void set_in_out_flow_bc(double *phi_out[NFIELDS], short int xy_in[NX*NY], double flow_speed)
+/* set fields for particular boundary conditions (flowing in and out for Euler equations) */
+{
+    int ropening, w;
+    double x, y, dy, xy[2], padding, a;
+    static int y_channels, y_channels1, imin, imax, first = 1;
+    
+    if (first)  /* for D_MAZE_CHANNELS boundary conditions in Euler equation */
+    {
+        ropening = (NYMAZE+1)/2;
+        padding = 0.02;
+        dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+        y = YMIN + 0.02 + dy*((double)ropening);
+        x = YMAX - padding + MAZE_XSHIFT;
+        xy_to_pos(x, y, xy);
+        y_channels = xy[1] - 5;
+        if ((B_DOMAIN == D_MAZE_CHANNELS)||(OBSTACLE_GEOMETRY == D_MAZE_CHANNELS))
+        {
+            imax = xy[0] + 2;
+            x = YMIN + padding + MAZE_XSHIFT;
+            xy_to_pos(x, y, xy);
+            imin = xy[0] - 2;
+            if (imin < 5) imin = 5;
+        }
+        else if (OBSTACLE_GEOMETRY == D_TESLA)
+        {
+            imin = 0;
+            imax = NX;
+            y = -a;
+            xy_to_pos(XMIN, y, xy);
+            y_channels = xy[1]; 
+            printf("y_channels = %i\n", y_channels);
+        }
+        else if (OBSTACLE_GEOMETRY == D_TESLA_FOUR)
+        {
+            imin = 0;
+            imax = NX;
+            a = 0.16;
+//             y = YMIN + 0.25*(YMAX-YMIN) - 0.5*a;
+            y = YMIN + 0.25*(YMAX-YMIN) + 0.75*a;
+            xy_to_pos(XMIN, y, xy);
+            y_channels = xy[1]; 
+            y_channels1 = NY/2 + y_channels;
+            
+            printf("y_channels = %i, interval [%i, %i]\n", y_channels, NY/2 - y_channels, y_channels);
+            printf("y_channels1 = %i, interval [%i, %i]\n", y_channels1, NY - y_channels1, y_channels1);
+        }
+        else
+        {
+            imin = 0;
+            imax = NX;
+        }
+        first = 0;
+    }
+    
+    switch (IN_OUT_FLOW_BC) {
+        case (BCE_LEFT):
+        {
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, 0, 5, 0, NY);
+            break;
+        }
+        case (BCE_TOPBOTTOM):
+        {
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, 0, NX, 0, 10);
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, 0, NX, NY-10, NY);
+            break;
+        }
+        case (BCE_TOPBOTTOMLEFT):
+        {
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, 0, NX, 0, 10);
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, 0, NX, NY-10, NY);
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, 0, 2, 0, NY);
+            break;
+        }
+        case (BCE_CHANNELS):
+        {
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, 0, imin+5, NY - y_channels, y_channels);
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, imax-5, NX - 1, NY- y_channels, y_channels);
+            break;
+        }
+        case (BCE_FOUR_CHANNELS):
+        {
+            w = 3;
+            set_bc_flow(flow_speed, 0.0, phi_out, xy_in, 0, imin+5, y_channels-w, y_channels+w);
+            set_bc_flow(flow_speed, 0.0, phi_out, xy_in, imax-5, NX - 1, y_channels-w, y_channels+w);
+            set_bc_flow(flow_speed, 0.0, phi_out, xy_in, 0, imin+5, y_channels1-w, y_channels1+w);
+            set_bc_flow(flow_speed, 0.0, phi_out, xy_in, imax-5, NX - 1, y_channels1-w, y_channels1+w);
+            break;
+        }
+        case (BCE_MIDDLE_STRIP):
+        {
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, 0, NX, NY/2 - 10, NY/2 + 10);
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, 0, 2, 0, NY);
+            set_bc_flow(flow_speed, 0.1, phi_out, xy_in, NX-2, NX, 0, NY);
+            break;
+        }
+    }
     
 }

@@ -81,6 +81,9 @@
 #define I_LJ_DIPOLE 5       /* Lennard-Jones with a dipolar angle dependence */
 #define I_LJ_QUADRUPOLE 6   /* Lennard-Jones with a quadropolar angle dependence */
 #define I_LJ_WATER 7        /* model for water molecule */
+#define I_VICSEK 8          /* Vicsek-type interaction */
+#define I_VICSEK_REPULSIVE 9  /* Vicsek-type interaction with harmonic repulsion */
+#define I_VICSEK_SPEED 10   /* Vicsek-type interaction with speed adjustment */
 
 /* Boundary conditions */
 
@@ -159,6 +162,8 @@
 #define IC_CATALYSIS 4     /* mix of 1 and 2 in left half, only 1 in right half */
 #define IC_LAYERS 5        /* layer of 2 below 1 */
 #define IC_BZ 6            /* initial state for BZ reaction */
+#define IC_SIGNX 7         /* type 1 or 2 depending on sign of x */
+#define IC_TWOROCKETS 8    /* type 1 or 2 depending on rocket position */
 
 /* Plot types */
 
@@ -201,6 +206,7 @@
 
 #define COL_TURBO_CYCLIC 101    /* TURBO color palette (by Anton Mikhailov) corrected to be cyclic, beta */
 
+#define VICSEK_INT ((INTERACTION == I_VICSEK)||(INTERACTION == I_VICSEK_REPULSIVE)||(INTERACTION == I_VICSEK_SPEED))
 
 typedef struct
 {
@@ -216,6 +222,7 @@ typedef struct
     double fx;                  /* x component of force on particle */
     double fy;                  /* y component of force on particle */
     double torque;              /* torque on particle */
+    int close_to_boundary;      /* has value 1 if particle is close to a boundary */
     short int thermostat;       /* whether particle is coupled to thermostat */
     int hashcell;               /* hash cell in which particle is located */
     int neighb;                 /* number of neighbours within given distance */
