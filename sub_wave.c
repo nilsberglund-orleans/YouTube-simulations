@@ -2000,6 +2000,93 @@ int compute_circular_maze_coordinates(t_rect_rotated polyrectrot[NMAXPOLY], t_ar
     free(maze);
 }
 
+int compute_interior_maze_coordinates(t_rectangle polyrect[NMAXPOLY], int type)
+/* compute positions of complement of maze */
+{
+    t_maze* maze;
+    int i, j, n, nsides = 0, ropening;
+    double dx, dy, x1, y1, x0, padding = 0.02, pos[2], width = MAZE_WIDTH;
+    
+    /* TODO */
+    
+    maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+    
+    ropening = (NYMAZE+1)/2;
+    
+    init_maze(maze);
+    
+    /* move the entrance for maze type with two channels */
+    if (type == 2)
+    {
+        n = nmaze(0, ropening-1);
+        maze[n].west = 0;
+        n = nmaze(0, ropening);
+        maze[n].west = 1;
+    }
+            
+    /* build walls of maze */
+//     x0 = LAMBDA - 1.0;
+    dx = (YMAX - YMIN - 2.0*padding)/(double)(NXMAZE);
+    dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+            
+    for (i=0; i<NXMAZE; i++)
+        for (j=0; j<NYMAZE; j++)
+        {
+            n = nmaze(i, j);
+            x1 = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
+            y1 = YMIN + padding + (double)j*dy;
+            
+            if (!maze[n].west) 
+            {
+                polyrect[nsides].x1 = x1 - 0.5*dx - width;
+                polyrect[nsides].y1 = y1 + 0.5*dx - width;
+                polyrect[nsides].x2 = x1 + 0.5*dx + width;
+                polyrect[nsides].y2 = y1 + 0.5*dx + width;
+                nsides++;
+            }
+            
+            if (!maze[n].south) 
+            {
+                polyrect[nsides].x1 = x1 + 0.5*dx - width;
+                polyrect[nsides].y1 = y1 - 0.5*dx - width;
+                polyrect[nsides].x2 = x1 + 0.5*dx + width;
+                polyrect[nsides].y2 = y1 + 0.5*dx + width;
+                nsides++;
+            }
+        }
+    
+    
+    /* right channel of maze */
+    y1 = YMIN + padding + dy*((double)ropening);
+    x1 = YMAX - padding + MAZE_XSHIFT;
+    polyrect[nsides].x1 = x1 - 0.5*dx - width;
+    polyrect[nsides].y1 = y1 - 0.5*dy - width;
+    polyrect[nsides].x2 = XMAX;
+    polyrect[nsides].y2 = y1 - 0.5*dy + width;
+    nsides++;
+                
+    /* left channel of maze */
+    x1 = YMIN + padding + MAZE_XSHIFT;
+    polyrect[nsides].x1 = XMIN;
+    polyrect[nsides].y1 = y1 - 0.5*dy - width;
+    polyrect[nsides].x2 = x1 + 0.5*dx + width;
+    polyrect[nsides].y2 = y1 - 0.5*dy + width;
+    nsides++;
+    
+    for (i=0; i<nsides; i++)
+    {
+        xy_to_pos(polyrect[i].x1, polyrect[i].y1, pos);        
+        polyrect[i].posi1 = pos[0];
+        polyrect[i].posj1 = pos[1];
+        xy_to_pos(polyrect[i].x2, polyrect[i].y2, pos);        
+        polyrect[i].posi2 = pos[0];
+        polyrect[i].posj2 = pos[1];        
+    }
+    
+    free(maze);
+    return(nsides);
+}
+
 int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
 /* initialise variable polyline, for certain polygonal domain shapes */
 {
@@ -2102,6 +2189,10 @@ int init_polyrect_euler(t_rectangle polyrect[NMAXPOLY], int domain)
         case (D_MAZE_CHANNELS):
         {
             return(compute_maze_coordinates(polyrect, 2));
+        }
+        case (D_MAZE_CHANNELS_INT):
+        {
+            return(compute_interior_maze_coordinates(polyrect, 2));
         }
      }
 }
@@ -5055,6 +5146,158 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
 }
 
 
+void draw_circular_color_scheme_palette_fade(double x1, double y1, double radius, int plot, double min, double max, int palette, int fade, double fade_value)
+{
+    int j, k;
+    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2];
+    
+    glBegin(GL_TRIANGLE_FAN);
+    xy_to_pos(x1, y1, xy);
+    glVertex2d(xy[0], xy[1]);
+    dy = (max - min)/360.0;
+    dy_e = max/360.0;
+    dy_phase = 1.0/360.0;
+    dphi = DPI/360.0;
+    
+    for (j = 0; j <= 360; j++)
+    {
+        switch (plot) {
+            case (P_AMPLITUDE):
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_ENERGY):
+            {
+                value = dy_e*(double)(j)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_MEAN_ENERGY):
+            {
+                value = dy_e*(double)(j)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_LOG_ENERGY):
+            {
+                value = LOG_SCALE*log(dy_e*(double)(j)*100.0/E_SCALE);
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_LOG_MEAN_ENERGY):
+            {
+                value = LOG_SHIFT + LOG_SCALE*log(dy_e*(double)(j)*100.0/E_SCALE);
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_ENERGY_FLUX):
+            {
+                value = dy_e*(double)(j);
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_TOTAL_ENERGY_FLUX):
+            {
+                value = dy_phase*(double)(j);
+                color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_PHASE):
+            {
+                value = min + 1.0*dy*(double)(j);
+                amp = 0.5*color_amplitude_linear(value, 1.0, 1);
+                while (amp > 1.0) amp -= 2.0;
+                while (amp < -1.0) amp += 2.0;
+                amp_to_rgb(0.5*(1.0 + amp), rgb);
+                break;
+            }
+            case (Z_EULER_VORTICITY):      
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_LOG_VORTICITY):
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_VORTICITY_ASYM):      
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_LPRESSURE):     
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+             case (Z_EULER_PRESSURE):     
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_DENSITY):      
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_SPEED):      
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULERC_VORTICITY):      
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            default:
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+        }
+        if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+        
+        xy_to_pos(x1 + radius*cos(dphi*(double)j), y1 + radius*sin(dphi*(double)j), xy);
+        glVertex2d(xy[0], xy[1]);
+    }
+    xy_to_pos(x1 + radius*cos(dphi), y1 + radius*sin(dphi), xy);
+    glVertex2d(xy[0], xy[1]);
+    glEnd ();
+    
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    glLineWidth(BOUNDARY_WIDTH*3/2);
+    glEnable(GL_LINE_SMOOTH);
+    
+    dphi = DPI/(double)NSEG;
+    glBegin(GL_LINE_LOOP);
+    for (j = 0; j < NSEG; j++)
+    {               
+        xy_to_pos(x1 + radius*cos(dphi*(double)j), y1 + radius*sin(dphi*(double)j), xy);
+        glVertex2d(xy[0], xy[1]);
+        glVertex2d(xy[0], xy[1]);
+    }
+    glEnd ();
+}
+
+
 void print_speed(double speed, int fade, double fade_value)
 {
     char message[100];
@@ -5550,12 +5793,13 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
 /* compute variable index of refraction */
 /* should be at some point merged with 3D version in suv_wave_3d.c */
 {
-    int i, j, k, n, inlens;
+    int i, j, k, n, inlens, ncircles;
     double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
     double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
     double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
     static double xc_stat[NGRIDX*NGRIDY], yc_stat[NGRIDX*NGRIDY], sigma_stat;
     static int first = 1;
+    t_circle circles[NMAXCIRCLES];
     
     rgb[0] = 1.0;
     rgb[1] = 1.0;
@@ -5749,7 +5993,9 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                     }
                     
 //                 #pragma omp parallel for private(i,j)
-                for (i=0; i<NX; i++){
+                for (i=0; i<NX; i++)
+                {
+                    if (i%100 == 0) printf("Computing potential for column %i of %i\n", i, NX);
                     for (j=0; j<NY; j++){
                         ij_to_xy(i, j, xy);
                         x = xy[0];
@@ -5857,7 +6103,78 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                 }
                 break;
             }
-            default:
+            case (IOR_POISSON_WELLS):
+            {
+                ncircles = init_circle_config_pattern(circles, C_POISSON_DISC);
+                for (n = 0; n<ncircles; n++) 
+                {
+                    height[n] = 0.5 + 0.5*gaussian();
+                    if (height[n] > 1.0) height[n] = 1.0;
+                    if (height[n] < 0.0) height[n] = 0.0;
+                }
+                
+                for (n = 0; n<ncircles; n++) printf("Circle %i at (%.3lg, %.3lg) height %.3lg\n", n, circles[n].xc, circles[n].yc, height[n]);
+                
+                sigma = 0.2*(XMAX - XMIN)*(YMAX - YMIN)/(double)ncircles;
+//                 sigma = MU*MU;
+                
+                for (i=0; i<NX; i++)
+                {
+                    if (i%100 == 0) printf("Computing potential for column %i of %i\n", i, NX);
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        sum = 0.0;
+                        for (n = 0; n<ncircles; n++)
+                        {
+                            r2 = (x - circles[n].xc)*(x - circles[n].xc) + (y - circles[n].yc)*(y - circles[n].yc);
+                            sum += exp(-r2/(sigma))*height[n];
+                        }
+                        sum = tanh(sum);
+//                         printf("%.3lg\n", sum);
+                        tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                    }
+                }
+                
+                break;
+            }
+            case (IOR_PPP_WELLS):
+            {
+                ncircles = init_circle_config_pattern(circles, C_RAND_POISSON);
+                for (n = 0; n<ncircles; n++) 
+                {
+                    height[n] = 0.5 + 0.5*gaussian();
+                    if (height[n] > 1.0) height[n] = 1.0;
+                    if (height[n] < 0.0) height[n] = 0.0;
+                }
+                
+                for (n = 0; n<ncircles; n++) printf("Circle %i at (%.3lg, %.3lg) height %.3lg\n", n, circles[n].xc, circles[n].yc, height[n]);
+                
+                sigma = 0.2*(XMAX - XMIN)*(YMAX - YMIN)/(double)ncircles;
+//                 sigma = MU*MU;
+                
+                for (i=0; i<NX; i++)
+                {
+                    if (i%100 == 0) printf("Computing potential for column %i of %i\n", i, NX);
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        sum = 0.0;
+                        for (n = 0; n<ncircles; n++)
+                        {
+                            r2 = (x - circles[n].xc)*(x - circles[n].xc) + (y - circles[n].yc)*(y - circles[n].yc);
+                            sum += exp(-r2/(sigma))*height[n];
+                        }
+                        sum = tanh(sum);
+//                         printf("%.3lg\n", sum);
+                        tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                    }
+                }
+                
+                break;
+            }default:
             {
                 for (i=0; i<NX; i++){
                     for (j=0; j<NY; j++){

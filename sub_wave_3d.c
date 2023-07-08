@@ -1296,6 +1296,7 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
     double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
     double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
     double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
+    t_circle circles[NMAXCIRCLES];
     
     if (VARIABLE_IOR)
     {
@@ -1539,6 +1540,82 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
                         tgamma[i*NY+j] = GAMMA;
                     }
                 }
+                break;
+            }
+            case (IOR_POISSON_WELLS):
+            {
+                ncircles = init_circle_config_pattern(circles, C_POISSON_DISC);
+                for (n = 0; n<ncircles; n++)
+                {
+                    height[n] = 0.5 + 0.5*gaussian();
+                    if (height[n] > 1.0) height[n] = 1.0;
+                    if (height[n] < 0.0) height[n] = 0.0;
+                }
+                
+                for (n = 0; n<ncircles; n++) printf("Circle %i at (%.3lg, %.3lg) height %.3lg\n", n, circles[n].xc, circles[n].yc, height[n]);
+                
+                sigma = 0.2*(XMAX - XMIN)*(YMAX - YMIN)/(double)ncircles;
+//                 sigma = MU*MU;
+                
+                for (i=0; i<NX; i++)
+                {
+                    if (i%100 == 0) printf("Computing potential for column %i of %i\n", i, NX);
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        sum = 0.0;
+                        for (n = 0; n<ncircles; n++)
+                        {
+                            r2 = (x - circles[n].xc)*(x - circles[n].xc) + (y - circles[n].yc)*(y - circles[n].yc);
+                            sum += exp(-r2/(sigma))*height[n];
+                        }
+                        sum = tanh(sum);
+//                         printf("%.3lg\n", sum);
+                        tc[i*NY+j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tcc[i*NY+j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tgamma[i*NY+j] = GAMMA;
+                    }
+                }
+                
+                break;
+            }
+            case (IOR_PPP_WELLS):
+            {
+                ncircles = init_circle_config_pattern(circles, C_RAND_POISSON);
+                for (n = 0; n<ncircles; n++)
+                {
+                    height[n] = 0.5 + 0.5*gaussian();
+                    if (height[n] > 1.0) height[n] = 1.0;
+                    if (height[n] < 0.0) height[n] = 0.0;
+                }
+                
+                for (n = 0; n<ncircles; n++) printf("Circle %i at (%.3lg, %.3lg) height %.3lg\n", n, circles[n].xc, circles[n].yc, height[n]);
+                
+                sigma = 0.2*(XMAX - XMIN)*(YMAX - YMIN)/(double)ncircles;
+//                 sigma = MU*MU;
+                
+                for (i=0; i<NX; i++)
+                {
+                    if (i%100 == 0) printf("Computing potential for column %i of %i\n", i, NX);
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        sum = 0.0;
+                        for (n = 0; n<ncircles; n++)
+                        {
+                            r2 = (x - circles[n].xc)*(x - circles[n].xc) + (y - circles[n].yc)*(y - circles[n].yc);
+                            sum += exp(-r2/(sigma))*height[n];
+                        }
+                        sum = tanh(sum);
+//                         printf("%.3lg\n", sum);
+                        tc[i*NY+j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tcc[i*NY+j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tgamma[i*NY+j] = GAMMA;
+                    }
+                }
+                
                 break;
             }
             default:
@@ -2120,7 +2197,6 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
     glLineWidth(BOUNDARY_WIDTH);
     draw_rectangle_noscale(x1, y1, x2, y2);
 }
-
 
 void print_speed_3d(double speed, int fade, double fade_value)
 {

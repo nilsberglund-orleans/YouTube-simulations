@@ -481,6 +481,9 @@ double type_hue(int type)
     
     if ((RD_REACTION == CHEM_CATALYTIC_A2D)&&(type == 4)) return(HUE_TYPE3); 
     
+    if ((RD_REACTION == CHEM_ABDACBE)&&(type == 4)) return(HUE_TYPE3); 
+    if ((RD_REACTION == CHEM_ABDACBE)&&(type == 5)) return(280.0); 
+    
     switch (type) {
         case (0): return(HUE_TYPE0);
         case (1): return(HUE_TYPE0);
@@ -898,6 +901,122 @@ void init_particle_config(t_particle particles[NMAXCIRCLES])
     }
 }
 
+void add_particle_config(t_particle particles[NMAXCIRCLES], double xmin, double xmax, double ymin, double ymax, double radius)
+/* add particles to configuration */
+{
+    int i, j, k, n, ncirc0, n_p_active, ncandidates = PDISC_CANDIDATES, naccepted, newcircles; 
+    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, dpoisson, xx[4], yy[4];
+    short int active_poisson[NMAXCIRCLES], far;
+    
+    dpoisson = PDISC_DISTANCE*radius;
+    
+    switch (CIRCLE_PATTERN_B) {
+        case (C_SQUARE):
+        {
+            ncircles = NGRIDX*NGRIDY;
+            dy = (YMAX - YMIN)/((double)NGRIDY);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY; j++)
+                {
+                    n = NGRIDY*i + j;
+                    particles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    particles[n].yc = YMIN + ((double)j + 0.5)*dy;
+                    particles[n].radius = MU;
+                    particles[n].active = 1;
+                }
+            break;
+        }
+        case (C_HEX):
+        {
+            dx = (xmax - xmin)/((double)NGRIDX);
+            dy = (ymax - ymin)/((double)NGRIDY);
+//             dx = dy*0.5*sqrt(3.0);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY+1; j++)
+                {
+                    n = ncircles + (NGRIDY+1)*i + j;
+//                     particles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dx;   /* is +0.5 needed? */
+                    particles[n].xc = xmin + ((double)i - 0.5)*dx;   
+                    particles[n].yc = ymin + ((double)j - 0.5)*dy;
+                    if ((i+NGRIDX)%2 == 1) particles[n].yc += 0.5*dy;
+                    particles[n].radius = radius;
+                    /* activate only circles that intersect the domain */
+                    if ((particles[n].yc < ymax + radius)&&(particles[n].yc > ymin - radius)&&(particles[n].xc < xmax + radius)&&(particles[n].xc > xmin - radius)) particles[n].active = 1;
+                    else particles[n].active = 0;
+                }
+            ncircles += NGRIDX*(NGRIDY+1);
+            break;
+        }
+        case (C_POISSON_DISC):
+        {
+            ncirc0 = ncircles;
+            printf("Generating new Poisson disc sample\n");
+            /* generate first circle */
+            particles[ncirc0].xc = (xmax - xmin)*(double)rand()/RAND_MAX + xmin;
+            particles[ncirc0].yc = (ymax - ymin)*(double)rand()/RAND_MAX + ymin;
+            active_poisson[0] = 1;
+// //             particles[0].active = 1;
+            n_p_active = 1;
+            newcircles = 1;
+            
+            while ((n_p_active > 0)&&(ncircles < NMAXCIRCLES))
+            {
+                /* randomly select an active circle */
+                i = rand()%(newcircles);
+                while (!active_poisson[i]) i = rand()%(ncircles);                 
+//                 printf("Starting from circle %i at (%.3f,%.3f)\n", i, particles[i].xc, particles[i].yc);
+                /* generate new candidates */
+                naccepted = 0;
+                for (j=0; j<ncandidates; j++)
+                {
+                    r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
+                    phi = DPI*(double)rand()/RAND_MAX;
+                    x = particles[ncirc0 + i].xc + r*cos(phi);
+                    y = particles[ncirc0 + i].yc + r*sin(phi);
+//                        printf("Testing new circle at (%.3f,%.3f)\t", x, y);
+                    far = 1;
+                    for (k=0; k<ncircles; k++) if ((k!=i))
+                    {
+                        /* new circle is far away from circle k */
+                        far = far*((x - particles[k].xc)*(x - particles[k].xc) + (y - particles[k].yc)*(y - particles[k].yc) >= dpoisson*dpoisson);
+                        /* new circle is in domain */
+                        far = far*(x < xmax)*(x > xmin)*(y < ymax)*(y > ymin);
+//                         far = far*(vabs(x) < LAMBDA)*(y < INITYMAX)*(y > INITYMIN);
+                    }
+                    if (far)    /* accept new circle */
+                    {
+                        printf("New circle at (%.3f,%.3f) accepted\n", x, y);
+                        particles[ncircles].xc = x;
+                        particles[ncircles].yc = y;
+                        particles[ncircles].radius = radius;
+                        particles[ncircles].active = 1;
+                        active_poisson[ncircles] = 1;
+                        ncircles++;
+                        ncirc0++;
+                        n_p_active++;
+                        naccepted++;
+                    }
+//                        else printf("Rejected\n");
+                }
+                if (naccepted == 0)    /* inactivate circle i */ 
+                {
+//                     printf("No candidates work, inactivate circle %i\n", i);
+                    active_poisson[i] = 0;
+                    n_p_active--;
+                }
+                printf("%i active circles\n", n_p_active);
+            }
+            
+            printf("Generated %i circles\n", ncircles);
+            break;
+        }
+        default: 
+        {
+            printf("Function init_circle_config not defined for this pattern \n");
+        }
+    }
+}
+
 void init_people_config(t_person people[NMAXCIRCLES])
 /* initialise particle configuration */
 {
@@ -1021,6 +1140,17 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
                 add_obstacle(0.5*(double)i, YMIN + 0.3, radius, obstacle);
             break;
         }
+        case (O_CIRCLE):
+        {
+            n = 0;
+            obstacle[n].xc = 0.0;
+            obstacle[n].yc = 0.0;
+            obstacle[n].radius = OBSTACLE_RADIUS;
+            obstacle[n].active = 1;
+            nobstacles = 1;
+            break;
+        }
+        
         default: 
         {
             printf("Function init_obstacle_config not defined for this pattern \n");
@@ -1162,7 +1292,7 @@ void add_circle_to_segments(double x, double y, double r, int nsegs, double angl
 double nozzle_width(double x, double width, int nozzle_shape)
 /* width of bell-shaped nozzle */
 {
-    double lam  = 0.5*LAMBDA;
+    double lam  = 0.5*LAMBDA, a, b;
     
     if (x >= 0.0) return(width);
     else switch (nozzle_shape) {
@@ -1176,6 +1306,16 @@ double nozzle_width(double x, double width, int nozzle_shape)
             if (-x < 0.1) return(width - (0.5 - width)*x/0.1);
             else return(0.5);
         }
+        case (NZ_DELAVAL): 
+        {
+            a = 1.5;
+            b = 0.05;
+            return(sqrt(width*width - 0.5*x) + a*b*x*(1.0 + x)/(b + x*x));
+//             a = (sqrt(width*width+0.5) - width)/sqrt(0.5);
+//             c = (a*sqrt(0.5*h) - width)/(h*h);
+//             if (-x < h) return(width + c*x*x);
+//             else return(width + a * sqrt(-0.5*x));
+        }
         default: return(0.0);
     }
 }
@@ -1185,7 +1325,7 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
 /* add one or several rocket_shaped set of segments */
 {
     int i, j, cycle = 0, nsegments0; 
-    double angle, dx, x1, y1, x2, y2, nozx, nozy, a, b;
+    double angle, dx, x1, y1, x2, y2, nozx, nozy, a, b, c, w;
     
     nsegments0 = nsegments;
 
@@ -1234,6 +1374,25 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
             add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, segment, 0);
             break;
         }
+        case (RCK_RECT_BAR):    /* rectangular chamber with a hat and separating bar */
+        {
+            a = 0.5*LAMBDA;
+            b = (0.49*PI-0.25)*LAMBDA;
+            c = 0.5*a;
+            w = 0.025;
+            add_rotated_angle_to_segments(x0+nozx, nozy, x0+nozx, nozy+0.5*c, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+nozx, nozy+0.5*c, x0+nozx+0.5*c, nozy+c, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+nozx+0.5*c, nozy+c, x0+a, nozy+c, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy+c, x0+a, nozy+b+c, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy+b+c, x0, nozy+b+a+c, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0-w, nozy+a+c, x0-w, nozy+b+a+c, 2.0*w, segment, 0);
+            add_rotated_angle_to_segments(x0, nozy+b+a+c, x0-a, nozy+b+c, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy+b+c, x0-a, nozy+c, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy+c, x0-nozx-0.5*c, nozy+c, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0-nozx-0.5*c, nozy+c, x0-nozx+w, nozy+0.5*c, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0-nozx+w, nozy+0.5*c, x0-nozx+w, nozy, 0.02, segment, 0);
+            break;
+        }
     }
             
     dx = LAMBDA/(double)(nsides);
@@ -1275,7 +1434,7 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
     for (i=nsegments0; i<nsegments; i++) segment[i].group = group;
 }
  
-int init_maze_segments(t_segment segment[NMAXSEGMENTS])
+int init_maze_segments(t_segment segment[NMAXSEGMENTS], int diag)
 /* init segments forming a maze */
 {
     t_maze* maze;
@@ -1297,7 +1456,11 @@ int init_maze_segments(t_segment segment[NMAXSEGMENTS])
             x1 = YMIN + padding + (double)i*dx + MAZE_XSHIFT;
             y1 = YMIN + padding + (double)j*dy;
             
-            if (((i>0)||(j!=NYMAZE/2))&&(maze[n].west)) add_rectangle_to_segments(x1, y1, x1 - width, y1 + dy, segment, 0);
+            if (diag)
+            {
+                if (((i>0)||(j<NYMAZE-1))&&(maze[n].west)) add_rectangle_to_segments(x1, y1, x1 - width, y1 + dy, segment, 0);
+            }
+            else if (((i>0)||(j!=NYMAZE/2))&&(maze[n].west)) add_rectangle_to_segments(x1, y1, x1 - width, y1 + dy, segment, 0);
             if (maze[n].south) add_rectangle_to_segments(x1, y1, x1 + dx, y1 - width, segment, 0);            
         }
     
@@ -1305,15 +1468,29 @@ int init_maze_segments(t_segment segment[NMAXSEGMENTS])
     add_rectangle_to_segments(YMIN + padding + MAZE_XSHIFT, YMAX - padding, YMAX - padding + MAZE_XSHIFT, YMAX - padding - width, segment, 0);
     
     /* right side of maze */
-    y1 = YMIN + padding + dy*((double)NYMAZE/2);
     x1 = YMAX - padding + MAZE_XSHIFT;
-    add_rectangle_to_segments(x1, YMIN - 1.0, x1 - width, y1 - dy, segment, 0);
-    add_rectangle_to_segments(x1, y1, x1 - width, YMAX + 1.0, segment, 0);
+    if (diag)
+    {
+        y1 = YMIN + padding + dy;
+        add_rectangle_to_segments(x1, y1, x1 - width, YMAX + 10.0, segment, 0);
+    }
+    else
+    {
+        y1 = YMIN + padding + dy*((double)NYMAZE/2);
+        add_rectangle_to_segments(x1, YMIN - 1.0, x1 - width, y1 - dy, segment, 0);
+        add_rectangle_to_segments(x1, y1, x1 - width, YMAX + 1.0, segment, 0);
+    }
     
     /* left side of maze */
     x1 = YMIN + padding + MAZE_XSHIFT;
     add_rectangle_to_segments(x1, YMIN - 1.0, x1 - width, YMIN + padding, segment, 0);
-    add_rectangle_to_segments(x1, YMAX - padding, x1 - width, YMAX + 1.0, segment, 0);
+    add_rectangle_to_segments(x1, YMAX - padding, x1 - width, YMAX + 10.0, segment, 0);
+    
+    if (diag) 
+    {
+        add_rotated_angle_to_segments(XMIN, YMAX - 0.5*dy, x1, YMAX - dy - 2.0*width, width, segment, 0);
+        add_rectangle_to_segments(XMIN, YMAX - 0.5*dy, XMIN - width, YMAX + 10.0, segment, 0);
+    }
     
     free(maze);
 }
@@ -1822,7 +1999,20 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         }
         case (S_MAZE):
         {
-            init_maze_segments(segment);
+            init_maze_segments(segment, 0);
+            
+            cycle = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_MAZE_DIAG):
+        {
+            init_maze_segments(segment, 1);
             
             cycle = 0;
             for (i=0; i<nsegments; i++) 
@@ -2096,7 +2286,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
 int in_rocket(double x, double y, int rocket_shape)
 /* returns 1 if (x,y) is in rocket chamber, with translated coordinates */
 {
-    double l, y1, a, b;
+    double l, y1, a, b, c;
     
     switch (rocket_shape) {
         case (RCK_DISC) :
@@ -2124,6 +2314,18 @@ int in_rocket(double x, double y, int rocket_shape)
             if (y1 < b - 0.05) return(1);
             return(y1 < a + b - 0.05 - vabs(x));
 //             return(1);
+        }
+        case (RCK_RECT_BAR) :
+        {
+            a = 0.5*LAMBDA;
+            b = (0.49*PI-0.25)*LAMBDA;
+            c = 0.5*a;
+            y1 = y - YMIN - LAMBDA;
+            if (vabs(x) > 0.95*a) return(0);
+            if (vabs(x) < 0.1*a) return(0);
+            if (y1 < 0.05 + c) return(0);
+            if (y1 < b - 0.05 + c) return(1);
+            return(y1 < a + b - 0.05 + c - vabs(x));
         }
     }
 }
@@ -2286,6 +2488,14 @@ int in_segment_region(double x, double y, t_segment segment[NMAXSEGMENTS])
             return(0);
         }
         case (S_MAZE):
+        {
+            for (i=0; i<nsegments; i++)
+            {
+                if (distance_to_segment(x, y, segment[i].x1, segment[i].y1, segment[i].x2, segment[i].y2) < 5.0*MAZE_WIDTH) return(0);
+            }
+            return(1);
+        }
+        case (S_MAZE_DIAG):
         {
             for (i=0; i<nsegments; i++)
             {
@@ -2911,7 +3121,7 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
 /* compute repelling force and torque of particle #k on particle #i */
 /* returns 1 if distance between particles is smaller than NBH_DIST_FACTOR*MU */
 {
-    double x1, y1, x2, y2, r, f, angle, aniso, fx, fy, ff[2], dist_scaled, spin_f, ck, sk, ck_rel, sk_rel;
+    double x1, y1, x2, y2, r, f, angle, aniso, fx, fy, ff[2], dist_scaled, spin_f, ck, sk, ck_rel, sk_rel, alpha, amp;
     static double dxhalf = 0.5*(BCXMAX - BCXMIN), dyhalf = 0.5*(BCYMAX - BCYMIN);
     int wwrapx, wwrapy, twrapx, twrapy;
     
@@ -3010,6 +3220,37 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
             force[1] = f*KSPRING_VICSEK*(particle[k].vy - particle[i].vy);
             break;
         }
+        case (I_VICSEK_SHARK):
+        {
+            if (particle[k].type == particle[i].type)
+            {
+                f = cos(0.5*(particle[k].angle - particle[i].angle));
+                force[0] = f*KSPRING_VICSEK*(particle[k].vx - particle[i].vx);
+                force[1] = f*KSPRING_VICSEK*(particle[k].vy - particle[i].vy);
+            }
+            else if (particle[i].type != 2)
+            {
+                f = krepel*coulomb_force(distance, particle[k]);
+                force[0] = f*ca;
+                force[1] = f*sa;
+            }
+            else 
+            {
+                if (VICSEK_REPULSION > 0.0)
+                {
+//                     f = VICSEK_REPULSION*harmonic_force(distance, particle[k]);
+                    f = VICSEK_REPULSION*coulomb_force(distance, particle[k]);
+                    force[0] = f*ca;
+                    force[1] = f*sa;   
+                }
+                else
+                {
+                    force[0] = 0.0;
+                    force[1] = 0.0;
+                }
+            }
+            break;
+        }
     }
 
     if (ROTATION) 
@@ -3051,6 +3292,27 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
                 if (dist_scaled > 1.0) *torque = 0.0;
                 else if (twrapx||twrapy) *torque = sin(-particle[k].angle - particle[i].angle);
                 else *torque = sin(particle[k].angle - particle[i].angle);
+                break;
+            }
+            case (I_VICSEK_SHARK):
+            {
+                if (dist_scaled > 10.0) *torque = 0.0;
+                else if (particle[k].type == particle[i].type)  /* fish adjusting direction */
+                {
+                    if (twrapx||twrapy) *torque = sin(-particle[k].angle - particle[i].angle);
+                    else *torque = sin(particle[k].angle - particle[i].angle);
+                }
+                else if (particle[k].type == 2)     /* fish fleeing a shark */
+                {
+                    alpha = argument(ca,sa);
+                    particle[i].angle = alpha + PI;
+                    *torque = 0.0;
+                }
+                else    /* shark tracking fish */
+                {
+                    *torque = cos(particle[k].angle)*sa - sin(particle[k].angle)*ca;
+                }
+                    
                 break;
             }
             default: 
@@ -3266,6 +3528,9 @@ int add_particle(double x, double y, double vx, double vy, double mass, short in
 //             particle[i].spin_freq = SPIN_INTER_FREQUENCY_B;            
 //         }
     
+        if ((PLOT == P_NUMBER)||(PLOT_B == P_NUMBER))
+            particle[i].color_hue = 360.0*(double)(i%N_PARTICLE_COLORS)/(double)N_PARTICLE_COLORS;
+        
         ncircles++;
         
         printf("Added particle at (%.3lg, %.3lg)\n", x, y);
@@ -3442,6 +3707,13 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
             *width = BOUNDARY_WIDTH;
             break;
         }
+        case (P_NUMBER):
+        {
+            hue = particle.color_hue;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
     }
     
     switch (plot) {
@@ -3466,6 +3738,13 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
             hsl_to_rgb_twilight(hue, 0.9, 0.5, rgby);
             break;
         }
+        case (P_ANGLE): 
+        {
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_ANGLE);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgbx, COLOR_PALETTE_ANGLE);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgby, COLOR_PALETTE_ANGLE);
+            break;
+        }
         case (P_DIRECT_ENERGY): 
         {
             hsl_to_rgb_twilight(hue, 0.9, 0.5, rgb);
@@ -3484,6 +3763,13 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
             hsl_to_rgb_twilight(hue, 0.9, 0.5, rgb);
             hsl_to_rgb_twilight(hue, 0.9, 0.5, rgbx);
             hsl_to_rgb_twilight(hue, 0.9, 0.5, rgby);
+            break;
+        }
+        case (P_INITIAL_POS): 
+        {
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_INITIAL_POS);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgbx, COLOR_PALETTE_INITIAL_POS);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgby, COLOR_PALETTE_INITIAL_POS);
             break;
         }
         default: 
@@ -3988,6 +4274,29 @@ int draw_special_particle(t_particle particle, double xc1, double yc1, double ra
             }
             break;
         }
+        case (CHEM_ABDACBE):
+        {
+            if (particle.type == 4) 
+            {
+                for (wsign = -1; wsign <= 1; wsign+=2)
+                {
+                    x1 = xc1 + (double)wsign*0.7*radius*cos(particle.angle);
+                    y1 = yc1 + (double)wsign*0.7*radius*sin(particle.angle);
+                    if (wsign == 1) 
+                    {
+                        if (fill) draw_colored_polygon(x1, y1, 1.2*MU_B, nsides, angle + APOLY*PID, rgb);
+                        else draw_polygon(x1, y1, 1.2*MU_B, nsides, angle + APOLY*PID);
+                    }
+                    else 
+                    {
+                        if (fill) draw_colored_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID, rgb);
+                        else draw_polygon(x1, y1, 1.2*MU, nsides, angle + APOLY*PID);
+                    }
+                }
+                return(0);
+            }
+            break;
+        }
     }
     return(1);
 }
@@ -4011,7 +4320,7 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     /* specific shapes for chemical reactions */
     if (REACTION_DIFFUSION) cont = draw_special_particle(particle, xc1, yc1, radius, angle, nsides, rgb, 1);    
    
-    if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)||(particle.interaction == I_VICSEK)||(particle.interaction == I_VICSEK_REPULSIVE)||(particle.interaction == I_VICSEK_SPEED)) 
+    if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)||(particle.interaction == I_VICSEK)||(particle.interaction == I_VICSEK_REPULSIVE)||(particle.interaction == I_VICSEK_SPEED)||(particle.interaction == I_VICSEK_SHARK)) 
         draw_colored_rhombus(xc1, yc1, radius, angle + APOLY*PID, rgb);
     else if (cont) draw_colored_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID, rgb);
         
@@ -4041,7 +4350,7 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     glColor3f(1.0, 1.0, 1.0);
     if (REACTION_DIFFUSION) cont = draw_special_particle(particle, xc1, yc1, radius, angle, nsides, rgb, 0);
 
-    if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)||(particle.interaction == I_VICSEK)||(particle.interaction == I_VICSEK_REPULSIVE)||(particle.interaction == I_VICSEK_SPEED)) 
+    if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)||(particle.interaction == I_VICSEK)||(particle.interaction == I_VICSEK_REPULSIVE)||(particle.interaction == I_VICSEK_SPEED)||(particle.interaction == I_VICSEK_SHARK)) 
         draw_rhombus(xc1, yc1, radius, angle + APOLY*PID);
     else if (cont) draw_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID); 
     
@@ -5646,6 +5955,30 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
             
             return(fperp);
         }
+        case (BC_REFLECT_ABS_BOTTOM):
+        {
+            /* add harmonic force outside screen */
+            padding = MU;
+            x = particle[j].xc;
+            y = particle[j].yc;
+            
+            if (y < BCYMIN)
+            {
+                particle[j].active = 0;
+                particle[j].vx = 0.0;
+                particle[j].vy = 0.0;
+                particle[j].xc = BCXMAX + 2.0*padding;
+                particle[j].yc = BCYMIN - 2.0*padding;
+            }
+            else 
+            {
+                if (y > BCYMAX + padding) particle[j].fy -= KSPRING_BOUNDARY*(y - BCYMAX - padding);
+                if (x > BCXMAX - padding) particle[j].fx -= KSPRING_BOUNDARY*(x - BCXMAX + padding);
+                else if (x < BCXMIN + padding) particle[j].fx += KSPRING_BOUNDARY*(BCXMIN - x + padding);
+            }
+                        
+            return(0.0);
+        }
     }
 }
 
@@ -5730,9 +6063,8 @@ int reorder_particles(t_particle particle[NMAXCIRCLES], double py[NMAXCIRCLES], 
 }
 
 
-int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY], 
-                             t_obstacle obstacle[NMAXOBSTACLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES], int tracer_n[N_TRACER_PARTICLES],
-                             t_segment segment[NMAXSEGMENTS])
+int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY], t_obstacle obstacle[NMAXOBSTACLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES], int tracer_n[N_TRACER_PARTICLES],
+t_segment segment[NMAXSEGMENTS])
 /* initialize all particles, obstacles, and the hashgrid */
 {
     int i, j, k, n, nactive = 0;
@@ -5743,6 +6075,11 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
         /* set particle type */
         particle[i].type = 0;
         if ((TWO_TYPES)&&((double)rand()/RAND_MAX > TYPE_PROPORTION)) 
+        {
+            particle[i].type = 2;
+            particle[i].radius = MU_B;
+        }
+        if ((INTERACTION == I_VICSEK_SHARK)&&(i==1)) 
         {
             particle[i].type = 2;
             particle[i].radius = MU_B;
@@ -5781,6 +6118,13 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
                 
         particle[i].vx = V_INITIAL*gaussian();
         particle[i].vy = V_INITIAL*gaussian();
+        
+        if ((INTERACTION == I_VICSEK_SHARK)&&(i==1)) 
+        {
+            particle[i].vx *= 1000.0;
+            particle[i].vy *= 1000.0;
+        }
+        
         particle[i].energy = (particle[i].vx*particle[i].vx + particle[i].vy*particle[i].vy)*particle[i].mass_inv;
         
         px[i] = particle[i].vx;
@@ -5802,6 +6146,8 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
         
         if ((PLOT == P_INITIAL_POS)||(PLOT_B == P_INITIAL_POS))
             particle[i].color_hue = 360.0*(particle[i].yc - INITYMIN)/(INITYMAX - INITYMIN);
+        else if ((PLOT == P_NUMBER)||(PLOT_B == P_NUMBER))
+            particle[i].color_hue = 360.0*(double)(i%N_PARTICLE_COLORS)/(double)N_PARTICLE_COLORS;
     }
     /* initialize dummy values in case particles are added */
     for (i=ncircles; i < NMAXCIRCLES; i++) 
@@ -5892,7 +6238,7 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
     
     /* position-dependent particle type */
     if (POSITION_DEPENDENT_TYPE) for (i=0; i<ncircles; i++)
-        if (((!POSITION_Y_DEPENDENCE)&&(particle[i].xc < 0))||((POSITION_Y_DEPENDENCE)&&(particle[i].yc < 0))) 
+        if (((!POSITION_Y_DEPENDENCE)&&((particle[i].xc - POSITION_DEP_X)*POSITION_DEP_SIGN < 0.0))||((POSITION_Y_DEPENDENCE)&&(particle[i].yc*POSITION_DEP_SIGN < 0.0))) 
         {
             particle[i].type = 2;
             particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
@@ -6074,12 +6420,25 @@ int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgr
                     particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
                 }
                 break;
-            }case (IC_TWOROCKETS):
+            }
+            case (IC_TWOROCKETS):
             {
                 if (vabs(particle[i].xc) < SEGMENTS_X0) particle[i].type = 1;
                 else 
                 {
                     particle[i].type = 2;
+                    particle[i].radius = MU_B;
+                    particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
+                }
+                break;
+            }
+            case (IC_TWOROCKETS_TWOFUELS):
+            {
+                if (vabs(particle[i].xc) < SEGMENTS_X0) particle[i].type = 1;
+                else 
+                {
+                    if (particle[i].xc < 0) particle[i].type = 2;
+                    else particle[i].type = 3;
                     particle[i].radius = MU_B;
                     particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
                 }
@@ -6136,11 +6495,13 @@ int add_particles(t_particle particle[NMAXCIRCLES], double px[NMAXCIRCLES], doub
     
 //     x = INITXMIN + (INITXMAX - INITXMIN)*(double)rand()/(double)RAND_MAX;
 //     y = INITYMIN + (INITYMAX - INITYMIN)*(double)rand()/(double)RAND_MAX;
+//     x = BCXMIN + (BCXMAX - BCXMIN)*(double)rand()/(double)RAND_MAX;
+//     y = YMAX + 0.5*(BCYMAX - YMAX)*(double)rand()/(double)RAND_MAX;
     
     printf("Adding a particle\n\n");
     
-    x = BCXMIN + (BCXMAX - BCXMIN)*(double)rand()/(double)RAND_MAX;
-    y = YMAX + 0.5*(BCYMAX - YMAX)*(double)rand()/(double)RAND_MAX;
+    x = ADDXMIN + (ADDXMAX - ADDXMIN)*(double)rand()/(double)RAND_MAX;
+    y = ADDYMIN + 0.5*(ADDYMAX - ADDYMIN)*(double)rand()/(double)RAND_MAX;
     add_particle(x, y, 0.0, 0.0, PARTICLE_MASS, 0, particle);
 //     add_particle(BCXMIN + 0.1, 0.5*(BCYMIN + BCYMAX), 200.0, 0.0, PARTICLE_MASS, 0, particle);
 //     i++;
@@ -6381,6 +6742,13 @@ void compute_inverse_masses(double inv_masses[RD_TYPES+1])
             inv_masses[6] = inv_masses[1];
             break;
         }
+        case (CHEM_ABDACBE): 
+        {
+            inv_masses[3] = inv_masses[1];
+            inv_masses[4] = 1.0/(PARTICLE_MASS + PARTICLE_MASS_B);
+            inv_masses[5] = inv_masses[1];
+            break;
+        }
     }
 }
 
@@ -6457,6 +6825,13 @@ void compute_radii(double radii[RD_TYPES+1])
             radii[4] = 1.2*MU_B;
             radii[5] = MU;
             radii[6] = MU;
+            break;
+        }
+        case (CHEM_ABDACBE): 
+        {
+            radii[3] = MU;
+            radii[4] = 1.2*MU_B;
+            radii[5] = MU;
             break;
         }
     }
@@ -6855,6 +7230,12 @@ int chem_transfer(int i, int type2, int newtype1, int newtype2, t_particle parti
                 particle[k].vy *= newmass_inv2/mass_inv2;
                 particle[k].mass_inv = newmass_inv2;
                 
+                if (EXOTHERMIC) 
+                {
+                    adapt_speed_exothermic(&particle[i], DELTA_EKIN);
+                    adapt_speed_exothermic(&particle[k], DELTA_EKIN);
+                }
+                
                 collisions[ncollisions].x = 0.5*(particle[i].xc + particle[k].xc);
                 collisions[ncollisions].y = 0.5*(particle[i].yc + particle[k].yc);
                 collisions[ncollisions].time = COLLISION_TIME;
@@ -6996,7 +7377,6 @@ int update_types(t_particle particle[NMAXCIRCLES], t_collision *collisions, int 
             printf("%i collisions\n", ncollisions);
             delta_n = ncollisions - oldncollisions; 
             printf("delta_n = %i\n", delta_n);
-//             if (delta_n > 1) delta_n = 1;
             if (EXOTHERMIC) *delta_e = (double)(delta_n)*DELTA_EKIN;
             return(ncollisions);
         }
@@ -7240,10 +7620,29 @@ int update_types(t_particle particle[NMAXCIRCLES], t_collision *collisions, int 
                 }
             }
             return(ncollisions);
-        }    
+        }
+        case (CHEM_ABDACBE):
+        {
+            for (i=0; i<ncircles; i++) 
+            {
+//                 oldncollisions = ncollisions;
+                if ((particle[i].active)&&(particle[i].type == 1))
+                {
+                    ncollisions = chem_merge(i, 2, 4, particle, collisions, ncollisions, inv_masses, radii);
+//                     if (EXOTHERMIC) *delta_e += (double)(ncollisions - oldncollisions)*DELTA_EKIN;
+                    
+                    ncollisions = chem_transfer(i, 3, 2, 5, particle, collisions, ncollisions, inv_masses, radii, REACTION_DIST);
+//                     if (EXOTHERMIC) *delta_e += (double)(ncollisions - oldncollisions)*DELTA_EKIN;
+                }
+            }
+            printf("%i collisions\n", ncollisions);
+            delta_n = ncollisions - oldncollisions; 
+            printf("delta_n = %i\n", delta_n);
+            if (EXOTHERMIC) *delta_e = (double)(delta_n)*DELTA_EKIN;
+            return(ncollisions);
+        }
     }
 }
-    
     
 double plot_coord(double x, double xmin, double xmax)
 {
@@ -7596,5 +7995,32 @@ void init_segment_group(t_segment segment[NMAXSEGMENTS], int group, t_group_segm
     segment_group[group].moment_inertia = SEGMENT_GROUP_I;
     
     printf("Segment group data %i: (%.3lg, %.3lg)\n", group, segment_group[group].xc, segment_group[group].yc);
+    
+}
+
+
+void reset_energy(t_particle particle[NMAXCIRCLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], double totalenergy, double emean)
+/* decrease energy in case of blow-up */
+{
+    int i;
+    double vratio, emax;
+    
+    emax = 10.0*emean/(double)ncircles;
+    
+//     printf("Warning: blow-up, resetting energy from %.5lg to %.5lg\n\n", totalenergy, emean);
+    printf("Warning: blow-up, resetting energy of some particles\n");
+    
+//     vratio = sqrt(emean/totalenergy);
+    
+    for (i=0; i < ncircles; i++) if (particle[i].energy > emax)
+    {
+        printf("Particle %i at (%.3lg, %.3lg) has energy %.5lg, resetting to 0\n", i, particle[i].xc, particle[i].yc, particle[i].energy);
+        particle[i].vx = 0.0;
+        particle[i].vy = 0.0;
+        px[i] = 0.0;
+        py[i] = 0.0;
+        particle[i].energy = 0.0;
+    }
+    printf("\n\n"); 
     
 }

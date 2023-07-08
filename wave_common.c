@@ -386,8 +386,7 @@ void draw_wave(double *phi[NX], double *psi[NX], short int *xy_in[NX], double sc
     glEnd ();
 }
 
-void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], double *color_scale[NX], short int *xy_in[NX], 
-                 double scale, int time, int plot)
+void draw_wave_e(double *phi[NX], double *psi[NX], double *total_energy[NX], double *color_scale[NX], short int *xy_in[NX], double scale, int time, int plot)
 /* draw the field, new version with total energy option */
 {
     int i, j, iplus, iminus, jplus, jminus;

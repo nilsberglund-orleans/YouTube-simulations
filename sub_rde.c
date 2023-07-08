@@ -699,6 +699,127 @@ void init_pressure_gradient_flow(double vx, double pmax, double pmin, double *ph
         }
 }
 
+double init_gaussian_wave(double x, double y, double amp, double radius, double min, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], var, a;
+    
+    var = radius*radius; 
+    a = amp/(sqrt(DPI)*radius);
+    
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] = min + a*exp(-((xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y))/var);
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+            else
+            {
+                phi[0][i*NY+j] = 0.0;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+}
+
+
+double init_linear_wave(double x, double vx, double amp, double radius, double min, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], var, a;
+    
+    var = radius*radius; 
+    a = amp/(sqrt(DPI)*radius);
+    
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] = min + a*exp(-(xy[0]-x)*(xy[0]-x)/var);
+                phi[1][i*NY+j] = vx*exp(-(xy[0]-x)*(xy[0]-x)/var);
+                phi[2][i*NY+j] = 0.0;
+            }
+            else
+            {
+                phi[0][i*NY+j] = 0.0;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+}
+
+
+double init_linear_blob(double x, double y, double vx, double vy, double amp, double radiusx, double radiusy, double min, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], varx, vary, a, height;
+    
+    varx = radiusx*radiusx; 
+    vary = radiusy*radiusy; 
+    a = amp/(sqrt(DPI*radiusx*radiusy));
+    
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy_in[i*NY+j])
+            {
+                height = exp(-(xy[0]-x)*(xy[0]-x)/varx - (xy[1]-y)*(xy[1]-y)/vary);
+                phi[0][i*NY+j] = min + a*height;
+                phi[1][i*NY+j] = vx*height;
+                phi[2][i*NY+j] = vy*height;
+            }
+            else
+            {
+                phi[0][i*NY+j] = 0.0;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+}
+
+
+
+double add_gaussian_wave(double x, double y, double amp, double radius, double min, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], var, a;
+    
+    var = radius*radius; 
+    a = amp/(sqrt(DPI)*radius);
+    
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] += a*exp(-((xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y))/var);
+//                 phi[1][i*NY+j] = 0.0;
+//                 phi[2][i*NY+j] = 0.0;
+            }
+            
+        }
+}
+
 double distance_to_segment(double x, double y, double x1, double y1, double x2, double y2)
 /* distance of (x,y) to segment from (x1,y1) to (x2,y2) */
 {
@@ -792,6 +913,20 @@ void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_recta
                 }
             break;
         }
+        case (D_ELLIPSE): 
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    r = module2(xy[0]/LAMBDA,xy[1]);
+                    f = 0.5*(1.0 + tanh(BC_STIFFNESS*(1.0 - r))); 
+                    bc_field[i*NY+j] = f;
+                    f = 0.5*(1.0 + tanh(0.5*BC_STIFFNESS*(0.99 - r))); 
+                    bc_field2[i*NY+j] = f;
+                }
+            break;
+        }
         case (D_EXT_ELLIPSE): 
         {
             for (i=0; i<NX; i++)
@@ -815,6 +950,21 @@ void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_recta
                     r = module2(xy[0]/LAMBDA,y1/MU);
                     f = 0.5*(1.0 + tanh(BC_STIFFNESS*(r - 1.0))); 
                     bc_field[i*NY+j] = f;
+                }
+            break;
+        }
+        case (D_ANNULUS):
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    r = module2(xy[0],xy[1]);
+                    if (r > 0.5*(LAMBDA + 1.0)) f = 0.5*(1.0 + tanh(BC_STIFFNESS*(1.0 - r)));
+                    else f = 0.5*(1.0 + tanh(BC_STIFFNESS*(r - LAMBDA)));
+                    bc_field[i*NY+j] = f;
+                    f = 0.5*(1.0 + tanh(0.5*BC_STIFFNESS*(0.99 - r))); 
+                    bc_field2[i*NY+j] = f;
                 }
             break;
         }
@@ -850,9 +1000,19 @@ void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_recta
             nsides = init_polyrect_euler(polyrect, D_MAZE);
             break;
         }
+        case (D_MAZE_CLOSED):
+        {
+            nsides = init_polyrect_euler(polyrect, D_MAZE_CLOSED);
+            break;
+        }
         case (D_MAZE_CHANNELS):
         {
             nsides = init_polyrect_euler(polyrect, D_MAZE_CHANNELS);
+            break;
+        }
+        case (D_MAZE_CHANNELS_INT):
+        {
+            nsides = init_polyrect_euler(polyrect, D_MAZE_CHANNELS_INT);
             break;
         }
         case (D_TESLA):
@@ -947,7 +1107,7 @@ void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_recta
         }
     }
     
-    if ((OBSTACLE_GEOMETRY == D_MAZE)||(OBSTACLE_GEOMETRY == D_MAZE_CHANNELS))
+    if ((OBSTACLE_GEOMETRY == D_MAZE)||(OBSTACLE_GEOMETRY == D_MAZE_CLOSED)||(OBSTACLE_GEOMETRY == D_MAZE_CHANNELS))
     {
         d0 = 0.25*MAZE_WIDTH;
         fmin = 0.5*(1.0 - tanh(d0*BC_STIFFNESS));
@@ -1012,7 +1172,78 @@ void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_recta
                 else f = 0.5*(1.0 + tanh(BC_STIFFNESS*(distance - 1.25*MAZE_WIDTH))); 
                 bc_field[i*NY+j] = f;
                 
-                if (distance >= d0) f = 0.5*(1.0 + tanh(BC_STIFFNESS*(distance - 1.5*MAZE_WIDTH))); 
+                if (distance >= d0) f = 0.5*(1.0 + tanh(0/BC_STIFFNESS*(distance - 1.5*MAZE_WIDTH))); 
+                bc_field2[i*NY+j] = f;
+//                     printf("distance = %.5lg, bcfield = %.5lg\n", distance, f);
+            }
+        }
+    }
+    else if (OBSTACLE_GEOMETRY == D_MAZE_CHANNELS_INT)
+    {
+        d0 = 2.0*MAZE_WIDTH;
+        fmin = 0.5*(1.0 - tanh(d0*BC_STIFFNESS));
+        for (i=0; i<NX; i++)
+        {
+            if (i%100 == 0) printf("Initialising maze, column %i of %i\n", i, NX);
+            for (j=0; j<NY; j++)
+            {
+                ij_to_xy(i, j, xy);
+                x = xy[0];
+                y = xy[1];
+                distance = XMAX - XMIN;
+                /* determine distance of point to middle of walls */ 
+                for (s=0; s<nsides; s++)
+                {
+                    x1 = polyrect[s].x1 + MAZE_WIDTH;
+                    x2 = polyrect[s].x2 - MAZE_WIDTH;
+                    y1 = polyrect[s].y1 + MAZE_WIDTH;
+                    y2 = polyrect[s].y2 - MAZE_WIDTH;
+                    length = vabs(polyrect[s].x2 - polyrect[s].x1);
+                    height = vabs(polyrect[s].y2 - polyrect[s].y1);
+                    
+                    /* case of large rectangles for maze with channels */
+                    if ((length > 4.0*MAZE_WIDTH)&&(height > 4.0*MAZE_WIDTH))
+                    {
+                        if (x < x1)
+                        {
+                            if (y < y1) d = module2(x - x1, y - y1);
+                            else if (y > y2) d = module2(x - x1, y - y2);
+                            else d = x1 - x;
+                        }
+                        else if (x > x2)
+                        {
+                            if (y < y1) d = module2(x - x2, y - y1);
+                            else if (y > y2) d = module2(x - x2, y - y2);
+                            else d = x - x2;
+                        }
+                        else
+                        {
+                            if (y < y1) d = y1 - y;
+                            else if (y > y2) d = y - y2;
+                            else d = 0.0;
+                        }
+                    }
+                    else if (length > height)
+                    {
+                        mid = 0.5*(polyrect[s].y1 + polyrect[s].y2);
+                        if ((x > x1)&&(x < x2)) d = vabs(y - mid); 
+                        else if (x <= x1) d = module2(x - x1, y - mid);
+                        else d = module2(x - x2, y - mid);
+                    }
+                    else
+                    {
+                        mid = 0.5*(polyrect[s].x1 + polyrect[s].x2);
+                        if ((y > y1)&&(y < y2)) d = vabs(x - mid); 
+                        else if (y <= y1) d = module2(x - mid, y - y1);
+                        else d = module2(x - mid, y - y2);
+                    }
+                    if (d < distance) distance = d;
+                }
+                if (distance < d0) f = 1.0;
+                else f = 0.5*(1.0 - tanh(BC_STIFFNESS*(distance - 1.25*MAZE_WIDTH))); 
+                bc_field[i*NY+j] = f;
+                
+                if (distance >= d0) f = 0.5*(1.0 - tanh(0.5*BC_STIFFNESS*(distance - 1.5*MAZE_WIDTH))); 
                 bc_field2[i*NY+j] = f;
 //                     printf("distance = %.5lg, bcfield = %.5lg\n", distance, f);
             }
@@ -1025,15 +1256,22 @@ void adapt_state_to_bc(double *phi[NFIELDS], double bc_field[NX*NY], short int x
 /* apply smooth modulation to adapt initial state to obstacles */ 
 {
     int i, j, field;
-    double xy[2], r, f; 
-//     double ratio = 1.0e-1;
+    double xy[2], r, f, integral = 0.0, factor; 
+    
+    if (CHECK_INTEGRAL)
+    {
+        integral = 0.0;
+        
+//         #pragma omp parallel for private(i)
+        for (i=0; i<NX*NY; i++) integral += phi[0][i];
+        
+        printf("Integral = %.3lg\n", integral); 
+    }
     
     #pragma omp parallel for private(i,j)
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++) if (xy_in[i*NY+j])
         {
-//             phi[0][i*NY+j] = 1.3 - bc_field[i*NY+j] + bc_field[i*NY+j]*phi[0][i*NY+j];
-//             phi[0][i*NY+j] = (1.0 - bc_field[i*NY+j]) + bc_field[i*NY+j]*phi[0][i*NY+j];
             for (field = 1; field < NFIELDS; field++) 
                 phi[field][i*NY+j] *= bc_field[i*NY+j];
         }
@@ -1312,7 +1550,7 @@ void compute_gradient_euler(double phi[NX*NY], double gradient[2*NX*NY], double 
 }
 
 
-void compute_gradient_euler_test(double phi[NX*NY], double gradient[2*NX*NY], short int xy_in[NX*NY])
+void compute_gradient_euler_periodic(double phi[NX*NY], double gradient[2*NX*NY], short int xy_in[NX*NY])
 /* compute the gradient of the field */
 {
     int i, j, iplus, iminus, jplus, jminus, padding = 0; 
@@ -1340,8 +1578,61 @@ void compute_gradient_euler_test(double phi[NX*NY], double gradient[2*NX*NY], sh
                 gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
         }
     }
+    
+    /* left boundary */
+    for (j=1; j<NY-1; j++)
+    {
+        jplus = j+1;
+        jminus = j-1;
+
+        i = 0;
+        iplus = 1;
+        switch (B_COND_LEFT) {
+            case (BC_PERIODIC): 
+            {
+                iminus = NX-1; 
+                gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+                gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+                break;
+            }
+            case (BC_DIRICHLET):
+            {
+                iminus = 0; 
+                gradient[i*NY+j] = 0.25*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+                gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+                break;
+            }
+        }
+    }
+    
+    /* right boundary */
+    for (j=1; j<NY-1; j++)
+    {
+        jplus = j+1;
+        jminus = j-1;
+                
+        i = NX-1;
+        iminus = NX-2;
+        switch (B_COND_RIGHT) {
+            case (BC_PERIODIC): 
+            {
+                iplus = 0;
+                gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+                gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+                break;
+            }
+            case (BC_DIRICHLET):
+            {
+                iplus = NX-1;
+                gradient[i*NY+j] = 0.25*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+                gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+                break;
+            }
+        }
+    }
+    
         
-    /* boundaries */
+    /* bottom boundary */
     for (i=1; i<NX-1; i++)
     {
         iplus = i+1;    
@@ -1349,64 +1640,234 @@ void compute_gradient_euler_test(double phi[NX*NY], double gradient[2*NX*NY], sh
         
         j = 0;
         jplus = 1;
-        jminus = NY-1;
-            
-        gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
         
-//         if (i == 1) printf("psi+ = %.5lg, psi- = %.5lg, gradient = %.5lg\n", phi[i*NY+jplus], phi[i*NY+jminus], gradient[NX*NY+i*NY+j]);
-        
+        switch (B_COND_BOTTOM) {
+            case (BC_PERIODIC): 
+            {
+                jminus = NY-1;
+                gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+                gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+                break;
+            }
+            case (BC_DIRICHLET):
+            {
+                jminus = 0;
+                gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+                gradient[NX*NY+i*NY+j] = 0.25*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+                break;
+            }
+        }
+    }
+    
+    /* top boundary */
+    for (i=1; i<NX-1; i++)
+    {
+        iplus = i+1;    
+        iminus = i-1;   
+                        
         j = NY-1;
-        jplus = 0;
         jminus = NY-2;
         
-        gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+        switch (B_COND_TOP) {
+            case (BC_PERIODIC): 
+            {
+                jplus = 0;
+                gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+                gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+                break;
+            }
+            case (BC_DIRICHLET):
+            {
+                jplus = NY-1;
+                gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+                gradient[NX*NY+i*NY+j] = 0.25*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+                break;
+            }
+        }
     }
     
-    for (j=1; j<NY-1; j++)
+    /* corners TODO: CHECK */
+    
+    /* bottom left corner */
+    i = 0;  iplus = 1;  
+    
+    j = 0;  jplus = 1; 
+    
+    switch (B_COND_LEFT){
+        case (BC_PERIODIC):
+        {
+            iminus = NX-1;
+            gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            iminus = 0;
+            gradient[i*NY+j] = 0.25*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+            break; 
+        }
+    }
+    
+    switch (B_COND_BOTTOM){
+        case (BC_PERIODIC):
+        {
+            jminus = NY-1;
+            gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            jminus = 0;
+            gradient[NX*NY+i*NY+j] = 0.25*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+            break; 
+        }
+    }
+    
+    /* top left corner */
+    j = NY-1;  jminus = NY-2;
+    switch (B_COND_LEFT){
+        case (BC_PERIODIC):
+        {
+            iminus = NX-1;
+            gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            iminus = 0;
+            gradient[i*NY+j] = 0.25*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+            break; 
+        }
+    }
+    
+    switch (B_COND_TOP){
+        case (BC_PERIODIC):
+        {
+            jplus = 0;  
+            gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            jplus = NY-1;  
+            gradient[NX*NY+i*NY+j] = 0.25*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+            break; 
+        }
+    }
+    
+    /* bottom right corner */
+    i = NX-1;  iminus = NX-2;
+    j = 0;  jplus = 1;  
+    
+    switch (B_COND_RIGHT){
+        case (BC_PERIODIC):
+        {
+            iplus = 0;  
+            gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            iplus = NX-1;  
+            gradient[i*NY+j] = 0.25*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+            break; 
+        }
+    }
+    
+    switch (B_COND_BOTTOM){
+        case (BC_PERIODIC):
+        {
+            jminus = NY-1; 
+            gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            jminus = 0;
+            gradient[NX*NY+i*NY+j] = 0.25*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+            break; 
+        }
+    }
+    
+    /* top right corner */
+    j = NY-1;  jminus = NY-2;
+    
+    switch (B_COND_RIGHT){
+        case (BC_PERIODIC):
+        {
+            iplus = 0;  
+            gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            iplus = NX - 1;  
+            gradient[i*NY+j] = 0.25*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+            break; 
+        }
+    }
+    switch (B_COND_TOP){
+        case (BC_PERIODIC):
+        {
+            jplus = 0;  
+            gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            jplus = NY-1;  
+            gradient[NX*NY+i*NY+j] = 0.25*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+            break; 
+        }
+    }
+}
+
+
+void compute_gradient_euler_domain(double phi[NX*NY], double gradient[2*NX*NY], short int xy_in[NX*NY])
+/* compute the gradient of the field */
+{
+    int i, j, iplus, iminus, jplus, jminus, padding = 0; 
+    double deltaphi, maxgradient = 1.0e10;
+    double dx = (XMAX-XMIN)/((double)NX);
+    
+    dx = (XMAX-XMIN)/((double)NX);
+    
+    #pragma omp parallel for private(i)
+    for (i=0; i<2*NX*NY; i++) gradient[i] = 0.0;
+    
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus)
+    for (i=1; i<NX-1; i++)
     {
-        jplus = j+1;
-        jminus = j-1;
-
-        i = 0;
-        iplus = 1; 
-        iminus = NX-1; 
-
-        gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
-        
-//         printf("j = %i, psi+ = %.5lg, psi- = %.5lg, gradient = %.5lg\n", j, phi[i*NY+jplus], phi[i*NY+jminus], gradient[NX*NY+i*NY+j]);
-
+        for (j=1; j<NY-1; j++) 
+        {
+            iplus = i+1;
+            iminus = i-1;
+            jplus = j+1;
+            jminus = j-1;
             
-        i = NX-1;
-        iplus = 0;
-        iminus = NX-2;
-        
-        gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-        gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+            if ((xy_in[iplus*NY+j])&&(xy_in[iminus*NY+j]))
+                gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
+            if ((xy_in[i*NY+jplus])&&(xy_in[i*NY+jminus]))
+                gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+        }
     }
-    
-    /* corners */
-    i = 0;  iplus = 1;  iminus = NX-1;
-    
-    j = 0;  jplus = 1;  jminus = NY-1;
-    gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
-    
-    j = NY-1;  jplus = 0;  jminus = NY-2;
-    gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
-    
-    i = NX-1;  iplus = 0;  iminus = NX-2;
-    
-    j = 0;  jplus = 1;  jminus = NY-1;
-    gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
-    
-    j = NY-1;  jplus = 0;  jminus = NY-2;
-    gradient[i*NY+j] = 0.5*(phi[iplus*NY+j] - phi[iminus*NY+j]);
-    gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
+}
+
+void compute_gradient_euler_test(double phi[NX*NY], double gradient[2*NX*NY], short int xy_in[NX*NY])
+/* compute the gradient of the field */
+{
+    switch (B_DOMAIN) {
+        case (D_NOTHING): 
+        {
+            compute_gradient_euler_periodic(phi, gradient, xy_in);
+            break;
+        }
+        default :
+        {
+            compute_gradient_euler_domain(phi, gradient, xy_in);
+            break;
+        }   
+    }
 }
 
 
@@ -1650,6 +2111,21 @@ void compute_speed(double *phi[NFIELDS], t_rde rde[NX*NY])
         }
 }
 
+void adjust_height(double *phi[NFIELDS], t_rde rde[NX*NY])
+/* adjust height of field */
+{
+    int i, j; 
+    double value;
+    
+    #pragma omp parallel for private(i,j,value)
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            value = VSCALE_WATER_HEIGHT*(phi[0][i*NY+j] + ADD_HEIGHT_CONSTANT);
+            rde[i*NY+j].height = value;
+        }
+}
+
 void compute_direction(double *phi[NFIELDS], t_rde rde[NX*NY])
 /* compute the direction of a field */
 {
@@ -1681,8 +2157,8 @@ void compute_vorticity(t_rde rde[NX*NY])
         }
 }
 
-void compute_velocity_gradients(double *phi[NFIELDS], t_rde rde[NX*NY])
-/* compute the gradients of the velocity field (for Euler equation) */
+void compute_velocity_gradients_periodic(double *phi[NFIELDS], t_rde rde[NX*NY])
+/* compute the gradients of the velocity field with periodic b.c. (for Euler equation) */
 {
     int i, j, k, iplus, iminus, jplus, jminus, padding = 0; 
     double deltaphi, maxgradient = 1.0e10;
@@ -1706,33 +2182,7 @@ void compute_velocity_gradients(double *phi[NFIELDS], t_rde rde[NX*NY])
             rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
         }
         
-    /* boundaries */
-    for (i=1; i<NX-1; i++)
-    {
-        iplus = i+1;    
-        iminus = i-1;   
-        
-        j = 0;
-        jplus = 1;
-        jminus = NY-1;
-            
-        rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
-        rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
-        
-        rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
-        rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
-        
-        j = NY-1;
-        jplus = 0;
-        jminus = NY-2;
-        
-        rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
-        rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
-        
-        rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
-        rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
-    }
-    
+    /* left boundary */
     for (j=1; j<NY-1; j++)
     {
         jplus = j+1;
@@ -1740,59 +2190,359 @@ void compute_velocity_gradients(double *phi[NFIELDS], t_rde rde[NX*NY])
 
         i = 0;
         iplus = 1; 
-        iminus = NX-1; 
-
-        rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
-        rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
         
-        rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
-        rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
-                    
-        i = NX-1;
-        iplus = 0;
-        iminus = NX-2;
+        switch (B_COND_LEFT){
+            case (BC_PERIODIC):
+            {
+                iminus = NX-1; 
+                
+                rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
         
-        rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
-        rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+                rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+                rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                break; 
+            }
+            case (BC_DIRICHLET):
+            {
+                iminus = 0; 
+                
+                rde[i*NY+j].dxu = 0.25*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
         
-        rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
-        rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                rde[i*NY+j].dxv = 0.25*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+                rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                break; 
+            }
+        }
     }
     
-    /* corners */
-    i = 0;  iplus = 1;  iminus = NX-1;
-    
-    j = 0;  jplus = 1;  jminus = NY-1;
-    rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
-    rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+    /* right boundary */
+    for (j=1; j<NY-1; j++)
+    {
+        jplus = j+1;
+        jminus = j-1;
+                    
+        i = NX-1;
+        iminus = NX-2;
         
-    rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
-    rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
-    
-    j = NY-1;  jplus = 0;  jminus = NY-2;
-    rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
-    rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        switch (B_COND_RIGHT){
+            case (BC_PERIODIC):
+            {
+                iplus = 0;
+                
+                rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
         
-    rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
-    rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
-    
-    i = NX-1;  iplus = 0;  iminus = NX-2;
-    
-    j = 0;  jplus = 1;  jminus = NY-1;
-    rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
-    rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+                rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+                rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                break; 
+            }
+            case (BC_DIRICHLET):
+            {
+                iplus = NX-1;
+                
+                rde[i*NY+j].dxu = 0.25*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
         
-    rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
-    rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
-    
-    j = NY-1;  jplus = 0;  jminus = NY-2;
-    rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
-    rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+                rde[i*NY+j].dxv = 0.25*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+                rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                break; 
+            }
+        }
+    }
+
+    /* bottom boundary */
+    for (i=1; i<NX-1; i++)
+    {
+        iplus = i+1;    
+        iminus = i-1;   
         
-    rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
-    rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+        j = 0;
+        jplus = 1;
+        
+        switch (B_COND_BOTTOM){
+            case (BC_PERIODIC):
+            {
+                jminus = NY-1;
+                
+                rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+                rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+                rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                break; 
+            }
+            case (BC_DIRICHLET):
+            {
+                jminus =0;
+                
+                rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                rde[i*NY+j].dyu = 0.25*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+                rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+                rde[i*NY+j].dyv = 0.25*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                break; 
+            }
+        }
+    }
+    
+    /* top boundary */
+    for (i=1; i<NX-1; i++)
+    {
+        iplus = i+1;    
+        iminus = i-1;   
+        
+        j = NY-1;
+        jminus = NY-2;
+        
+        switch (B_COND_TOP){
+            case (BC_PERIODIC):
+            {
+                jplus = 0;
+                
+                rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+                rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+                rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                break; 
+            }
+            case (BC_DIRICHLET):
+            {
+                jplus = NY-1;
+                
+                rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                rde[i*NY+j].dyu = 0.25*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        
+                rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+                rde[i*NY+j].dyv = 0.25*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                break; 
+            }
+        }
+    }
+    
+    /* TODO: CHECK */
+    
+    /* bottom left corner */
+    i = 0;  iplus = 1;  
+    j = 0;  jplus = 1;  
+    
+    switch (B_COND_LEFT){
+        case (BC_PERIODIC):
+        {
+            iminus = NX-1;
+            rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+            rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            iminus = 0;
+            rde[i*NY+j].dxu = 0.25*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+            rde[i*NY+j].dxv = 0.25*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            break;
+        }
+    }
+    
+    switch (B_COND_BOTTOM){
+        case (BC_PERIODIC):
+        {
+            jminus = NY-1;
+            rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+            rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            jminus = 0;
+            rde[i*NY+j].dyu = 0.25*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+            rde[i*NY+j].dyv = 0.25*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+            break;
+        }
+    }
+        
+    /* top left corner */
+    j = NY-1;  jminus = NY-2;
+    
+    switch (B_COND_LEFT){
+        case (BC_PERIODIC):
+        {
+            iminus = NX-1;
+            rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+            rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            iminus = 0;
+            rde[i*NY+j].dxu = 0.25*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+            rde[i*NY+j].dxv = 0.25*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            break;
+        }
+    }
+    
+    switch (B_COND_TOP){
+        case (BC_PERIODIC):
+        {
+            jplus = 0;  
+            rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+            rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            jplus = NY-1;
+            rde[i*NY+j].dyu = 0.25*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+            rde[i*NY+j].dyv = 0.25*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+            break;
+        }
+    }
+
+    /* bottom right corner */
+    i = NX-1;  iminus = NX-2;
+    
+    j = 0;  jplus = 1; 
+    
+    switch (B_COND_RIGHT){
+        case (BC_PERIODIC):
+        {
+            iplus = 0;  
+            rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+            rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            iplus = NX-1;  
+            rde[i*NY+j].dxu = 0.25*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+            rde[i*NY+j].dxv = 0.25*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            break;
+        }
+    }
+    
+    switch (B_COND_BOTTOM){
+        case (BC_PERIODIC):
+        {
+            jminus = NY-1;
+            rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+            rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            jminus = 0;
+            rde[i*NY+j].dyu = 0.25*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+            rde[i*NY+j].dyv = 0.25*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+            break;
+        }
+    }
+
+    /* top right corner */
+    j = NY-1;  jminus = NY-2;
+    
+    switch (B_COND_RIGHT){
+        case (BC_PERIODIC):
+        {
+            iplus = 0; 
+            rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+            rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            iplus = NX-1;  
+            rde[i*NY+j].dxu = 0.25*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+            rde[i*NY+j].dxv = 0.25*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            break;
+        }
+    }
+    
+    switch (B_COND_TOP){
+        case (BC_PERIODIC):
+        {
+            jplus = 0;  
+            rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+            rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            jplus = NY-1;  
+            rde[i*NY+j].dyu = 0.25*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+            rde[i*NY+j].dyv = 0.25*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+            break;
+        }
+    }
+
 }
 
+void compute_velocity_gradients_domain(double *phi[NFIELDS], t_rde rde[NX*NY], short int xy_in[NX*NY])
+/* compute the gradients of the velocity field in a bounded domain (for shallow water equation) */
+{
+    int i, j, k, iplus, iminus, jplus, jminus, padding = 0; 
+    double deltaphi, maxgradient = 1.0e10;
+        
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus)
+    for (i=1; i<NX-1; i++)
+    {
+        iplus = i+1;
+        iminus = i-1;
+        for (j=1; j<NY-1; j++) 
+        {
+            if (xy_in[i*NY+j])
+            {
+            
+                jplus = j+1;
+                jminus = j-1;
+            
+                if (xy_in[iplus*NY+j] && xy_in[iminus*NY+j])
+                {
+                    rde[i*NY+j].dxu = 0.5*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                    rde[i*NY+j].dxv = 0.5*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+                }
+                else 
+                {
+                    rde[i*NY+j].dxu = 0.0;
+                    rde[i*NY+j].dxv = 0.0;
+                }
+                
+                if (xy_in[i*NY+jplus] && xy_in[i*NY+jplus])
+                {
+                    rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+                    rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                }
+                else 
+                {
+                    rde[i*NY+j].dyu = 0.0;
+                    rde[i*NY+j].dyv = 0.0;
+                }
+            }
+            else 
+            {
+                rde[i*NY+j].dxu = 0.0;
+                rde[i*NY+j].dxv = 0.0;
+                rde[i*NY+j].dyu = 0.0;
+                rde[i*NY+j].dyv = 0.0;
+            }
+        }
+    }  
+}
+void compute_velocity_gradients(double *phi[NFIELDS], t_rde rde[NX*NY], short int xy_in[NX*NY])
+/* compute the gradients of the velocity field (for Euler equation) */
+{
+    switch (B_DOMAIN) {
+        case (D_NOTHING):
+        {
+            compute_velocity_gradients_periodic(phi, rde);
+            break;
+        }
+        default:
+        {
+            compute_velocity_gradients_domain(phi, rde, xy_in);
+        }
+    }
+}
 
 
 void compute_probabilities(t_rde rde[NX*NY], short int xy_in[NX*NY], double probas[2])
@@ -1847,8 +2597,8 @@ void compute_probabilities(t_rde rde[NX*NY], short int xy_in[NX*NY], double prob
 
 
 
-void compute_laplacian_rde(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY])
-/* computes the Laplacian of phi_in and stores it in phi_out */
+void compute_laplacian_rde_bc(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY])
+/* computes the Laplacian of phi_in and stores it in phi_out - case with whole rectangular domain */
 {
     int i, j, iplus, iminus, jplus, jminus;
     
@@ -1862,49 +2612,193 @@ void compute_laplacian_rde(double phi_in[NX*NY], double phi_out[NX*NY], short in
         }
     }
     
-    /* boundary conditions */
-    switch (B_COND) {
+    /* TODO */
+    
+    /* boundary conditions - left side */
+    switch (B_COND_LEFT) {
         case (BC_PERIODIC):
         {
-            /* left and right side */
             for (j = 0; j < NY; j++) 
             {
                 jplus = j+1;  if (jplus == NY) jplus = 0;
                 jminus = j-1; if (jminus == -1) jminus = NY-1;
                 
                 phi_out[j] = phi_in[jminus] + phi_in[jplus] + phi_in[(NX-1)*NY+j] + phi_in[NY+j] - 4.0*phi_in[j];
+            }
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            for (j = 1; j < NY-1; j++) 
+            {
+                phi_out[j] = phi_in[j-1] + phi_in[j+1] + phi_in[NY+j] - 3.0*phi_in[j];
+            }
+            /* corners */
+            switch (B_COND_BOTTOM){
+                case (BC_PERIODIC):
+                {
+                    phi_out[0] = phi_in[1] + phi_in[NY] + phi_in[NY-1] - 3.0*phi_in[0];
+                    break;
+                }
+                case (BC_DIRICHLET):
+                {
+                    phi_out[0] = phi_in[1] + phi_in[NY] - 2.0*phi_in[0];
+                    break;
+                }
+            }
+            switch (B_COND_TOP){
+                case (BC_PERIODIC):
+                {
+                    phi_out[NY-1] = phi_in[NY] + phi_in[NY-2] + phi_in[NY+NY-1] - 3.0*phi_in[NY-1];
+                    break;
+                }
+                case (BC_DIRICHLET):
+                {
+                    phi_out[NY-1] = phi_in[NY-2] + phi_in[NY+NY-1] - 2.0*phi_in[NY-1];
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
+    /* boundary conditions - right side */
+    switch (B_COND_RIGHT) {
+        case (BC_PERIODIC):
+        {
+            for (j = 0; j < NY; j++) 
+            {
+                jplus = j+1;  if (jplus == NY) jplus = 0;
+                jminus = j-1; if (jminus == -1) jminus = NY-1;
+                
                 phi_out[(NX-1)*NY+j] = phi_in[(NX-1)*NY+jminus] + phi_in[(NX-1)*NY+jplus] + phi_in[(NX-2)*NY+j] + phi_in[j] - 4.0*phi_in[(NX-1)*NY+j];
             }
-            /* top and bottom side */
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            for (j = 1; j < NY-1; j++) 
+            {
+                phi_out[(NX-1)*NY+j] = phi_in[(NX-1)*NY+j-1] + phi_in[(NX-1)*NY+j+1] + phi_in[(NX-2)*NY+j] - 3.0*phi_in[(NX-1)*NY+j];
+            }
+            /* corners */
+            switch (B_COND_BOTTOM){
+                case (BC_PERIODIC):
+                {
+                    phi_out[(NX-1)*NY] = phi_in[(NX-2)*NY] + phi_in[(NX-1)*NY+1] + phi_in[(NX-1)*NY+NY-1] - 3.0*phi_in[(NX-1)*NY];
+                    break;
+                }
+                case (BC_DIRICHLET):
+                {
+                    phi_out[(NX-1)*NY] = phi_in[(NX-2)*NY] + phi_in[(NX-1)*NY+1] - 2.0*phi_in[(NX-1)*NY];
+                    break;
+                }
+            }
+            switch (B_COND_TOP){
+                case (BC_PERIODIC):
+                {
+                    phi_out[(NX-1)*NY+NY-1] = phi_in[(NX-2)*NY+NY-1] + phi_in[(NX-1)*NY+NY-2] + phi_in[(NX-1)*NY] - 3.0*phi_in[(NX-1)*NY+NY-1];
+                    break;
+                }
+                case (BC_DIRICHLET):
+                {
+                    phi_out[(NX-1)*NY+NY-1] = phi_in[(NX-2)*NY+NY-1] + phi_in[(NX-1)*NY-2] - 2.0*phi_in[(NX-1)*NY+NY-1];
+                    break;
+                }
+            }
+            break;
+        }
+    }
+
+    /* boundary conditions - bottom side */
+    switch (B_COND_BOTTOM) {
+        case (BC_PERIODIC):
+        {
             for (i = 1; i < NX-1; i++) 
             {
                 iplus = i+1;  /*if (iplus == NX) iplus = 0;*/
                 iminus = i-1; /*if (iminus == -1) iminus = NX-1;*/
                 
                 phi_out[i*NY] = phi_in[iminus*NY] + phi_in[iplus*NY] + phi_in[i*NY+1] + phi_in[i*NY+NY-1] - 4.0*phi_in[i*NY];
+            }
+            break;
+        }
+        case (BC_DIRICHLET):
+        {
+            for (i = 1; i < NX-1; i++) 
+            {
+                phi_out[i*NY] = phi_in[(i-1)*NY] + phi_in[(i+1)*NY] + phi_in[i*NY+1] - 3.0*phi_in[i*NY];
+            }
+            /* corners */
+//             phi_out[0] = phi_in[1] + phi_in[NY] - 2.0*phi_in[0];
+//             phi_out[NY-1] = phi_in[NY-2] + phi_in[NY+NY-1] - 2.0*phi_in[NY-1];
+//             phi_out[(NX-1)*NY] = phi_in[(NX-2)*NY] + phi_in[(NX-1)*NY+1] - 2.0*phi_in[(NX-1)*NY];
+//             phi_out[(NX-1)*NY+NY-1] = phi_in[(NX-2)*NY+NY-1] + phi_in[(NX-1)*NY-2] - 2.0*phi_in[(NX-1)*NY+NY-1];
+            break;
+        }
+    }
+    
+        /* boundary conditions - top side */
+    switch (B_COND_TOP) {
+        case (BC_PERIODIC):
+        {
+            for (i = 1; i < NX-1; i++) 
+            {
+                iplus = i+1;  /*if (iplus == NX) iplus = 0;*/
+                iminus = i-1; /*if (iminus == -1) iminus = NX-1;*/
+                
                 phi_out[i*NY+NY-1] = phi_in[iminus*NY+NY-1] + phi_in[iplus*NY+NY-1] + phi_in[i*NY] + phi_in[i*NY+NY-2] - 4.0*phi_in[i*NY+NY-1];
             }
             break;
         }
         case (BC_DIRICHLET):
         {
-            /* left and right side */
-            for (j = 1; j < NY-1; j++) 
-            {
-                phi_out[j] = phi_in[j-1] + phi_in[j+1] + phi_in[NY+j] - 3.0*phi_in[j];
-                phi_out[(NX-1)*NY+j] = phi_in[(NX-1)*NY+j-1] + phi_in[(NX-1)*NY+j+1] + phi_in[(NX-2)*NY+j] - 3.0*phi_in[(NX-1)*NY+j];
-            }
-            /* top and bottom side */
             for (i = 1; i < NX-1; i++) 
             {
-                phi_out[i*NY] = phi_in[(i-1)*NY] + phi_in[(i+1)*NY] + phi_in[i*NY+1] - 3.0*phi_in[i*NY];
                 phi_out[i*NY+NY-1] = phi_in[(i-1)*NY+NY-1] + phi_in[(i+1)*NY+NY-1] + phi_in[i*NY+NY-2] - 3.0*phi_in[i*NY+NY-1];
             }
             /* corners */
-            phi_out[0] = phi_in[1] + phi_in[NY] - 2.0*phi_in[0];
-            phi_out[NY-1] = phi_in[NY-2] + phi_in[NY+NY-1] - 2.0*phi_in[NY-1];
-            phi_out[(NX-1)*NY] = phi_in[(NX-2)*NY] + phi_in[(NX-1)*NY+1] - 2.0*phi_in[(NX-1)*NY];
-            phi_out[(NX-1)*NY+NY-1] = phi_in[(NX-2)*NY+NY-1] + phi_in[(NX-1)*NY-2] - 2.0*phi_in[(NX-1)*NY+NY-1];
+//             phi_out[0] = phi_in[1] + phi_in[NY] - 2.0*phi_in[0];
+//             phi_out[NY-1] = phi_in[NY-2] + phi_in[NY+NY-1] - 2.0*phi_in[NY-1];
+//             phi_out[(NX-1)*NY] = phi_in[(NX-2)*NY] + phi_in[(NX-1)*NY+1] - 2.0*phi_in[(NX-1)*NY];
+//             phi_out[(NX-1)*NY+NY-1] = phi_in[(NX-2)*NY+NY-1] + phi_in[(NX-1)*NY-2] - 2.0*phi_in[(NX-1)*NY+NY-1];
+            break;
+        }
+    }
+
+}
+
+void compute_laplacian_rde_domain(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY])
+/* computes the Laplacian of phi_in and stores it in phi_out - case with bounded domain */
+{
+    int i, j, iplus, iminus, jplus, jminus;
+    
+    #pragma omp parallel for private(i,j)
+    for (i=1; i<NX-1; i++){
+        for (j=1; j<NY-1; j++){
+            if ((xy_in[(i+1)*NY+j])&&(xy_in[(i-1)*NY+j])&&(xy_in[i*NY+j+1])&&(xy_in[i*NY+j-1]))
+            {
+                phi_out[i*NY+j] = phi_in[(i+1)*NY+j] + phi_in[(i-1)*NY+j] 
+                + phi_in[i*NY+j+1] + phi_in[i*NY+j-1] - 4.0*phi_in[i*NY+j];
+            }
+            else phi_out[i*NY+j] = 0.0;
+        }
+    }
+}
+
+    
+void compute_laplacian_rde(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY])
+/* computes the Laplacian of phi_in and stores it in phi_out */
+{
+    switch (B_DOMAIN) {
+        case (D_NOTHING): 
+        {
+            compute_laplacian_rde_bc(phi_in, phi_out, xy_in);
+            break;
+        }
+        default : 
+        {
+            compute_laplacian_rde_domain(phi_in, phi_out, xy_in);
             break;
         }
     }
@@ -2158,6 +3052,28 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
             hsl_to_rgb_palette(360.0*value/DPI, 0.9, 0.5, rgb, palette);
             break;
         }
+        case (Z_SWATER_HEIGHT): 
+        {
+            color_scheme_palette(COLOR_SCHEME, palette, VSCALE_SWATER*(value - SWATER_MIN_HEIGHT), 1.0, 0, rgb);
+            break;
+        }
+        case (Z_SWATER_SPEED): 
+        {
+            if (ASYM_SPEED_COLOR) 
+                color_scheme_asym_palette(COLOR_SCHEME, palette, VSCALE_SPEED*value, 1.0, 0, rgb);
+            else 
+                color_scheme_palette(COLOR_SCHEME, palette, VSCALE_SPEED*value, 1.0, 0, rgb);
+            break;
+        }
+        case (Z_SWATER_DIRECTION_SPEED): 
+        {
+            value *= 360.0/DPI;
+            value += 180.0*COLOR_PHASE_SHIFT;
+            if (value > 360.0) value -= 360.0; 
+            hsl_to_rgb_palette(value, 0.9, 0.5, rgb, palette);
+            break;
+        }
+        
     }
 }
 
@@ -2169,10 +3085,7 @@ double adjust_field(double z, double pot)
 }  
 
 
-double compute_interpolated_colors_rde(int i, int j, t_rde rde[NX*NY], double potential[NX*NY], double palette, int cplot, 
-                                 double rgb_e[3], double rgb_w[3], double rgb_n[3], double rgb_s[3],
-                                 double *z_sw, double *z_se, double *z_nw, double *z_ne, 
-                                 int fade, double fade_value, int movie)
+double compute_interpolated_colors_rde(int i, int j, t_rde rde[NX*NY], double potential[NX*NY], double palette, int cplot, double rgb_e[3], double rgb_w[3], double rgb_n[3], double rgb_s[3], double *z_sw, double *z_se, double *z_nw, double *z_ne, int fade, double fade_value, int movie)
 {
     int k;
     double cw, ce, cn, cs, c_sw, c_se, c_nw, c_ne, c_mid, ca, z_mid;
@@ -2226,7 +3139,8 @@ double compute_interpolated_colors_rde(int i, int j, t_rde rde[NX*NY], double po
     compute_field_color_rde(cs, cplot, palette, rgb_s);
     
 //     if ((cplot == Z_ARGUMENT)||(cplot == Z_REALPART))
-    if (cplot == Z_ARGUMENT)
+//     if (cplot == Z_ARGUMENT)
+    if ((cplot == Z_ARGUMENT)||(cplot == Z_EULER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED))
     {
         lum = tanh(SLOPE_SCHROD_LUM*rde[i*NY+j].field_norm) + MIN_SCHROD_LUM;
         for (k=0; k<3; k++) 
@@ -2247,6 +3161,45 @@ double compute_interpolated_colors_rde(int i, int j, t_rde rde[NX*NY], double po
             rgb_w[k] *= ca;
             rgb_n[k] *= ca;
             rgb_s[k] *= ca;
+        }
+    }
+    if (fade)
+        for (k=0; k<3; k++) 
+        {
+            rgb_e[k] *= fade_value;
+            rgb_w[k] *= fade_value;
+            rgb_n[k] *= fade_value;
+            rgb_s[k] *= fade_value;
+        }
+    
+    return(z_mid);
+}
+
+
+double compute_depth_colors_rde(int i, int j, t_rde rde[NX*NY], double potential[NX*NY], double palette, int cplot, double rgb_e[3], double rgb_w[3], double rgb_n[3], double rgb_s[3], double *z_sw, double *z_se, double *z_nw, double *z_ne, int fade, double fade_value, int movie)
+{
+    int k;
+    double cw, ce, cn, cs, c_sw, c_se, c_nw, c_ne, c_mid, ca, z_mid;
+    double lum;
+        
+    *z_sw = -DEPTH_SCALE*rde[i*NY+j].depth + DEPTH_SHIFT;
+    *z_se = -DEPTH_SCALE*rde[(i+1)*NY+j].depth + DEPTH_SHIFT;
+    *z_nw = -DEPTH_SCALE*rde[i*NY+j+1].depth + DEPTH_SHIFT;
+    *z_ne = -DEPTH_SCALE*rde[(i+1)*NY+j+1].depth + DEPTH_SHIFT;
+                            
+    z_mid = 0.25*(*z_sw + *z_se + *z_nw + *z_ne);
+    
+    if (SHADE_3D)
+    {
+//         printf("cos angle = %.3lg\n", rde[i*NY+j].cos_depth_angle);
+        ca = rde[i*NY+j].cos_depth_angle;
+        ca = (ca + 1.0)*0.2 + 0.1;
+        for (k=0; k<3; k++) 
+        {
+            rgb_e[k] = ca;
+            rgb_w[k] = ca;
+            rgb_n[k] = ca;
+            rgb_s[k] = ca;
         }
     }
     if (fade)
@@ -2329,6 +3282,14 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
             if ((zplot == Z_EULERC_VORTICITY)||(cplot == Z_EULERC_VORTICITY))
                 compute_vorticity(rde);
             break;
+        }
+        case (E_SHALLOW_WATER):
+        {
+            if (zplot == Z_SWATER_HEIGHT) adjust_height(phi, rde);
+            if ((zplot == Z_SWATER_SPEED)||(cplot == Z_SWATER_SPEED)||(zplot == Z_SWATER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED))
+                compute_speed(phi, rde);
+            if ((zplot == Z_SWATER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED))
+                compute_direction(phi, rde);
         }
         default : break;
     }
@@ -2485,6 +3446,24 @@ void init_zfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, t_
             break;
         }
         case (Z_EULER_DIRECTION_SPEED):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].field_norm;
+            break;
+        }
+        case (Z_SWATER_HEIGHT):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].height;
+            break;
+        }
+        case (Z_SWATER_SPEED):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].field_norm;
+            break;
+        }
+        case (Z_SWATER_DIRECTION_SPEED):
         {
             #pragma omp parallel for private(i,j)
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].field_norm;
@@ -2650,6 +3629,24 @@ void init_cfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int cplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].field_arg;
             break;
         }
+        case (Z_SWATER_HEIGHT):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &phi[0][i*NY+j];
+            break;
+        }
+        case (Z_SWATER_SPEED):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].field_norm;
+            break;
+        }
+        case (Z_SWATER_DIRECTION_SPEED):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].field_arg;
+            break;
+        }
     }
 }
 
@@ -2665,10 +3662,12 @@ void compute_cfield_rde(short int xy_in[NX*NY], int cplot, int palette, t_rde rd
         compute_field_color_rde(*rde[i*NY+j].p_cfield[movie], cplot, palette, rde[i*NY+j].rgb);
         
 //         if ((cplot == Z_ARGUMENT)||(cplot == Z_REALPART))
-        if ((cplot == Z_ARGUMENT)||(cplot == Z_EULER_DIRECTION_SPEED))
+//         if ((cplot == Z_ARGUMENT)||(cplot == Z_EULER_DIRECTION_SPEED))
+        if ((cplot == Z_ARGUMENT)||(cplot == Z_EULER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED))
         {
             lum = tanh(SLOPE_SCHROD_LUM*rde[i*NY+j].field_norm);
             for (k=0; k<3; k++) rde[i*NY+j].rgb[k] *= lum;
+//             if ((i==0)&&(j==0)) printf("Luminosity multiplied by %.3lg\n", lum); 
         }
         if (SHADE_3D)
         {
@@ -2712,10 +3711,16 @@ void draw_wave_3d_ij_rde(int i, int j, int movie, double *phi[NFIELDS], short in
     int k, l, draw = 1;
     double xy[2], xy_screen[2], rgb[3], pos[2], ca, rgb_e[3], rgb_w[3], rgb_n[3], rgb_s[3]; 
     double z, z_sw, z_se, z_nw, z_ne, z_mid, zw, ze, zn, zs, min = 1000.0, max = 0.0;
+    double zd_sw, zd_se, zd_nw, zd_ne, zd_mid, rgb_de[3], rgb_dw[3], rgb_dn[3], rgb_ds[3];
     double xy_sw[2], xy_se[2], xy_nw[2], xy_ne[2], xy_mid[2];
     double energy;
     
-
+    if ((VARIABLE_DEPTH)&&(FADE_WATER_DEPTH)) 
+    {
+        fade = 1;
+        fade_value *= 2.0 - rde[i*NY+j].depth/max_depth;
+    }
+        
     if (NON_DIRICHLET_BC) 
         draw = (xy_in[i*NY+j])&&(xy_in[(i+1)*NY+j])&&(xy_in[i*NY+j+1])&&(xy_in[(i+1)*NY+j+1]);
     else draw = (TWOSPEEDS)||(xy_in[i*NY+j]);
@@ -2727,6 +3732,11 @@ void draw_wave_3d_ij_rde(int i, int j, int movie, double *phi[NFIELDS], short in
             z_mid = compute_interpolated_colors_rde(i, j, rde, potential, palette, cplot, 
                                                         rgb_e, rgb_w, rgb_n, rgb_s, &z_sw, &z_se, &z_nw, &z_ne, 
                                                         fade, fade_value, movie);
+            
+            if (DRAW_DEPTH) zd_mid = compute_depth_colors_rde(i, j, rde, potential, palette, cplot, 
+                                                        rgb_de, rgb_dw, rgb_dn, rgb_ds, &zd_sw, &zd_se, &zd_nw, &zd_ne, 
+                                                        fade, fade_value, movie);
+            
             ij_to_xy(i, j, xy_sw);
             ij_to_xy(i+1, j, xy_se);
             ij_to_xy(i, j+1, xy_nw);
@@ -2751,6 +3761,25 @@ void draw_wave_3d_ij_rde(int i, int j, int movie, double *phi[NFIELDS], short in
                 glColor3f(rgb_n[0], rgb_n[1], rgb_n[2]);
                 draw_vertex_xyz(xy_nw, z_nw);
                 glEnd ();
+                
+                if (DRAW_DEPTH)
+                {
+                    glBegin(GL_TRIANGLE_FAN);
+                    glColor3f(rgb_dw[0], rgb_dw[1], rgb_dw[2]);
+                    draw_vertex_xyz(xy_mid, zd_mid);
+                    draw_vertex_xyz(xy_nw, zd_nw);
+                    draw_vertex_xyz(xy_sw, zd_sw);
+                    
+                    glColor3f(rgb_ds[0], rgb_ds[1], rgb_ds[2]);
+                    draw_vertex_xyz(xy_se, zd_se);
+                    
+                    glColor3f(rgb_de[0], rgb_de[1], rgb_de[2]);
+                    draw_vertex_xyz(xy_ne, zd_ne);
+                    
+                    glColor3f(rgb_dn[0], rgb_dn[1], rgb_dn[2]);
+                    draw_vertex_xyz(xy_nw, zd_nw);
+                    glEnd ();
+                }
             }
         }
         else
@@ -2771,8 +3800,7 @@ void draw_wave_3d_ij_rde(int i, int j, int movie, double *phi[NFIELDS], short in
     }
 }
 
-void draw_wave_3d_ij_rde_periodic(int shiftx, int shifty, int i, int j, int movie, double *phi[NFIELDS], 
-                         short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
+void draw_wave_3d_ij_rde_periodic(int shiftx, int shifty, int i, int j, int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
 {
     int k, l, draw = 1;
     double xy[2], xy_screen[2], rgb[3], pos[2], ca, rgb_e[3], rgb_w[3], rgb_n[3], rgb_s[3]; 
@@ -2780,7 +3808,12 @@ void draw_wave_3d_ij_rde_periodic(int shiftx, int shifty, int i, int j, int movi
     double xy_sw[2], xy_se[2], xy_nw[2], xy_ne[2], xy_mid[2];
     double energy;
     
-
+    if ((VARIABLE_DEPTH)&&(FADE_WATER_DEPTH)) 
+    {
+        fade = 1;
+        fade_value = rde[i*NY+j].depth/max_depth;
+    }
+    
     if (NON_DIRICHLET_BC) 
         draw = (xy_in[i*NY+j])&&(xy_in[(i+1)*NY+j])&&(xy_in[i*NY+j+1])&&(xy_in[(i+1)*NY+j+1]);
     else draw = (TWOSPEEDS)||(xy_in[i*NY+j]);
@@ -2837,8 +3870,7 @@ void draw_wave_3d_ij_rde_periodic(int shiftx, int shifty, int i, int j, int movi
 }
 
 
-void draw_wave_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], 
-                  int zplot, int cplot, int palette, int fade, double fade_value)
+void draw_wave_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
 {
     int i, j;
     double observer_angle;
@@ -3032,7 +4064,7 @@ void set_in_out_flow_bc(double *phi_out[NFIELDS], short int xy_in[NX*NY], double
         x = YMAX - padding + MAZE_XSHIFT;
         xy_to_pos(x, y, xy);
         y_channels = xy[1] - 5;
-        if ((B_DOMAIN == D_MAZE_CHANNELS)||(OBSTACLE_GEOMETRY == D_MAZE_CHANNELS))
+        if ((B_DOMAIN == D_MAZE_CHANNELS)||(OBSTACLE_GEOMETRY == D_MAZE_CHANNELS)||(OBSTACLE_GEOMETRY == D_MAZE_CHANNELS_INT))
         {
             imax = xy[0] + 2;
             x = YMIN + padding + MAZE_XSHIFT;

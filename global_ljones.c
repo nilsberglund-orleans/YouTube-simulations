@@ -44,6 +44,7 @@
 #define O_GENUS_TWO 2       /* obstacles in corners of L-shape domeain (for genus 2 b.c.) */
 #define O_POOL_TABLE 3      /* obstacles around pockets of pool table */
 #define O_HLINE_HOLE_SPOKES 181    /* tips of spokes for S_HLINE_HOLE_SPOKES segment pattern */
+#define O_CIRCLE 4          /* one circle at the origin */
 
 /* pattern of additional repelling segments */
 #define S_RECTANGLE 0       /* segments forming a rectangle */
@@ -64,6 +65,7 @@
 #define S_DAM_WITH_HOLE 13    /* segments forming a dam in which a hole can open */
 #define S_DAM_WITH_HOLE_AND_RAMP 14    /* segments forming a dam in which a hole can open */
 #define S_MAZE 15           /* segments forming a maze */
+#define S_MAZE_DIAG 151     /* segments forming a maze with diagonally opposed exits */
 #define S_EXT_RECTANGLE 16  /* particles outside a rectangle */
 #define S_DAM_BRICKS 17     /* dam made of several bricks */
 #define S_HLINE_HOLE 18    /* horizontal line with a hole in the bottom */
@@ -84,6 +86,7 @@
 #define I_VICSEK 8          /* Vicsek-type interaction */
 #define I_VICSEK_REPULSIVE 9  /* Vicsek-type interaction with harmonic repulsion */
 #define I_VICSEK_SPEED 10   /* Vicsek-type interaction with speed adjustment */
+#define I_VICSEK_SHARK 11   /* Vicsek-type interaction with speed adjustment, and one shark */
 
 /* Boundary conditions */
 
@@ -103,6 +106,7 @@
 #define BC_GENUS_TWO 14     /* surface of genus 2, obtained by identifying opposite sides of an L shape */
 #define BC_ABSORBING 20     /* "no-return" boundary conditions outside BC area */
 #define BC_REFLECT_ABS 21   /* reflecting on lower boundary, and "no-return" boundary conditions outside BC area */
+#define BC_REFLECT_ABS_BOTTOM 22    /* absorbing on lower boundary, and reflecting elsewhere */
 
 /* Regions for partial thermostat couplings */
 
@@ -122,6 +126,7 @@
 #define RCK_DISC 0      /* disc-shaped rocket */
 #define RCK_RECT 1      /* rectangular rocket */
 #define RCK_RECT_HAT 2  /* rectangular rocket with a hat */
+#define RCK_RECT_BAR 3  /* rectangular rocket with a hat and a separating bar */
 
 /* Nozzle shapes */
 
@@ -131,6 +136,7 @@
 #define NZ_CONE 3       /* cone-shaped nozzle */
 #define NZ_TRUMPET 4    /* trumpet-shaped nozzle */
 #define NZ_BROAD 5      /* broad straight nozzle */
+#define NZ_DELAVAL 6    /* a type of de Laval nozzle */
 #define NZ_NONE 99      /* no nozzle */
 
 /* Types of chemical reactions */
@@ -151,6 +157,7 @@
 #define CHEM_ABCDABC 13     /* reactions A + B <-> C, A + C <-> D */
 #define CHEM_BZ 14          /* simplified Belousov-Zhabotinski reaction with 6 types (Oregonator) */
 #define CHEM_BRUSSELATOR 15 /* Brusselator oscillating reaction */
+#define CHEM_ABDACBE 16     /* A + B -> D, A + C -> B + E */
 
 /* Initial conditions for chemical reactions */
 
@@ -164,6 +171,7 @@
 #define IC_BZ 6            /* initial state for BZ reaction */
 #define IC_SIGNX 7         /* type 1 or 2 depending on sign of x */
 #define IC_TWOROCKETS 8    /* type 1 or 2 depending on rocket position */
+#define IC_TWOROCKETS_TWOFUELS 9    /* type 1 and 2 or 1 and 3 depending on rocket */
 
 /* Plot types */
 
@@ -179,6 +187,7 @@
 #define P_DIFF_NEIGHB 9   /* colors represent number of neighbours of different type */
 #define P_THERMOSTAT 10   /* colors show which particles are coupled to the thermostat */
 #define P_INITIAL_POS 11  /* colors depend on initial position of particle */
+#define P_NUMBER 12       /* colors depend on particle number */
 
 /* Color schemes */
 
@@ -206,7 +215,7 @@
 
 #define COL_TURBO_CYCLIC 101    /* TURBO color palette (by Anton Mikhailov) corrected to be cyclic, beta */
 
-#define VICSEK_INT ((INTERACTION == I_VICSEK)||(INTERACTION == I_VICSEK_REPULSIVE)||(INTERACTION == I_VICSEK_SPEED))
+#define VICSEK_INT ((INTERACTION == I_VICSEK)||(INTERACTION == I_VICSEK_REPULSIVE)||(INTERACTION == I_VICSEK_SPEED)||(INTERACTION == I_VICSEK_SHARK))
 
 typedef struct
 {

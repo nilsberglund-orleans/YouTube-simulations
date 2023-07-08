@@ -58,7 +58,7 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define D_ALT_REU 11    /* alternating between star and Reuleaux */
 #define D_ANGLE 12      /* angular sector */
 #define D_LSHAPE 13     /* L-shaped billiard for conical singularity */
-#define D_GENUSN 14     /* polygon with identifies opposite sides */
+#define D_GENUSN 14     /* polygon with identified opposite sides */
 #define D_PARABOLAS 15  /* polygon with parabolic sides */
 #define D_PENROSE 16    /* Penrose solution to illumination problem */
 

@@ -35,15 +35,18 @@
 #include <omp.h>
 #include <time.h>
 
-#define MOVIE 0         /* set to 1 to generate movie */
+#define MOVIE 1         /* set to 1 to generate movie */
 #define SAVE_MEMORY 1       /* set to 1 to save memory when writing tiff images */
 #define INVERT_COUNTER 0    /* set to 1 to save frames in inverse order */
 
-#define WINWIDTH 	1280  /* window width */
+// #define WINWIDTH 	1280  /* window width */
+#define WINWIDTH 	720  /* window width */
 #define WINHEIGHT 	720   /* window height */
 
-#define XMIN -1.5
-#define XMAX 2.5	/* x interval */
+// #define XMIN -1.5
+// #define XMAX 2.5	/* x interval */
+#define XMIN -1.125
+#define XMAX 1.125	/* x interval */
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
@@ -51,7 +54,7 @@
 
 /* Choice of the billiard table, see global_particles.c */
 
-#define B_DOMAIN 31     /* choice of domain shape */
+#define B_DOMAIN 30     /* choice of domain shape */
 
 #define CIRCLE_PATTERN 1    /* pattern of circles */
 #define POLYLINE_PATTERN 10  /* pattern of polyline */
@@ -83,7 +86,7 @@
 /* Simulation parameters */
 
 // #define NPART 10      /* number of particles */
-#define NPART 5000      /* number of particles */
+#define NPART 50000      /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
@@ -91,10 +94,10 @@
 #define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
 #define HEATMAP 1       /* set to 1 to show heat map of particles */
 #define DRAW_FINAL_HEATMAP 1       /* set to 1 to show final heat map of particles */
-#define DRAW_HEATMAP_HISTOGRAM 1   /* set to 1 to draw a histogram of particle distribution in heat map */
-#define NBIN_FACTOR 8.0             /* constant controlling number of bins in histogram */
+#define DRAW_HEATMAP_HISTOGRAM 0   /* set to 1 to draw a histogram of particle distribution in heat map */
+#define NBIN_FACTOR 6.0             /* constant controlling number of bins in histogram */
 #define DRAW_HEATMAP_PARTICLES 1    /* set to 1 to draw particles in heat map */
-#define HEATMAP_MAX_PART_BY_CELL 5     /* set to positive value to draw only limited number of particles in cell */
+#define HEATMAP_MAX_PART_BY_CELL 50     /* set to positive value to draw only limited number of particles in cell */
 #define PLOT_HEATMAP_AVERAGE 1      /* set to 1 to plot average number of particles in heat map */
 #define SHOWZOOM 0      /* set to 1 to show zoom on specific area */
 #define PRINT_PARTICLE_NUMBER 0 /* set to 1 to print number of particles */
@@ -105,8 +108,8 @@
 
 #define TEST_INITIAL_COND 0     /* set to 1 to allow only initial conditions that pass a test */
 
-#define NSTEPS 22000      /* number of frames of movie */
-#define TIME 2000        /* time between movie frames, for fluidity of real-time simulation */ 
+#define NSTEPS 1300      /* number of frames of movie */
+#define TIME 3000        /* time between movie frames, for fluidity of real-time simulation */ 
 // #define DPHI 0.000002     /* integration step */
 #define DPHI 0.00002     /* integration step */
 #define NVID 25          /* number of iterations between images displayed on screen */
@@ -120,12 +123,12 @@
 
 /* Colors and other graphical parameters */
 
-#define COLOR_PALETTE 17     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 11     /* Color palette, see list in global_pdes.c  */
 
 #define NCOLORS 500      /* number of colors */
 #define COLORSHIFT 0     /* hue of initial color */ 
 #define COLOR_HUEMIN 0   /* minimal color hue */
-#define COLOR_HUEMAX 160 /* maximal color hue */
+#define COLOR_HUEMAX 300 /* maximal color hue */
 #define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
@@ -145,8 +148,8 @@
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1       /* final sleeping time */
 
-#define NXMAZE 36       /* width of maze */
-#define NYMAZE 36      /* height of maze */
+#define NXMAZE 18       /* width of maze */
+#define NYMAZE 18      /* height of maze */
 #define MAZE_MAX_NGBH 8     /* max number of neighbours of maze cell */
 #define RAND_SHIFT 15        /* seed of random number generator */
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */

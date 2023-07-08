@@ -69,6 +69,7 @@
 #define D_MAZE 53               /* maze */
 #define D_MAZE_CLOSED 54        /* closed maze */
 #define D_MAZE_CHANNELS 541     /* maze with two channels attached */
+#define D_MAZE_CHANNELS_INT 542 /* maze with two channels attached, distance defined from interior of cells */
 #define D_CHESSBOARD 55         /* chess board configuration */
 #define D_TRIANGLE_TILES 56     /* triangular tiling */
 #define D_HEX_TILES 57          /* honeycomb tiling */
@@ -128,6 +129,8 @@
 #define IOR_RANDOM_WELLS 5  /* random superposition of "wells" */
 #define IOR_PERIODIC_WELLS_ROTATING 6   /* periodic superposition rotating in time */
 #define IOR_PERIODIC_WELLS_ROTATING_LARGE 7   /* periodic superposition rotating in time, larger area */
+#define IOR_POISSON_WELLS 8     /* wells located on a random Poisson disc process */
+#define IOR_PPP_WELLS 9         /* wells located on a Poisson point process */
 
 /* Boundary conditions */
 
@@ -229,12 +232,17 @@
 #define Z_EULER_LPRESSURE 53        /* Laplacian of pressure */
 #define Z_EULER_PRESSURE 54         /* pressure */
 
-/* for Euler compressible Euler equation */
+/* for compressible Euler equation */
 #define Z_EULER_DENSITY 60           /* density */
 #define Z_EULER_SPEED 61             /* norm of velocity */
 #define Z_EULERC_VORTICITY 62        /* vorticity of velocity */
 #define Z_EULER_DIRECTION 63         /* direction of velocity */
-#define Z_EULER_DIRECTION_SPEED 64   /* hut for direction of velocity, luminosity for speed */
+#define Z_EULER_DIRECTION_SPEED 64   /* hue for direction of velocity, luminosity for speed */
+
+/* for shallow water equation */
+#define Z_SWATER_HEIGHT 70           /* height */
+#define Z_SWATER_SPEED 71            /* speed */
+#define Z_SWATER_DIRECTION_SPEED 74  /* hue for direction of velocity, luminosity for speed */
 
 /* special boundary conditions for Euler equation */
 #define BCE_TOPBOTTOM 1         /* special flow at top and bottom */

@@ -483,6 +483,11 @@ int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
     int i, j, k, k1, k2, condition, type;
 
     switch (domain) {
+        case (D_NOTHING):
+        {
+            return(1);
+            break;
+        }
         case (D_MENGER):       
         {
             x1 = 0.5*(x+1.0);
@@ -744,7 +749,12 @@ void draw_billiard_half(int domain, int pattern, int top)      /* draws the bill
             /* Do nothing */
             break;
         }
-       default:
+        case (D_NOTHING):
+        {
+            /* Do nothing */
+            break;
+        }   
+        default:
         {
             printf("Function draw_billiard not defined for this billiard \n");
         }
@@ -798,6 +808,31 @@ void init_wave_flat_comp( double *phi[NX], double *psi[NX], short int * xy_in[NX
         }
 }
 
+
+void add_circular_wave_comp(double factor, double x, double y, double *phi[NX], double *psi[NX], short int * xy_in[NX], int half)
+/* add drop at (x,y) to the field with given prefactor */
+{
+    int i, j;
+    double xy[2], dist2;
+
+    for (i=0; i<NX; i++)
+    {
+        if (half == 1) for (j=NY/2; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+            if ((xy_in[i][j])||(TWOSPEEDS)) 
+                phi[i][j] += INITIAL_AMP*factor*exp(-dist2/INITIAL_VARIANCE)*cos(-sqrt(dist2)/INITIAL_WAVELENGTH);
+        }
+        else for (j=0; j<NY/2; j++)
+        {
+            ij_to_xy(i, j, xy);
+            dist2 = (xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+            if ((xy_in[i][j])||(TWOSPEEDS)) 
+                phi[i][j] += INITIAL_AMP*factor*exp(-dist2/INITIAL_VARIANCE)*cos(-sqrt(dist2)/INITIAL_WAVELENGTH);
+        }
+    }
+}
 
 void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], double scale, int time, int plot)
 /* draw the field */
@@ -878,6 +913,101 @@ void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], doub
                 glVertex2i(i+1, j);
                 glVertex2i(i+1, j+1);
                 glVertex2i(i, j+1);
+            }
+        }
+
+    glEnd ();
+    
+    /* draw horizontal mid line */
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINE_STRIP);
+    xy_to_pos(XMIN, 0.5*(YMIN+YMAX), pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(XMAX, 0.5*(YMIN+YMAX), pos);
+    glVertex2d(pos[0], pos[1]);
+    glEnd();
+}
+
+void draw_wave_comp_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], short int *xy_in[NX], double scale, int time, int plot, int palette, int fade, double fade_value)
+/* draw the field */
+{
+    int i, j, iplus, iminus, jplus, jminus, k;
+    double rgb[3], xy[2], x1, y1, x2, y2, velocity, energy, gradientx2, gradienty2, pos[2];
+    static double dtinverse = ((double)NX)/(COURANT*(XMAX-XMIN)), dx = (XMAX-XMIN)/((double)NX);
+
+    glBegin(GL_QUADS);
+    
+//     printf("dtinverse = %.5lg\n", dtinverse);
+
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            if (((TWOSPEEDS)&&(xy_in[i][j] != 2))||(xy_in[i][j] == 1))
+            {
+                switch (plot) {
+                    case (P_AMPLITUDE):
+                    {
+                        color_scheme_palette(COLOR_SCHEME, palette, phi[i][j], scale, time, rgb);
+                        break;
+                    }
+                    case (P_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, energy, scale, time, rgb);
+                        else color_scheme_palette(COLOR_SCHEME, palette, energy, scale, time, rgb);
+                        break;
+                    }
+                    case (P_MIXED):
+                    {
+                        if (j > NY/2) color_scheme_palette(COLOR_SCHEME, palette, phi[i][j], scale, time, rgb);
+                        else color_scheme_palette(COLOR_SCHEME, palette, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
+                        break;
+                    }
+                    case (P_MEAN_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        total_energy[i][j] += energy;
+                        if (COLOR_PALETTE >= COL_TURBO) 
+                            color_scheme_asym_palette(COLOR_SCHEME, palette, total_energy[i][j]/(double)(time+1), scale, time, rgb);
+                        else color_scheme_palette(COLOR_SCHEME, palette, total_energy[i][j]/(double)(time+1), scale, time, rgb);
+                        break;
+                    }
+                    case (P_LOG_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        color_scheme(COLOR_SCHEME, LOG_SHIFT + LOG_SCALE*log(energy), scale, time, rgb);
+                        break;
+                    }
+//                     case (P_LOG_MEAN_ENERGY):
+//                     {
+//                         energy = compute_energy(phi, psi, xy_in, i, j);
+//                         if (energy == 0.0) energy = 1.0e-20;
+//                         total_energy[i][j] += energy;
+//                         color_scheme(COLOR_SCHEME, LOG_SCALE*log(total_energy[i][j]/(double)(time+1)), scale, time, rgb);
+//                         break;
+//                     }
+                }
+                    
+//                 if (PLOT == P_AMPLITUDE)
+//                     color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
+//                 else if (PLOT == P_ENERGY)
+//                 {
+//                     energy = compute_energy(phi, psi, xy_in, i, j);
+//                     if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, energy, scale, time, rgb);
+//                     else color_scheme(COLOR_SCHEME, energy, scale, time, rgb);
+//                 }
+//                 else if (PLOT == P_MIXED)
+//                 {
+//                     if (j > NY/2) color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
+//                     else color_scheme(COLOR_SCHEME, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
+//                 }
+                if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
+                glColor3f(rgb[0], rgb[1], rgb[2]);
+                
+                glVertex2i(i, j);
+                glVertex2i(i+size, j);
+                glVertex2i(i+size, j+size);
+                glVertex2i(i, j+size);
             }
         }
 

@@ -22,6 +22,7 @@ int bc_grouped(int bc)
         case (BC_GENUS_TWO): return(4);
         case (BC_ABSORBING): return(0);
         case (BC_REFLECT_ABS): return(0);
+        case (BC_REFLECT_ABS_BOTTOM): return(0);
         default: 
         {
             printf("Warning: Hashgrid will not be properly initialised, update bc_grouped()\n\n");

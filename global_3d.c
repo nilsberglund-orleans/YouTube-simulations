@@ -27,6 +27,7 @@
 #define E_SCHRODINGER 5     /* Schrodinger equation */
 #define E_EULER_INCOMP 6    /* incompressible Euler equation */
 #define E_EULER_COMP 7      /* compressible Euler equation */
+#define E_SHALLOW_WATER 8   /* shallow water equation */
 
 /* Choice of potential */
 
@@ -51,7 +52,14 @@
 #define GF_ELLIPSE 2        /* repelling ellipse */
 #define GF_AIRFOIL 3        /* curved repelling ellipse */
 #define GF_WING 4           /* wing shape */
-#define GF_COMPUTE_FROM_BC 5    /* compute force field as gradient of bc_field */
+#define GF_COMPUTE_FROM_BC 5    /* compute force field as gradient of bc_field2 */
+
+/* Choice of water depth for shallow water equation */
+
+#define SH_CIRCLE 1     /* circular shallower obstacle */
+#define SH_CIRCLES 2    /* shallow obstacle specified by CIRCLE_PATTERN */
+#define SH_COAST 3      /* depth varying with x-coordinate */
+#define SH_COAST_MONOTONE 4      /* depth decreasing with x-coordinate */
 
 /* macros to avoid unnecessary computations in 3D plots */
 
@@ -74,6 +82,7 @@
 
 
 int global_time = 0;
+double max_depth = 1.0;
 
 /* structure used for color and height representations */
 /* possible extra fields: zfield, cfield, interpolated coordinates */
@@ -111,11 +120,20 @@ typedef struct
     double cos_angle;           /* cos of angle between normal vector and direction of light */
     double log_vorticity;       /* logarithm of vorticity (for Euler equation) */
     double Lpressure;           /* Laplacian of pressure (for Euler equation) */
+    double height;              /* wave height (for shallow wave equation) */
     double dxu, dyu, dxv, dyv;  /* gradient of velocity field (for compressible Euler equation) */
     double rgb[3];              /* RGB color code */
     double *p_zfield[2];        /* pointers to z field (second pointer for option DOUBLE_MOVIE) */
     double *p_cfield[2];        /* pointers to color field (second pointer for option DOUBLE_MOVIE) */
+    double depth;               /* water depth */
+    double cos_depth_angle;     /* cos of angle of depth profile */
+    double gradx, grady;        /* gradient of water depth */
 } t_rde;
 
 
+typedef struct
+{
+    double depth;               /* water depth */
+    double gradx, grady;        /* gradient of water depth */
+} t_swater_depth;
 

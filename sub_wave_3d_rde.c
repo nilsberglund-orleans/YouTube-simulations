@@ -1529,3 +1529,179 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
     draw_rectangle_noscale(x1, y1, x2, y2);
 }
 
+
+void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, int plot, 
+                                  double min, double max, int palette, int fade, double fade_value)
+{
+    int j, k, ij_center[2], ij_right[2], ic, jc, ir;
+    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2];
+    
+//     printf("Drawing color bar\n");
+    
+    xy_to_ij(x1, y1, ij_center);
+    xy_to_ij(x1 + radius, y1, ij_right);
+    
+//     rgb[0] = 0.0;   rgb[1] = 0.0;   rgb[2] = 0.0;
+//     erase_area_rgb(0.5*(x1 + x2), x2 - x1, 0.5*(y1 + y2), y2 - y1, rgb);
+
+    ic = ij_center[0];
+    jc = ij_center[1];
+    ir = ij_right[0] - ij_center[0];
+//     imax = ij_topright[0];
+//     jmax = ij_topright[1];    
+
+        
+    glBegin(GL_TRIANGLE_FAN);
+    draw_vertex_ij(ic, jc);
+    dy = (max - min)/360.0;
+    dy_e = max/360.0;
+    dy_phase = 1.0/360.0;
+    dphi = DPI/360.0;
+    
+    for (j = 0; j < 360; j++)
+    {
+        switch (plot) {
+            case (P_3D_AMPLITUDE):
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (P_3D_ANGLE):
+            {
+                value = 1.0*dy*(double)(j);
+                color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+                break;
+            }
+            case (P_3D_AMP_ANGLE):
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (P_3D_ENERGY):
+            {
+                value = dy_e*(double)(j)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_LOG_ENERGY):
+            {
+                value = LOG_SCALE*dy_e*(double)(j)*100.0/E_SCALE;
+                color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_TOTAL_ENERGY):
+            {
+                value = dy_e*(double)(j)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_LOG_TOTAL_ENERGY):
+            {
+                value = LOG_SCALE*dy_e*(double)(j)*100.0/E_SCALE;
+                color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_MEAN_ENERGY):
+            {
+                value = dy_e*(double)(j)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_LOG_MEAN_ENERGY):
+            {
+                value = LOG_SCALE*dy_e*(double)(j)*100.0/E_SCALE;
+                color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_PHASE):
+            {
+                value = dy_phase*(double)(j);
+                color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_FLUX_INTENSITY):
+            {
+                value = dy_e*(double)(j)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_3D_FLUX_DIRECTION):
+            {
+                value = dy_phase*(double)(j);
+                color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (Z_EULER_VORTICITY):
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_LOG_VORTICITY):
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_VORTICITY_ASYM):
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULER_LPRESSURE):
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_EULERC_VORTICITY):
+             {
+                value = min + 1.0*dy*(double)(j);
+                printf("Palette value %.3lg\n", value);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_SWATER_DIRECTION_SPEED):
+            {
+                value = dy_phase*(double)(j);
+                color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
+               
+        }
+        if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+        x = cos(dphi*(double)j)*(double)ir;
+        y = sin(dphi*(double)j)*(double)ir;
+        ij_to_xy(ic + x, jc + y, xy);
+        glVertex2d(xy[0], xy[1]);
+    }
+    draw_vertex_ij(ic + ir, jc);
+    glEnd ();
+    
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    glLineWidth(BOUNDARY_WIDTH*3/2);
+    glEnable(GL_LINE_SMOOTH);
+    
+    dphi = DPI/(double)NSEG;
+    glBegin(GL_LINE_LOOP);
+    for (j = 0; j < NSEG; j++)
+    {        
+        x = cos(dphi*(double)j)*(double)ir;
+        y = sin(dphi*(double)j)*(double)ir;
+        xy[0] = XMIN + ((double)ic + x)*(XMAX-XMIN)/((double)NX);
+        xy[1] = YMIN + ((double)jc + y)*(YMAX-YMIN)/((double)NY);
+        glVertex2d(xy[0], xy[1]);
+    }
+    glEnd ();
+
+}
+
