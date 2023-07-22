@@ -53,7 +53,8 @@ in the shell before running the program
 4. *wave_energy.c*:     a version of `wave_billiard` plotting the energy profile of the wave
 5. *mangrove.c*:        a version of `wave_billiard` with additional features to animate mangroves
 6. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
-7. *rde.c*:             simulation of reaction-diffusion equations, plots in 2D and 3D (including Schrödinger equation)
+7. *rde.c*:             simulation of reaction-diffusion equations, plots in 2D and 3D (including Schrödinger equation, 
+                        Euler equation, and shallow water equation)
 8. *schrodinger.c*:     simulation of the Schrodinger equation in 2D (old version)
 9. *global_pdes.c*:      global variables and parameters
 10. *global_3d.c*:        additional global variables for 3d version
