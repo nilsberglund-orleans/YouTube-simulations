@@ -17,6 +17,12 @@ The following file (beta version) provides support for creating mazes:
 
 4. `sub_maze.c`
 
+The file 
+
+5. `Earth_Map_Blue_Marble_2002_large.ppm.gz` 
+
+is required by `wave_sphere.c` and should be unzipped before compiling. 
+
 ### Simulations of classical particles in billiards.
 
 1. *particle_billiard.c*:   simulation of a collection of non-interacting particles in a billiard
@@ -49,22 +55,24 @@ in the shell before running the program
 
 1. *wave_billiard.c*:    simulation of the (linear) wave equation
 2. *wave_3d.c*:          3d rendering of wave equation
-3. *wave_comparison.c*: comparison of the wave equation in two different domains
-4. *wave_energy.c*:     a version of `wave_billiard` plotting the energy profile of the wave
-5. *mangrove.c*:        a version of `wave_billiard` with additional features to animate mangroves
-6. *heat.c*:            simulation of the heat equation, with optional drawing of gradient field lines
-7. *rde.c*:             simulation of reaction-diffusion equations, plots in 2D and 3D (including Schrödinger equation, 
-                        Euler equation, and shallow water equation)
-8. *schrodinger.c*:     simulation of the Schrodinger equation in 2D (old version)
-9. *global_pdes.c*:      global variables and parameters
-10. *global_3d.c*:        additional global variables for 3d version
-11. *sub_wave.c*:         drawing/computation routines common to `wave_billiard`, `heat` and `schrodinger`
-12. *sub_wave_comp.c*:    some modified functions needed by `wave_comparison`
-13. *sub_wave_3d.c*:      additional functions for 3d version
-14. *common_wave.c*:      common functions of `wave_billiard` and `wave_comparison`
-15. *colors_waves.c*:     colormaps used by wave simulations
-16. *sub_rde.c*:          additional routines for rde.c
-17. *sub_wave_rde_3d.c*:  additional 3d drawing routines for rde.c
+3. *wave_sphere.c*:      wave equation on a sphere (3D and 2D render)
+4. *wave_comparison.c*:  comparison of the wave equation in two different domains
+5. *wave_energy.c*:      a version of `wave_billiard` plotting the energy profile of the wave
+6. *mangrove.c*:         a version of `wave_billiard` with additional features to animate mangroves
+7. *heat.c*:             simulation of the heat equation, with optional drawing of gradient field lines
+8. *rde.c*:              simulation of reaction-diffusion equations, plots in 2D and 3D (including Schrödinger equation, 
+                         Euler equation, and shallow water equation)
+9. *schrodinger.c*:      simulation of the Schrodinger equation in 2D (old version)
+10. *global_pdes.c*:      global variables and parameters
+11. *global_3d.c*:        additional global variables for 3d version
+12. *sub_wave.c*:         drawing/computation routines common to `wave_billiard`, `heat` and `schrodinger`
+13. *sub_wave_comp.c*:    some modified functions needed by `wave_comparison`
+14. *sub_wave_3d.c*:      additional functions for 3d version
+15. *common_wave.c*:      common functions of `wave_billiard` and `wave_comparison`
+16. *colors_waves.c*:     colormaps used by wave simulations
+17. *sub_rde.c*:          additional routines for rde.c
+18. *sub_wave_rde_3d.c*:  additional 3d drawing routines for rde.c
+19. *sub_sphere.c*:       additional routines for wave_sphere.c
 
 - Create subfolders `tif_wave`, `tif_heat`, `tif_bz`, `tif_schrod`
 - Customize constants at beginning of .c file
