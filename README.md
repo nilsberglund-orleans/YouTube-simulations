@@ -6,7 +6,7 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
 Parameter values used in specific simulations will be gradually added to file `Parameters.md`, `Parameters_June21.md` and so on.
 
-There are four groups of 6 files, 17 files, 5 files and 4 files. 
+There are four groups of 6 files, 19 files, 5 files and 4 files. 
 In addition the following files handling color schemes have been included:
 
 1. `hsluv.c`and `hsluv.h` from https://github.com/adammaj1/hsluv-color-gradient 
