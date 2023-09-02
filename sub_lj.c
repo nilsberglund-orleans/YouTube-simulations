@@ -284,6 +284,31 @@ void draw_line(double x1, double y1, double x2, double y2)
     glEnd();    
 }
 
+void draw_arrow(double x1, double y1, double x2, double y2, double angle, double length)
+{
+    double alpha, beta, x3, y3, x4, y4, x5, y5;
+    
+    alpha = argument(x2 - x1, y2 - y1);
+    beta = angle*PI/180.0;
+    x3 = x2 - length*cos(alpha - beta);
+    y3 = y2 - length*sin(alpha - beta);
+    x4 = x2 - length*cos(alpha + beta);
+    y4 = y2 - length*sin(alpha + beta);
+    x5 = x2 - 0.5*length*cos(alpha);
+    y5 = y2 - 0.5*length*sin(alpha);
+    
+    glBegin(GL_LINE_STRIP);
+    glVertex2d(x1, y1);
+    glVertex2d(x5, y5);
+    glEnd();  
+    
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(x2, y2);
+    glVertex2d(x3, y3);
+    glVertex2d(x4, y4);
+    glEnd(); 
+}
+
 void draw_rectangle(double x1, double y1, double x2, double y2)
 {    
     glBegin(GL_LINE_LOOP);
@@ -357,6 +382,26 @@ void draw_colored_circle(double x, double y, double r, int nseg, double rgb[3])
         glVertex2d(x + r*cos(alpha), y + r*sin(alpha));
     }
     
+    glEnd();
+}
+
+void draw_circle_precomp(double x, double y, double r)
+{
+    int i;
+        
+    glBegin(GL_LINE_LOOP);
+    for (i=0; i<=NSEG; i++) glVertex2d(x + r*cosangle[i], y + r*sinangle[i]);
+    glEnd();
+}
+
+void draw_colored_circle_precomp(double x, double y, double r, double rgb[3])
+{
+    int i;
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(x, y);
+    for (i=0; i<=NSEG; i++) glVertex2d(x + r*cosangle[i], y + r*sinangle[i]);
     glEnd();
 }
 
@@ -533,6 +578,38 @@ double distance_to_segment(double x, double y, double x1, double y1, double x2, 
     else return(module2(xp-length, yp));
 }
 
+int in_polygon(double x, double y, double r, int npoly, double apoly)
+/* test whether (x,y) is in regular polygon of npoly sides inscribed in circle of radius r, turned by apoly Pi/2 */
+{
+    int condition = 1, k;
+    double omega, cw, angle; 
+    
+    omega = DPI/((double)npoly);
+    cw = cos(omega*0.5);
+    for (k=0; k<npoly; k++)  
+    {
+        angle = -apoly*PID + ((double)k+0.5)*omega;
+        condition = condition*(x*cos(angle) + y*sin(angle) < r*cw);
+    }
+    return(condition);
+}
+
+
+void init_angles()
+/* initialise cos and sin of angles to save computing time */
+{
+    int i;
+    double alpha, dalpha;
+    
+    dalpha = DPI/(double)NSEG;
+    
+    for (i=0; i<=NSEG; i++)
+    {
+        alpha = (double)i*dalpha;
+        cosangle[i] = cos(alpha);
+        sinangle[i] = sin(alpha);        
+    }
+}
 
 void init_particle_config(t_particle particles[NMAXCIRCLES])
 /* initialise particle configuration */
@@ -571,6 +648,8 @@ void init_particle_config(t_particle particles[NMAXCIRCLES])
                     particles[n].xc = INITXMIN + ((double)i - 0.5)*dx;   
                     particles[n].yc = INITYMIN + ((double)j - 0.5)*dy;
                     if ((i+NGRIDX)%2 == 1) particles[n].yc += 0.5*dy;
+                    if (particles[n].yc > YMAX) particles[n].yc += YMIN - YMAX;
+//                     else if (particles[n].yc < YMIN) particles[n].yc += YMAX - YMIN;
                     particles[n].radius = MU;
                     /* activate only circles that intersect the domain */
                     if ((particles[n].yc < INITYMAX + MU)&&(particles[n].yc > INITYMIN - MU)&&(particles[n].xc < INITXMAX + MU)&&(particles[n].xc > INITXMIN - MU)) particles[n].active = 1;
@@ -1149,6 +1228,36 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
             obstacle[n].active = 1;
             nobstacles = 1;
             break;
+        }case (O_FOUR_CIRCLES):
+        {
+            n = 0;
+            
+            obstacle[n].xc = -1.5;
+            obstacle[n].yc = -0.5;
+            obstacle[n].radius = OBSTACLE_RADIUS;
+            obstacle[n].active = 1;
+            n++;
+
+            obstacle[n].xc = -0.5;
+            obstacle[n].yc = 0.5;
+            obstacle[n].radius = OBSTACLE_RADIUS;
+            obstacle[n].active = 1;
+            n++;
+
+            obstacle[n].xc = 0.5;
+            obstacle[n].yc = -0.5;
+            obstacle[n].radius = OBSTACLE_RADIUS;
+            obstacle[n].active = 1;
+            n++;
+
+            obstacle[n].xc = 1.5;
+            obstacle[n].yc = 0.5;
+            obstacle[n].radius = OBSTACLE_RADIUS;
+            obstacle[n].active = 1;
+            n++;
+            
+            nobstacles = 4;
+            break;
         }
         
         default: 
@@ -1158,7 +1267,7 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
     }
 }
 
-void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, double width, t_segment segment[NMAXSEGMENTS], int group)
+void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, double width, int center, t_segment segment[NMAXSEGMENTS], int group)
 /* add four segments forming a rectangle, specified by two adjacent corners and width */
 {
     double tx, ty, ux, uy, norm, x3, y3, x4, y4;
@@ -1169,6 +1278,13 @@ void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, d
     norm = module2(tx, ty);
     tx = tx/norm;
     ty = ty/norm;
+    if (center)
+    {
+        x2 -= 0.5*width*ty;
+        y2 += 0.5*width*tx;
+        x1 -= 0.5*width*ty;
+        y1 += 0.5*width*tx;
+    }
     x3 = x2 + width*ty;
     y3 = y2 - width*tx;
     x4 = x1 + width*ty;
@@ -1258,7 +1374,7 @@ void add_rectangle_to_segments(double x1, double y1, double x2, double y2, t_seg
 
 
 void add_circle_to_segments(double x, double y, double r, int nsegs, double angle0, t_segment segment[NMAXSEGMENTS], int group)
-/* add segments forming a circle to linear obstacle configuration */
+/* add segments forming a circle/polygon to linear obstacle configuration */
 {
     int i, n = nsegments, nplus, nminus; 
     double angle;
@@ -1269,10 +1385,10 @@ void add_circle_to_segments(double x, double y, double r, int nsegs, double angl
     {
         for (i=0; i<nsegs; i++)
         {
-            segment[n+i].x1 = -SEGMENTS_X0 + r*cos(((double)i)*angle + angle0*PID);
-            segment[n+i].y1 = SEGMENTS_Y0 - r*sin(((double)i)*angle + angle0*PID);
-            segment[n+i].x2 = -SEGMENTS_X0 + r*cos(((double)(i+1))*angle + angle0*PID);
-            segment[n+i].y2 = SEGMENTS_Y0 - r*sin(((double)(i+1))*angle + angle0*PID);
+            segment[n+i].x1 = x + r*cos(((double)i)*angle + angle0*PID);
+            segment[n+i].y1 = y - r*sin(((double)i)*angle + angle0*PID);
+            segment[n+i].x2 = x + r*cos(((double)(i+1))*angle + angle0*PID);
+            segment[n+i].y2 = y - r*sin(((double)(i+1))*angle + angle0*PID);
             segment[n+i].angle1 = -((double)i + 0.5)*angle - angle0*PID;
             segment[n+i].angle2 = -((double)i - 0.5)*angle - angle0*PID;
             while (segment[n+i].angle1 < 0.0) segment[n+i].angle1 += DPI;
@@ -1346,7 +1462,7 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
                 angle = -PID + (double)(i+1)*DPI/(double)NPOLY;
                 x2 = x0 + 0.7*LAMBDA*cos(angle);
                 y2 = y0 + YMIN + LAMBDA*(1.7 + 0.7*sin(angle));
-                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment, 0);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, 0, segment, 0);
             }
             break;
         }
@@ -1355,23 +1471,23 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
             /* dimensions chosen to have same area as circular chamber */
             a = 0.5*LAMBDA;
             b = 0.49*PI*LAMBDA;
-            add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0+a, nozy+b, x0-a, nozy+b, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0-a, nozy+b, x0-a, nozy, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy+b, x0-a, nozy+b, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy+b, x0-a, nozy, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, 0, segment, 0);
             break;
         }
         case (RCK_RECT_HAT):    /* rectangular chamber with a hat */
         {
             a = 0.5*LAMBDA;
             b = (0.49*PI-0.25)*LAMBDA;
-            add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0+a, nozy+b, x0, nozy+b+a, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0, nozy+b+a, x0-a, nozy+b, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0-a, nozy+b, x0-a, nozy, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+nozx, nozy, x0+a, nozy, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy, x0+a, nozy+b, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy+b, x0, nozy+b+a, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0, nozy+b+a, x0-a, nozy+b, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy+b, x0-a, nozy, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy, x0-nozx, nozy, 0.02, 0, segment, 0);
             break;
         }
         case (RCK_RECT_BAR):    /* rectangular chamber with a hat and separating bar */
@@ -1380,17 +1496,17 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
             b = (0.49*PI-0.25)*LAMBDA;
             c = 0.5*a;
             w = 0.025;
-            add_rotated_angle_to_segments(x0+nozx, nozy, x0+nozx, nozy+0.5*c, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0+nozx, nozy+0.5*c, x0+nozx+0.5*c, nozy+c, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0+nozx+0.5*c, nozy+c, x0+a, nozy+c, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0+a, nozy+c, x0+a, nozy+b+c, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0+a, nozy+b+c, x0, nozy+b+a+c, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0-w, nozy+a+c, x0-w, nozy+b+a+c, 2.0*w, segment, 0);
-            add_rotated_angle_to_segments(x0, nozy+b+a+c, x0-a, nozy+b+c, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0-a, nozy+b+c, x0-a, nozy+c, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0-a, nozy+c, x0-nozx-0.5*c, nozy+c, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0-nozx-0.5*c, nozy+c, x0-nozx+w, nozy+0.5*c, 0.02, segment, 0);
-            add_rotated_angle_to_segments(x0-nozx+w, nozy+0.5*c, x0-nozx+w, nozy, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x0+nozx, nozy, x0+nozx, nozy+0.5*c, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0+nozx, nozy+0.5*c, x0+nozx+0.5*c, nozy+c, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0+nozx+0.5*c, nozy+c, x0+a, nozy+c, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy+c, x0+a, nozy+b+c, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0+a, nozy+b+c, x0, nozy+b+a+c, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0-w, nozy+a+c, x0-w, nozy+b+a+c, 2.0*w, 0, segment, 0);
+            add_rotated_angle_to_segments(x0, nozy+b+a+c, x0-a, nozy+b+c, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy+b+c, x0-a, nozy+c, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0-a, nozy+c, x0-nozx-0.5*c, nozy+c, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0-nozx-0.5*c, nozy+c, x0-nozx+w, nozy+0.5*c, 0.02, 0, segment, 0);
+            add_rotated_angle_to_segments(x0-nozx+w, nozy+0.5*c, x0-nozx+w, nozy, 0.02, 0, segment, 0);
             break;
         }
     }
@@ -1406,18 +1522,18 @@ void add_rocket_to_segments(t_segment segment[NMAXSEGMENTS], double x0, double y
             x1 = x0 + nozzle_width(y1 - y0, nozx, nozzle_shape);
             y2 = y1 + dx;
             x2 = x0 + nozzle_width(y2 - y0, nozx, nozzle_shape);
-            add_rotated_angle_to_segments(x1, y1 + YMIN + LAMBDA, x2, y2 + YMIN + LAMBDA, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x1, y1 + YMIN + LAMBDA, x2, y2 + YMIN + LAMBDA, 0.02, 0, segment, 0);
         }
-        add_rotated_angle_to_segments(x2, y2 + YMIN + LAMBDA, x0 + nozx, nozy, 0.02, segment, 0);
+        add_rotated_angle_to_segments(x2, y2 + YMIN + LAMBDA, x0 + nozx, nozy, 0.02, 0, segment, 0);
         for (i=0; i<nsides; i++)
         {
             y1 = y0 - LAMBDA + dx*(double)(i-1);
             x1 = x0 - nozzle_width(y1 - y0, nozx, nozzle_shape);
             y2 = y1 + dx;
             x2 = x0 - nozzle_width(y2 - y0, nozx, nozzle_shape);
-            add_rotated_angle_to_segments(x1, y1 + YMIN + LAMBDA, x2, y2 + YMIN + LAMBDA, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x1, y1 + YMIN + LAMBDA, x2, y2 + YMIN + LAMBDA, 0.02, 0, segment, 0);
         }
-        add_rotated_angle_to_segments(x2, y2 + YMIN + LAMBDA, x0 - nozx, nozy, 0.02, segment, 0);
+        add_rotated_angle_to_segments(x2, y2 + YMIN + LAMBDA, x0 - nozx, nozy, 0.02, 0, segment, 0);
     }
     
     for (i=nsegments0; i<nsegments; i++) segment[i].inactivate = 0;
@@ -1488,7 +1604,7 @@ int init_maze_segments(t_segment segment[NMAXSEGMENTS], int diag)
     
     if (diag) 
     {
-        add_rotated_angle_to_segments(XMIN, YMAX - 0.5*dy, x1, YMAX - dy - 2.0*width, width, segment, 0);
+        add_rotated_angle_to_segments(XMIN, YMAX - 0.5*dy, x1, YMAX - dy - 2.0*width, width, 0, segment, 0);
         add_rectangle_to_segments(XMIN, YMAX - 0.5*dy, XMIN - width, YMAX + 10.0, segment, 0);
     }
     
@@ -1500,7 +1616,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
 /* initialise linear obstacle configuration */
 {
     int i, j, cycle = 0, iminus, iplus, nsides, n, concave = 1; 
-    double angle, angle2, dangle, dx, width, height, a, b, length, xmid = 0.5*(BCXMIN + BCXMAX), lpocket, r, x, x1, y1, x2, y2, nozx, nozy, y, dy;
+    double angle, angle2, dangle, dx, width, height, a, b, length, xmid = 0.5*(BCXMIN + BCXMAX), lpocket, r, x, x1, y1, x2, y2, nozx, nozy, y, dy, ca, sa;
     
     switch (SEGMENT_PATTERN) {
         case (S_RECTANGLE):
@@ -1777,7 +1893,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 y1 = LAMBDA*sin(angle2);
                 x2 = 0.7*cos(angle2);
                 y2 = 0.7*sin(angle2);
-                add_rotated_angle_to_segments(x1, y1, x2, y2, MU, segment, 0);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, MU, 0, segment, 0);
                 
                 for (j=0; j<nsides; j++) if (j!=nsides/2)
                 {
@@ -1795,7 +1911,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                     x2 = r*cos(angle2);
                     y2 = r*sin(angle2);
                     
-                    add_rotated_angle_to_segments(x1, y1, x2, y2, 0.5*MU, segment, 0);
+                    add_rotated_angle_to_segments(x1, y1, x2, y2, 0.5*MU, 0, segment, 0);
                 }
             }
             
@@ -1844,7 +1960,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 angle = -PI + (double)(i+1)*DPI/(double)NPOLY;
                 x2 = 0.7*LAMBDA*(1.0 + cos(angle));
                 y2 = 0.5*LAMBDA*sin(angle);                
-                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment, 0);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, 0, segment, 0);
             }
              
             /* compute intersection point of nozzle and ellipse */
@@ -1862,18 +1978,18 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 y1 = nozzle_width(x1, nozy, NOZZLE_SHAPE);
                 x2 = x1 + dx;
                 y2 = nozzle_width(x2, nozy, NOZZLE_SHAPE);
-                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment, 0);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, 0, segment, 0);
             }
-            add_rotated_angle_to_segments(x2, y2, nozx, nozy, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x2, y2, nozx, nozy, 0.02, 0, segment, 0);
             for (i=0; i<nsides; i++)
             {
                 x1 = -LAMBDA + dx*(double)(i-1);
                 y1 = -nozzle_width(x1, nozy, NOZZLE_SHAPE);
                 x2 = x1 + dx;
                 y2 = -nozzle_width(x2, nozy, NOZZLE_SHAPE);
-                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, segment, 0);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, 0.02, 0, segment, 0);
             }
-            add_rotated_angle_to_segments(x2, y2, nozx, -nozy, 0.02, segment, 0);
+            add_rotated_angle_to_segments(x2, y2, nozx, -nozy, 0.02, 0, segment, 0);
             
             /* closing segment */
             segment[nsegments].x1 = nozx;
@@ -1983,7 +2099,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 y1 = YMIN + r - (r + MU)*sin(angle);
                 x2 = XMAX - r + (r + MU)*cos(angle + dangle);
                 y2 = YMIN + r - (r + MU)*sin(angle + dangle);
-                add_rotated_angle_to_segments(x1, y1, x2, y2, MU, segment, 0);
+                add_rotated_angle_to_segments(x1, y1, x2, y2, MU, 0, segment, 0);
             }
             
             cycle = 0;
@@ -2183,6 +2299,106 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             }
             break;
         }
+        case (S_POLYGON_EXT):
+        {
+            add_circle_to_segments(0.0, 0.0, LAMBDA, NPOLY, APOLY, segment, 0);
+                        
+            cycle = 0;
+            concave = 0;
+            nsegments = NPOLY;
+            ngroups = 1;
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].concave = 1;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_WEDGE_EXT):
+        {
+            angle = AWEDGE*PID;
+            
+            segment[0].x1 = LAMBDA;
+            segment[0].y1 = 0.0;
+            
+            segment[1].x1 = -LAMBDA*cos(angle);
+            segment[1].y1 = -LAMBDA*sin(angle);
+
+            segment[2].x1 = 0.0;
+            segment[2].y1 = 0.0;
+
+            segment[3].x1 = -LAMBDA*cos(angle);
+            segment[3].y1 = LAMBDA*sin(angle);
+            
+            cycle = 1;
+            nsegments = 4;
+            ngroups = 2;
+            
+            ca = cos(APOLY*PID);
+            sa = sin(APOLY*PID);
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                x = segment[i].x1;
+                y = segment[i].y1;
+                segment[i].x1 = x*ca + y*sa;
+                segment[i].y1 = -x*sa + y*ca;
+                segment[i].concave = 1;
+                segment[i].group = 1;
+                segment[i].inactivate = 0;
+            }
+            break;
+        }
+        case (S_MIXER):
+        {
+            for (i=0; i<NPOLY; i++)
+            {
+                angle = (double)i*DPI/(double)NPOLY;
+                add_rotated_angle_to_segments(0.0, 0.0, LAMBDA*cos(angle), LAMBDA*sin(angle), 0.05, 1, segment, 0);
+            }
+            
+            cycle = 0;
+            concave = 1;    /* add_rectangle_to_segments already deals with concave corners */
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_AIRFOIL):
+        {
+            dangle = DPI/(double)NPOLY;
+            angle = APOLY*PID;
+            ca = cos(angle);
+            sa = sin(angle);
+            for (i=0; i<NPOLY; i++)
+            {
+                angle = (double)i*dangle;
+                x = LAMBDA*cos(angle);
+                y1 = -0.2*LAMBDA*sin(angle);
+                y1 -= 0.5*x*x;
+                segment[i].x1 = x*ca + y1*sa;
+                segment[i].y1 = -x*sa + y1*ca;
+            }
+            
+            cycle = 1;
+            concave = 1;
+            nsegments = NPOLY;
+            ngroups = 1;
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].concave = 1;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
         default: 
         {
             printf("Function init_segment_config not defined for this pattern \n");
@@ -2334,7 +2550,7 @@ int in_segment_region(double x, double y, t_segment segment[NMAXSEGMENTS])
 /* returns 1 if (x,y) is inside region delimited by obstacle segments */
 {
     int i;
-    double angle, dx, height, width, theta, lx, ly, x1, y1, x2, y2, padding;
+    double angle, dx, height, width, theta, lx, ly, x1, y1, x2, y2, padding, ca, sa, r;
     
     if (x >= BCXMAX) return(0);
     if (x <= BCXMIN) return(0);
@@ -2486,6 +2702,53 @@ int in_segment_region(double x, double y, t_segment segment[NMAXSEGMENTS])
             if (y < 0.0) return(1);
             if ((y > 1.0 - LAMBDA + padding)&&(vabs(x) < LAMBDA - padding)) return(1);
             return(0);
+        }
+        case (S_POLYGON_EXT):
+        {
+            padding = 3.0*MU;
+            if (in_polygon(x, y, LAMBDA + padding, NPOLY, APOLY)) return(0);
+            else return(1);
+        }
+        case (S_WEDGE_EXT):
+        {
+            padding = 3.0*MU;
+            angle = AWEDGE*PID;
+            ca = cos(APOLY*PID);
+            sa = sin(APOLY*PID);
+            x1 = x*ca - y*sa;
+            y1 = x*sa + y*ca;
+            if (vabs(y1) - padding > (LAMBDA-x1)*sin(angle)/(1.0+cos(angle))) return(1);
+            if (vabs(y1) + padding < -x1*tan(angle)) return(1);
+            return(0);
+        }
+        case (S_MIXER):
+        {
+            padding = 1.5*MU;
+            r = module2(x,y);
+            if (r > LAMBDA + padding) return(1);
+            if (r < 2.0*padding) return(0);
+            for (i=0; i<NPOLY; i++)
+            {
+                angle = (double)i*DPI/(double)NPOLY;
+                ca = cos(angle);
+                sa = sin(angle);
+                x1 = x*ca - y*sa;
+                y1 = x*sa + y*ca;
+                if ((x1 > 0.0)&&(vabs(y1) < 0.025 + padding)) return(0); 
+            }
+            return(1);
+        }
+        case (S_AIRFOIL):
+        {
+            if (vabs(x) > LAMBDA + 4.0*MU) return(1);
+            padding = 0.35;
+            angle = APOLY*PID;
+            ca = cos(angle);
+            sa = sin(angle);
+            x1 = x*ca - y*sa;
+            y1 = x*sa + y*ca;
+            y1 += 0.5*x1*x1;
+            return(x1*x1 + 25.0*y1*y1 > LAMBDA*LAMBDA*(1.0 + padding));
         }
         case (S_MAZE):
         {
@@ -3506,6 +3769,8 @@ int add_particle(double x, double y, double vx, double vy, double mass, short in
         particle[i].thermostat = 1;
 
         particle[i].energy = 0.0;
+        particle[i].emean = 0.0;
+        particle[i].dirmean = 0.0;
 
         if (RANDOM_RADIUS) particle[i].radius = particle[i].radius*(0.75 + 0.5*((double)rand()/RAND_MAX));
         
@@ -3714,14 +3979,50 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
             *width = BOUNDARY_WIDTH;
             break;
         }
+        case (P_EMEAN): 
+        {
+            ej = particle.emean;
+            if (ej > 0.0) 
+            {
+                hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*ej/PARTICLE_EMAX;
+                if (hue > ENERGY_HUE_MIN) hue = ENERGY_HUE_MIN;
+                if (hue < ENERGY_HUE_MAX) hue = ENERGY_HUE_MAX;
+            }
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_DIRECT_EMEAN): 
+        {
+            hue = particle.dirmean + COLOR_HUESHIFT*PI;
+            if (hue > DPI) hue -= DPI;
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*(hue)/DPI;
+            ej = particle.emean;
+            if (ej < 0.1*PARTICLE_EMAX) lum = 10.0*ej/PARTICLE_EMAX;
+            else lum = 1.0;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_NOPARTICLE): 
+        {
+            hue = 0.0;
+            lum = 1.0;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
     }
     
     switch (plot) {
         case (P_KINETIC):  
         {
-            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
-            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgbx);
-            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgby);
+//             hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+//             hsl_to_rgb_turbo(hue, 0.9, 0.5, rgbx);
+//             hsl_to_rgb_turbo(hue, 0.9, 0.5, rgby);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_EKIN);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgbx, COLOR_PALETTE_EKIN);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgby, COLOR_PALETTE_EKIN);
             break;
         }
         case (P_BONDS):  
@@ -3733,9 +4034,9 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
         }
         case (P_DIRECTION): 
         {
-            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgb);
-            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgbx);
-            hsl_to_rgb_twilight(hue, 0.9, 0.5, rgby);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_DIRECTION);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgbx, COLOR_PALETTE_DIRECTION);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgby, COLOR_PALETTE_DIRECTION);
             break;
         }
         case (P_ANGLE): 
@@ -3770,6 +4071,26 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
             hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_INITIAL_POS);
             hsl_to_rgb_palette(hue, 0.9, 0.5, rgbx, COLOR_PALETTE_INITIAL_POS);
             hsl_to_rgb_palette(hue, 0.9, 0.5, rgby, COLOR_PALETTE_INITIAL_POS);
+            break;
+        }
+        case (P_EMEAN):  
+        {
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_EKIN);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgbx, COLOR_PALETTE_EKIN);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgby, COLOR_PALETTE_EKIN);
+            break;
+        }
+        case (P_DIRECT_EMEAN): 
+        {
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_DIRECTION);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgbx, COLOR_PALETTE_DIRECTION);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgby, COLOR_PALETTE_DIRECTION);
+            for (i=0; i<3; i++)
+            {
+                rgb[i] *= lum;
+                rgbx[i] *= lum;
+                rgby[i] *= lum;
+            }
             break;
         }
         default: 
@@ -4322,8 +4643,12 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
    
     if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)||(particle.interaction == I_VICSEK)||(particle.interaction == I_VICSEK_REPULSIVE)||(particle.interaction == I_VICSEK_SPEED)||(particle.interaction == I_VICSEK_SHARK)) 
         draw_colored_rhombus(xc1, yc1, radius, angle + APOLY*PID, rgb);
-    else if (cont) draw_colored_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID, rgb);
-        
+    else if (cont) 
+    {
+        if (nsides == NSEG) draw_colored_circle_precomp(xc1, yc1, radius, rgb);
+        else draw_colored_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID, rgb);
+    }
+    
     /* draw crosses on particles of second type */
     if ((TWO_TYPES)&&(DRAW_CROSS))
         if (particle.type == 1)
@@ -4352,7 +4677,11 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
 
     if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)||(particle.interaction == I_VICSEK)||(particle.interaction == I_VICSEK_REPULSIVE)||(particle.interaction == I_VICSEK_SPEED)||(particle.interaction == I_VICSEK_SHARK)) 
         draw_rhombus(xc1, yc1, radius, angle + APOLY*PID);
-    else if (cont) draw_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID); 
+    else if (cont) 
+    {
+        if (nsides == NSEG) draw_circle_precomp(xc1, yc1, radius);
+        else draw_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID); 
+    }
     
     if (particle.interaction == I_LJ_WATER) for (wsign = -1; wsign <= 1; wsign+=2)
     {
@@ -4470,6 +4799,7 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_c
     char message[100];
     
 //     if (!TRACER_PARTICLE) blank();
+    if (plot == P_NOPARTICLE) blank();
     glColor3f(1.0, 1.0, 1.0);
     
     /* show region of partial thermostat */
@@ -4536,19 +4866,17 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_c
 
         angle = particle[j].angle + APOLY*DPI;
         
-        draw_one_particle(particle[j], particle[j].xc, particle[j].yc, radius, angle, nsides, width, rgb);
-                
         /* in case of periodic b.c., draw translates of particles */
-        if (PERIODIC_BC)
+        if ((PERIODIC_BC)&&(plot != P_NOPARTICLE))
         {
             x1 = particle[j].xc;
             y1 = particle[j].yc;
             
-            for (i=-2; i<3; i++)
+            for (i=-1; i<2; i++)
                 for (k=-1; k<2; k++)
-                    draw_one_particle(particle[j], x1 + (double)i*(BCXMAX - BCXMIN), y1 + (double)k*(BCYMAX - BCYMIN), radius,          angle, nsides, width, rgb);
+                    draw_one_particle(particle[j], x1 + (double)i*(BCXMAX - BCXMIN), y1 + (double)k*(BCYMAX - BCYMIN), radius, angle, nsides, width, rgb);
         }
-        else if (BOUNDARY_COND == BC_KLEIN)
+        else if ((BOUNDARY_COND == BC_KLEIN)&&(plot != P_NOPARTICLE))
         {
             x1 = particle[j].xc;
             y1 = particle[j].yc;
@@ -4563,7 +4891,7 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_c
                                       radius, angle1, nsides, width, rgb);
             }
         }
-        else if (BOUNDARY_COND == BC_BOY)
+        else if ((BOUNDARY_COND == BC_BOY)&&(plot != P_NOPARTICLE))
         {
             x1 = particle[j].xc;
             y1 = particle[j].yc;
@@ -4584,7 +4912,7 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_c
                     sign*(y1 + (double)k*(BCYMAX - BCYMIN)), radius, angle1, nsides, width, rgb);
             }
         }
-        else if (BOUNDARY_COND == BC_GENUS_TWO)
+        else if ((BOUNDARY_COND == BC_GENUS_TWO)&&(plot != P_NOPARTICLE))
         {
             x1 = particle[j].xc;
             y1 = particle[j].yc;
@@ -4622,6 +4950,10 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_c
                             draw_one_particle(particle[j], x, y, radius, angle, nsides, width, rgb);
                     }
         }
+        else if (plot != P_NOPARTICLE)
+            draw_one_particle(particle[j], particle[j].xc, particle[j].yc, radius, angle, nsides, width, rgb);
+                
+        
     }
     
 //     /* draw spin vectors */
@@ -4658,10 +4990,10 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
         glLineWidth(CONTAINER_WIDTH);
         hsl_to_rgb(300.0, 0.1, 0.5, rgb);
         for (i = 0; i < nobstacles; i++)
-            draw_colored_circle(obstacle[i].xc - xtrack, obstacle[i].yc - ytrack, obstacle[i].radius, NSEG, rgb);
+            draw_colored_circle_precomp(obstacle[i].xc - xtrack, obstacle[i].yc - ytrack, obstacle[i].radius, rgb);
         glColor3f(1.0, 1.0, 1.0);
         for (i = 0; i < nobstacles; i++)
-            draw_circle(obstacle[i].xc - xtrack, obstacle[i].yc - ytrack, obstacle[i].radius, NSEG);
+            draw_circle_precomp(obstacle[i].xc - xtrack, obstacle[i].yc - ytrack, obstacle[i].radius);
     }
     if (ADD_FIXED_SEGMENTS)
     {
@@ -4710,9 +5042,9 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
                 if (CENTER_VIEW_ON_OBSTACLE) x = 0.0;
                 else x = xmin + (double)i*(OBSXMAX - OBSXMIN);
                 
-                draw_colored_circle(x, 0.0, OBSTACLE_RADIUS, NSEG, rgb);
+                draw_colored_circle_precomp(x, 0.0, OBSTACLE_RADIUS, rgb);
                 glColor3f(1.0, 1.0, 1.0);
-                draw_circle(x, 0.0, OBSTACLE_RADIUS, NSEG);
+                draw_circle_precomp(x, 0.0, OBSTACLE_RADIUS);
                 
                 glColor3f(0.0, 0.0, 0.0);
                 sprintf(message, "Mach %.3f", xspeed/20.0);
@@ -4730,9 +5062,9 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
                 if (CENTER_VIEW_ON_OBSTACLE) x = 0.0;
                 else x = xmin + (double)i*(OBSXMAX - OBSXMIN);
                 
-                draw_colored_circle(x, 0.0, OBSTACLE_RADIUS, NSEG, rgb);
+                draw_colored_circle_precomp(x, 0.0, OBSTACLE_RADIUS, rgb);
                 glColor3f(1.0, 1.0, 1.0);
-                draw_circle(x, 0.0, OBSTACLE_RADIUS, NSEG);
+                draw_circle_precomp(x, 0.0, OBSTACLE_RADIUS);
                 
                 glColor3f(0.0, 0.0, 0.0);
                 sprintf(message, "Mach %.2f", xspeed/20.0);
@@ -4774,9 +5106,9 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
                 
                 for (j=-1; j<2; j+=2)
                 {
-                    draw_colored_circle(x, (double)j*(FUNNEL_WIDTH + OBSTACLE_RADIUS), OBSTACLE_RADIUS, NSEG, rgb);
+                    draw_colored_circle_precomp(x, (double)j*(FUNNEL_WIDTH + OBSTACLE_RADIUS), OBSTACLE_RADIUS, rgb);
                     glColor3f(1.0, 1.0, 1.0);
-                    draw_circle(x, (double)j*(FUNNEL_WIDTH + OBSTACLE_RADIUS), OBSTACLE_RADIUS, NSEG);
+                    draw_circle_precomp(x, (double)j*(FUNNEL_WIDTH + OBSTACLE_RADIUS), OBSTACLE_RADIUS);
                 }
                 
                 glColor3f(0.0, 0.0, 0.0);
@@ -4869,12 +5201,77 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
     
 }
 
-void print_parameters(double beta, double temperature, double krepel, double lengthcontainer, double boundary_force, short int left, double pressure[N_PRESSURES], double gravity)
+void print_omega(double angle, double angular_speed, double fx, double fy)
+{
+    char message[100];
+    double rgb[3], y1, frac, absa;
+    static double xleftbox, xlefttext, xrightbox, xrighttext, y = YMAX - 0.1, ymin = YMIN + 0.05;
+    static int first = 1;
+    
+    if (first)
+    {
+        xrightbox = XMAX - 0.54;
+        xrighttext = xrightbox - 0.48;
+        first = 0;
+    }
+    
+    y1 = y;
+    
+    if (PRINT_ANGLE)
+    {
+        erase_area_hsl(xrightbox, y + 0.025, 0.42, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        angle = angle*360.0/DPI;
+        absa = vabs(angle);
+        frac = absa - (double)((int)absa);
+        sprintf(message, "Angle = %3d.%d degrees", (int)absa, (int)(10.0*frac));
+        write_text(xrighttext + 0.1, y, message);
+        y1 -= 0.1;
+    }
+    if (PRINT_OMEGA)
+    {
+        erase_area_hsl(xrightbox, y1 + 0.025, 0.42, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Angular speed = %.4f", angular_speed);
+        write_text(xrighttext + 0.1, y1, message);
+        y1 -= 0.1;
+    }
+    if (PRINT_SEGMENTS_FORCE)
+    {
+        erase_area_hsl(xrightbox, y1 + 0.025, 0.42, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Fx = %.4f", fx);
+        write_text(xrighttext + 0.1, y1, message);
+        
+        y1 -= 0.1;
+        erase_area_hsl(xrightbox, y1 + 0.025, 0.42, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Fy = %.4f", fy);
+        write_text(xrighttext + 0.1, y1, message);
+    }
+}
+
+void compute_segments_force(t_lj_parameters *params, t_segment segment[NMAXSEGMENTS])
+{
+    int i;
+    double fx = 0.0, fy = 0.0;
+    
+    for (i=0; i<nsegments; i++) if (segment[i].active)
+    {
+        fx += segment[i].fx;
+        fy += segment[i].fy;
+    }
+    params->bdry_fx = fx;
+    params->bdry_fy = fy;
+        
+}
+
+void print_parameters(t_lj_parameters params, short int left, double pressure[N_PRESSURES], short int refresh)
 {
     char message[100];
     int i, j, k;
-    double density, hue, rgb[3], logratio, x, y, meanpress[N_PRESSURES], phi, sphi, dphi, pprint, mean_temp;
-    static double xbox, xtext, xmid, xmidtext, xxbox, xxtext, pressures[N_P_AVERAGE], meanpressure = 0.0, maxpressure = 0.0;
+    double density, hue, rgb[3], logratio, x, y, meanpress[N_PRESSURES], phi, sphi, dphi, pprint, mean_temp, lengthcontainer, boundary_force, fx, fy, r1, r2;
+    static double xbox, xtext, xmid, xmidtext, xxbox, xxtext, pressures[N_P_AVERAGE], meanpressure = 0.0, maxpressure = 0.0, mean_fx, mean_fy;
     static double press[N_PRESSURES][N_P_AVERAGE], temp[N_T_AVERAGE], scale;
     static int first = 1, i_pressure, i_temp;
     
@@ -4907,9 +5304,16 @@ void print_parameters(double beta, double temperature, double krepel, double len
         i_pressure = 0;
         i_temp = 0;
         for (i=0; i<N_T_AVERAGE; i++) temp[i] = 0.0;
+        mean_fx = 0.0;
+        mean_fy = 0.0;
+        r1 = 0.005;
+        r2 = 1.0 - r1;
         
         first = 0;
     }
+    
+    lengthcontainer = params.xmaxcontainer - params.xmincontainer;
+    boundary_force = params.fboundary/(double)(ncircles*NVID);
     
     /* table of pressures */
     pressures[i_pressure] = boundary_force/(lengthcontainer + INITYMAX - INITYMIN);
@@ -4945,7 +5349,7 @@ void print_parameters(double beta, double temperature, double krepel, double len
     y = YMAX - 0.1*scale;
     if ((INCREASE_BETA)||(PRINT_TEMPERATURE))  /* print temperature */
     {
-        logratio = log(beta/BETA)/log(0.5*BETA_FACTOR);
+        logratio = log(params.beta/BETA)/log(0.5*BETA_FACTOR);
         if (logratio > 1.0) logratio = 1.0;
         else if (logratio < 0.0) logratio = 0.0;
         if (BETA_FACTOR > 1.0) hue = PARTICLE_HUE_MAX - (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*logratio;
@@ -4954,7 +5358,7 @@ void print_parameters(double beta, double temperature, double krepel, double len
         else erase_area_hsl_turbo(xmid + 0.1, y + 0.025*scale, 0.45*scale, 0.05*scale, hue, 0.9, 0.5);
         if ((hue < 90)||(hue > 270)) glColor3f(1.0, 1.0, 1.0);
         else glColor3f(0.0, 0.0, 0.0);
-        sprintf(message, "Temperature %.2f", 1.0/beta);
+        sprintf(message, "Temperature %.2f", 1.0/params.beta);
         if (PRINT_LEFT) write_text(xtext, y, message);
         else write_text(xmidtext, y, message);
 //         y -= 0.1;
@@ -4974,7 +5378,7 @@ void print_parameters(double beta, double temperature, double krepel, double len
         
         erase_area_hsl(xmid, y + 0.025*scale, 0.37*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
-        sprintf(message, "Temperature %.2f", temperature);
+        sprintf(message, "Temperature %.2f", params.mean_energy);
         write_text(xmidtext, y, message);
 
         erase_area_hsl(xxbox, y + 0.025*scale, 0.37*scale, 0.05*scale, 0.0, 0.9, 0.0);
@@ -4987,7 +5391,7 @@ void print_parameters(double beta, double temperature, double krepel, double len
     {
         erase_area_hsl(xbox, y + 0.025*scale, 0.22*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
-        sprintf(message, "Force %.0f", krepel);
+        sprintf(message, "Force %.0f", params.krepel);
         write_text(xtext + 0.28, y, message);
     }   
     
@@ -5023,8 +5427,8 @@ void print_parameters(double beta, double temperature, double krepel, double len
     
     if ((PARTIAL_THERMO_COUPLING)&&(!INCREASE_BETA)&&(!EXOTHERMIC))
     {
-        printf("Temperature %i in average: %.3lg\n", i_temp, temperature);
-        temp[i_temp] = temperature;
+        printf("Temperature %i in average: %.3lg\n", i_temp, params.mean_energy);
+        temp[i_temp] = params.mean_energy;
         i_temp++;
         if (i_temp >= N_T_AVERAGE) i_temp = 0;
         
@@ -5045,9 +5449,44 @@ void print_parameters(double beta, double temperature, double krepel, double len
     {
         erase_area_hsl(xmid, y + 0.025*scale, 0.22*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
-        sprintf(message, "Gravity %.2f", gravity/GRAVITY);
+        sprintf(message, "Gravity %.2f", params.gravity/GRAVITY);
         write_text(xmidtext + 0.1, y, message);
-    }   
+    } 
+    
+    if (CHANGE_RADIUS)
+    {
+        erase_area_hsl(xmid, y + 0.025*scale, 0.3*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Radius %.4f", params.radius);
+        write_text(xmidtext + 0.05, y, message);
+    }  
+    
+    if (PRINT_SEGMENTS_FORCE)
+    {
+        glColor3f(1.0, 1.0, 1.0);
+        if (refresh)
+        {
+            fx = 0.01*params.bdry_fx/(double)params.nactive;
+            fy = 0.01*params.bdry_fy/(double)params.nactive;
+            /* average boundary force */
+            mean_fx = r2*mean_fx + r1*fx;
+            mean_fy = r2*mean_fy + r1*fy;
+        }
+        
+        if ((PRINT_ANGLE)||(PRINT_OMEGA)) 
+            draw_arrow(0.0, 0.0, FORCE_FACTOR*mean_fx, FORCE_FACTOR*mean_fy, 15.0, 0.1);
+        else
+        {
+            erase_area_hsl(xmid, 0.0, 0.2*scale, 0.05*scale, 0.0, 0.9, 0.0);
+            glColor3f(1.0, 1.0, 1.0);
+            sprintf(message, "Fy = %.2f", mean_fy);
+            write_text(xmidtext + 0.15*scale, -0.02*scale, message);
+            if (mean_fx*mean_fx + mean_fy*mean_fy > 5.0*FORCE_FACTOR) 
+                draw_arrow(0.0, 0.0, FORCE_FACTOR*mean_fx, FORCE_FACTOR*mean_fy, 15.0, 0.1);
+        }
+    }
+    if ((PRINT_ANGLE)||(PRINT_OMEGA)) print_omega(params.angle, params.omega, mean_fx, mean_fy); 
+    
 }
 
 
@@ -5266,29 +5705,6 @@ void print_entropy(double entropy[2])
 
 }
 
-void print_omega(double angular_speed)
-{
-    char message[100];
-    double rgb[3];
-    static double xleftbox, xlefttext, xrightbox, xrighttext, y = YMAX - 0.1, ymin = YMIN + 0.05;
-    static int first = 1;
-    
-    if (first)
-    {
-        xrightbox = XMAX - 0.39;
-        xrighttext = xrightbox - 0.55;
-        first = 0;
-    }
-    
-
-    erase_area_hsl(xrightbox, y + 0.025, 0.35, 0.05, 0.0, 0.9, 0.0);
-    glColor3f(1.0, 1.0, 1.0);
-    sprintf(message, "Angular speed = %.4f", angular_speed);
-//     sprintf(message, "Angular speed = %.4f", DPI*angular_speed*25.0/(double)(PERIOD_ROTATE_BOUNDARY));
-    write_text(xrighttext + 0.1, y, message);
-
-}
-
 void print_segments_speeds(double vx[2], double vy[2])
 {
     char message[100];
@@ -5500,11 +5916,12 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                 
                 
             
-                if ((MOVE_BOUNDARY)||(MOVE_SEGMENT_GROUPS))
+                if ((MOVE_BOUNDARY)||(MOVE_SEGMENT_GROUPS)||(PRINT_SEGMENTS_FORCE))
                 {
                     segment[i].fx -= f*segment[i].nx;
                     segment[i].fy -= f*segment[i].ny;
                     segment[i].torque -= (x - segment[i].xc)*f*segment[i].ny - (y - segment[i].yc)*f*segment[i].nx;
+//                     printf("Segment %i: f = (%.3lg, %.3lg)\n", i, segment[i].fx, segment[i].fy);
                 }
             }
             if ((VICSEK_INT)&&(vabs(distance) < 1.5*r))
@@ -6089,6 +6506,8 @@ t_segment segment[NMAXSEGMENTS])
         particle[i].diff_neighb = 0;
         particle[i].thermostat = 1;
         particle[i].close_to_boundary = 0;
+        particle[i].emean = 0.0;
+        particle[i].dirmean = 0.0;
 
 //         particle[i].energy = 0.0;
 //         y = particle[i].yc;
@@ -6126,6 +6545,8 @@ t_segment segment[NMAXSEGMENTS])
         }
         
         particle[i].energy = (particle[i].vx*particle[i].vx + particle[i].vy*particle[i].vy)*particle[i].mass_inv;
+        particle[i].emean = particle[i].energy;
+        particle[i].dirmean = 0.0;
         
         px[i] = particle[i].vx;
         py[i] = particle[i].vy;
@@ -6145,7 +6566,21 @@ t_segment segment[NMAXSEGMENTS])
         pangle[i] = particle[i].omega;
         
         if ((PLOT == P_INITIAL_POS)||(PLOT_B == P_INITIAL_POS))
-            particle[i].color_hue = 360.0*(particle[i].yc - INITYMIN)/(INITYMAX - INITYMIN);
+        {
+            switch (INITIAL_POS_TYPE) {
+                case (IP_X):
+                {
+                    particle[i].color_hue = 360.0*(particle[i].xc - INITXMIN)/(INITXMAX - INITXMIN);
+                    break;
+                }
+                 case (IP_Y):
+                {
+                    particle[i].color_hue = 360.0*(particle[i].yc - INITYMIN)/(INITYMAX - INITYMIN);
+                    break;
+                }
+            }
+            
+        }
         else if ((PLOT == P_NUMBER)||(PLOT_B == P_NUMBER))
             particle[i].color_hue = 360.0*(double)(i%N_PARTICLE_COLORS)/(double)N_PARTICLE_COLORS;
     }
@@ -6157,6 +6592,8 @@ t_segment segment[NMAXSEGMENTS])
         particle[i].neighb = 0;
         particle[i].thermostat = 0;
         particle[i].energy = 0.0;
+        particle[i].emean = 0.0;
+        particle[i].dirmean = 0.0;
         particle[i].mass_inv = 1.0/PARTICLE_MASS;
         particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
         particle[i].vx = 0.0;
@@ -7825,7 +8262,7 @@ void draw_trajectory_plot(t_group_data *group_speeds, int i)
             x1 = x2;
             y1 = y2;
         }
-        if (i>0) draw_colored_circle(x1, y1, 0.015, NSEG, rgb);
+        if (i>0) draw_colored_circle_precomp(x1, y1, 0.015, rgb);
     }
 
     glColor3f(1.0, 1.0, 1.0);

@@ -293,6 +293,15 @@ void write_text( double x, double y, char *st)
 	return(alph);
  }
  
+ double iabs(int i)     /* absolute value */
+ {
+	int res;
+
+	if (i<0) res = -i;
+	else res = i;
+	return(i);
+ }
+
  
 double gaussian()
 /* returns standard normal random variable, using Box-Mueller algorithm */
@@ -446,6 +455,16 @@ void erase_area(double x, double y, double dx, double dy)
     glEnd();
 }
 
+void erase_area_ij(int imin, int jmin, int imax, int jmax)
+{
+    glColor3f(0.0, 0.0, 0.0);
+    glBegin(GL_QUADS);
+    glVertex2i(imin, jmin);
+    glVertex2i(imax, jmin);
+    glVertex2i(imax, jmax);
+    glVertex2i(imin, jmax);
+    glEnd();
+}
 
 void erase_area_rgb(double x, double y, double dx, double dy, double rgb[3])
 {
@@ -1002,6 +1021,63 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
                 /* inactivate circles outside the domain */
                 if ((circles[i].yc < YMAX + MU)&&(circles[i].yc > YMIN - MU)) circles[i].active = 1;
             }
+            break;
+        }
+        case (C_HEX_BOTTOM):
+        {
+            ncircles = NGRIDX*(NGRIDY+1);
+            dy = (- YMIN)/((double)NGRIDY);
+//             dx = dy*0.5*sqrt(3.0);
+            dx = (XMAX - XMIN)/((double)NGRIDX);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY+1; j++)
+                {
+                    n = (NGRIDY+1)*i + j;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dx;   /* is +0.5 needed? */
+                    circles[n].yc = YMIN + ((double)j - 0.5)*dy;
+                    if ((i+NGRIDX)%2 == 1) circles[n].yc += 0.5*dy;
+                    circles[n].radius = MU;
+                    /* activate only circles that intersect the domain */
+                    if ((circles[n].yc < YMAX + MU)&&(circles[n].yc > YMIN - MU)) circles[n].active = 1;
+                    else circles[n].active = 0;
+                }
+            break;
+        }
+        case (C_HEX_BOTTOM2):
+        {
+            ncircles = NGRIDX*(NGRIDY+1);
+            dy = (- YMIN)/((double)NGRIDY);
+            dx = 2.0*LAMBDA/((double)NGRIDX);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY+1; j++)
+                {
+                    n = (NGRIDY+1)*i + j;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dx;   /* is +0.5 needed? */
+                    circles[n].yc = YMIN + ((double)j - 0.5)*dy;
+                    if ((i+NGRIDX)%2 == 1) circles[n].yc += 0.5*dy;
+                    circles[n].radius = MU;
+                    /* activate only circles that intersect the domain */
+                    if ((circles[n].yc < YMAX + MU)&&(circles[n].yc > YMIN - MU)) circles[n].active = 1;
+                    else circles[n].active = 0;
+                }
+            break;
+        }
+        case (C_SQUARE_BOTTOM):
+        {
+            ncircles = NGRIDX*(NGRIDY+1);
+            dy = (- YMIN)/((double)NGRIDY);
+            dx = 2.0*LAMBDA/((double)NGRIDX);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY+1; j++)
+                {
+                    n = (NGRIDY+1)*i + j;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dx;  
+                    circles[n].yc = YMIN + ((double)j - 0.5)*dy;
+                    circles[n].radius = MU;
+                    /* activate only circles that intersect the domain */
+                    if ((circles[n].yc < YMAX + MU)&&(circles[n].yc > YMIN - MU)) circles[n].active = 1;
+                    else circles[n].active = 0;
+                }
             break;
         }
         case (C_ONE):
@@ -5752,7 +5828,7 @@ void compute_laplacian(double phi[NX*NY], t_laplacian laplace[NX*NY], double del
     }
 }
 
-double oscillating_bc(int time)
+double oscillating_bc(int time, int j)
 {
     double t, phase, a, envelope, omega;
     
@@ -5760,7 +5836,12 @@ double oscillating_bc(int time)
     {
         case (OSC_PERIODIC): 
         {
-            return(AMPLITUDE*cos((double)time*OMEGA)*exp(-(double)time*DAMPING));
+            if (OSCIL_LEFT_YSHIFT > 0.0)
+                t = (double)time*OMEGA - (double)j*OSCIL_LEFT_YSHIFT/(double)NY;
+            else 
+                t = (double)time*OMEGA + (double)(NY-j)*OSCIL_LEFT_YSHIFT/(double)NY;
+            if (t < 0.0) return(0.0);
+            else return(AMPLITUDE*cos(t)*exp(-(double)t*DAMPING));
         }
         case (OSC_SLOWING):
         {

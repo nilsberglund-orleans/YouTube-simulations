@@ -853,12 +853,171 @@ void draw_wave_epalette(double *phi[NX], double *psi[NX], double *total_energy[N
 }
 
 
+double wave_value(int i, int j, double *phi[NX], double *psi[NX], double *total_energy[NX], double *total_flux, short int *xy_in[NX], double scale, int time, int plot, int palette, double rgb[3])
+/* compute value of wave and color */
+{
+    int k;
+    double value, velocity, energy, gradientx2, gradienty2, arg, mod, flux_factor, gx, gy, mgx, mgy;
+    
+    switch (plot) {
+        case (P_AMPLITUDE):
+        {
+            value = phi[i][j];
+            color_scheme_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
+            break;
+        }
+        case (P_ENERGY):
+        {
+            value = compute_energy(phi, psi, xy_in, i, j);
+            /* adjust energy to color palette */
+            if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
+            else color_scheme_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
+            break;
+        }
+        case (P_MIXED):
+        {
+            if (j > NY/2) value = phi[i][j];
+            else value = compute_energy(phi, psi, xy_in, i, j);
+            color_scheme_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
+            break;
+        }
+        case (P_MEAN_ENERGY):
+        {
+            energy = compute_energy(phi, psi, xy_in, i, j);
+            total_energy[i][j] += energy;
+            value = total_energy[i][j]/(double)(time+1);
+            if (COLOR_PALETTE >= COL_TURBO) 
+                color_scheme_asym_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
+            else color_scheme_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
+            break;
+        }
+        case (P_LOG_ENERGY):
+        {
+            energy = compute_energy(phi, psi, xy_in, i, j);
+//                       energy = LOG_SHIFT + LOG_SCALE*log(energy);
+//                         if (energy < 0.0) energy = 0.0;
+            value = LOG_SHIFT + LOG_SCALE*log(energy);
+            color_scheme_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
+            break;
+        }
+        case (P_LOG_MEAN_ENERGY):
+        {
+            energy = compute_energy(phi, psi, xy_in, i, j);
+            if (energy == 0.0) energy = 1.0e-20;
+            total_energy[i][j] += energy;
+            value = LOG_SHIFT + LOG_SCALE*log(total_energy[i][j]/(double)(time+1));
+            color_scheme_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
+            break;
+        }
+        case (P_ENERGY_FLUX):
+        {
+            compute_energy_flux(phi, psi, xy_in, i, j, &gx, &gy, &arg, &mod);
+//                         color_scheme_palette(C_ONEDIM_LINEAR, palette, arg/DPI, 1.0, 1, rgb);
+//                         flux_factor = tanh(mod*E_SCALE);
+//                         for (k=0; k<3; k++) rgb[k] *= flux_factor;
+            value = mod*FLUX_SCALE;
+            color_scheme_asym_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
+            break;
+        }
+        case (P_TOTAL_ENERGY_FLUX):
+        {
+            compute_energy_flux(phi, psi, xy_in, i, j, &gx, &gy, &arg, &mod);
+            total_flux[2*j*NX + 2*i] *= 0.99;
+            total_flux[2*j*NX + 2*i + 1] *= 0.99;
+            total_flux[2*j*NX + 2*i] += gx;
+            total_flux[2*j*NX + 2*i + 1] += gy;
+//                         mgx = total_flux[2*j*NX + 2*i]/(double)(time+1);
+//                         mgy = total_flux[2*j*NX + 2*i + 1]/(double)(time+1);
+            mgx = total_flux[2*j*NX + 2*i];
+            mgy = total_flux[2*j*NX + 2*i + 1];
+//                         mgx = total_flux[2*j*NX + 2*i]/log((double)(time+2));
+//                         mgy = total_flux[2*j*NX + 2*i + 1]/log((double)(time+2));
+            mod = module2(mgx, mgy);
+            arg = argument(mgx, mgy);
+            if (arg < 0.0) arg += DPI;
+            value = arg/DPI;
+            color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+            flux_factor = tanh(mod*E_SCALE);
+            for (k=0; k<3; k++) rgb[k] *= flux_factor;
+            break;
+        }
+    }
+    
+    return(value);
+}
+
+
+void draw_wave_profile(double *values, int size, int fade, double fade_value)
+/* draw a profile of the wave, if option DRAW_WAVE_PROFILE is active */
+{
+    int i, k;
+    double vmin, vmax, deltav, a, b, y;
+    static int imin, imax, jmin, jmax, jmid, d, first = 1;
+    static double deltaj, ymin;
+    
+    if (first)
+    {
+        imin = 100;
+        imax = NX - 250;
+        jmin = NY - 150;
+        jmax = NY - 50;
+        jmid = (jmin + jmax)/2;
+        jmid -= (jmid%size);
+        d = (jmax - jmin)/10 + 1;
+        deltaj = (double)(jmax - jmin - 2*d); 
+        ymin = (double)(jmin + d);
+        first = 0;
+    }
+    
+    vmin = 1.0e10;
+    vmax = -vmin;
+    for (i=imin; i<imax; i+=size)
+    {
+        if (values[i*NY+jmin] > vmax) vmax = values[i*NY+jmin];
+        if (values[i*NY+jmin] < vmin) vmin = values[i*NY+jmin];        
+    }
+    if ((vmin < 0.0)&&(vmax > 0.0))
+    {
+        if (vmax > -vmin) vmin = -vmax;
+        else if (vmax < -vmin) vmax = -vmin;
+    }
+//     printf("vmin = %.3lg, vmax = %.3lg\n", vmin, vmax);
+    deltav = vmax-vmin;
+    if (deltav == 0.0) deltav = 0.01;
+    a = deltaj/deltav;
+    b = ymin - a*vmin;
+
+    erase_area_ij(imin, jmin, imax, jmax);
+    
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINE_STRIP);
+    for (i=imin; i<imax; i+=size)
+    {
+        y = a*values[i*NY+jmin] + b;
+        glVertex2d((double)i, y);
+    }
+    glEnd();
+    
+    glBegin(GL_LINE_LOOP);
+    glVertex2i(imin, jmin);
+    glVertex2i(imax, jmin);
+    glVertex2i(imax, jmax);
+    glVertex2i(imin, jmax);
+    glEnd();
+}
+
+
 void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], double *total_flux, short int *xy_in[NX], double scale, int time, int plot, int palette, int fade, double fade_value)
 /* same as draw_wave_highres, but with color scheme option */
 {
     int i, j, k, iplus, iminus, jplus, jminus;
-    double rgb[3], xy[2], x1, y1, x2, y2, velocity, energy, gradientx2, gradienty2, arg, mod, flux_factor, gx, gy, mgx, mgy;
+    double value, rgb[3], xy[2], x1, y1, x2, y2, velocity, energy, gradientx2, gradienty2, arg, mod, flux_factor, gx, gy, mgx, mgy;
+//     double vmin, vmax, deltav;
     static double dtinverse = ((double)NX)/(COURANT*(XMAX-XMIN)), dx = (XMAX-XMIN)/((double)NX);
+    double *values;
+    
+    if (DRAW_WAVE_PROFILE) values = (double *)malloc(NX*NY*sizeof(double));
 
     glBegin(GL_QUADS);
     
@@ -869,86 +1028,10 @@ void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], doubl
         {
             if ((TWOSPEEDS)||(xy_in[i][j]))
             {
-                switch (plot) {
-                    case (P_AMPLITUDE):
-                    {
-//                         /* make wave luminosity larger inside obstacles */
-//                         if (!(xy_in[i][j])) color_scheme_lum(COLOR_SCHEME, phi[i][j], scale, time, 0.7, rgb);
-//                         else 
-                        color_scheme_palette(COLOR_SCHEME, palette, phi[i][j], scale, time, rgb);
-                        break;
-                    }
-                    case (P_ENERGY):
-                    {
-                        energy = compute_energy(phi, psi, xy_in, i, j);
-                        /* adjust energy to color palette */
-                        if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, energy, scale, time, rgb);
-                        else color_scheme_palette(COLOR_SCHEME, palette, energy, scale, time, rgb);
-                        break;
-                    }
-                    case (P_MIXED):
-                    {
-                        if (j > NY/2) color_scheme_palette(COLOR_SCHEME, palette, phi[i][j], scale, time, rgb);
-                        else color_scheme_palette(COLOR_SCHEME, palette, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
-                        break;
-                    }
-                    case (P_MEAN_ENERGY):
-                    {
-                        energy = compute_energy(phi, psi, xy_in, i, j);
-                        total_energy[i][j] += energy;
-                        if (COLOR_PALETTE >= COL_TURBO) 
-                            color_scheme_asym_palette(COLOR_SCHEME, palette, total_energy[i][j]/(double)(time+1), scale, time, rgb);
-                        else color_scheme_palette(COLOR_SCHEME, palette, total_energy[i][j]/(double)(time+1), scale, time, rgb);
-                        break;
-                    }
-                    case (P_LOG_ENERGY):
-                    {
-                        energy = compute_energy(phi, psi, xy_in, i, j);
-//                         energy = LOG_SHIFT + LOG_SCALE*log(energy);
-//                         if (energy < 0.0) energy = 0.0;
-                        color_scheme_palette(COLOR_SCHEME, palette, LOG_SHIFT + LOG_SCALE*log(energy), scale, time, rgb);
-                        break;
-                    }
-                    case (P_LOG_MEAN_ENERGY):
-                    {
-                        energy = compute_energy(phi, psi, xy_in, i, j);
-                        if (energy == 0.0) energy = 1.0e-20;
-                        total_energy[i][j] += energy;
-                        color_scheme_palette(COLOR_SCHEME, palette, LOG_SHIFT + LOG_SCALE*log(total_energy[i][j]/(double)(time+1)), scale, time, rgb);
-                        break;
-                    }
-                    case (P_ENERGY_FLUX):
-                    {
-                        compute_energy_flux(phi, psi, xy_in, i, j, &gx, &gy, &arg, &mod);
-//                         color_scheme_palette(C_ONEDIM_LINEAR, palette, arg/DPI, 1.0, 1, rgb);
-//                         flux_factor = tanh(mod*E_SCALE);
-//                         for (k=0; k<3; k++) rgb[k] *= flux_factor;
-                        color_scheme_asym_palette(COLOR_SCHEME, palette, mod*FLUX_SCALE, scale, time, rgb);
-                        break;
-                    }
-                    case (P_TOTAL_ENERGY_FLUX):
-                    {
-                        compute_energy_flux(phi, psi, xy_in, i, j, &gx, &gy, &arg, &mod);
-                        total_flux[2*j*NX + 2*i] *= 0.99;
-                        total_flux[2*j*NX + 2*i + 1] *= 0.99;
-                        total_flux[2*j*NX + 2*i] += gx;
-                        total_flux[2*j*NX + 2*i + 1] += gy;
-//                         mgx = total_flux[2*j*NX + 2*i]/(double)(time+1);
-//                         mgy = total_flux[2*j*NX + 2*i + 1]/(double)(time+1);
-                        mgx = total_flux[2*j*NX + 2*i];
-                        mgy = total_flux[2*j*NX + 2*i + 1];
-//                         mgx = total_flux[2*j*NX + 2*i]/log((double)(time+2));
-//                         mgy = total_flux[2*j*NX + 2*i + 1]/log((double)(time+2));
-                        mod = module2(mgx, mgy);
-                        arg = argument(mgx, mgy);
-                        if (arg < 0.0) arg += DPI;
-                        color_scheme_palette(C_ONEDIM_LINEAR, palette, arg/DPI, 1.0, 1, rgb);
-                        flux_factor = tanh(mod*E_SCALE);
-                        for (k=0; k<3; k++) rgb[k] *= flux_factor;
-                        break;
-                    }
-                    
-                }
+                value = wave_value(i, j, phi, psi, total_energy, total_flux, xy_in, scale, time, plot, palette, rgb);
+                
+                if (DRAW_WAVE_PROFILE) values[i*NY+j] = value;
+                
                 if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
                 glColor3f(rgb[0], rgb[1], rgb[2]);
                 
@@ -960,6 +1043,12 @@ void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], doubl
         }
 
     glEnd ();
+    
+    if (DRAW_WAVE_PROFILE) 
+    {
+        draw_wave_profile(values, size, fade, fade_value);
+        free(values);
+    }
 }
 
 /* modified function for "flattened" wave tables */

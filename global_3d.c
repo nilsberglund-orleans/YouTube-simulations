@@ -61,6 +61,11 @@
 #define SH_COAST 3      /* depth varying with x-coordinate */
 #define SH_COAST_MONOTONE 4      /* depth decreasing with x-coordinate */
 
+/* Type of rotating viewpoint */
+
+#define VP_HORIZONTAL 0     /* rotate in a horizontal plane */
+#define VP_ORBIT 1          /* rotate in a plane containing the origin */
+
 /* macros to avoid unnecessary computations in 3D plots */
 
 #define COMPUTE_THETA ((cplot == Z_POLAR)||(cplot == Z_NORM_GRADIENT)||(cplot == Z_ANGLE_GRADIENT)||(cplot == Z_NORM_GRADIENT_INTENSITY)||(cplot == Z_VORTICITY)||(cplot == Z_VORTICITY_ABS))
@@ -80,6 +85,7 @@
 
 #define COMPUTE_TOTAL_ENERGY ((ZPLOT == P_3D_TOTAL_ENERGY)||(CPLOT == P_3D_TOTAL_ENERGY)||(ZPLOT == P_3D_LOG_TOTAL_ENERGY)||(CPLOT == P_3D_LOG_TOTAL_ENERGY)||(ZPLOT == P_3D_MEAN_ENERGY)||(CPLOT == P_3D_MEAN_ENERGY)||(ZPLOT == P_3D_LOG_MEAN_ENERGY)||(CPLOT == P_3D_LOG_MEAN_ENERGY)||(ZPLOT_B == P_3D_TOTAL_ENERGY)||(CPLOT_B == P_3D_TOTAL_ENERGY)||(ZPLOT_B == P_3D_LOG_TOTAL_ENERGY)||(CPLOT_B == P_3D_LOG_TOTAL_ENERGY)||(ZPLOT_B == P_3D_MEAN_ENERGY)||(CPLOT_B == P_3D_MEAN_ENERGY)||(ZPLOT_B == P_3D_LOG_MEAN_ENERGY)||(CPLOT_B == P_3D_LOG_MEAN_ENERGY))
 
+#define NMAXCIRC_SPHERE 100     /* max number of circles on sphere */
 
 int global_time = 0;
 double max_depth = 1.0;
@@ -137,3 +143,26 @@ typedef struct
     double gradx, grady;        /* gradient of water depth */
 } t_swater_depth;
 
+
+typedef struct
+{
+    double phi, theta;          /* phi, theta angles */
+    double cphi, sphi;          /* cos and sin of phi */
+    double ctheta, stheta, cottheta;   /* cos, sin and cotangent of theta */
+    double x, y, z;             /* x, y, z coordinates of point on sphere */
+    double radius;              /* radius with wave height */
+    double r, g, b;             /* RGB values for image */
+    short int indomain;         /* has value 1 if lattice point is in domain */
+    double x2d, y2d;            /* x and y coordinates for 2D representation */
+} t_wave_sphere;
+
+
+typedef struct 
+{
+    double phi, theta;          /* longitude, latitude */
+    double radius;              /* radius */
+    double x, y, z;             /* x, y, z coordinates of point on sphere */
+} t_circles_sphere;
+
+
+t_circles_sphere circ_sphere[NMAXCIRC_SPHERE];      /* circular scatterers on sphere */

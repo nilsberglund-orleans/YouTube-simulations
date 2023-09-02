@@ -156,6 +156,7 @@
 #define KAPPA 0.0           /* "elasticity" term enforcing oscillations */
 #define KAPPA_SIDES 5.0e-4  /* "elasticity" term on absorbing boundary */
 #define KAPPA_TOPBOT 0.0    /* "elasticity" term on absorbing boundary */
+#define OSCIL_LEFT_YSHIFT 0.0   /* y-dependence of left oscillation (for non-horizontal waves) */
 /* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
 /* The physical damping coefficient is given by GAMMA/(DT)^2 */
 /* Increasing COURANT speeds up the simulation, but decreases accuracy */
@@ -289,6 +290,7 @@
 // #define POT_MAZE 7
 #define POTENTIAL 10
 #define POT_FACT 20.0
+#define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 /* end of constants only used by sub_wave and sub_maze */
 
 
@@ -364,8 +366,8 @@ void evolve_wave_half_new(double phi_in[NX*NY], double psi_in[NX*NY], double phi
 //     if (OSCILLATE_LEFT) for (j=1; j<NY-1; j++) phi_out[j] = AMPLITUDE*cos((double)time*OMEGA);
     if (OSCILLATE_LEFT) 
     {
-        for (j=1; j<NY-1; j++) phi_out[j] = oscillating_bc(time);
-        printf("Boundary condition %.3lg\n", oscillating_bc(time));
+        for (j=1; j<NY-1; j++) phi_out[j] = oscillating_bc(time, j);
+        printf("Boundary condition %.3lg\n", oscillating_bc(time, 0));
     }
     else for (j=1; j<NY-1; j++){
         if ((TWOSPEEDS)||(xy_in[j] != 0)){
@@ -574,7 +576,7 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
 //     if (OSCILLATE_LEFT) for (j=1; j<NY-1; j++) phi_out[j] = AMPLITUDE*cos((double)time*OMEGA);
     if (OSCILLATE_LEFT) 
     {
-        for (j=1; j<NY-1; j++) phi_out[j] = oscillating_bc(time);
+        for (j=1; j<NY-1; j++) phi_out[j] = oscillating_bc(time, j);
 //         printf("Boundary condition %.3lg\n", oscillating_bc(time));
     }
     else for (j=1; j<NY-1; j++){
@@ -865,8 +867,8 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
     /* add oscillating boundary condition on the left corners */
     if (OSCILLATE_LEFT)
     {
-        phi_out[0] = oscillating_bc(time);
-        phi_out[NY-1] = oscillating_bc(time);
+        phi_out[0] = oscillating_bc(time, 0);
+        phi_out[NY-1] = oscillating_bc(time, NY-1);
     }
     
     

@@ -82,6 +82,14 @@
 #define D_TESLA 71              /* Tesla valve */
 #define D_TESLA_FOUR 72         /* four Tesla valves */
 
+/* for wave_sphere.c */
+
+#define D_LATITUDE 80           /* strip between two latitudes */
+#define D_SPHERE_CIRCLES 81     /* circles on the sphere */
+#define D_SPHERE_JULIA 82       /* Julia set on Riemann sphere */
+#define D_SPHERE_JULIA_INV 83   /* inverted Julia set on Riemann sphere */
+#define D_SPHERE_EARTH 84       /* map of the Earth */
+
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
 
@@ -103,6 +111,15 @@
 #define C_RINGS 20          /* obstacles arranged in concentric rings */
 #define C_RINGS_T 201       /* obstacles arranged in concentric rings, triangular lattice */
 #define C_RINGS_SPIRAL 202  /* obstacles arranged on a "subflower" spiral, similar to C_GOLDEN_SPIRAL */
+
+#define C_HEX_BOTTOM 101    /* hex/triangular lattice in lower half */
+#define C_HEX_BOTTOM2 102   /* smaller hex/triangular lattice in lower half */
+#define C_SQUARE_BOTTOM 103 /* square lattice in lower half */
+
+#define C_SPH_DODECA 30     /* dodecahedron (on sphere) */
+#define C_SPH_ICOSA 31      /* icosahedron (on sphere) */
+#define C_SPH_OCTA 32       /* octahedron (on sphere) */
+#define C_SPH_CUBE 33       /* cube (on sphere) */
 
 #define C_ONE 97            /* one single circle, as for Sinai */
 #define C_TWO 98            /* two concentric circles of different type */

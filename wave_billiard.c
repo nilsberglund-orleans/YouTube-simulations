@@ -24,7 +24,7 @@
 /*  create movie using                                                           */
 /*  ffmpeg -i wave.%05d.tif -vcodec libx264 wave.mp4                             */
 /*                                                                               */
-/******************************F***************************************************/
+/**********************************************************************************/
 
 /*********************************************************************************/
 /*                                                                               */
@@ -61,10 +61,12 @@
 #define NX 3840          /* number of grid points on x axis */
 #define NY 2300          /* number of grid points on y axis */
 
-#define XMIN -1.0
-#define XMAX 3.0	/* x interval */
-#define YMIN -1.197916667
-#define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
+#define YMIN -0.397916667
+#define YMAX 1.997916667	/* y interval for 9/16 aspect ratio */
+// #define YMIN -1.197916667
+// #define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
 
 #define HIGHRES 1       /* set to 1 if resolution of grid is double that of displayed image */
 
@@ -87,9 +89,9 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 10        /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 20        /* choice of domain shape, see list in global_pdes.c */
 
-#define CIRCLE_PATTERN 1   /* pattern of circles or polygons, see list in global_pdes.c */
+#define CIRCLE_PATTERN 103   /* pattern of circles or polygons, see list in global_pdes.c */
 
 #define COMPARISON 0        /* set to 1 to compare two different patterns (beta) */
 #define B_DOMAIN_B 20       /* second domain shape, for comparisons */
@@ -99,8 +101,8 @@
 #define NPOISSON 1000        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 0.1197916667	    /* parameter controlling the dimensions of domain */
-#define MU 0.035             /* parameter controlling the dimensions of domain */
+#define LAMBDA 1.0	    /* parameter controlling the dimensions of domain */
+#define MU 0.005            /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 6            /* depth of computation of Menger gasket */
@@ -108,8 +110,8 @@
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0    /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-#define NGRIDX 30            /* number of grid point for grid of disks */
-#define NGRIDY 30            /* number of grid point for grid of disks */
+#define NGRIDX 60           /* number of grid point for grid of disks */
+#define NGRIDY 10           /* number of grid point for grid of disks */
 // #define NGRIDY 18            /* number of grid point for grid of disks */
 
 #define X_SHOOTER -0.2
@@ -129,11 +131,11 @@
 /* Physical parameters of wave equation */
 
 #define TWOSPEEDS 0          /* set to 1 to replace hardcore boundary by medium with different speed */
-#define OSCILLATE_LEFT 0     /* set to 1 to add oscilating boundary condition on the left */
+#define OSCILLATE_LEFT 1     /* set to 1 to add oscilating boundary condition on the left */
 #define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
 #define OSCILLATION_SCHEDULE 0  /* oscillation schedule, see list in global_pdes.c */
 
-#define OMEGA 0.004        /* frequency of periodic excitation */
+#define OMEGA 0.024        /* frequency of periodic excitation */
 #define AMPLITUDE 1.0      /* amplitude of periodic excitation */ 
 #define ACHIRP 0.25        /* acceleration coefficient in chirp */
 #define DAMPING 0.0        /* damping of periodic excitation */
@@ -146,12 +148,13 @@
 #define KAPPA 0.0           /* "elasticity" term enforcing oscillations */
 #define KAPPA_SIDES 5.0e-4  /* "elasticity" term on absorbing boundary */
 #define KAPPA_TOPBOT 0.0    /* "elasticity" term on absorbing boundary */
+#define OSCIL_LEFT_YSHIFT -400.0   /* y-dependence of left oscillation (for non-horizontal waves) */
 /* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
 /* The physical damping coefficient is given by GAMMA/(DT)^2 */
 /* Increasing COURANT speeds up the simulation, but decreases accuracy */
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
-#define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
+#define ADD_OSCILLATING_SOURCE 0        /* set to 1 to add an oscillating wave source */
 #define OSCILLATING_SOURCE_PERIOD 30    /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
 
@@ -166,11 +169,11 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 2400       /* number of frames of movie */
-// #define NSTEPS 1300       /* number of frames of movie */
-#define NVID 6            /* number of iterations between images displayed on screen */
+#define NSTEPS 3600       /* number of frames of movie */
+// #define NSTEPS 500       /* number of frames of movie */
+#define NVID 7            /* number of iterations between images displayed on screen */
 #define NSEG 1000         /* number of segments of boundary */
-#define INITIAL_TIME 0      /* time after which to start saving frames */
+#define INITIAL_TIME 700      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
 #define PRINT_SPEED 0       /* print speed of moving source */
 #define PRINT_FREQUENCY 0       /* print frequency (for phased array) */
@@ -199,9 +202,9 @@
 
 /* Color schemes */
 
-// #define COLOR_PALETTE 15     /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE 17      /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 13     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 18     /* Color palette, see list in global_pdes.c  */
+// #define COLOR_PALETTE 17      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 12     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
@@ -212,9 +215,9 @@
 #define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-#define E_SCALE 100.0     /* scaling factor for energy representation */
+#define E_SCALE 50.0     /* scaling factor for energy representation */
 #define LOG_SCALE 1.0     /* scaling factor for energy log representation */
-#define LOG_SHIFT 1.0     /* shift of colors on log scale */
+#define LOG_SHIFT 1.5     /* shift of colors on log scale */
 #define FLUX_SCALE 5.0e3    /* scaling factor for enegy flux represtnation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 
@@ -226,11 +229,13 @@
 #define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
 
 #define DRAW_COLOR_SCHEME 1    /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 2.0     /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 2.0   /* scale of color scheme bar for 2nd part */
+#define COLORBAR_RANGE 1.0     /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 0.4   /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
 #define CIRC_COLORBAR_B 0       /* set to 1 to draw circular color scheme */
+
+#define DRAW_WAVE_PROFILE 1     /* set to 1 to draw a profile of the wave */
 
 #define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
 
@@ -328,7 +333,7 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
     }
     
     /* left boundary */
-    if (OSCILLATE_LEFT) for (j=1; j<NY-1; j++) phi_out[0][j] = oscillating_bc(time);
+    if (OSCILLATE_LEFT) for (j=1; j<NY-1; j++) phi_out[0][j] = oscillating_bc(time, j);
     else for (j=1; j<NY-1; j++){
         if ((TWOSPEEDS)||(xy_in[0][j] != 0)){
             x = phi_in[0][j];
@@ -519,8 +524,8 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
     /* add oscillating boundary condition on the left corners */
     if (OSCILLATE_LEFT)
     {
-        phi_out[0][0] = oscillating_bc(time);
-        phi_out[0][NY-1] = oscillating_bc(time);
+        phi_out[0][0] = oscillating_bc(time, 0);
+        phi_out[0][NY-1] = oscillating_bc(time, NY-1);
     }
     
     /* for debugging purposes/if there is a risk of blow-up */
@@ -676,9 +681,9 @@ void animation()
 //     xy_to_ij(startright[0], startright[1], sample_right);
 //     printf("xleft = (%.3f, %.3f) xright = (%.3f, %.3f)\n", xin_left, yin_left, xin_right, yin_right);
     
-//     init_wave_flat(phi, psi, xy_in);
+    init_wave_flat(phi, psi, xy_in);
 
-    init_circular_wave(-0.5, 0.0, phi, psi, xy_in);
+//     init_circular_wave(-0.5, 0.0, phi, psi, xy_in);
 //     x = XMIN + (XMAX - XMIN)*rand()/RAND_MAX;
 //     y = YMIN + (YMAX - YMIN)*rand()/RAND_MAX;
 //     init_circular_wave(0.0, -0.8, phi, psi, xy_in);

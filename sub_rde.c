@@ -794,7 +794,93 @@ double init_linear_blob(double x, double y, double vx, double vy, double amp, do
 }
 
 
+double init_circular_vibration(double x, double y, double v, double radius, double amp, double var, double omega, double min, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], r, angle, a, height;
+        
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy_in[i*NY+j])
+            {
+                r = module2(xy[0]-x, xy[1]-y);
+                angle = argument(xy[0]-x, xy[1]-y);
+                height = exp(-(r - radius)*(r - radius)/var)*cos(omega*angle);
+                phi[0][i*NY+j] = min + amp*height;
+                phi[1][i*NY+j] = v*cos(angle)*height;
+                phi[2][i*NY+j] = v*sin(angle)*height;
+            }
+            else
+            {
+                phi[0][i*NY+j] = 0.0;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+}
 
+
+double init_elliptical_vibration(double x, double y, double v, double radiusx, double radiusy, double amp, double var, double omega, double min, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], r, angle, a, height;
+        
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy_in[i*NY+j])
+            {
+                r = module2((xy[0]-x)/radiusx, (xy[1]-y)/radiusy);
+                angle = argument((xy[0]-x)/radiusx, (xy[1]-y)/radiusy);
+                height = exp(-(r - 1.0)*(r - 1.0)/var)*cos(omega*angle);
+                phi[0][i*NY+j] = min + amp*height;
+                phi[1][i*NY+j] = v*cos(angle)*height*radiusx;
+                phi[2][i*NY+j] = v*sin(angle)*height*radiusy;
+            }
+            else
+            {
+                phi[0][i*NY+j] = 0.0;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+}
+
+double add_elliptical_vibration(double x, double y, double v, double radiusx, double radiusy, double amp, double var, double omega, double min, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], r, angle, a, height;
+        
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy_in[i*NY+j])
+            {
+                r = module2((xy[0]-x)/radiusx, (xy[1]-y)/radiusy);
+                if (r < 1.0 + var)
+                {
+                    angle = argument((xy[0]-x)/radiusx, (xy[1]-y)/radiusy);
+                    height = exp(-(r - 1.0)*(r - 1.0)/var)*cos(omega*angle);
+                    phi[0][i*NY+j] += amp*height;
+                    phi[1][i*NY+j] += v*cos(angle)*height*radiusx;
+                    phi[2][i*NY+j] += v*sin(angle)*height*radiusy;
+                }
+            }
+        }
+}
 double add_gaussian_wave(double x, double y, double amp, double radius, double min, double *phi[NFIELDS], short int xy_in[NX*NY])
 /* initialise gaussian wave height for shallow water equation */
 {

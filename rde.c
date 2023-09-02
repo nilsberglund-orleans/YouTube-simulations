@@ -49,13 +49,13 @@
 #define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1150  /* window height */
 // #define NY 575          /* number of grid points on y axis */
-// #define NX 960          /* number of grid points on x axis */
-// #define NY 575          /* number of grid points on y axis */
+#define NX 960          /* number of grid points on x axis */
+#define NY 575          /* number of grid points on y axis */
 
 // #define WINWIDTH 	1280  /* window width */
 // #define WINHEIGHT 	720   /* window height */
-#define NX 640          /* number of grid points on x axis */
-#define NY 360          /* number of grid points on y axis */
+// #define NX 640          /* number of grid points on x axis */
+// #define NY 360          /* number of grid points on y axis */
 // #define NX 320          /* number of grid points on x axis */
 // #define NY 180          /* number of grid points on y axis */
 
@@ -76,16 +76,16 @@
 
 #define ADD_POTENTIAL 0 /* set to 1 to add a potential (for Schrodinger equation) */
 #define ADD_MAGNETIC_FIELD 0    /* set to 1 to add a magnetic field (for Schrodinger equation) - then set POTENTIAL 1 */
-#define ADD_FORCE_FIELD 0   /* set to 1 to add a foce field (for compressible Euler equation) */
+#define ADD_FORCE_FIELD 1   /* set to 1 to add a foce field (for compressible Euler equation) */
 #define POTENTIAL 7         /* type of potential or vector potential, see list in global_3d.c  */
 #define FORCE_FIELD 5       /* type of force field, see list in global_3d.c  */
 #define ADD_CORIOLIS_FORCE 0    /* set to 1 to add Coriolis force (quasigeostrophic Euler equations) */
-#define VARIABLE_DEPTH 1    /* set to 1 for variable depth in shallow water equation */
+#define VARIABLE_DEPTH 0    /* set to 1 for variable depth in shallow water equation */
 #define SWATER_DEPTH 4      /* variable depth in shallow water equation */
 
 #define ANTISYMMETRIZE_WAVE_FCT 0   /* set tot 1 to make wave function antisymmetric */
-#define ADAPT_STATE_TO_BC 0     /* to smoothly adapt initial state to obstacles */
-#define OBSTACLE_GEOMETRY 7     /* geometry of obstacles, as in B_DOMAIN */
+#define ADAPT_STATE_TO_BC 1     /* to smoothly adapt initial state to obstacles */
+#define OBSTACLE_GEOMETRY 1     /* geometry of obstacles, as in B_DOMAIN */
 // #define BC_STIFFNESS 100.0        /* controls region of boundary condition control */
 #define BC_STIFFNESS 50.0        /* controls region of boundary condition control */
 #define CHECK_INTEGRAL 1     /* set to 1 to check integral of first field */
@@ -102,7 +102,7 @@
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 0.5	    /* parameter controlling the dimensions of domain */
+#define LAMBDA 1.2	    /* parameter controlling the dimensions of domain */
 #define MU 0.06	            /* parameter controlling the dimensions of domain */
 #define NPOLY 5             /* number of sides of polygon */
 #define APOLY 2.0          /* angle by which to turn polygon, in units of Pi/2 */
@@ -129,7 +129,7 @@
 /* You can add more billiard tables by adapting the functions */
 /* xy_in_billiard and draw_billiard in sub_wave.c */
 
-/* Physical patameters of wave equation */
+/* Physical parameters of wave equation */
 
 #define DT 0.00000025
 
@@ -163,6 +163,10 @@
 #define SMOOTHEN_VELOCITY 1     /* set to 1 to smoothen velocity field in Euler equation */
 #define SMOOTHEN_PERIOD 10      /* period between smoothenings */
 #define SMOOTH_FACTOR 0.15       /* factor by which to smoothen */
+
+#define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
+#define OSCILLATING_SOURCE_PERIOD 1     /* period of oscillating source */
+#define OSCILLATING_SOURCE_OMEGA 0.2    /* frequency of oscillating source */
 
 #define ADD_TRACERS 1    /* set to 1 to add tracer particles (for Euler equations) */
 #define N_TRACERS 1000    /* number of tracer particles */
@@ -201,7 +205,7 @@
 #define LAMINAR_FLOW_YPERIOD 1.0    /* period of laminar flow in y direction */
 #define PRESSURE_GRADIENT 0.2       /* amplitude of pressure gradient for Euler equation */
 
-#define SWATER_MIN_HEIGHT 2.0      /* min height of initial condition for shallow water equation */
+#define SWATER_MIN_HEIGHT 0.5      /* min height of initial condition for shallow water equation */
 // #define DEPTH_FACTOR 0.0125        /* proportion of min height in variable depth */
 // #define DEPTH_FACTOR 0.001        /* proportion of min height in variable depth */
 // #define DEPTH_FACTOR 0.0012        /* proportion of min height in variable depth */
@@ -216,20 +220,20 @@
 
 /* Boundary conditions, see list in global_pdes.c  */
 
-#define B_COND 1
+#define B_COND 0
 
 #define B_COND_LEFT 0
 #define B_COND_RIGHT 0
-#define B_COND_TOP 1
-#define B_COND_BOTTOM 1
+#define B_COND_TOP 0
+#define B_COND_BOTTOM 0
 
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 2100        /* number of frames of movie */
+#define NSTEPS 1300        /* number of frames of movie */
 // #define NSTEPS 500         /* number of frames of movie */
 // #define NVID 100           /* number of iterations between images displayed on screen */
-#define NVID 30            /* number of iterations between images displayed on screen */
+#define NVID 45            /* number of iterations between images displayed on screen */
 #define ACCELERATION_FACTOR 1.0 /* factor by which to increase NVID in course of simulation */
 #define DT_ACCELERATION_FACTOR 1.0 /* factor by which to increase time step in course of simulation  */
 #define MAX_DT 0.024     /* maximal value of integration step */
@@ -249,7 +253,7 @@
 
 #define PLOT_3D 1    /* controls whether plot is 2D or 3D */
 
-#define ROTATE_VIEW 0       /* set to 1 to rotate position of observer */
+#define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
 #define ROTATE_ANGLE 360.0  /* total angle of rotation during simulation */
 
 #define DRAW_PERIODICISED 0     /* set to 1 to repeat wave periodically in x and y directions */
@@ -273,8 +277,8 @@
 #define DRAW_OUTSIDE_GRAY 0     /* experimental - draw outside of billiard in gray */
 #define ADD_POTENTIAL_TO_Z 0    /* set to 1 to add the external potential to z-coordinate of plot */
 #define ADD_POT_CONSTANT 0.35   /* constant added to wave height */
-#define ADD_HEIGHT_CONSTANT -2.0   /* constant added to wave height */
-#define DRAW_DEPTH 1            /* set to 1 to draw water depth */
+#define ADD_HEIGHT_CONSTANT -0.5   /* constant added to wave height */
+#define DRAW_DEPTH 0            /* set to 1 to draw water depth */
 #define DEPTH_SCALE 0.75         /* vertical scaling of depth plot */
 #define DEPTH_SHIFT -0.015      /* vertical shift of depth plot */
 
@@ -306,9 +310,9 @@
 
 /* Color schemes, see list in global_pdes.c  */
 
-#define COLOR_PALETTE 11       /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 10      /* Color palette, see list in global_pdes.c  */
-// #define COLOR_PALETTE_B 0      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 14       /* Color palette, see list in global_pdes.c  */
+// #define COLOR_PALETTE_B 17      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 0      /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
 
@@ -318,11 +322,11 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
-#define VSCALE_AMPLITUDE 10.0      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSCALE_AMPLITUDE 15.0      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define CURL_SCALE 0.000015   /* scaling factor for curl representation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
-#define SLOPE_SCHROD_LUM 200.0       /* sensitivity of luminosity on module, for color scheme Z_ARGUMENT */
+#define SLOPE_SCHROD_LUM 400.0       /* sensitivity of luminosity on module, for color scheme Z_ARGUMENT */
 #define MIN_SCHROD_LUM 0.2       /* minimal luminosity in color scheme Z_ARGUMENT*/
 #define VSCALE_PRESSURE 2.0      /* additional scaling factor for color scheme Z_EULER_PRESSURE */
 #define PRESSURE_SHIFT 10.0        /* shift for color scheme Z_EULER_PRESSURE */
@@ -347,7 +351,7 @@
 #define VSCALE_VORTICITY 20.0     /* additional scaling factor for color scheme Z_EULERC_VORTICITY */
 #define VORTICITY_SHIFT 0.0     /* vertical shift of vorticity */
 #define ZSCALE_SPEED 0.3        /* additional scaling factor for z-coord Z_EULER_SPEED and Z_SWATER_SPEED */
-#define VSCALE_SWATER 300.0        /* additional scaling factor for color scheme Z_EULER_DENSITY */
+#define VSCALE_SWATER 250.0        /* additional scaling factor for color scheme Z_EULER_DENSITY */
 
 #define NXMAZE 7      /* width of maze */
 #define NYMAZE 7      /* height of maze */
@@ -390,6 +394,8 @@
 #define WAVE_PACKET_SOURCE_TYPE 1       /* type of wave packet sources */
 #define N_WAVE_PACKETS 15               /* number of wave packets */
 #define WAVE_PACKET_RADIUS 20            /* radius of wave packets */
+#define OSCIL_LEFT_YSHIFT 25.0   /* y-dependence of left oscillation (for non-horizontal waves) */
+#define DRAW_WAVE_PROFILE 1     /* set to 1 to draw a profile of the wave */
 /* end of constants added only for compatibility with wave_common.c */
 
 
@@ -400,8 +406,8 @@ double light[3] = {0.816496581, 0.40824829, 0.40824829};      /* vector of "ligh
 double observer[3] = {8.0, 8.0, 7.0};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
-#define Z_SCALING_FACTOR 35.0   /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define XY_SCALING_FACTOR 1.7  /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define Z_SCALING_FACTOR 150.0   /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define XY_SCALING_FACTOR 2.5  /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0        /* max value of z coordinate for REP_PROJ_3D representation */
 #define XSHIFT_3D 0.0          /* overall x shift for REP_PROJ_3D representation */
 #define YSHIFT_3D 0.1         /* overall y shift for REP_PROJ_3D representation */
@@ -1565,7 +1571,7 @@ void viewpoint_schedule(int i)
 void animation()
 {
     double time = 0.0, scale, dx, var, jangle, cosj, sinj, sqrintstep, 
-        intstep0, viscosity_printed, fade_value, noise = NOISE_INTENSITY, x, y, sign;
+        intstep0, viscosity_printed, fade_value, noise = NOISE_INTENSITY, x, y, sign, phase;
     double *phi[NFIELDS], *phi_tmp[NFIELDS], *potential_field, *vector_potential_field, *tracers, *gfield, *bc_field, *bc_field2;
     short int *xy_in;
     int i, j, k, s, nvid, field;
@@ -1672,9 +1678,11 @@ void animation()
 
 //     init_gaussian_wave(-1.0, 0.0, 0.005, 0.25, SWATER_MIN_HEIGHT, phi, xy_in);
     
-    init_linear_wave(-1.0, 0.01, 5.0e-8, 0.25, SWATER_MIN_HEIGHT, phi, xy_in);
+//     init_linear_wave(-1.0, 0.01, 5.0e-8, 0.25, SWATER_MIN_HEIGHT, phi, xy_in);
     
 //     init_linear_blob(0.0, -0.75, 0.025, 0.0, 0.001, 0.25, 0.5, SWATER_MIN_HEIGHT, phi, xy_in);
+        
+    init_elliptical_vibration(0.0, 0.0, 0.0075, LAMBDA, 1.0, 0.0003, 0.1, 1.0, SWATER_MIN_HEIGHT, phi, xy_in);
     
 //     add_gaussian_wave(-1.6, -0.5, 0.015, 0.25, SWATER_MIN_HEIGHT, phi, xy_in);
     
@@ -1759,6 +1767,13 @@ void animation()
 
         if (ADAPT_STATE_TO_BC) adapt_state_to_bc(phi, bc_field, xy_in);
         
+        if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == 0))
+        {
+            phase = (double)i*OSCILLATING_SOURCE_OMEGA;
+            printf("Adding vibration with phase %.3lg\n", phase); 
+            add_elliptical_vibration(0.0, 0.0, 0.00007*cos(phase), LAMBDA, 1.0, 0.00004*cos(phase), 0.1, 1.0, SWATER_MIN_HEIGHT, phi, xy_in);
+        }
+                
         if (ADD_TRACERS)
         {
             printf("Evolving tracer particles\n");

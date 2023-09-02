@@ -43,7 +43,7 @@
 #include <omp.h>
 #include <time.h>
 
-#define MOVIE 1         /* set to 1 to generate movie */
+#define MOVIE 0         /* set to 1 to generate movie */
 #define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
@@ -263,6 +263,8 @@
 // #define TWOSPEEDS 0          /* set to 1 to replace hardcore boundary by medium with different speed */
 #define WAVE_PACKET_SOURCE_TYPE 1       /* type of wave packet sources */
 #define N_WAVE_PACKETS 15               /* number of wave packets */
+#define OSCIL_LEFT_YSHIFT 0.0   /* y-dependence of left oscillation (for non-horizontal waves) */
+#define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 /* end of constants only used by sub_wave and sub_maze */
 
 

@@ -45,6 +45,7 @@
 #define O_POOL_TABLE 3      /* obstacles around pockets of pool table */
 #define O_HLINE_HOLE_SPOKES 181    /* tips of spokes for S_HLINE_HOLE_SPOKES segment pattern */
 #define O_CIRCLE 4          /* one circle at the origin */
+#define O_FOUR_CIRCLES 5    /* four circles  */
 
 /* pattern of additional repelling segments */
 #define S_RECTANGLE 0       /* segments forming a rectangle */
@@ -72,6 +73,10 @@
 #define S_HLINE_HOLE_SPOKES 181    /* horizontal line with a hole in the bottom and extra spokes */
 #define S_EXT_CIRCLE_RECT 19    /* particles outside a circle and a rectangle */
 #define S_BIN_OPENING 20        /* bin containing particles opening at deactivation time */
+#define S_POLYGON_EXT 21        /* exterior of a regular polygon */
+#define S_WEDGE_EXT 22          /* exterior of a wedge */ 
+#define S_MIXER 23              /* exterior of a set of fan of rectangles */
+#define S_AIRFOIL 24            /* exterior of an air foil */
 
 /* particle interaction */
 
@@ -183,11 +188,19 @@
 #define P_TYPE 5          /* colors represent type of particle */
 #define P_DIRECTION 6     /* colors represent direction of velocity */
 #define P_ANGULAR_SPEED 7 /* colors represent angular speed */
-#define P_DIRECT_ENERGY 8 /* hues represent direction, luminosity represents energy */
+#define P_DIRECT_ENERGY 8 /* hue represents direction, luminosity represents energy */
 #define P_DIFF_NEIGHB 9   /* colors represent number of neighbours of different type */
 #define P_THERMOSTAT 10   /* colors show which particles are coupled to the thermostat */
 #define P_INITIAL_POS 11  /* colors depend on initial position of particle */
 #define P_NUMBER 12       /* colors depend on particle number */
+#define P_EMEAN 13        /* averaged kinetic energy (with exponential damping) */
+#define P_DIRECT_EMEAN 14 /* averaged version of P_DIRECT_ENERGY */
+#define P_NOPARTICLE 15   /* particles are not drawn (only the links between them) */
+
+/* Initial position dependence types */
+
+#define IP_X 0      /* color depends on x coordinate of initial position */
+#define IP_Y 1      /* color depends on y coordinate of initial position */
 
 /* Color schemes */
 
@@ -223,6 +236,7 @@ typedef struct
     double angle;               /* angle of particle's "spin" */
     short int active;           /* circle is active */
     double energy;              /* dissipated energy */
+    double emean;               /* mean energy */
     double vx;                  /* x velocity of particle */
     double vy;                  /* y velocity of particle */
     double omega;               /* angular velocity of particle */
@@ -231,6 +245,7 @@ typedef struct
     double fx;                  /* x component of force on particle */
     double fy;                  /* y component of force on particle */
     double torque;              /* torque on particle */
+    double dirmean;             /* time averaged direction */
     int close_to_boundary;      /* has value 1 if particle is close to a boundary */
     short int thermostat;       /* whether particle is coupled to thermostat */
     int hashcell;               /* hash cell in which particle is located */
@@ -330,6 +345,23 @@ typedef struct
     int time;                   /* time since collision */
     int color;                  /* color hue in case of different collisions */
 } t_collision;
+
+
+typedef struct
+{
+    int nactive;                /* number of active particles */
+    double beta;                /* inverse temperature */
+    double mean_energy;         /* mean energy */
+    double krepel;              /* force constant */
+    double xmincontainer, xmaxcontainer;      /* container size */
+    double fboundary;           /* boundary force */
+    double pressure;            /* pressure */
+    double gravity;             /* gravity */
+    double radius;              /* particle radius */
+    double angle;               /* orientation of obstacle */
+    double omega;               /* angular speed of obstacle */
+    double bdry_fx, bdry_fy;    /* components of boundary force */
+} t_lj_parameters;
 
 int ncircles, nobstacles, nsegments, ngroups = 1, counter = 0;
 

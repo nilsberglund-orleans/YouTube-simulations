@@ -219,8 +219,16 @@
 #define IOR 7               /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.5 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
+#define COURANT 0.04       /* Courant number */
+#define COURANTB 0.0       /* Courant number in medium B */
+#define INITIAL_AMP 0.5            /* amplitude of initial condition */
+#define INITIAL_VARIANCE 0.0003    /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.015  /* wavelength of initial condition */
+#define TWOSPEEDS 0          /* set to 1 to replace hardcore boundary by medium with different speed */
 #define WAVE_PACKET_SOURCE_TYPE 1       /* type of wave packet sources */
 #define N_WAVE_PACKETS 15               /* number of wave packets */
+#define OSCIL_LEFT_YSHIFT 0.0   /* y-dependence of left oscillation (for non-horizontal waves) */
+#define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 /* end of constants only used by sub_wave and sub_maze */
 
 #include "global_pdes.c"        /* constants and global variables */
