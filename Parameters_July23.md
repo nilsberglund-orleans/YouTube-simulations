@@ -97,8 +97,6 @@ updated gradually.
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0    /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-// #define NGRIDX 140           /* number of grid point for grid of disks */
-// #define NGRIDY 70           /* number of grid point for grid of disks */
 #define NGRIDX 128           /* number of grid point for grid of disks */
 #define NGRIDY 64           /* number of grid point for grid of disks */
 #define EHRENFEST_RADIUS 0.9    /* radius of container for Ehrenfest urn configuration */
@@ -114,7 +112,6 @@ updated gradually.
 /* Parameters for length and speed of simulation */
 
 #define NSTEPS 3000      /* number of frames of movie */
-// #define NSTEPS 800      /* number of frames of movie */
 #define NVID 80         /* number of iterations between images displayed on screen */
 #define NSEG 250         /* number of segments of boundary */
 #define INITIAL_TIME 0     /* time after which to start saving frames */
@@ -175,8 +172,6 @@ updated gradually.
 
 /* particle properties */
 
-// #define ENERGY_HUE_MIN 330.0        /* color of original particle */
-// #define ENERGY_HUE_MAX 50.0         /* color of saturated particle */
 #define ENERGY_HUE_MIN 360.0        /* color of original particle */
 #define ENERGY_HUE_MAX 0.0         /* color of saturated particle */
 #define PARTICLE_HUE_MIN 359.0      /* color of original particle */
@@ -193,8 +188,6 @@ updated gradually.
 #define EQUILIBRIUM_DIST 3.5    /* Lennard-Jones equilibrium distance */
 #define EQUILIBRIUM_DIST_B 3.5  /* Lennard-Jones equilibrium distance for second type of particle */
 #define REPEL_RADIUS 15.0    /* radius in which repelling force acts (in units of particle radius) */
-// #define DAMPING 45.0          /* damping coefficient of particles */
-// #define DAMPING 35.0          /* damping coefficient of particles */
 #define DAMPING 18.0          /* damping coefficient of particles */
 #define OMEGA_INITIAL 10.0        /* initial angular velocity range */
 #define INITIAL_DAMPING 5.0  /* damping coefficient of particles during initial phase */
@@ -215,9 +208,7 @@ updated gradually.
 #define MU_XI 0.01           /* friction constant in thermostat */
 #define KSPRING_BOUNDARY 1.0e7    /* confining harmonic potential outside simulation region */
 #define KSPRING_OBSTACLE 1.0e11    /* harmonic potential of obstacles */
-// #define NBH_DIST_FACTOR 2.3       /* radius in which to count neighbours */
 #define NBH_DIST_FACTOR 2.7       /* radius in which to count neighbours */
-// #define NBH_DIST_FACTOR 4.0       /* radius in which to count neighbours */
 #define GRAVITY 5000.0             /* gravity acting on all particles */
 #define GRAVITY_X 0.0          /* horizontal gravity acting on all particles */
 #define INCREASE_GRAVITY 0     /* set to 1 to increase gravity during the simulation */
