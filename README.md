@@ -35,7 +35,7 @@ is required by `wave_sphere.c` and should be unzipped before compiling.
 
 - Create subfolders `tif_part`, `tif_drop`
 - Customize constants at beginning of .c file
-- Compile with m̀ake particle_billiard`, `make_drop_billiard`, etc, or
+- Compile with `make particle_billiard`, `make_drop_billiard`, etc, or
 
 `gcc -o particle_billiard particle_billiard.c-O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut`
 
