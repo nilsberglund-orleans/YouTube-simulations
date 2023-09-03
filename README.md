@@ -35,7 +35,7 @@ is required by `wave_sphere.c` and should be unzipped before compiling.
 
 - Create subfolders `tif_part`, `tif_drop`
 - Customize constants at beginning of .c file
-- Compile with 
+- Compile with m̀ake particle_billiard`, `make_drop_billiard`, etc, or
 
 `gcc -o particle_billiard particle_billiard.c-O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut`
 
@@ -76,7 +76,7 @@ in the shell before running the program
 
 - Create subfolders `tif_wave`, `tif_heat`, `tif_bz`, `tif_schrod`
 - Customize constants at beginning of .c file
-- Compile with 
+- Compile with `make wave_billiard`, etc, or
 
 `gcc -o wave_billiard wave_billiard.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
 
@@ -107,7 +107,7 @@ in the shell before running the program
 
 - Create subfolder `tif_ljones`
 - Customize constants at beginning of .c file
-- Compile with 
+- Compile with `make lennardjones` or
 
 `gcc -o lennardjones lennardjones.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
 
@@ -124,7 +124,7 @@ in the shell before running the program
 
 - Create subfolder `tif_perc`
 - Customize constants at beginning of .c file
-- Compile with 
+- Compile with `make percolation` or 
 
 `gcc -o percolation percolation.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
 
