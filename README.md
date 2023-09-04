@@ -55,14 +55,14 @@ in the shell before running the program
 
 1. *wave_billiard.c*:    simulation of the (linear) wave equation
 2. *wave_3d.c*:          3d rendering of wave equation
-3. *wave_sphere.c*:      wave equation on a sphere (3D and 2D render)
+3. *wave_sphere.c*:      wave equation on a sphere (3d and 2d render)
 4. *wave_comparison.c*:  comparison of the wave equation in two different domains
 5. *wave_energy.c*:      a version of `wave_billiard` plotting the energy profile of the wave
 6. *mangrove.c*:         a version of `wave_billiard` with additional features to animate mangroves
 7. *heat.c*:             simulation of the heat equation, with optional drawing of gradient field lines
-8. *rde.c*:              simulation of reaction-diffusion equations, plots in 2D and 3D (including Schrödinger equation, 
+8. *rde.c*:              simulation of reaction-diffusion equations, plots in 2d and 3d (including Schrödinger equation, 
                          Euler equation, and shallow water equation)
-9. *schrodinger.c*:      simulation of the Schrodinger equation in 2D (old version)
+9. *schrodinger.c*:      simulation of the Schrodinger equation in 2d (old version)
 10. *global_pdes.c*:      global variables and parameters
 11. *global_3d.c*:        additional global variables for 3d version
 12. *sub_wave.c*:         drawing/computation routines common to `wave_billiard`, `heat` and `schrodinger`
