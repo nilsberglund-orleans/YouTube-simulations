@@ -53,6 +53,7 @@
 
 #define DPOLE 20         /* safety distance to poles */
 #define SMOOTHPOLE 0.1     /* smoothing coefficient at poles */
+#define ZERO_MERIDIAN 0.0     /* choice of zero meridian (will be at left/right boundary of 2d plot) */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
@@ -61,10 +62,10 @@
 
 #define HIGHRES 0        /* set to 1 if resolution of grid is double that of displayed image */
 
-#define JULIA_SCALE 0.25     /* scaling for Julia sets */
-#define JULIA_ROT 90.0       /* rotation of Julia set, in degrees */
-#define JULIA_RE -0.77145    
-#define JULIA_IM -0.10295    /* parameters for Julia sets */
+#define JULIA_SCALE 0.6  /* scaling for Julia sets */
+#define JULIA_ROT -20.0       /* rotation of Julia set, in degrees */
+#define JULIA_RE 0.5    
+#define JULIA_IM 0.462    /* parameters for Julia sets */
 
 /* Choice of the billiard table */
 
@@ -77,7 +78,7 @@
 #define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
 
 #define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
-#define IOR 9               /* choice of index of refraction, see list in global_pdes.c */
+#define IOR 10              /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.0 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
 
@@ -114,7 +115,7 @@
 
 /* Physical parameters of wave equation */
 
-#define TWOSPEEDS 0          /* set to 1 to replace hardcore boundary by medium with different speed */
+#define TWOSPEEDS 1          /* set to 1 to replace hardcore boundary by medium with different speed */
 #define OSCILLATE_LEFT 0     /* set to 1 to add oscilating boundary condition on the left */
 #define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
 #define OSCILLATION_SCHEDULE 3  /* oscillation schedule, see list in global_pdes.c */
@@ -124,7 +125,7 @@
 #define ACHIRP 0.2        /* acceleration coefficient in chirp */
 #define DAMPING 0.0       /* damping of periodic excitation */
 #define COURANT 0.05       /* Courant number */
-#define COURANTB 0.01      /* Courant number in medium B */
+#define COURANTB 0.002    /* Courant number in medium B */
 #define GAMMA 0.0          /* damping factor in wave equation */
 #define GAMMAB 1.0e-6         /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
@@ -155,7 +156,7 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 3600       /* number of frames of movie */
+#define NSTEPS 2500       /* number of frames of movie */
 #define NVID 4            /* number of iterations between images displayed on screen */
 #define NSEG 1000          /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
@@ -167,15 +168,14 @@
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1        /* final sleeping time */
 #define MID_FRAMES 100    /* number of still frames between parts of two-part movie */
-#define END_FRAMES 100   /* number of still frames at end of movie */
+#define END_FRAMES 500   /* number of still frames at end of movie */
 #define FADE 1           /* set to 1 to fade at end of movie */
-#define ROTATE_VIEW_WHILE_FADE 1    /* set to 1 to keep rotating viewpoint during fade */
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 0.75            /* amplitude of initial condition */
-#define INITIAL_VARIANCE 0.0005  /* variance of initial condition */
-#define INITIAL_WAVELENGTH  0.025  /* wavelength of initial condition */
+#define INITIAL_AMP 0.5            /* amplitude of initial condition */
+#define INITIAL_VARIANCE 0.001  /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.05  /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 
@@ -188,15 +188,15 @@
 #define CHANGE_LUMINOSITY 1     /* set to 1 to let luminosity depend on energy flux intensity */
 #define FLUX_WINDOW 30          /* size of averaging window of flux intensity */
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of plot */
-#define SHADE_3D 1              /* set to 1 to change luminosity according to normal vector */
-#define SHADE_2D 0              /* set to 1 to change luminosity according to normal vector to plane */
+#define SHADE_3D 0              /* set to 1 to change luminosity according to normal vector */
+#define SHADE_2D 1              /* set to 1 to change luminosity according to normal vector to plane */
 #define SHADE_WAVE 1            /* set to 1 to have luminosity depend on wave height */
 #define NON_DIRICHLET_BC 0      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
 #define FLOOR_ZCOORD 1          /* set to 1 to draw only facets with z not too negative */
 #define DRAW_BILLIARD 0         /* set to 1 to draw boundary */
 #define DRAW_BILLIARD_FRONT 0   /* set to 1 to draw front of boundary after drawing wave */
 #define DRAW_CONSTRUCTION_LINES 0   /* set to 1 to draw construction lines of certain domains */
-#define FADE_IN_OBSTACLE 1      /* set to 1 to fade color inside obstacles */
+#define FADE_IN_OBSTACLE 0      /* set to 1 to fade color inside obstacles */
 #define DRAW_OUTSIDE_GRAY 0     /* experimental, draw outside of billiard in gray */
 #define SHADE_SCALE_2D 10.0     /* controls "depth" of 2D shading */
 #define COS_LIGHT_MIN 0.0       /* controls angle-dependence of 2D shading */
@@ -208,16 +208,19 @@
 /* 3D representation */
 
 #define REPRESENTATION_3D 1     /* choice of 3D representation */ 
-#define PLOT_2D 0               /* switch to 2D representation, equirectangular projection */
+#define PLOT_2D 1               /* switch to 2D representation, equirectangular projection */
 #define PHISHIFT 0.0            /* shift of phi in 2D plot (in degrees) */
+#define FLOODING 1              /* set to 1 to draw waves above altitude (for Earth representations) */
 
 #define REP_AXO_3D 0        /* linear projection (axonometry) */
 #define REP_PROJ_3D 1       /* projection on plane orthogonal to observer line of sight */
 
 #define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
-#define ROTATE_ANGLE -360.0   /* total angle of rotation during simulation */
+#define ROTATE_ANGLE 75.0   /* total angle of rotation during simulation */
+#define ROTATE_VIEW_WHILE_FADE 1    /* set to 1 to keep rotating viewpoint during fade */
 
-#define VIEWPOINT_TRAJ 1    /* type of viewpoint trajectory */
+#define VIEWPOINT_TRAJ 2    /* type of viewpoint trajectory */
+#define MAX_LATITUDE 45.0   /* maximal latitude for viewpoint trajectory VP_ORBIT2 */
 
 /* Color schemes */
 
@@ -233,18 +236,18 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
-#define VSCALE_AMPLITUDE 1.0   /* additional scaling factor for color scheme P_3D_AMPLITUDE */
-#define VSCALE_ENERGY 10.0     /* additional scaling factor for color scheme P_3D_ENERGY */
+#define VSCALE_AMPLITUDE 1.5   /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSCALE_ENERGY 4.0     /* additional scaling factor for color scheme P_3D_ENERGY */
 #define PHASE_FACTOR 20.0      /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0    /* exponential attenuation coefficient of contrast with time */
-#define E_SCALE 100.0       /* scaling factor for energy representation */
+#define E_SCALE 150.0      /* scaling factor for energy representation */
 #define LOG_SCALE 0.75     /* scaling factor for energy log representation */
 #define LOG_SHIFT 0.5      /* shift of colors on log scale */
 #define LOG_ENERGY_FLOOR -10.0    /* floor value for log of (total) energy */
 #define LOG_MEAN_ENERGY_SHIFT 1.0   /* additional shift for log of mean energy */
-#define FLUX_SCALE 600.0    /* scaling factor for energy flux representation */
-#define FLUX_CSCALE 5.0      /* scaling factor for color in energy flux representation */
+#define FLUX_SCALE 1200.0    /* scaling factor for energy flux representation */
+#define FLUX_CSCALE 2.0      /* scaling factor for color in energy flux representation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
@@ -261,9 +264,9 @@
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_WIDTH 0.02     /* half width of maze walls */
 
-#define DRAW_COLOR_SCHEME 1       /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 3.0      /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 2.0    /* scale of color scheme bar for 2nd part */
+#define DRAW_COLOR_SCHEME 0       /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 2.0      /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 3.0    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0     /* set to 1 to draw color scheme horizontally */
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
 #define CIRC_COLORBAR_B 0       /* set to 1 to draw circular color scheme */
@@ -276,7 +279,6 @@
 #define POT_FACT 20.0
 /* end of constants only used by sub_wave and sub_maze */
 
-
 /* For debugging purposes only */
 #define FLOOR 1         /* set to 1 to limit wave amplitude to VMAX */
 #define VMAX 10.0       /* max value of wave amplitude */
@@ -286,18 +288,27 @@
 double u_3d[2] = {0.75, -0.45};     /* projections of basis vectors for REP_AXO_3D representation */
 double v_3d[2] = {-0.75, -0.45};
 double w_3d[2] = {0.0, 0.015};
-double light[3] = {0.816496581, -0.40824829, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
-double observer[3] = {6.0, 8.0, 2.5};    /* location of observer for REP_PROJ_3D representation */ 
+double light[3] = {-0.816496581, 0.40824829, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
+double observer[3] = {-5.0, 8.0, -7.0};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
+
+#define ADD_DEM 1               /* add DEM (digital elevation model) */
+#define ADD_NEGATIVE_DEM 0      /* add DEM with bathymetric data */
+#define RSCALE_DEM 0.1          /* scaling factor of radial component for DEM */
+#define SMOOTH_DEM 0            /* set to 1 to smoothen DEM (to make altitude less constant) */
+#define DEM_SMOOTH_STEPS 10     /* number of smoothening steps */
+#define DEM_SMOOTH_HEIGHT 0.5   /* relative height below which to smoothen */
+#define DEM_MAXHEIGHT 8000      /* max height of DEM (estimated from Everest) */
+#define PLANET_SEALEVEL 2500.0      /* sea level for flooded planet */
 
 #define RSCALE 0.01             /* scaling factor of radial component */
 #define RMAX 10.0               /* max value of radial component */
-#define Z_SCALING_FACTOR 0.8    /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define Z_SCALING_FACTOR 0.85   /* overall scaling factor of z axis for REP_PROJ_3D representation */
 #define XY_SCALING_FACTOR 2.0   /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0         /* max value of z coordinate for REP_PROJ_3D representation */
 #define XSHIFT_3D 0.0           /* overall x shift for REP_PROJ_3D representation */
 #define YSHIFT_3D 0.0           /* overall y shift for REP_PROJ_3D representation */
-#define COS_VISIBLE -0.75        /* limit on cosine of normal to shown facets */
+#define COS_VISIBLE -0.5        /* limit on cosine of normal to shown facets */
 
 #include "global_pdes.c"        /* constants and global variables */
 #include "global_3d.c"          /* constants and global variables */
@@ -498,25 +509,36 @@ void evolve_wave(double phi[NX*NY], double psi[NX*NY], double tmp[NX*NY], short 
 void draw_color_bar_palette(int plot, double range, int palette, int circular, int fade, double fade_value)
 {
 //     double width = 0.2;
-    double width = 0.14;
+    double width = 0.12;
 //     double width = 0.2;
     
     width *= (double)NX/(double)WINWIDTH;
     
-    if (ROTATE_COLOR_SCHEME) 
-        draw_color_scheme_palette_3d(-1.0, -0.8, XMAX - 0.1, -1.0, plot, -range, range, palette, fade, fade_value);
-    else if (circular)
-        draw_circular_color_scheme_palette_3d(XMAX - 2.0*width, YMIN + 2.0*width, 1.5*width, 1.3*width, plot, -range, range, palette, fade, fade_value);
-    else 
-        draw_color_scheme_palette_3d(XMAX - 1.5*width, YMIN + 0.1, XMAX - 0.5*width, YMAX - 0.1, plot, -range, range, palette, fade, fade_value);
+    if (PLOT_2D)
+    {
+        if (ROTATE_COLOR_SCHEME) 
+            draw_color_scheme_palette_fade(XMIN + 0.6, YMIN + 0.1, XMAX - 0.6, YMIN + 0.1 + width, plot, -range, range, palette, fade, fade_value);
+        else 
+            draw_color_scheme_palette_fade(XMAX - 1.5*width, YMIN + 0.1, XMAX - 0.5*width, YMAX - 0.1, plot, -range, range, palette, fade, fade_value);
+    }
+    else
+    {
+        if (ROTATE_COLOR_SCHEME) 
+            draw_color_scheme_palette_3d(-1.0, -0.8, XMAX - 0.1, -1.0, plot, -range, range, palette, fade, fade_value);
+        else if (circular)
+            draw_circular_color_scheme_palette_3d(XMAX - 2.0*width, YMIN + 2.0*width, 1.5*width, 1.3*width, plot, -range, range, palette, fade, fade_value);
+        else 
+            draw_color_scheme_palette_3d(XMAX - 1.5*width, YMIN + 0.1, XMAX - 0.5*width, YMAX - 0.1, plot, -range, range, palette, fade, fade_value);
+    }
+
 }
 
 void viewpoint_schedule(int i)
 /* change position of observer */
 {
     int j;
-    double angle, ca, sa, r1;
-    static double observer_initial[3], r, ratio;
+    double angle, ca, sa, r1, interpolate, rho;
+    static double observer_initial[3], r, ratio, rho0, zmax;
     static int first = 1;
     
     if (first)
@@ -525,10 +547,14 @@ void viewpoint_schedule(int i)
         r1 = observer[0]*observer[0] + observer[1]*observer[1];
         r = sqrt(r1 + observer[2]*observer[2]);
         ratio = r/sqrt(r1);
+        rho0 = module2(observer[0], observer[1]);
+        if (vabs(rho0) < 0.001) rho0 = 0.001; 
+        zmax = r*sin(MAX_LATITUDE*PI/180.0);
         first = 0;
     }
     
-    angle = (ROTATE_ANGLE*DPI/360.0)*(double)i/(double)NSTEPS;
+    interpolate = (double)i/(double)NSTEPS;
+    angle = (ROTATE_ANGLE*DPI/360.0)*interpolate;
     ca = cos(angle);
     sa = sin(angle);
     switch (VIEWPOINT_TRAJ)
@@ -545,6 +571,21 @@ void viewpoint_schedule(int i)
             observer[1] = ca*observer_initial[1] + sa*observer_initial[0]*ratio;
             observer[2] = ca*observer_initial[2];
             break;
+        }
+        case (VP_ORBIT2):
+        {
+            observer[0] = ca*observer_initial[0] - sa*observer_initial[1]*ratio;
+            observer[1] = ca*observer_initial[1] + sa*observer_initial[0]*ratio;
+            observer[2] = sa*zmax;
+            break;
+        }
+        case (VP_POLAR):
+        {
+            rho = -sa*observer_initial[2] + ca*rho0;
+            observer[0] = observer_initial[0]*rho/rho0;
+            observer[1] = observer_initial[1]*rho/rho0;
+            observer[2] = ca*observer_initial[2] + sa*rho0;
+            break; 
         }
     }
     
@@ -630,10 +671,7 @@ void animation()
     courant2 = COURANT*COURANT;
     courantb2 = COURANTB*COURANTB;
     c = COURANT*(XMAX - XMIN)/(double)NX;
-//     a = 0.015;
-//     b = 0.0003;
-//     a = 0.04;
-//     b = 0.0018;
+
     a = 0.05;
     b = 0.0016;
     
@@ -674,16 +712,18 @@ void animation()
 //     for (j=1; j<NPOLY; j++)
 //         add_circular_wave_mod(1.0, lambda1*cos(((double)j+0.5)*angle), lambda1*sin(((double)j+0.5)*angle), phi, psi, xy_in);
         
-    init_circular_wave_sphere(0.7, 0.5, phi, psi, xy_in, wsphere);
 //     init_wave_flat_sphere(phi, psi, xy_in, wsphere);
-//     init_circular_wave_sphere(0.25 + PID, 0.0, phi, psi, xy_in, wsphere);
-//     add_circular_wave_sphere(-1.0, 0.25 + 3.0*PID, 0.0, phi, psi, xy_in, wsphere);
-
+    init_circular_wave_sphere(123.3*PI/180.0, -48.8*PI/180.0, phi, psi, xy_in, wsphere);
+    
+//     add_circular_wave_sphere(1.0, 1.0 - PI/9.0 + DPI/3.0, 0.15, phi, psi, xy_in, wsphere);
+//     add_circular_wave_sphere(1.0, 1.0 - PI/9.0 + 2.0*DPI/3.0, 0.15, phi, psi, xy_in, wsphere);
     
 //     printf("Wave initialized\n");
 
     /* initialize table of wave speeds/dissipation */
-    init_speed_dissipation(xy_in, tc, tcc, tgamma);
+    init_speed_dissipation_sphere(xy_in, tc, tcc, tgamma, wsphere);
+    
+    
     
     /* initialze potential to add to z coordinate */ 
     if (ADD_POTENTIAL)

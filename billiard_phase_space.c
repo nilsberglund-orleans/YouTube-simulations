@@ -30,7 +30,7 @@
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
 #include <time.h>
 
-#define MOVIE 1         /* set to 1 to generate movie */
+#define MOVIE 0         /* set to 1 to generate movie */
 #define SAVE_MEMORY 1       /* set to 1 to save memory when writing tiff images */
 
 #define WINWIDTH 	1280  /* window width */
@@ -52,7 +52,7 @@
 
 /* Choice of the billiard table, see global_particles.c */
 
-#define B_DOMAIN 11      /* choice of domain shape */
+#define B_DOMAIN 1      /* choice of domain shape */
 
 #define CIRCLE_PATTERN 6   /* pattern of circles */
 #define POLYLINE_PATTERN 4  /* pattern of polyline */
@@ -67,8 +67,8 @@
 #define NGOLDENSPIRAL 2000  /* max number of points for C_GOLDEN_SPIRAL arrandement */
 #define SDEPTH 2            /* Sierpinski gastket depth */
 
-#define LAMBDAMIN 6.0	/* parameter controlling shape of domain */
-#define LAMBDA 20.0	/* parameter controlling shape of domain */
+#define LAMBDAMIN 0.0	/* parameter controlling shape of domain */
+#define LAMBDA 1.5	/* parameter controlling shape of domain */
 #define MU 1.0          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 6             /* number of sides of polygon */
@@ -96,7 +96,7 @@
 #define PRINT_TRAJECTORY_LENGTH 0   /* set to 1 to print length of trajectory 0 */
 #define PRINT_TRAJECTORY_PERIOD 0   /* set to 1 to print period of trajectory 0 */
 #define DRAW_LENGTHS_PLOT 0         /* set to 1 to plot trajectory lengths */
-#define LENGTHS_LOG_SCALE 1         /* set to 1 to use log scale for plot of lengths */
+#define LENGTHS_LOG_SCALE 0         /* set to 1 to use log scale for plot of lengths */
 #define MAX_ANGLE 90.0         /* range of angles of trajectory */
 
 #define NSTEPS 4000      /* number of frames of movie */
@@ -141,7 +141,7 @@
 #define PLOT_LYAPUNOV 1     /* set to 1 to add plot of Lyapunov exponents */
 #define LOGSCALEX_LYAP 0    /* set to 1 to use log scale on parameter axis of Lyapunov exponents */
 #define LYAP_MAX 1.0        /* maximal Lyapunov exponent */
-#define ADAPT_TO_SYMMETRY 1 /* set to 1 to show only one symmetric part of phase space */
+#define ADAPT_TO_SYMMETRY 0 /* set to 1 to show only one symmetric part of phase space */
 #define SYMMETRY_FACTOR 3   /* proportion of phase space to be shown */
 
 #define PAUSE 1000       /* number of frames after which to pause */

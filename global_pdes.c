@@ -77,6 +77,7 @@
 #define D_ONE_FUNNEL 581        /* one funnel */
 #define D_LENSES_RING 59        /* several lenses forming a ring */
 #define D_MAZE_CIRCULAR 60      /* circular maze */
+#define D_LENS 61               /* symmetric lens made of circular faces */
 
 #define D_WING 70               /* complement of wing-shaped domain */
 #define D_TESLA 71              /* Tesla valve */
@@ -89,6 +90,9 @@
 #define D_SPHERE_JULIA 82       /* Julia set on Riemann sphere */
 #define D_SPHERE_JULIA_INV 83   /* inverted Julia set on Riemann sphere */
 #define D_SPHERE_EARTH 84       /* map of the Earth */
+#define D_SPHERE_JULIA_CUBIC 85 /* Julia set for cubic polynomial on Riemann sphere */
+#define D_SPHERE_MARS 86        /* map of Mars */
+#define D_SPHERE_MOON 87        /* map of the Moon */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
@@ -149,6 +153,8 @@
 #define IOR_POISSON_WELLS 8     /* wells located on a random Poisson disc process */
 #define IOR_PPP_WELLS 9         /* wells located on a Poisson point process */
 
+#define IOR_EARTH_DEM 10        /* digital elevation model (for waves on sphere) */
+
 /* Boundary conditions */
 
 #define BC_DIRICHLET 0   /* Dirichlet boundary conditions */
@@ -166,6 +172,18 @@
 #define OSC_SLOWING 1   /* oscillation of slowing frequency (anti-chirp) */
 #define OSC_WAVE_PACKET 2   /* Gaussian wave packet */
 #define OSC_CHIRP 3     /* chirp (linearly accelerating frequency) */
+
+/* Wave packet types */
+
+#define WP_RANDOM1 0    /* random, variant 1 */
+#define WP_RANDOM2 1    /* random, variant 2 */
+#define WP_PAIR 2       /* 2 sources */
+
+/* Wave packet envelope types */
+
+#define WE_SINE 0       /* sine envelope */
+#define WE_CUTOFF 1     /* sharp cut-off */
+#define WE_CONSTANT 2   /* constant envelope */
 
 /* For debugging purposes only */
 // #define FLOOR 0         /* set to 1 to limit wave amplitude to VMAX */

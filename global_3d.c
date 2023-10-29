@@ -65,6 +65,14 @@
 
 #define VP_HORIZONTAL 0     /* rotate in a horizontal plane */
 #define VP_ORBIT 1          /* rotate in a plane containing the origin */
+#define VP_ORBIT2 11        /* rotate in a plane specified by max latitude */
+#define VP_POLAR 2          /* polar orbit */
+
+/* Type of digital elevation model */
+
+#define DEM_EARTH 0         /* DEM of Earth */
+#define DEM_MARS 1          /* DEM of Mars */
+#define DEM_MOON 2          /* DEM of the Moon */
 
 /* macros to avoid unnecessary computations in 3D plots */
 
@@ -84,6 +92,9 @@
 #define COMPUTE_ENERGY_FLUX ((ZPLOT == P_3D_FLUX_INTENSITY)||(CPLOT == P_3D_FLUX_INTENSITY)||(ZPLOT_B == P_3D_FLUX_INTENSITY)||(CPLOT_B == P_3D_FLUX_INTENSITY)||(ZPLOT == P_3D_FLUX_DIRECTION)||(CPLOT == P_3D_FLUX_DIRECTION)||(ZPLOT_B == P_3D_FLUX_DIRECTION)||(CPLOT_B == P_3D_FLUX_DIRECTION))
 
 #define COMPUTE_TOTAL_ENERGY ((ZPLOT == P_3D_TOTAL_ENERGY)||(CPLOT == P_3D_TOTAL_ENERGY)||(ZPLOT == P_3D_LOG_TOTAL_ENERGY)||(CPLOT == P_3D_LOG_TOTAL_ENERGY)||(ZPLOT == P_3D_MEAN_ENERGY)||(CPLOT == P_3D_MEAN_ENERGY)||(ZPLOT == P_3D_LOG_MEAN_ENERGY)||(CPLOT == P_3D_LOG_MEAN_ENERGY)||(ZPLOT_B == P_3D_TOTAL_ENERGY)||(CPLOT_B == P_3D_TOTAL_ENERGY)||(ZPLOT_B == P_3D_LOG_TOTAL_ENERGY)||(CPLOT_B == P_3D_LOG_TOTAL_ENERGY)||(ZPLOT_B == P_3D_MEAN_ENERGY)||(CPLOT_B == P_3D_MEAN_ENERGY)||(ZPLOT_B == P_3D_LOG_MEAN_ENERGY)||(CPLOT_B == P_3D_LOG_MEAN_ENERGY))
+
+#define PLANET ((B_DOMAIN == D_SPHERE_EARTH)||(B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON))
+#define OTHER_PLANET ((B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON))
 
 #define NMAXCIRC_SPHERE 100     /* max number of circles on sphere */
 
@@ -154,6 +165,9 @@ typedef struct
     double r, g, b;             /* RGB values for image */
     short int indomain;         /* has value 1 if lattice point is in domain */
     double x2d, y2d;            /* x and y coordinates for 2D representation */
+    double altitude;            /* altitude in case of Earth with digital elevation model */
+    double cos_angle;           /* cosine of light angle */
+    double cos_angle_sphere;    /* cosing of light angle for perfect sphere */
 } t_wave_sphere;
 
 

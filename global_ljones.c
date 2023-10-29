@@ -75,8 +75,10 @@
 #define S_BIN_OPENING 20        /* bin containing particles opening at deactivation time */
 #define S_POLYGON_EXT 21        /* exterior of a regular polygon */
 #define S_WEDGE_EXT 22          /* exterior of a wedge */ 
-#define S_MIXER 23              /* exterior of a set of fan of rectangles */
+#define S_MIXER 23              /* exterior of a blender made of rectangles */
 #define S_AIRFOIL 24            /* exterior of an air foil */
+#define S_COANDA 25             /* wall for Coanda effect */
+#define S_COANDA_SHORT 26       /* shorter wall for Coanda effect */
 
 /* particle interaction */
 
@@ -92,6 +94,7 @@
 #define I_VICSEK_REPULSIVE 9  /* Vicsek-type interaction with harmonic repulsion */
 #define I_VICSEK_SPEED 10   /* Vicsek-type interaction with speed adjustment */
 #define I_VICSEK_SHARK 11   /* Vicsek-type interaction with speed adjustment, and one shark */
+#define I_COULOMB_LJ 12     /* Coulomb force regularised by Lennard-Jones repulsion */
 
 /* Boundary conditions */
 
@@ -178,6 +181,17 @@
 #define IC_TWOROCKETS 8    /* type 1 or 2 depending on rocket position */
 #define IC_TWOROCKETS_TWOFUELS 9    /* type 1 and 2 or 1 and 3 depending on rocket */
 
+/* Initial conditions for option TWO_TYPES */
+
+#define TTC_RANDOM 0        /* assign types randomly */
+#define TTC_CHESSBOARD 1    /* assign types according to chessboard, works with hex initial config */
+#define TTC_COANDA 2        /* type 1 in a band of width LAMBDA */
+
+/* Initial speed distribution */
+
+#define VI_RANDOM 0         /* random (Gaussian) initial speed distribution */
+#define VI_COANDA 1         /* nonzero speed in a band of width LAMBDA */
+
 /* Plot types */
 
 #define P_KINETIC 0       /* colors represent kinetic energy of particles */
@@ -196,6 +210,11 @@
 #define P_EMEAN 13        /* averaged kinetic energy (with exponential damping) */
 #define P_DIRECT_EMEAN 14 /* averaged version of P_DIRECT_ENERGY */
 #define P_NOPARTICLE 15   /* particles are not drawn (only the links between them) */
+
+/* Rotation schedules */
+
+#define ROT_SPEEDUP_SLOWDOWN 0  /* rotation speeds up and then slows down to zero */
+#define ROT_BACK_FORTH 1        /* rotation goes in one direction and then back */
 
 /* Initial position dependence types */
 
@@ -241,6 +260,7 @@ typedef struct
     double vy;                  /* y velocity of particle */
     double omega;               /* angular velocity of particle */
     double mass_inv;            /* inverse of particle mass */
+    double charge;              /* electric charge */
     double inertia_moment_inv;  /* inverse of moment of inertia */
     double fx;                  /* x component of force on particle */
     double fy;                  /* y component of force on particle */
@@ -313,6 +333,8 @@ typedef struct
     double angle01, angle02;    /* initial values of angles in which concave corners repel */
     double fx, fy;              /* x and y-components of force on segment */
     double torque;              /* torque on segment with respect to its center */
+    double pressure;            /* pressure acting on segement */
+    double avrg_pressure;       /* time-averaged pressure */
     short int inactivate;       /* set to 1 for segment to become inactive at time SEGMENT_DEACTIVATION_TIME */
 } t_segment;
 
@@ -361,6 +383,7 @@ typedef struct
     double angle;               /* orientation of obstacle */
     double omega;               /* angular speed of obstacle */
     double bdry_fx, bdry_fy;    /* components of boundary force */
+    double efield, bfield;      /* electric and magnetic field */
 } t_lj_parameters;
 
 int ncircles, nobstacles, nsegments, ngroups = 1, counter = 0;

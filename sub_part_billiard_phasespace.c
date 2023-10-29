@@ -112,8 +112,8 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
   glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
-  TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (uint32) width);
-  TIFFSetField(file, TIFFTAG_IMAGELENGTH, (uint32) height);
+  TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (uint32_t) width);
+  TIFFSetField(file, TIFFTAG_IMAGELENGTH, (uint32_t) height);
   TIFFSetField(file, TIFFTAG_BITSPERSAMPLE, 8);
   TIFFSetField(file, TIFFTAG_COMPRESSION, compression);
   TIFFSetField(file, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);

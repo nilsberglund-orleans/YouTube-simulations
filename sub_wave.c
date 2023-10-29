@@ -30,8 +30,8 @@ int writetiff_new(char *filename, char *description, int x, int y, int width, in
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
   glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
-  TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (uint32) width);
-  TIFFSetField(file, TIFFTAG_IMAGELENGTH, (uint32) height);
+  TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (uint32_t) width);
+  TIFFSetField(file, TIFFTAG_IMAGELENGTH, (uint32_t) height);
   TIFFSetField(file, TIFFTAG_BITSPERSAMPLE, 8);
   TIFFSetField(file, TIFFTAG_COMPRESSION, compression);
   TIFFSetField(file, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
@@ -85,8 +85,8 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
   glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
-  TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (uint32) width);
-  TIFFSetField(file, TIFFTAG_IMAGELENGTH, (uint32) height);
+  TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (uint32_t) width);
+  TIFFSetField(file, TIFFTAG_IMAGELENGTH, (uint32_t) height);
   TIFFSetField(file, TIFFTAG_BITSPERSAMPLE, 8);
   TIFFSetField(file, TIFFTAG_COMPRESSION, compression);
   TIFFSetField(file, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
@@ -3130,6 +3130,13 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             }
             return(1);
         }
+        case (D_LENS):
+        {
+            if (vabs(y) > MU) return(1);
+            a = LAMBDA - 0.25;
+            if (x > 0) return ((x+a)*(x+a) + y*y > LAMBDA*LAMBDA);
+            return ((x-a)*(x-a) + y*y > LAMBDA*LAMBDA);
+        }
         case (D_MENGER):       
         {
             x1 = 0.5*(x+1.0);
@@ -4535,6 +4542,22 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 y = sa*(LAMBDA + ll);
                 draw_circle_arc(x, y, MU, PI-arcangle + APOLY*PID + (double)i*salpha, 2.0*arcangle, NSEG);
             }
+            break;
+        }
+        case (D_LENS):
+        {
+            a = LAMBDA - 0.25;
+            if (first)
+            {
+                arcangle = asin(MU/LAMBDA);
+                ll = LAMBDA*cos(arcangle) - a;
+                first = 0;
+            }
+            
+            draw_circle_arc(-a, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_line(ll, MU, -ll, MU);
+            draw_circle_arc(a, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            draw_line(-ll, -MU, ll, -MU);
             break;
         }
         case (D_MENGER):
@@ -6330,7 +6353,7 @@ void init_wave_packets(t_wave_packet *packet, int radius)
     
     printf("Initialising wave packets\n");
     switch (WAVE_PACKET_SOURCE_TYPE) {
-        case (0): 
+        case (WP_RANDOM1): 
         {
             nx = (int)sqrt((double)N_WAVE_PACKETS);
             ny = N_WAVE_PACKETS/nx;
@@ -6356,20 +6379,38 @@ void init_wave_packets(t_wave_packet *packet, int radius)
             
             break;
         }
-        case (1): 
+        case (WP_RANDOM2): 
         {
             for (i=0; i<N_WAVE_PACKETS; i++)
             {
-//                 j = i/nx;
-//                 k = i%nx;
                 packet[i].xc = XMIN + 0.15*(XMAX - XMIN)*(double)rand()/RAND_MAX;
                 packet[i].yc = 0.4*(YMAX - YMIN)*((double)rand()/RAND_MAX - 0.5);
-//                 packet[i].period = 30.0*(1.0 + 0.5*(double)rand()/RAND_MAX);
                 packet[i].period = 50.0*(1.0 + 0.5*(double)rand()/RAND_MAX);
                 packet[i].amp = INITIAL_AMP;
                 packet[i].phase = DPI*(double)rand()/RAND_MAX;
                 packet[i].var_envelope = 1500.0 + 500.0*(double)rand()/RAND_MAX;
                 packet[i].time_shift = 10 + rand()%200;
+                
+                xy_to_ij(packet[i].xc, packet[i].yc, ij);
+                if(ij[0] <= radius) ij[0] = radius+1;
+                packet[i].ix = ij[0];
+                packet[i].iy = ij[1]; 
+            }
+            
+            break;
+        }
+        case (WP_PAIR):
+        {
+            for (i=0; i<2; i++)
+            {
+                packet[i].xc = -1.25;
+                packet[i].yc = 0.06;
+                if (i==1) packet[i].yc *= -1.0;
+                packet[i].period = OSCILLATING_SOURCE_PERIOD;
+                packet[i].amp = INITIAL_AMP;
+                packet[i].phase = 0.0;
+                packet[i].var_envelope = 100000.0;
+                packet[i].time_shift = 0;
                 
                 xy_to_ij(packet[i].xc, packet[i].yc, ij);
                 if(ij[0] <= radius) ij[0] = radius+1;
@@ -6390,16 +6431,21 @@ double wave_packet_height(double t, t_wave_packet packet, int type_envelope)
     cwave = packet.amp*cos(DPI*t/packet.period + packet.phase);
     
     switch (type_envelope) {
-        case (0): 
+        case (WE_SINE): 
         {
             envelope = 0.1 + sin(DPI*t/packet.var_envelope);
             envelope = envelope*envelope;
             break;
         }
-        case (1): 
+        case (WE_CUTOFF): 
         {
             if (t < (double)packet.var_envelope) envelope = 1.0;
             else envelope = 0.0;
+            break;
+        }
+        case (WE_CONSTANT):
+        {
+            envelope = 1.0;
             break;
         }
     }

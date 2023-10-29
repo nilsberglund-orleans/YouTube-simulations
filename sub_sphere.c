@@ -53,6 +53,8 @@ void init_wave_sphere(t_wave_sphere wsphere[NX*NY])
             wsphere[i*NY+j].y = wsphere[i*NY+j].sphi*wsphere[i*NY+j].stheta;
             wsphere[i*NY+j].z = -wsphere[i*NY+j].ctheta;
             
+            wsphere[i*NY+j].radius = 1.0;
+            
             ij_to_xy(NX-1-i,j,xy);
 //             xy[0] = XMIN + ((double)(NX-i-1))*(XMAX-XMIN)/((double)NX);
 //             xy[1] = YMIN + ((double)(j-DPOLE))*(YMAX-YMIN)/((double)(NY-2*DPOLE));
@@ -64,6 +66,8 @@ void init_wave_sphere(t_wave_sphere wsphere[NX*NY])
             
             wsphere[i*NY+j].x2d = xy[0]; 
             wsphere[i*NY+j].y2d = xy[1]; 
+            
+            wsphere[i*NY+j].cos_angle_sphere = wsphere[i*NY+j].x*light[0] + wsphere[i*NY+j].y*light[1] + wsphere[i*NY+j].z*light[2];
         }
         
         /* cotangent, taking care of not dividing by zero */
@@ -74,10 +78,524 @@ void init_wave_sphere(t_wave_sphere wsphere[NX*NY])
 }
 
 
+void read_negative_dem_values(double *height_values, t_wave_sphere wsphere[NX*NY])
+/* init bathymetric data */
+{
+    int i, j, k, ii, jj, nx, ny, maxrgb, nmaxpixels = 6480000, hmin, hmax, ishift, nshift, sshift, rgbval, scan, rgbtot;
+    int *rgb_values, *int_height_values;
+    int hcont = 50, rgbdiff;
+    double cratio, rx, ry, height;
+    double *height_values_tmp, *height_values_tmp2;
+    FILE *image_file;
+    
+    printf("Reading bathymetric data\n");
+    
+    rgb_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+    int_height_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+    height_values_tmp = (double *)malloc(NX*NY*sizeof(double));
+    height_values_tmp2 = (double *)malloc(NX*NY*sizeof(double));
+    
+//     image_file = fopen("bathymetry_gebco_3600x1800_color.ppm", "r");
+    image_file = fopen("bathymetry_gebco_2560_1280_mod2_color.ppm", "r");
+    scan = fscanf(image_file,"%i %i\n", &nx, &ny);
+    scan = fscanf(image_file,"%i\n", &maxrgb);
+    
+    for (i=0; i<NX*NY; i++) 
+    {
+        height_values_tmp[i] = 0.0;
+        height_values_tmp2[i] = 0.0;
+    }
+    
+    hmin = maxrgb;
+    hmax = 0;
+    
+    if (nx*ny > nmaxpixels)
+    {
+        printf("bathymetric data file too large, increase nmaxpixels in read_negative_dem_values()\n");
+        exit(0);
+    }
+    
+    /* shift due to min/max latitudes of image */
+    sshift = 0 + DPOLE;
+    nshift = 0 + DPOLE; 
+    
+    /* choice of zero meridian */
+    ishift = (int)(nx*ZERO_MERIDIAN/360.0);
+    
+    /* read rgb values */
+    for (j=0; j<ny; j++)
+        for (i=0; i<nx; i++)
+        {
+            rgbtot = 0;
+            for (k=0; k<3; k++)
+            {
+                scan = fscanf(image_file,"%i\n", &rgbval);
+                rgb_values[3*(j*nx+i)+k] = rgbval;
+                rgbtot += rgbval;
+            }
+            if ((rgbtot < hmin)&&(rgbtot > hcont)) hmin = rgbtot;
+            if (rgbtot > hmax) hmax = rgbtot;
+            int_height_values[3*(j*nx+i)] = rgbtot;
+        }
+    
+    printf("hmin = %i, hmax = %i\n", hmin, hmax);
+    
+    /* remove remaining black continents */
+    for (i=0; i<3*nx*ny; i++) if (int_height_values[i] < hcont) int_height_values[i] = hmax;
+    
+    cratio = 1.0/(double)(hmax-hmin);
+    rx = (double)nx/(double)NX;
+    ry = (double)ny/(double)(NY - sshift - nshift);
+    
+    /* option: set continents color to white */
+//     for (i=0; i<NX; i++)
+//         for (j=0; j<NY; j++) 
+//         {
+//             wsphere[i*NY+j].r = 0.9;
+//             wsphere[i*NY+j].g = 0.9;
+//             wsphere[i*NY+j].b = 0.9;
+//         }
+    
+    /* build underwater height table */
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++) 
+        {
+            ii = (int)(rx*(double)(NX-1 - i)) + nx/2 + ishift;
+            if (ii > nx-1) ii -= nx;
+            jj = (int)(ry*(double)(NY-nshift - j));
+            if (jj > ny-1) jj = ny-1;
+            if (jj < 0) jj = 0;
+                        
+            if (wsphere[i*NY+j].indomain)
+            {
+                /* set height to zero if color is black (due to black patches in bathymetric map) */
+                if (int_height_values[3*(jj*nx+ii)] < hcont) height = 0.0;
+                else height = -1.0 + (double)(int_height_values[3*(jj*nx+ii)])*cratio;
+                if (height > 0.0) height = 0.0;
+                height_values_tmp[i*NY+j] = height;
+                wsphere[i*NY+j].altitude = height;
+
+                if (int_height_values[3*(jj*nx+ii)] > hcont)
+                {
+                    wsphere[i*NY+j].r = 0.9*(double)rgb_values[3*(jj*nx+ii)]*cratio;
+                    wsphere[i*NY+j].g = 0.9*(double)rgb_values[3*(jj*nx+ii)+1]*cratio;
+                    wsphere[i*NY+j].b = 0.9*(double)rgb_values[3*(jj*nx+ii)+2]*cratio;
+                }
+                else 
+                {
+                    wsphere[i*NY+j].r = 0.29;
+                    wsphere[i*NY+j].g = 0.29;
+                    wsphere[i*NY+j].b = 0.29;
+                }
+            }
+            else 
+            {
+                height_values_tmp[i*NY+j] = 0.0;
+                height_values_tmp2[i*NY+j] = 0.0;
+            }
+        }
+    
+    /* smoothen values at low depth */
+    if (SMOOTH_DEM) for (k=1; k<DEM_SMOOTH_STEPS; k++)
+    {
+        printf("Smoothing step %i\n", k);
+        for (i=1; i<NX-1; i++)
+            for (j=1; j<NY-1; j++) 
+                if ((wsphere[i*NY+j].indomain)&&(height_values[i*NY+j] >= -0.25))
+                {
+                    height_values_tmp2[i*NY+j] = height_values_tmp[i*NY+j] + 0.1*(height_values_tmp[(i+1)*NY+j] + height_values_tmp[(i-1)*NY+j] + height_values_tmp[i*NY+j+1] + height_values_tmp[i*NY+j-1] - 4.0*height_values_tmp[i*NY+j]);
+            
+                    height_values_tmp[i*NY+j] = height_values_tmp2[i*NY+j] + 0.1*(height_values_tmp2[(i+1)*NY+j] + height_values_tmp2[(i-1)*NY+j] + height_values_tmp2[i*NY+j+1] + height_values_tmp2[i*NY+j-1] - 4.0*height_values_tmp2[i*NY+j]);
+                }
+    }
+            
+    if (SMOOTH_DEM) for (i=1; i<NX-1; i++)
+        for (j=1; j<NY-1; j++) 
+            if ((wsphere[i*NY+j].indomain)&&(height_values[i*NY+j] >= -0.25))
+            {
+                wsphere[i*NY+j].altitude = height_values_tmp[i*NY+j];
+            }
+    
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++) 
+            height_values[i*NY+j] = height_values_tmp[i*NY+j];
+    
+    free(rgb_values);
+    free(int_height_values);
+    free(height_values_tmp);
+    free(height_values_tmp2);
+}
+
+void init_dem(t_wave_sphere wsphere[NX*NY], int dem_number)
+/* init heights from digital elevation map */
+{
+    int i, j, ii, jj, k, nx, ny, maxrgb, nmaxpixels = 4915200, scan, rgbval, diff, sshift, nshift, hmin, hmax, ishift;
+    int *rgb_values;
+    double cratio, rx, ry, cy, dx, dy, pscal, norm, vscale1, vscale2, gradx, grady, deltar, deltai[3], deltaj[3], dphi, dtheta, n[3], hsea;
+    double *height_values, *height_values_tmp;
+    FILE *image_file;
+    
+    printf("Reading digital elevation model\n");
+    
+    switch (dem_number) {
+        case (DEM_EARTH): 
+        {
+            nmaxpixels = 4915200;
+            image_file = fopen("digital_elevation_model_large.ppm", "r");
+            hsea = 12.0;  /* sea level #0c0c0c */
+            break;
+        }
+        case (DEM_MARS):
+        {
+            nmaxpixels = 8388608;
+            image_file = fopen("marscyl2.ppm", "r");
+            hsea = 6.0 + 255.0*PLANET_SEALEVEL/DEM_MAXHEIGHT;
+            break;
+        }
+        case (DEM_MOON):
+        {
+            nmaxpixels = 2097152;
+            image_file = fopen("Moon_LRO_LOLA_global_LDEM_1024.ppm", "r");
+            hsea = 255.0*PLANET_SEALEVEL/DEM_MAXHEIGHT;
+            break;
+        }
+    }
+    
+    rgb_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+    height_values = (double *)malloc(NX*NY*sizeof(double));
+    height_values_tmp = (double *)malloc(NX*NY*sizeof(double));
+    
+//     image_file = fopen("digital_elevation_model_large.ppm", "r");
+    scan = fscanf(image_file,"%i %i\n", &nx, &ny);
+    scan = fscanf(image_file,"%i\n", &maxrgb);
+    
+    hmin = maxrgb;
+    hmax = 0;
+    
+    if (nx*ny > nmaxpixels)
+    {
+        printf("DEM too large, increase nmaxpixels in init_dem()\n");
+        exit(0);
+    }
+    
+    /* shift due to min/max latitudes of image */
+    sshift = 0 + DPOLE;
+    nshift = 0 + DPOLE; 
+    
+    /* choice of zero meridian */
+    ishift = (int)(nx*ZERO_MERIDIAN/360.0);
+    
+    printf("Reading RGB values\n");
+    
+    /* read rgb values */
+    for (j=0; j<ny; j++)
+        for (i=0; i<nx; i++)
+            for (k=0; k<3; k++)
+                {
+                    scan = fscanf(image_file,"%i\n", &rgbval);
+                    rgb_values[3*(j*nx+i)+k] = rgbval;
+                    if (rgbval < hmin) hmin = rgbval;
+                    if (rgbval > hmax) hmax = rgbval;
+                }
+    
+    printf("hmin = %i, hmax = %i, hsea = %i\n", hmin, hmax, (int)hsea);
+                        
+    cratio = 1.0/(double)(hmax-hmin);
+    rx = (double)nx/(double)NX;
+    ry = (double)ny/(double)(NY - sshift - nshift);
+    
+    /* build height table */
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ii = (int)(rx*(double)(NX-1 - i)) + nx/2 + ishift;
+            if (ii > nx-1) ii -= nx;
+            if (ii < 0) ii = 0;
+            jj = (int)(ry*(double)(NY-nshift - j));
+            if (jj > ny-1) jj = ny-1;
+            if (jj < 0) jj = 0;
+            height_values[i*NY+j] = ((double)rgb_values[3*(jj*nx+ii)]-hsea)*cratio;
+            wsphere[i*NY+j].altitude = ((double)rgb_values[3*(jj*nx+ii)]-hsea)*cratio;
+            
+            if (OTHER_PLANET)
+                wsphere[i*NY+j].indomain = (wsphere[i*NY+j].altitude < 0.0);
+            
+//             if (wsphere[i*NY+j].indomain) printf("rgb = %i, altitude = %.3lg\n", rgb_values[3*(jj*nx+ii)], height_values[i*NY+j]);
+        }
+        
+    /* smooth values in case of high resolution */
+    if ((NX > nx)||(NY > ny))
+    {
+        for (i=1; i<NX-1; i++)
+            for (j=1; j<NY-1; j++)
+            {
+                height_values[i*NY+j] *= 0.2; 
+                height_values[i*NY+j] += 0.2*height_values[(i+1)*NY+j];
+                height_values[i*NY+j] += 0.2*height_values[(i-1)*NY+j];
+                height_values[i*NY+j] += 0.2*height_values[i*NY+j-1];
+                height_values[i*NY+j] += 0.2*height_values[i*NY+j+1];
+                
+                wsphere[i*NY+j].altitude *= 0.2; 
+                wsphere[i*NY+j].altitude += 0.2*wsphere[(i+1)*NY+j].altitude;
+                wsphere[i*NY+j].altitude += 0.2*wsphere[(i-1)*NY+j].altitude;
+                wsphere[i*NY+j].altitude += 0.2*wsphere[i*NY+j-1].altitude;
+                wsphere[i*NY+j].altitude += 0.2*wsphere[i*NY+j+1].altitude;
+            }
+            
+        /* i = 0 */
+        for (j=1; j<NY-1; j++)
+        {
+            height_values[j] *= 0.2; 
+            height_values[j] += 0.2*height_values[NY+j];
+            height_values[j] += 0.2*height_values[(NX-1)*NY+j];
+            height_values[j] += 0.2*height_values[j-1];
+            height_values[j] += 0.2*height_values[j+1];
+                
+            wsphere[j].altitude *= 0.2; 
+            wsphere[j].altitude += 0.2*wsphere[NY+j].altitude;
+            wsphere[j].altitude += 0.2*wsphere[(NX-1)*NY+j].altitude;
+            wsphere[j].altitude += 0.2*wsphere[j-1].altitude;
+            wsphere[j].altitude += 0.2*wsphere[j+1].altitude;
+        }
+        
+        /* i = NY-1 */
+        for (j=1; j<NY-1; j++)
+        {
+            height_values[(NY-1)*NY+j] *= 0.2; 
+            height_values[(NY-1)*NY+j] += 0.2*height_values[j];
+            height_values[(NY-1)*NY+j] += 0.2*height_values[(NY-2)*NY+j];
+            height_values[(NY-1)*NY+j] += 0.2*height_values[(NY-1)*NY+j-1];
+            height_values[(NY-1)*NY+j] += 0.2*height_values[(NY-1)*NY+j+1];
+                
+            wsphere[(NY-1)*NY+j].altitude *= 0.2; 
+            wsphere[(NY-1)*NY+j].altitude += 0.2*wsphere[j].altitude;
+            wsphere[(NY-1)*NY+j].altitude += 0.2*wsphere[(NY-2)*NY+j].altitude;
+            wsphere[(NY-1)*NY+j].altitude += 0.2*wsphere[(NY-1)*NY+j-1].altitude;
+            wsphere[(NY-1)*NY+j].altitude += 0.2*wsphere[(NY-1)*NY+j+1].altitude;
+        }
+    }
+        
+    printf("Closing rgb_values\n");
+    fclose(image_file);
+    free(rgb_values);
+    
+    /* smoothen values at low altitude */
+    if (SMOOTH_DEM) for (k=1; k<DEM_SMOOTH_STEPS; k++)
+    {
+        printf("Smoothing step %i\n", k);
+        for (i=1; i<NX-1; i++)
+            for (j=1; j<NY-1; j++) 
+                if ((!wsphere[i*NY+j].indomain)&&(height_values[i*NY+j] <= DEM_SMOOTH_HEIGHT))
+                {
+                    height_values_tmp[i*NY+j] = height_values[i*NY+j] + 0.1*(height_values[(i+1)*NY+j] + height_values[(i-1)*NY+j] + height_values[i*NY+j+1] + height_values[i*NY+j-1] - 4.0*height_values[i*NY+j]);
+            
+                    height_values[i*NY+j] = height_values_tmp[i*NY+j] + 0.1*(height_values_tmp[(i+1)*NY+j] + height_values_tmp[(i-1)*NY+j] + height_values_tmp[i*NY+j+1] + height_values_tmp[i*NY+j-1] - 4.0*height_values_tmp[i*NY+j]);
+                }
+        /* i = 0 */
+        for (j=1; j<NY-1; j++) 
+            if ((!wsphere[j].indomain)&&(height_values[j] <= DEM_SMOOTH_HEIGHT))
+            {
+                height_values_tmp[j] = height_values[j] + 0.1*(height_values[NY+j] + height_values[(NX-1)*NY+j] + height_values[j+1] + height_values[j-1] - 4.0*height_values[j]);
+            
+                height_values[j] = height_values_tmp[j] + 0.1*(height_values_tmp[NY+j] + height_values_tmp[(NX-1)*NY+j] + height_values_tmp[j+1] + height_values_tmp[j-1] - 4.0*height_values_tmp[j]);
+            }
+        /* i = NY-1 */
+        for (j=1; j<NY-1; j++) 
+            if ((!wsphere[(NX-1)*NY+j].indomain)&&(height_values[(NX-1)*NY+j] <= DEM_SMOOTH_HEIGHT))
+            {
+                height_values_tmp[(NX-1)*NY+j] = height_values[(NX-1)*NY+j] + 0.1*(height_values[j] + height_values[(NX-2)*NY+j] + height_values[(NX-1)*NY+j+1] + height_values[(NX-1)*NY+j-1] - 4.0*height_values[(NX-1)*NY+j]);
+            
+                height_values[(NX-1)*NY+j] = height_values_tmp[(NX-1)*NY+j] + 0.1*(height_values_tmp[j] + height_values_tmp[(NX-2)*NY+j] + height_values_tmp[(NX-1)*NY+j+1] + height_values_tmp[(NX-1)*NY+j-1] - 4.0*height_values_tmp[(NX-1)*NY+j]);
+            }
+    }
+            
+    if (SMOOTH_DEM) for (i=0; i<NX; i++)
+        for (j=1; j<NY-1; j++) 
+            if ((!wsphere[i*NY+j].indomain)&&(wsphere[i*NY+j].altitude <= DEM_SMOOTH_HEIGHT))
+            {
+                wsphere[i*NY+j].altitude = height_values[i*NY+j];
+            }
+        
+//     for (j=0; j<NY; j+= 100)
+//         for (i=0; i<NX; i++) 
+//             if ((wsphere[i*NY+j].altitude > 0.0)&&(wsphere[i*NY+j].altitude <= 0.15))
+//                 printf("Smoothed altitude at (%i, %i): %.3lg\n", i, j, wsphere[i*NY+j].altitude);
+        
+    if ((ADD_NEGATIVE_DEM)&&(dem_number == DEM_EARTH)) 
+        read_negative_dem_values(height_values, wsphere);
+            
+    /* set radius */
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+//             if (!wsphere[i*NY+j].indomain) wsphere[i*NY+j].radius = 1.0 + RSCALE_DEM*wsphere[i*NY+j].altitude;
+//             else wsphere[i*NY+j].radius = 1.0;
+                wsphere[i*NY+j].radius = 1.0 + RSCALE_DEM*wsphere[i*NY+j].altitude;
+    
+    /* compute light angle */  
+    dx = 2.0*(XMAX - XMIN)/(double)NX;
+    dy = 2.0*(YMAX - YMIN)/(double)NY;
+    vscale1 = 0.1*SHADE_SCALE_2D;
+    vscale2 = vscale1*vscale1;
+    
+    if (SHADE_2D)
+    {
+        for (i=1; i<NX-1; i++)
+            for (j=1; j<NY-1; j++)
+            {
+                gradx = (wsphere[(i+1)*NY+j].radius - wsphere[(i-1)*NY+j].radius)/dx;
+                grady = (wsphere[i*NY+j+1].radius - wsphere[i*NY+j-1].radius)/dy;
+                
+                norm = sqrt(vscale2 + gradx*gradx + grady*grady);
+                pscal = -gradx*light[0] - grady*light[1] + vscale1;
+                
+                wsphere[i*NY+j].cos_angle = pscal/norm;
+            }
+        /* i = 0 */
+        for (j=1; j<NY-1; j++)
+        {
+            gradx = (wsphere[NY+j].radius - wsphere[(NX-1)*NY+j].radius)/dx;
+            grady = (wsphere[j+1].radius - wsphere[j-1].radius)/dy;
+            
+            norm = sqrt(vscale2 + gradx*gradx + grady*grady);
+            pscal = -gradx*light[0] - grady*light[1] + vscale1;
+            
+            wsphere[j].cos_angle = pscal/norm;
+        }
+        /* i = N-1 */
+        for (j=1; j<NY-1; j++)
+        {
+            gradx = (wsphere[j].radius - wsphere[(NX-2)*NY+j].radius)/dx;
+            grady = (wsphere[(NX-1)*NY+j+1].radius - wsphere[(NX-1)*NY+j-1].radius)/dy;
+            
+            norm = sqrt(vscale2 + gradx*gradx + grady*grady);
+            pscal = -gradx*light[0] - grady*light[1] + vscale1;
+            
+            wsphere[(NX-1)*NY+j].cos_angle = pscal/norm;
+        }
+    }
+    else if (SHADE_3D)
+    {
+        dphi = DPI/(double)NX;
+        dtheta = PI/(double)NY;
+        
+        for (i=1; i<NX-1; i++)
+            for (j=1; j<NY-1; j++)
+            {                
+                /* computation of tangent vectors */
+                deltar = (wsphere[(i+1)*NY+j].radius - wsphere[i*NY+j].radius)/dphi;
+                    
+                deltai[0] = -wsphere[i*NY+j].radius*wsphere[i*NY+j].sphi;
+                deltai[0] += deltar*wsphere[i*NY+j].cphi;
+                    
+                deltai[1] = wsphere[i*NY+j].radius*wsphere[i*NY+j].cphi;
+                deltai[1] += deltar*wsphere[i*NY+j].sphi;
+                    
+                deltai[2] = -deltar*wsphere[i*NY+j].cottheta;
+                    
+                deltar = (wsphere[i*NY+j+1].radius - wsphere[i*NY+j].radius)/dtheta;
+                    
+                deltaj[0] = wsphere[i*NY+j].radius*wsphere[i*NY+j].cphi*wsphere[i*NY+j].ctheta;
+                deltaj[0] += deltar*wsphere[i*NY+j].cphi*wsphere[i*NY+j].stheta;
+                    
+                deltaj[1] = wsphere[i*NY+j].radius*wsphere[i*NY+j].sphi*wsphere[i*NY+j].ctheta;
+                deltaj[1] += deltar*wsphere[i*NY+j].sphi*wsphere[i*NY+j].stheta;
+                    
+                deltaj[2] = wsphere[i*NY+j].radius*wsphere[i*NY+j].stheta;
+                deltaj[2] += -deltar*wsphere[i*NY+j].ctheta;
+                    
+                /* computation of normal vector */
+                n[0] = deltai[1]*deltaj[2] - deltai[2]*deltaj[1];
+                n[1] = deltai[2]*deltaj[0] - deltai[0]*deltaj[2];
+                n[2] = deltai[0]*deltaj[1] - deltai[1]*deltaj[0];
+                                        
+                norm = sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+                    
+                pscal = n[0]*light[0] + n[1]*light[1] + n[2]*light[2];
+                
+                wsphere[i*NY+j].cos_angle = pscal/norm;
+            }
+        /* i = 0 */
+        for (j=1; j<NY-1; j++)
+        {                
+            /* computation of tangent vectors */
+            deltar = (wsphere[NY+j].radius - wsphere[j].radius)/dphi;
+                    
+            deltai[0] = -wsphere[j].radius*wsphere[j].sphi;
+            deltai[0] += deltar*wsphere[j].cphi;
+                    
+            deltai[1] = wsphere[j].radius*wsphere[j].cphi;
+            deltai[1] += deltar*wsphere[j].sphi;
+                    
+            deltai[2] = -deltar*wsphere[j].cottheta;
+                    
+            deltar = (wsphere[j+1].radius - wsphere[j].radius)/dtheta;
+                    
+            deltaj[0] = wsphere[j].radius*wsphere[j].cphi*wsphere[j].ctheta;
+            deltaj[0] += deltar*wsphere[j].cphi*wsphere[j].stheta;
+                    
+            deltaj[1] = wsphere[j].radius*wsphere[j].sphi*wsphere[j].ctheta;
+            deltaj[1] += deltar*wsphere[j].sphi*wsphere[j].stheta;
+                    
+            deltaj[2] = wsphere[j].radius*wsphere[j].stheta;
+            deltaj[2] += -deltar*wsphere[j].ctheta;
+                    
+            /* computation of normal vector */
+            n[0] = deltai[1]*deltaj[2] - deltai[2]*deltaj[1];
+            n[1] = deltai[2]*deltaj[0] - deltai[0]*deltaj[2];
+            n[2] = deltai[0]*deltaj[1] - deltai[1]*deltaj[0];
+                                        
+            norm = sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+                    
+            pscal = n[0]*light[0] + n[1]*light[1] + n[2]*light[2];
+                
+            wsphere[j].cos_angle = pscal/norm;
+        }
+        /* i = NX-1 */
+        for (j=1; j<NY-1; j++)
+        {                
+            /* computation of tangent vectors */
+            deltar = (wsphere[j].radius - wsphere[(NX-1)*NY+j].radius)/dphi;
+                    
+            deltai[0] = -wsphere[(NX-1)*NY+j].radius*wsphere[(NX-1)*NY+j].sphi;
+            deltai[0] += deltar*wsphere[(NX-1)*NY+j].cphi;
+                    
+            deltai[1] = wsphere[(NX-1)*NY+j].radius*wsphere[(NX-1)*NY+j].cphi;
+            deltai[1] += deltar*wsphere[(NX-1)*NY+j].sphi;
+                    
+            deltai[2] = -deltar*wsphere[(NX-1)*NY+j].cottheta;
+                    
+            deltar = (wsphere[(NX-1)*NY+j+1].radius - wsphere[(NX-1)*NY+j].radius)/dtheta;
+                    
+            deltaj[0] = wsphere[(NX-1)*NY+j].radius*wsphere[(NX-1)*NY+j].cphi*wsphere[(NX-1)*NY+j].ctheta;
+            deltaj[0] += deltar*wsphere[(NX-1)*NY+j].cphi*wsphere[(NX-1)*NY+j].stheta;
+                    
+            deltaj[1] = wsphere[(NX-1)*NY+j].radius*wsphere[(NX-1)*NY+j].sphi*wsphere[(NX-1)*NY+j].ctheta;
+            deltaj[1] += deltar*wsphere[(NX-1)*NY+j].sphi*wsphere[(NX-1)*NY+j].stheta;
+                    
+            deltaj[2] = wsphere[(NX-1)*NY+j].radius*wsphere[(NX-1)*NY+j].stheta;
+            deltaj[2] += -deltar*wsphere[(NX-1)*NY+j].ctheta;
+                    
+            /* computation of normal vector */
+            n[0] = deltai[1]*deltaj[2] - deltai[2]*deltaj[1];
+            n[1] = deltai[2]*deltaj[0] - deltai[0]*deltaj[2];
+            n[2] = deltai[0]*deltaj[1] - deltai[1]*deltaj[0];
+                                        
+            norm = sqrt(n[0]*n[0] + n[1]*n[1] + n[2]*n[2]);
+                    
+            pscal = n[0]*light[0] + n[1]*light[1] + n[2]*light[2];
+                
+            wsphere[(NX-1)*NY+j].cos_angle = pscal/norm;
+        }
+    }
+    
+    free(height_values);
+    free(height_values_tmp);
+}
+
 void init_earth_map(t_wave_sphere wsphere[NX*NY])
 /* init file from earth map */
 {
-    int i, j, ii, jj, k, nx, ny, maxrgb, nmaxpixels = 4915200, scan, rgbval, diff, sshift, nshift;
+    int i, j, ii, jj, k, nx, ny, maxrgb, nmaxpixels = 4915200, scan, rgbval, diff, sshift, nshift, ishift;
     int *rgb_values;
     double cratio, rx, ry, cy;
     FILE *image_file;
@@ -92,13 +610,16 @@ void init_earth_map(t_wave_sphere wsphere[NX*NY])
 
     if (nx*ny > nmaxpixels)
     {
-        printf("Image too large, increase nmaxpixels in choose_colors()\n");
+        printf("Image too large, increase nmaxpixels in init_earth_map()\n");
         exit(0);
     }
     
     /* shift due to min/max latitudes of image */
     sshift = 0 + DPOLE;
     nshift = 0 + DPOLE; 
+    
+    /* choice of zero meridian */
+    ishift = (int)(nx*ZERO_MERIDIAN/360.0);
     
     /* read rgb values */
     for (j=0; j<ny; j++)
@@ -118,7 +639,7 @@ void init_earth_map(t_wave_sphere wsphere[NX*NY])
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
-            ii = (int)(rx*(double)(NX-1 - i)) + nx/2;
+            ii = (int)(rx*(double)(NX-1 - i)) + nx/2 + ishift;
             if (ii > nx-1) ii -= nx;
 //             jj = (int)(-ry*(double)j + cy);
 //             jj = (int)(ry*(double)(NY-nshift - j)) + sshift;
@@ -133,13 +654,157 @@ void init_earth_map(t_wave_sphere wsphere[NX*NY])
             diff = iabs(rgb_values[3*(jj*nx+ii)] - 10);
             diff += iabs(rgb_values[3*(jj*nx+ii)+1] - 10);
             diff += iabs(rgb_values[3*(jj*nx+ii)+2] - 51);
-            wsphere[i*NY+j].indomain = (diff < 10);
+            wsphere[i*NY+j].indomain = (diff < 15);
         }
+    
+    /* smooth colors in case of high resolution */
+    if ((NX > nx)||(NY > ny))
+        for (i=1; i<NX-1; i++)
+            for (j=1; j<NY-1; j++)
+            {
+                wsphere[i*NY+j].r *= 0.2; 
+                wsphere[i*NY+j].r += 0.2*wsphere[(i+1)*NY+j].r;
+                wsphere[i*NY+j].r += 0.2*wsphere[(i-1)*NY+j].r;
+                wsphere[i*NY+j].r += 0.2*wsphere[i*NY+j-1].r;
+                wsphere[i*NY+j].r += 0.2*wsphere[i*NY+j+1].r;
+
+                wsphere[i*NY+j].g *= 0.2; 
+                wsphere[i*NY+j].g += 0.2*wsphere[(i+1)*NY+j].g;
+                wsphere[i*NY+j].g += 0.2*wsphere[(i-1)*NY+j].g;
+                wsphere[i*NY+j].g += 0.2*wsphere[i*NY+j-1].g;
+                wsphere[i*NY+j].g += 0.2*wsphere[i*NY+j+1].g;
+
+                wsphere[i*NY+j].b *= 0.2; 
+                wsphere[i*NY+j].b += 0.2*wsphere[(i+1)*NY+j].b;
+                wsphere[i*NY+j].b += 0.2*wsphere[(i-1)*NY+j].b;
+                wsphere[i*NY+j].b += 0.2*wsphere[i*NY+j-1].b;
+                wsphere[i*NY+j].b += 0.2*wsphere[i*NY+j+1].b;
+            }
     
     free(rgb_values);
     fclose(image_file);
+    
+    if (ADD_DEM) init_dem(wsphere, DEM_EARTH);
 }
 
+void init_planet_map(t_wave_sphere wsphere[NX*NY], int planet)
+/* init file from planetary map */
+{
+    int i, j, ii, jj, k, nx, ny, maxrgb, nmaxpixels, scan, rgbval, diff, sshift, nshift, ishift, dem_number;
+    int *rgb_values;
+    double cratio, rx, ry, cy;
+    FILE *image_file;
+    
+    switch (planet){
+        case (D_SPHERE_MARS): 
+        {
+            printf("Reading Mars map\n");
+            nmaxpixels = 8388608;
+            image_file = fopen("Mars_Viking_ClrMosaic_global_925m_scaled.ppm", "r");
+            dem_number = DEM_MARS;
+            break;
+        }
+        case (D_SPHERE_MOON):
+        {
+            printf("Reading Moon map\n");
+            nmaxpixels = 2048*1024;
+            image_file = fopen("Moon_photo_map.ppm", "r");
+            dem_number = DEM_MOON;
+            break;
+        }
+    }
+    
+    scan = fscanf(image_file,"%i %i\n", &nx, &ny);
+    scan = fscanf(image_file,"%i\n", &maxrgb);
+    printf("nx*ny = %i\n", nx*ny);
+    rgb_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+    
+    if (nx*ny > nmaxpixels)
+    {
+        printf("Image too large, increase nmaxpixels in init_planet_map()\n");
+        exit(0);
+    }
+    
+    /* shift due to min/max latitudes of image */
+    sshift = 0 + DPOLE;
+    nshift = 0 + DPOLE; 
+    
+    /* choice of zero meridian */
+    ishift = (int)(nx*ZERO_MERIDIAN/360.0);
+    
+    /* read rgb values */
+    for (j=0; j<ny; j++)
+        for (i=0; i<nx; i++)
+            for (k=0; k<3; k++)
+                {
+                    scan = fscanf(image_file,"%i\n", &rgbval);
+                    rgb_values[3*(j*nx+i)+k] = rgbval;
+                }
+                    
+    cratio = 1.0/(double)maxrgb;
+    rx = (double)nx/(double)NX;
+    ry = (double)ny/(double)(NY - sshift - nshift);
+    
+    printf("cratio = %.3lg, rx = %.3lg, ry = %.3lg\n", cratio, rx, ry);
+    
+//     cy = rx*(double)(NY - nshift);
+    
+    /* build wave table */
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ii = (int)(rx*(double)(NX-1 - i)) + nx/2 + ishift;
+            if (ii > nx-1) ii -= nx;
+//             jj = (int)(-ry*(double)j + cy);
+//             jj = (int)(ry*(double)(NY-nshift - j)) + sshift;
+            jj = (int)(ry*(double)(NY-nshift - j));
+            if (jj > ny-1) jj = ny-1;
+            if (jj < 0) jj = 0;
+            wsphere[i*NY+j].r = (double)rgb_values[3*(jj*nx+ii)]*cratio;
+            wsphere[i*NY+j].g = (double)rgb_values[3*(jj*nx+ii)+1]*cratio;
+            wsphere[i*NY+j].b = (double)rgb_values[3*(jj*nx+ii)+2]*cratio;
+            
+//             printf("RGB = (%.2f, %.2f, %.2f)\n", wsphere[i*NY+j].r, wsphere[i*NY+j].g, wsphere[i*NY+j].b);
+            
+            /* decide which points are in the Sea */
+            wsphere[i*NY+j].indomain = 1;
+//             wsphere[i*NY+j].indomain = 0;
+//             wsphere[i*NY+j].indomain = (diff < 15);
+        }
+    
+    /* smooth colors in case of high resolution */
+    if ((NX > nx)||(NY > ny))
+        for (i=1; i<NX-1; i++)
+            for (j=1; j<NY-1; j++)
+            {
+                wsphere[i*NY+j].r *= 0.2; 
+                wsphere[i*NY+j].r += 0.2*wsphere[(i+1)*NY+j].r;
+                wsphere[i*NY+j].r += 0.2*wsphere[(i-1)*NY+j].r;
+                wsphere[i*NY+j].r += 0.2*wsphere[i*NY+j-1].r;
+                wsphere[i*NY+j].r += 0.2*wsphere[i*NY+j+1].r;
+
+                wsphere[i*NY+j].g *= 0.2; 
+                wsphere[i*NY+j].g += 0.2*wsphere[(i+1)*NY+j].g;
+                wsphere[i*NY+j].g += 0.2*wsphere[(i-1)*NY+j].g;
+                wsphere[i*NY+j].g += 0.2*wsphere[i*NY+j-1].g;
+                wsphere[i*NY+j].g += 0.2*wsphere[i*NY+j+1].g;
+
+                wsphere[i*NY+j].b *= 0.2; 
+                wsphere[i*NY+j].b += 0.2*wsphere[(i+1)*NY+j].b;
+                wsphere[i*NY+j].b += 0.2*wsphere[(i-1)*NY+j].b;
+                wsphere[i*NY+j].b += 0.2*wsphere[i*NY+j-1].b;
+                wsphere[i*NY+j].b += 0.2*wsphere[i*NY+j+1].b;
+            }
+    
+    free(rgb_values);
+    fclose(image_file);
+    
+    if (ADD_DEM) init_dem(wsphere, dem_number);
+    
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+            wsphere[i*NY+j].indomain = (wsphere[i*NY+j].altitude < PLANET_SEALEVEL/DEM_MAXHEIGHT);
+}
 
 int ij_to_sphere(int i, int j, double r, t_wave_sphere wsphere[NX*NY], double xyz[3])
 /* convert spherical to rectangular coordinates */
@@ -154,14 +819,13 @@ int ij_to_sphere(int i, int j, double r, t_wave_sphere wsphere[NX*NY], double xy
         first = 0;
     }
     
-    newr = wsphere[i*NY+j].radius;
-    
     xyz[0] = wsphere[i*NY+j].x;
     xyz[1] = wsphere[i*NY+j].y;
     xyz[2] = wsphere[i*NY+j].z;
     
     pscal = xyz[0]*observer[0] + xyz[1]*observer[1] + xyz[2]*observer[2];
     
+    newr = wsphere[i*NY+j].radius;
     xyz[0] *= newr;
     xyz[1] *= newr;
     xyz[2] *= newr;
@@ -334,7 +998,8 @@ int xy_in_billiard_sphere(int i, int j, t_wave_sphere wsphere[NX*NY])
     if (first)
     {
         if (B_DOMAIN == D_SPHERE_EARTH) init_earth_map(wsphere);
-        else if ((B_DOMAIN == D_SPHERE_JULIA)||(B_DOMAIN == D_SPHERE_JULIA_INV))
+        else if (OTHER_PLANET) init_planet_map(wsphere, B_DOMAIN);
+        else if ((B_DOMAIN == D_SPHERE_JULIA)||(B_DOMAIN == D_SPHERE_JULIA_INV)||(B_DOMAIN == D_SPHERE_JULIA_CUBIC))
         {
             cos_rot = cos(JULIA_ROT*DPI/360.0);
             sin_rot = sin(JULIA_ROT*DPI/360.0);
@@ -403,7 +1068,35 @@ int xy_in_billiard_sphere(int i, int j, t_wave_sphere wsphere[NX*NY])
             if (u*u + v*v < MANDELLIMIT) return(0);
             return(1);
         }
+        case (D_SPHERE_JULIA_CUBIC):
+        {
+            if (wsphere[i*NY+j].z == 1.0) return(1);
+            if (wsphere[i*NY+j].z == -1.0) return(0);
+            r = (1.0 + wsphere[i*NY+j].ctheta)/wsphere[i*NY+j].stheta;
+            u1 = r*wsphere[i*NY+j].cphi*JULIA_SCALE;
+            v1 = r*wsphere[i*NY+j].sphi*JULIA_SCALE;
+            u = u1*cos_rot + v1*sin_rot;
+            v = -u1*sin_rot + v1*cos_rot;
+            i = 0;
+            while ((i<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+            {
+                u1 = u*u*u - 3.0*u*v*v + JULIA_RE;
+                v = 3.0*u*u*v - v*v*v + JULIA_IM;
+                u = u1;
+                i++;
+            }
+            if (u*u + v*v < MANDELLIMIT) return(1);
+            return(0);
+        }
         case (D_SPHERE_EARTH):
+        {
+            return(wsphere[i*NY+j].indomain);
+        }
+        case (D_SPHERE_MARS):
+        {
+            return(wsphere[i*NY+j].indomain);
+        }
+        case (D_SPHERE_MOON):
         {
             return(wsphere[i*NY+j].indomain);
         }
@@ -411,6 +1104,76 @@ int xy_in_billiard_sphere(int i, int j, t_wave_sphere wsphere[NX*NY])
         {
             printf("Function xy_in_billiard_sphere not defined for this billiard \n");
             return(0);
+        }
+    }
+}
+
+void init_speed_dissipation_sphere(short int xy_in[NX*NY], double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise fields for wave speed and dissipation */
+{
+    int i, j, k, n, inlens;
+    double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
+    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
+    double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
+    t_circle circles[NMAXCIRCLES];
+    
+    if (VARIABLE_IOR)
+    {
+        switch (IOR) {
+            case (IOR_EARTH_DEM):
+            {
+                #pragma omp parallel for private(i,j)
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        tc[i*NY+j] = COURANT;
+                        tgamma[i*NY+j] = GAMMA;
+                    }
+                    for (j=DPOLE; j<NY-DPOLE; j++){
+                        if (wsphere[i*NY+j].indomain) 
+                            tcc[i*NY+j] = COURANT;
+                        else 
+                        {
+                            speed = 1.0 - 10.0*wsphere[i*NY+j].altitude;
+                            if (speed < 0.0) speed = 0.0;
+                            tcc[i*NY+j] = COURANT*speed + COURANTB*(1.0 - speed); 
+                        }
+                    }
+                    for (j=0; j<DPOLE; j++) tcc[i*NY+j] = COURANT;
+                    for (j=NY-DPOLE; j<NY; j++) tcc[i*NY+j] = COURANT;
+                }
+                break;
+            }
+            default:
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        tc[i*NY+j] = COURANT;
+                        tcc[i*NY+j] = COURANT;
+                        tgamma[i*NY+j] = GAMMA;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        #pragma omp parallel for private(i,j)
+        for (i=0; i<NX; i++){
+            for (j=0; j<NY; j++){
+                if (xy_in[i*NY+j] != 0)
+                {
+                    tc[i*NY+j] = COURANT;
+                    tcc[i*NY+j] = courant2;
+                    if (xy_in[i*NY+j] == 1) tgamma[i*NY+j] = GAMMA;
+                    else tgamma[i*NY+j] = GAMMAB;
+                }
+                else if (TWOSPEEDS)
+                {
+                    tc[i*NY+j] = COURANTB;
+                    tcc[i*NY+j] = courantb2;
+                    tgamma[i*NY+j] = GAMMAB;
+                }
+            }
         }
     }
 }
@@ -442,11 +1205,12 @@ void init_circular_wave_sphere(double phi0, double theta0, double phi[NX*NY], do
 /* phi0 is longidude, theta0 is latitude */
 {
     int i, j;
-    double xy[2], pscal, dist, dist2, stheta, ctheta;
+    double xy[2], pscal, dist, dist2, stheta, ctheta, phishift;
 
     ctheta = cos(theta0 + PID);
     stheta = sin(theta0 + PID);
-    
+    phishift = ZERO_MERIDIAN*PI/180.0;
+        
     printf("Initializing wave\n"); 
 //     #pragma omp parallel for private(i,j,xy,dist2)
     for (i=0; i<NX; i++)
@@ -454,7 +1218,7 @@ void init_circular_wave_sphere(double phi0, double theta0, double phi[NX*NY], do
         if (i%100 == 0) printf("Initializing column %i of %i\n", i, NX);
         for (j=0; j<NY; j++)
         {
-            pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*stheta;
+            pscal = cos(wsphere[i*NY+j].phi - phi0 - phishift)*wsphere[i*NY+j].stheta*stheta;
             pscal += wsphere[i*NY+j].ctheta*ctheta;
             
             dist = acos(pscal);
@@ -475,10 +1239,11 @@ void add_circular_wave_sphere(double amp, double phi0, double theta0, double phi
 /* phi0 is longidude, theta0 is latitude */
 {
     int i, j;
-    double xy[2], pscal, dist, dist2, stheta, ctheta;
+    double xy[2], pscal, dist, dist2, stheta, ctheta, phishift;
 
     ctheta = cos(theta0 + PID);
     stheta = sin(theta0 + PID);
+    phishift = ZERO_MERIDIAN*PI/180.0;
     
     printf("Initializing wave\n"); 
 //     #pragma omp parallel for private(i,j,xy,dist2)
@@ -487,7 +1252,7 @@ void add_circular_wave_sphere(double amp, double phi0, double theta0, double phi
         if (i%100 == 0) printf("Initializing column %i of %i\n", i, NX);
         for (j=0; j<NY; j++)
         {
-            pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*stheta;
+            pscal = cos(wsphere[i*NY+j].phi - phi0 - phishift)*wsphere[i*NY+j].stheta*stheta;
             pscal += wsphere[i*NY+j].ctheta*ctheta;
             
             dist = acos(pscal);
@@ -519,7 +1284,7 @@ void compute_light_angle_sphere(short int xy_in[NX*NY], t_wave wave[NX*NY], t_wa
     
     #pragma omp parallel for private(i,j)
     for (i=0; i<NX; i++)
-        for (j=0; j<NY; j++)
+        for (j=0; j<NY; j++) if (xy_in[i*NY+j])
         {
             r = 1.0 + RSCALE*(*wave[i*NY+j].p_zfield[movie]);
             if (r > RMAX) r = RMAX;
@@ -568,6 +1333,7 @@ void compute_light_angle_sphere(short int xy_in[NX*NY], t_wave wave[NX*NY], t_wa
                 
                     wave[i*NY+j].cos_angle = pscal/norm;
                 }
+//                 else wave[i*NY+j].cos_angle = wsphere[i*NY+j].cos_angle;
                 else 
                 {
                     pscal = wsphere[i*NY+j].x*light[0] + wsphere[i*NY+j].y*light[1] + wsphere[i*NY+j].z*light[2];
@@ -596,10 +1362,11 @@ void compute_light_angle_sphere(short int xy_in[NX*NY], t_wave wave[NX*NY], t_wa
     }
 }
 
-void compute_light_angle_sphere_2d(short int xy_in[NX*NY], t_wave wave[NX*NY], int movie)
+void compute_light_angle_sphere_2d(short int xy_in[NX*NY], double phi[NX*NY], t_wave wave[NX*NY], t_wave_sphere wsphere[NX*NY], int movie)
 /* computes cosine of angle between normal vector and vector light */
 {
     int i, j;
+    short int draw;
     double gradx, grady, norm, pscal;
     static double dx, dy, vscale2;
     static int first = 1;
@@ -616,7 +1383,11 @@ void compute_light_angle_sphere_2d(short int xy_in[NX*NY], t_wave wave[NX*NY], i
     for (i=1; i<NX-1; i++)
         for (j=1; j<NY-1; j++)
         {
-            if ((TWOSPEEDS)||(xy_in[i*NY+j]))
+//             if ((TWOSPEEDS)||(xy_in[i*NY+j]))
+//             if ((wsphere[i*NY+j].indomain)||(phi[i*NY+j] >= wsphere[i*NY+j].altitude + 0.001))
+            if (FLOODING) draw = ((wsphere[i*NY+j].indomain)||(phi[i*NY+j] >= wsphere[i*NY+j].altitude + 0.001));
+            else draw = ((TWOSPEEDS)||(xy_in[i*NY+j]));
+            if (draw)
             {
                 gradx = (*wave[(i+1)*NY+j].p_zfield[movie] - *wave[(i-1)*NY+j].p_zfield[movie])/dx;
                 grady = (*wave[i*NY+j+1].p_zfield[movie] - *wave[i*NY+j-1].p_zfield[movie])/dy;
@@ -626,12 +1397,14 @@ void compute_light_angle_sphere_2d(short int xy_in[NX*NY], t_wave wave[NX*NY], i
                 
                 wave[i*NY+j].cos_angle = pscal/norm;
             }
+            else wave[i*NY+j].cos_angle = wsphere[i*NY+j].cos_angle;
         }
     
     /* i=0 */
     for (j=1; j<NY-1; j++)
     {
-        if ((TWOSPEEDS)||(xy_in[j]))
+//         if ((TWOSPEEDS)||(xy_in[j]))
+        if ((wsphere[j].indomain)||(phi[j] >= wsphere[j].altitude + 0.001))
         {
             gradx = (*wave[NY+j].p_zfield[movie] - *wave[(NY-1)*NY+j].p_zfield[movie])/dx;
             grady = (*wave[j+1].p_zfield[movie] - *wave[j-1].p_zfield[movie])/dy;
@@ -641,12 +1414,14 @@ void compute_light_angle_sphere_2d(short int xy_in[NX*NY], t_wave wave[NX*NY], i
                 
             wave[j].cos_angle = pscal/norm;
         }
+        else wave[j].cos_angle = wsphere[j].cos_angle;
     }
     
     /* i=NX-1 */
     for (j=1; j<NY-1; j++)
     {
-        if ((TWOSPEEDS)||(xy_in[(NX-1)*NY+j]))
+//         if ((TWOSPEEDS)||(xy_in[(NX-1)*NY+j]))
+        if ((wsphere[(NX-1)*NY+j].indomain)||(phi[(NX-1)*NY+j] >= wsphere[(NX-1)*NY+j].altitude + 0.001))
         {
             gradx = (*wave[j].p_zfield[movie] - *wave[(NX-2)*NY+j].p_zfield[movie])/dx;
             grady = (*wave[(NX-1)*NY+j+1].p_zfield[movie] - *wave[(NX-1)*NY+j-1].p_zfield[movie])/dy;
@@ -656,6 +1431,7 @@ void compute_light_angle_sphere_2d(short int xy_in[NX*NY], t_wave wave[NX*NY], i
                 
             wave[(NX-1)*NY+j].cos_angle = pscal/norm;
         }
+        else wave[(NX-1)*NY+j].cos_angle = wsphere[(NX-1)*NY+j].cos_angle;
     }
 }
 
@@ -694,6 +1470,7 @@ void compute_cfield_sphere(short int xy_in[NX*NY], int cplot, int palette, t_wav
 void draw_wave_sphere_2D(int movie, double phi[NX*NY], double psi[NX*NY], short int xy_in[NX*NY], t_wave wave[NX*NY], t_wave_sphere wsphere[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
 {
     int i, j, ii;
+    short int draw;
     double x, y, ca;
     static int ishift;
     static double dx, dy;
@@ -702,7 +1479,7 @@ void draw_wave_sphere_2D(int movie, double phi[NX*NY], double psi[NX*NY], short 
     {
         compute_wave_fields(phi, psi, xy_in, zplot, cplot, wave);
         if (SHADE_3D) compute_light_angle_sphere(xy_in, wave, wsphere, movie);
-        else if (SHADE_2D) compute_light_angle_sphere_2d(xy_in, wave, movie);
+        else if (SHADE_2D) compute_light_angle_sphere_2d(xy_in, phi, wave, wsphere, movie);
         compute_cfield_sphere(xy_in, cplot, palette, wave, fade, fade_value, movie);
         dx = (XMAX - XMIN)/(double)NX;
         dy = (YMAX - YMIN)/(double)(NY-2*DPOLE);
@@ -714,14 +1491,16 @@ void draw_wave_sphere_2D(int movie, double phi[NX*NY], double psi[NX*NY], short 
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
-            if ((TWOSPEEDS)||(xy_in[i*NY+j]))
+            if (FLOODING) draw = (wsphere[i*NY+j].indomain)||(phi[i*NY+j] >= wsphere[i*NY+j].altitude + 0.001);
+            else draw = (TWOSPEEDS)||(xy_in[i*NY+j]);
+            if (draw)
                 glColor3f(wave[i*NY+j].rgb[0], wave[i*NY+j].rgb[1], wave[i*NY+j].rgb[2]);
             else
             {
                 ca = wave[i*NY+j].cos_angle;
                 ca = (ca + 1.0)*0.4 + 0.2;
                 if (fade) ca *= fade_value;
-                if (B_DOMAIN == D_SPHERE_EARTH)
+                if (PLANET)
                     glColor3f(wsphere[i*NY+j].r*ca, wsphere[i*NY+j].g*ca, wsphere[i*NY+j].b*ca);
                 else glColor3f(COLOR_OUT_R*ca, COLOR_OUT_G*ca, COLOR_OUT_B*ca);
             }
@@ -744,16 +1523,22 @@ void draw_wave_sphere_ij(int i, int iplus, int j, int jplus, int jcolor, int mov
 /* draw wave at simulation grid point (i,j) */
 {
     int k, l;
+    short int draw;
     double xyz[3], ca;
     
-    if ((TWOSPEEDS)||(xy_in[i*NY+j]))
-        glColor3f(wave[i*NY+jcolor].rgb[0], wave[i*NY+jcolor].rgb[1], wave[i*NY+jcolor].rgb[2]);
+//     if ((TWOSPEEDS)||(xy_in[i*NY+j]))
+//     if (wsphere[i*NY+j].indomain)
+//     if ((wsphere[i*NY+j].indomain)||(phi[i*NY+j] >= wsphere[i*NY+j].altitude + 0.001))
+    if (FLOODING) draw = (wsphere[i*NY+j].indomain)||(phi[i*NY+j] >= wsphere[i*NY+j].altitude + 0.001);
+    else draw = ((TWOSPEEDS)||(xy_in[i*NY+j]));
+    if (draw) glColor3f(wave[i*NY+jcolor].rgb[0], wave[i*NY+jcolor].rgb[1], wave[i*NY+jcolor].rgb[2]);
     else
     {
-        ca = wave[i*NY+j].cos_angle;
+//         ca = wave[i*NY+j].cos_angle;
+        ca = wsphere[i*NY+j].cos_angle;
         ca = (ca + 1.0)*0.4 + 0.2;
         if (fade) ca *= fade_value;
-        if (B_DOMAIN == D_SPHERE_EARTH)
+        if (PLANET)
             glColor3f(wsphere[i*NY+j].r*ca, wsphere[i*NY+j].g*ca, wsphere[i*NY+j].b*ca);
         else glColor3f(COLOR_OUT_R*ca, COLOR_OUT_G*ca, COLOR_OUT_B*ca);
     }
@@ -781,7 +1566,7 @@ void draw_wave_sphere_3D(int movie, double phi[NX*NY], double psi[NX*NY], short 
     {
         compute_wave_fields(phi, psi, xy_in, zplot, cplot, wave);
         if (SHADE_3D) compute_light_angle_sphere(xy_in, wave, wsphere, movie);
-        else if (SHADE_2D) compute_light_angle_sphere_2d(xy_in, wave, movie);
+        else if (SHADE_2D) compute_light_angle_sphere_2d(xy_in, phi, wave, wsphere, movie);
         compute_cfield_sphere(xy_in, cplot, palette, wave, fade, fade_value, movie);
     }
     

@@ -34,8 +34,8 @@ int writetiff(char *filename, char *description, int x, int y, int width, int he
   glPixelStorei(GL_PACK_ALIGNMENT, 1);
 
   glReadPixels(x, y, width, height, GL_RGB, GL_UNSIGNED_BYTE, image);
-  TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (uint32) width);
-  TIFFSetField(file, TIFFTAG_IMAGELENGTH, (uint32) height);
+  TIFFSetField(file, TIFFTAG_IMAGEWIDTH, (uint32_t) width);
+  TIFFSetField(file, TIFFTAG_IMAGELENGTH, (uint32_t) height);
   TIFFSetField(file, TIFFTAG_BITSPERSAMPLE, 8);
   TIFFSetField(file, TIFFTAG_COMPRESSION, compression);
   TIFFSetField(file, TIFFTAG_PHOTOMETRIC, PHOTOMETRIC_RGB);
@@ -622,15 +622,18 @@ void init_particle_config(t_particle particles[NMAXCIRCLES])
         case (C_SQUARE):
         {
             ncircles = NGRIDX*NGRIDY;
-            dy = (YMAX - YMIN)/((double)NGRIDY);
+            dx = (INITXMAX - INITXMIN)/((double)NGRIDX);
+            dy = (INITYMAX - INITYMIN)/((double)NGRIDY);
             for (i = 0; i < NGRIDX; i++)
                 for (j = 0; j < NGRIDY; j++)
                 {
                     n = NGRIDY*i + j;
-                    particles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;
-                    particles[n].yc = YMIN + ((double)j + 0.5)*dy;
+                    particles[n].xc = INITXMIN + ((double)i - 0.5)*dx;   
+                    particles[n].yc = INITYMIN + ((double)j - 0.5)*dy;
                     particles[n].radius = MU;
-                    particles[n].active = 1;
+                    /* activate only circles that intersect the domain */
+                    if ((particles[n].yc < INITYMAX + MU)&&(particles[n].yc > INITYMIN - MU)&&(particles[n].xc < INITXMAX + MU)&&(particles[n].xc > INITXMIN - MU)) particles[n].active = 1;
+                    else particles[n].active = 0;
                 }
             break;
         }
@@ -1616,7 +1619,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
 /* initialise linear obstacle configuration */
 {
     int i, j, cycle = 0, iminus, iplus, nsides, n, concave = 1; 
-    double angle, angle2, dangle, dx, width, height, a, b, length, xmid = 0.5*(BCXMIN + BCXMAX), lpocket, r, x, x1, y1, x2, y2, nozx, nozy, y, dy, ca, sa;
+    double angle, angle2, dangle, dx, width, height, a, b, length, xmid = 0.5*(BCXMIN + BCXMAX), lpocket, r, x, x1, y1, x2, y2, nozx, nozy, y, yy, dy, ca, sa, padding;
     
     switch (SEGMENT_PATTERN) {
         case (S_RECTANGLE):
@@ -2399,6 +2402,82 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             
             break;
         }
+        case (S_COANDA):
+        {
+            y1 = SEGMENTS_Y0;
+            width = 0.05;
+            padding = 0.01;
+            
+            height = 0.25;
+            dx = (XMAX - XMIN + 2.0*padding)/(double)(NPOLY-1);
+            
+            for (i=0; i<NPOLY; i++)
+            {
+                x = XMIN - padding + (double)i*dx;
+                y = y1 + height*cos(PI*x/XMAX);
+                
+                segment[i].x1 = x;
+                segment[i].y1 = y + width;
+                segment[i].x2 = x + dx;
+                segment[i].x2 = y1 + height*cos(PI*(x+dx)/XMAX) + width;
+                
+                segment[i].concave = 1;
+            }
+            
+            for (i=0; i<NPOLY; i++)
+            {
+                x = XMAX + padding - (double)i*dx;
+                y = y1 + height*cos(PI*x/XMAX);
+                
+                segment[NPOLY+i].x1 = x;
+                segment[NPOLY+i].y1 = y - width;
+                segment[NPOLY+i].x2 = x - dx;
+                segment[NPOLY+i].x2 = y1 + height*cos(PI*(x-dx)/XMAX) - width;
+                
+                segment[NPOLY+i].concave = 1;
+            }
+            
+            nsegments = 2*NPOLY;
+            
+            cycle = 1;
+            concave = 1;    
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_COANDA_SHORT):
+        {
+            y1 = SEGMENTS_Y0;
+            width = 0.05;
+            padding = 0.1;
+            x1 = XMIN + padding;
+            
+            height = 0.2;
+            length = 0.85*(XMAX - XMIN - 2.0*padding);
+            dx = length/(double)(NPOLY-1);
+            
+            for (i=0; i<NPOLY; i++)
+            {
+                x = x1 + (double)i*dx;
+                y = y1 - height*cos(DPI*(x-x1)/length);
+                yy = y1 - height*cos(DPI*(x+dx-x1)/length);
+                add_rotated_angle_to_segments(x, y, x+dx, yy, width, 1, segment, 0);
+            }
+            
+            cycle = 0;
+            concave = 1;    
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
         default: 
         {
             printf("Function init_segment_config not defined for this pattern \n");
@@ -2491,6 +2570,10 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
         segment[i].angle02 = segment[i].angle2;
     }
     
+    /* initialize averaged pressure */
+    if (SHOW_SEGMENTS_PRESSURE) for (i=0; i<nsegments; i++) 
+        segment[i].avrg_pressure = 0.0;
+    
 //     for (i=0; i<nsegments; i++) 
 //     {
 //         printf("Segment %i: (x1, y1) = (%.3lg,%.3lg), (x2, y2) = (%.3lg,%.3lg)\n (nx, ny) = (%.3lg,%.3lg), c = %.3lg, length = %.3lg\n", i, segment[i].x1, segment[i].y1, segment[i].x2, segment[i].y2, segment[i].nx, segment[i].ny, segment[i].c, segment[i].length);
@@ -2550,7 +2633,7 @@ int in_segment_region(double x, double y, t_segment segment[NMAXSEGMENTS])
 /* returns 1 if (x,y) is inside region delimited by obstacle segments */
 {
     int i;
-    double angle, dx, height, width, theta, lx, ly, x1, y1, x2, y2, padding, ca, sa, r;
+    double angle, dx, height, width, length, theta, lx, ly, x1, y1, x2, y2, padding, ca, sa, r;
     
     if (x >= BCXMAX) return(0);
     if (x <= BCXMIN) return(0);
@@ -2749,6 +2832,17 @@ int in_segment_region(double x, double y, t_segment segment[NMAXSEGMENTS])
             y1 = x*sa + y*ca;
             y1 += 0.5*x1*x1;
             return(x1*x1 + 25.0*y1*y1 > LAMBDA*LAMBDA*(1.0 + padding));
+        }
+        case (S_COANDA):
+        {
+            return(vabs(y - SEGMENTS_Y0 - 0.25*cos(PI*x/XMAX)) > 0.1);
+        }
+        case (S_COANDA_SHORT):
+        {
+            x1 = XMIN + 0.1;
+            length = 0.85*(XMAX - XMIN - 0.2);
+            if (x > x1 + length + 0.1) return(1);
+            return(vabs(y - SEGMENTS_Y0 + 0.2*cos(DPI*(x-x1)/length)) > 0.05);
         }
         case (S_MAZE):
         {
@@ -3384,7 +3478,7 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
 /* compute repelling force and torque of particle #k on particle #i */
 /* returns 1 if distance between particles is smaller than NBH_DIST_FACTOR*MU */
 {
-    double x1, y1, x2, y2, r, f, angle, aniso, fx, fy, ff[2], dist_scaled, spin_f, ck, sk, ck_rel, sk_rel, alpha, amp;
+    double x1, y1, x2, y2, r, f, angle, aniso, fx, fy, ff[2], dist_scaled, spin_f, ck, sk, ck_rel, sk_rel, alpha, amp, charge;
     static double dxhalf = 0.5*(BCXMAX - BCXMIN), dyhalf = 0.5*(BCYMAX - BCYMIN);
     int wwrapx, wwrapy, twrapx, twrapy;
     
@@ -3514,6 +3608,17 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
             }
             break;
         }
+        case (I_COULOMB_LJ):
+        {
+            charge = particle[i].charge*particle[k].charge;
+            f = -100.0*krepel*charge/(1.0e-12 + distance*distance);
+            if (charge < 0.0) 
+                f += 0.01*krepel*lennard_jones_force(distance, particle[k]);
+            force[0] = f*ca;
+            force[1] = f*sa;   
+            break;
+        }
+        
     }
 
     if (ROTATION) 
@@ -3998,7 +4103,7 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
             if (hue > DPI) hue -= DPI;
             hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*(hue)/DPI;
             ej = particle.emean;
-            if (ej < 0.1*PARTICLE_EMAX) lum = 10.0*ej/PARTICLE_EMAX;
+            if (ej < 0.5*PARTICLE_EMAX) lum = 2.0*ej/PARTICLE_EMAX;
             else lum = 1.0;
             *radius = particle.radius;
             *width = BOUNDARY_WIDTH;
@@ -4126,6 +4231,21 @@ void set_segment_group_color(int group, double lum, double rgb[3])
     
     glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
 }
+
+void set_segment_pressure_color(double pressure, double lum, double rgb[3])
+{
+    double hue;
+    
+//     if (pressure < 0.0) pressure = 0.0;
+    hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*pressure/SEGMENT_PMAX;
+    if (hue > PARTICLE_HUE_MIN) hue = PARTICLE_HUE_MIN;
+    else if (hue < PARTICLE_HUE_MAX) hue = PARTICLE_HUE_MAX;
+        
+    hsl_to_rgb_turbo(hue, 0.9, lum, rgb);
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+}
+
 
 void draw_altitude_lines()
 {
@@ -4625,8 +4745,18 @@ int draw_special_particle(t_particle particle, double xc1, double yc1, double ra
 void draw_one_particle(t_particle particle, double xc, double yc, double radius, double angle, int nsides, double width, double rgb[3])
 /* draw one of the particles */ 
 {
-    double ca, sa, x1, x2, y1, y2, xc1, yc1, wangle, newradius = radius;
+    double x1, x2, y1, y2, xc1, yc1, wangle, newradius = radius;
     int wsign, cont = 1, draw = 1;
+    static double ca, sa;
+    static int first = 1;
+    
+    if (first)
+    {
+        angle = APOLY*PID;
+        ca = cos(angle);
+        sa = sin(angle);
+        first = 0;
+    }
     
     if (CENTER_VIEW_ON_OBSTACLE) xc1 = xc - xshift;
     else xc1 = xc;
@@ -4651,14 +4781,16 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     
     /* draw crosses on particles of second type */
     if ((TWO_TYPES)&&(DRAW_CROSS))
-        if (particle.type == 1)
+        if (particle.type == 2)
         {
-            if (ROTATION) angle = angle + APOLY*PID;
-            else angle = APOLY*PID;
-            ca = cos(angle);
-            sa = sin(angle);
-            glLineWidth(3);
-            glColor3f(0.0, 0.0, 0.0);
+            if (ROTATION) 
+            {
+                angle = angle + APOLY*PID;
+                ca = cos(angle);
+                sa = sin(angle);
+            }
+            glLineWidth(2);
+            glColor3f(1.0, 1.0, 1.0);
             x1 = xc1 - MU_B*ca;
             y1 = yc1 - MU_B*sa;
             x2 = xc1 + MU_B*ca;
@@ -5002,6 +5134,7 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
         for (i = 0; i < nsegments; i++) if (segment[i].active)
         {
             if (COLOR_SEG_GROUPS) set_segment_group_color(segment[i].group, 1.0, rgb);
+            else if (SHOW_SEGMENTS_PRESSURE) set_segment_pressure_color(segment[i].avrg_pressure, 1.0, rgb);
             draw_line(segment[i].x1 - xtrack, segment[i].y1 - ytrack, segment[i].x2 - xtrack, segment[i].y2 - ytrack);
         }
     }
@@ -5248,6 +5381,12 @@ void print_omega(double angle, double angular_speed, double fx, double fy)
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Fy = %.4f", fy);
         write_text(xrighttext + 0.1, y1, message);
+        
+        y1 -= 0.1;
+        erase_area_hsl(xrightbox, y1 + 0.025, 0.42, 0.05, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Fy/Fx = %.4f", fy/fx);
+        write_text(xrighttext + 0.1, y1, message);
     }
 }
 
@@ -5389,10 +5528,17 @@ void print_parameters(t_lj_parameters params, short int left, double pressure[N_
     }   
     else if (INCREASE_KREPEL)  /* print force constant */
     {
-        erase_area_hsl(xbox, y + 0.025*scale, 0.22*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        erase_area_hsl(xbox, y + 0.025*scale, 0.35*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
-        sprintf(message, "Force %.0f", params.krepel);
-        write_text(xtext + 0.28, y, message);
+        sprintf(message, "Force constant %.0f", params.krepel);
+        write_text(xtext + 0.03, y, message);
+    }   
+    else if (INCREASE_E)  /* print electric field */
+    {
+        erase_area_hsl(xbox, y + 0.025*scale, 0.27*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "E field = %.2f", 25.0*NVID*DT_PARTICLE*params.efield);
+        write_text(xtext + 0.08, y, message);
     }   
     
     if (RECORD_PRESSURES) 
@@ -5869,9 +6015,7 @@ void print_particles_speeds(t_particle particle[NMAXCIRCLES])
     write_text(xrighttext + 0.1, y, message);
 }
 
-double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES], 
-                              t_segment segment[NMAXSEGMENTS], 
-                              double xleft, double xright, double *pleft, double *pright, double pressure[N_PRESSURES], int wall)
+double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], double xleft, double xright, double *pleft, double *pright, double pressure[N_PRESSURES], int wall)
 {
     int i, k;
     double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, f, fperp = 0.0, x, y, xtube, distance, dx, dy, width, ybin, angle, x1, x2, h, ytop, norm, dleft, dplus, dminus, tmp_pleft = 0.0, tmp_pright = 0.0, proj, pscal, pvect, pvmin;
@@ -5914,14 +6058,20 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                 particle[j].fx += f*segment[i].nx;
                 particle[j].fy += f*segment[i].ny;
                 
-                
-            
                 if ((MOVE_BOUNDARY)||(MOVE_SEGMENT_GROUPS)||(PRINT_SEGMENTS_FORCE))
                 {
                     segment[i].fx -= f*segment[i].nx;
                     segment[i].fy -= f*segment[i].ny;
                     segment[i].torque -= (x - segment[i].xc)*f*segment[i].ny - (y - segment[i].yc)*f*segment[i].nx;
 //                     printf("Segment %i: f = (%.3lg, %.3lg)\n", i, segment[i].fx, segment[i].fy);
+                }
+                
+                if (SHOW_SEGMENTS_PRESSURE)
+                {
+                    segment[i].pressure = f/segment[i].length;
+                    segment[i].avrg_pressure *= (1.0 - P_AVRG_FACTOR);
+                    segment[i].avrg_pressure += P_AVRG_FACTOR*segment[i].pressure;
+//                      printf("Segment %i: pressure = %.3lg\n", i, segment[i].avrg_pressure);
                 }
             }
             if ((VICSEK_INT)&&(vabs(distance) < 1.5*r))
@@ -6480,21 +6630,51 @@ int reorder_particles(t_particle particle[NMAXCIRCLES], double py[NMAXCIRCLES], 
 }
 
 
+int twotype_config(int i, t_particle particle[NMAXCIRCLES])
+/* assign different particle types */
+{
+    switch (TWOTYPE_CONFIG) {
+        case (TTC_RANDOM): return((double)rand()/RAND_MAX > TYPE_PROPORTION);
+        case (TTC_CHESSBOARD): 
+        {
+            switch (CIRCLE_PATTERN) {
+                case (C_SQUARE): return((i%NGRIDY + i/NGRIDY)%2 == 0);
+                case (C_HEX): return(i%2 == 0);
+                default: return(i%2 == 0);
+            }
+        }
+        case (TTC_COANDA): 
+        {
+            if (vabs(particle[i].yc) < LAMBDA) return(1);
+            if (vabs(particle[i].yc) < LAMBDA + MU) return(-1);
+            return(0);
+        }
+        default: return(0);
+    }
+}
+
+
 int initialize_configuration(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY], t_obstacle obstacle[NMAXOBSTACLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES], int tracer_n[N_TRACER_PARTICLES],
 t_segment segment[NMAXSEGMENTS])
 /* initialize all particles, obstacles, and the hashgrid */
 {
-    int i, j, k, n, nactive = 0;
+    int i, j, k, n, type, nactive = 0;
     double x, y, h, xx, yy, rnd;
     
     for (i=0; i < ncircles; i++) 
     {
         /* set particle type */
         particle[i].type = 0;
-        if ((TWO_TYPES)&&((double)rand()/RAND_MAX > TYPE_PROPORTION)) 
+//         if ((TWO_TYPES)&&((double)rand()/RAND_MAX > TYPE_PROPORTION)) 
+        if ((TWO_TYPES)&&(twotype_config(i, particle))) 
         {
-            particle[i].type = 2;
-            particle[i].radius = MU_B;
+            type = twotype_config(i, particle);
+            if (type == 1)
+            {
+                particle[i].type = 2;
+                particle[i].radius = MU_B;
+            }
+            else if (type == -1) particle[i].active = 0;
         }
         if ((INTERACTION == I_VICSEK_SHARK)&&(i==1)) 
         {
@@ -6524,6 +6704,7 @@ t_segment segment[NMAXSEGMENTS])
             particle[i].spin_freq = SPIN_INTER_FREQUENCY;
             particle[i].mass_inv = 1.0/PARTICLE_MASS;
             particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
+            particle[i].charge = CHARGE;
         }
         else 
         {
@@ -6533,10 +6714,25 @@ t_segment segment[NMAXSEGMENTS])
             particle[i].spin_freq = SPIN_INTER_FREQUENCY_B;
             particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
             particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT_B;
+            particle[i].charge = CHARGE_B;
         }
-                
-        particle[i].vx = V_INITIAL*gaussian();
-        particle[i].vy = V_INITIAL*gaussian();
+               
+        switch (V_INITIAL_TYPE)
+        {
+            case (VI_RANDOM):
+            {
+                particle[i].vx = V_INITIAL*gaussian();
+                particle[i].vy = V_INITIAL*gaussian();
+                break;
+            }
+            case (VI_COANDA):
+            {
+                if (vabs(particle[i].yc) < LAMBDA) particle[i].vx = V_INITIAL;
+                else particle[i].vx = 0.0;
+                particle[i].vy = 0.0;
+                break;
+            }            
+        }
         
         if ((INTERACTION == I_VICSEK_SHARK)&&(i==1)) 
         {
@@ -6596,6 +6792,7 @@ t_segment segment[NMAXSEGMENTS])
         particle[i].dirmean = 0.0;
         particle[i].mass_inv = 1.0/PARTICLE_MASS;
         particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
+        particle[i].charge = 0.0;
         particle[i].vx = 0.0;
         particle[i].vy = 0.0;
         px[i] = 0.0;

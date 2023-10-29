@@ -212,6 +212,7 @@
 #define WAVE_PACKET_SOURCE_TYPE 1       /* type of wave packet sources */
 #define N_WAVE_PACKETS 15               /* number of wave packets */
 #define OSCIL_LEFT_YSHIFT 0.0   /* y-dependence of left oscillation (for non-horizontal waves) */
+#define OSCILLATING_SOURCE_PERIOD 20    /* period of oscillating source */
 /* end of constants only used by sub_wave and sub_maze */
 
 #include "global_pdes.c"
