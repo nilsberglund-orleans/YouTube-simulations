@@ -6,7 +6,7 @@ C code for videos on YouTube Channel https://www.youtube.com/c/NilsBerglund
 
 Parameter values used in specific simulations will be gradually added to file `Parameters.md`, `Parameters_June21.md` and so on.
 
-There are four groups of 6 files, 19 files, 5 files and 4 files. 
+There are four groups of 8 files, 19 files, 5 files and 4 files. 
 In addition the following files handling color schemes have been included:
 
 1. `hsluv.c`and `hsluv.h` from https://github.com/adammaj1/hsluv-color-gradient 
@@ -17,29 +17,31 @@ The following file (beta version) provides support for creating mazes:
 
 4. `sub_maze.c`
 
-The file 
+The files 
 
-5. `Earth_Map_Blue_Marble_2002_large.ppm.gz` 
+5. `*.ppm.gz` 
 
-is required by `wave_sphere.c` and should be unzipped before compiling. 
+are required by `wave_sphere.c` and should be unzipped before compiling. 
 
 ### Simulations of classical particles in billiards.
 
 1. *particle_billiard.c*:   simulation of a collection of non-interacting particles in a billiard
 2. *drop_billiard.c*:       simulation of an expanding front of particles
-3. *particle_pinball.c*:    variant of `particle_billiard` with some extra statistics plots 
-4. *global_particles.c*:    global variables and parameters
-5. *sub_part_billiard.c*:   drawing/computation routines common to `particle_billiard` and `drop_billiard`
-6. *sub_part_pinball.c*:    additional drawing/computation routines for `particle_pinball`
+3. *particle_pinball.c*:    variant of `particle_billiard` with some extra statistics plots
+4. *billiard_phasespace.c*: variant of `particle_billiard` for phase portraits (only works for certain shapes)
+5. *global_particles.c*:    global variables and parameters
+6. *sub_part_billiard.c*:   drawing/computation routines common to `particle_billiard` and `drop_billiard`
+7. *sub_part_pinball.c*:    additional drawing/computation routines for `particle_pinball`
+8. *sub_billiard_phasespace.c*:  additional drawing/computation routines for `billiard_phasespace`
 
 
 - Create subfolders `tif_part`, `tif_drop`
 - Customize constants at beginning of .c file
 - Compile with `make particle_billiard`, `make_drop_billiard`, etc, or
 
-`gcc -o particle_billiard particle_billiard.c-O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut`
+`gcc -o particle_billiard particle_billiard.c-O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lglut`
 
-`gcc -o drop_billiard drop_billiard.c-O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut`
+`gcc -o drop_billiard drop_billiard.c-O3 -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 lglut`
 
 - Many laptops claim to have 4 cores, but two of those are virtual. OMP acceleration may be more effective after executing           
 
@@ -78,13 +80,13 @@ in the shell before running the program
 - Customize constants at beginning of .c file
 - Compile with `make wave_billiard`, etc, or
 
-`gcc -o wave_billiard wave_billiard.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
+`gcc -o wave_billiard wave_billiard.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lglut -O3 -fopenmp`
 
-`gcc -o wave_comparison wave_comparison.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
+`gcc -o wave_comparison wave_comparison.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lglut -O3 -fopenmp`
 
 `gcc -o heat heat.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
 
-`gcc -o schrodinger schrodinger.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
+`gcc -o schrodinger schrodinger.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lglut -O3 -fopenmp`
 
 - Many laptops claim to have 4 cores, but two of those are virtual. OMP acceleration may be more effective after executing           
 
@@ -109,7 +111,7 @@ in the shell before running the program
 - Customize constants at beginning of .c file
 - Compile with `make lennardjones` or
 
-`gcc -o lennardjones lennardjones.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
+`gcc -o lennardjones lennardjones.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lglut -O3 -fopenmp`
 
 - Generate movie with 
 
@@ -126,7 +128,7 @@ in the shell before running the program
 - Customize constants at beginning of .c file
 - Compile with `make percolation` or 
 
-`gcc -o percolation percolation.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lXmu -lglut -O3 -fopenmp`
+`gcc -o percolation percolation.c -L/usr/X11R6/lib -ltiff -lm -lGL -lGLU -lX11 -lglut -O3 -fopenmp`
 
 - Generate movie with 
 
