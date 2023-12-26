@@ -213,6 +213,11 @@
 #define N_WAVE_PACKETS 15               /* number of wave packets */
 #define OSCIL_LEFT_YSHIFT 0.0   /* y-dependence of left oscillation (for non-horizontal waves) */
 #define OSCILLATING_SOURCE_PERIOD 20    /* period of oscillating source */
+#define MU_B 1.0           /* parameter controlling the dimensions of domain */
+#define GAMMA 0.0          /* damping factor in wave equation */
+#define GAMMAB 0.0         /* damping factor in wave equation */
+#define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
+#define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 /* end of constants only used by sub_wave and sub_maze */
 
 #include "global_pdes.c"

@@ -479,7 +479,7 @@ void init_polygon_config_comp(t_polygon polygons[NMAXCIRCLES])
 int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
 /* returns 1 if (x,y) represents a point in the billiard */
 {
-    double l2, r2, r2mu, omega, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy;
+    double l2, r2, r2mu, omega, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, a, b;
     int i, j, k, k1, k2, condition, type;
 
     switch (domain) {
@@ -571,6 +571,26 @@ int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
                 else return(1);                
             }
         }
+        case (D_TWO_LENSES_WALL):
+        {
+            width = 0.2;
+            a = 1.9;
+            b = 1.9 - 2.0*LAMBDA + 2.0*width;
+            x1 = vabs(x);
+            if (module2(x1 - a, y) > LAMBDA) return(1);
+            if (module2(x1 - b, y) > LAMBDA) return(1);
+            return(0);
+        }
+        case (D_TWO_LENSES_OBSTACLE):
+        {
+            width = 0.2;
+            a = 1.9;
+            b = 1.9 - 2.0*LAMBDA + 2.0*width;
+            x1 = vabs(x);
+            if (module2(x1 - a, y) > LAMBDA) return(1);
+            if (module2(x1 - b, y) > LAMBDA) return(1);
+            return(0);
+        }
         default:
         {
             printf("Function ij_in_billiard not defined for this billiard \n");
@@ -599,19 +619,29 @@ int ij_in_billiard_comp(int i, int j)
 }
 
 
-void draw_billiard_half(int domain, int pattern, int top)      /* draws the billiard boundary */
+void draw_billiard_half(int domain, int pattern, int top, int fade, double fade_value)      
+/* draws the billiard boundary */
 /* two domain version implemented for D_CIRCLES */
 {
-    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, signtop;
+    double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, signtop, width, a, b, arcangle;
     int i, j, k, k1, k2, mr2;
+    static int first = 1;
     
     glEnable(GL_SCISSOR_TEST);
     if (top) glScissor(0.0, YMID, NX, YMID);
 //     if (top) glScissor(0.0, YMID, NX, YMAX);
     else glScissor(0.0, 0.0, NX, YMID);
 
-    if (BLACK) glColor3f(1.0, 1.0, 1.0);
-    else glColor3f(0.0, 0.0, 0.0);
+    if (fade)
+    {
+        if (BLACK) glColor3f(fade_value, fade_value, fade_value);
+        else glColor3f(1.0 - fade_value, 1.0 - fade_value, 1.0 - fade_value);        
+    }
+    else
+    {
+        if (BLACK) glColor3f(1.0, 1.0, 1.0);
+        else glColor3f(0.0, 0.0, 0.0);
+    }
     glLineWidth(5);
     
     if (top) signtop = 1.0;
@@ -734,6 +764,45 @@ void draw_billiard_half(int domain, int pattern, int top)      /* draws the bill
             glEnd();
             break;
         }
+        case (D_TWO_LENSES_WALL):
+        {
+            width = 0.2;
+            a = 1.9;
+            b = 1.9 - 2.0*LAMBDA + 2.0*width;
+            if (first)
+            {
+                arcangle = acos(1.0 - width/LAMBDA);
+                first = 0;
+            }
+            draw_circle_arc(a, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(b, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(-a, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(-b, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            
+            width = 0.05;
+            draw_rectangle(-width, MU, width, YMAX + 1.0);
+            draw_rectangle(-width, YMIN-1.0, width, -MUB);
+            break;
+        }
+        case (D_TWO_LENSES_OBSTACLE):
+        {
+            width = 0.2;
+            a = 1.9;
+            b = 1.9 - 2.0*LAMBDA + 2.0*width;
+            if (first)
+            {
+                arcangle = acos(1.0 - width/LAMBDA);
+                first = 0;
+            }
+            draw_circle_arc(a, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(b, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(-a, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(-b, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            
+            width = 0.05;
+            draw_rectangle(-width, -MUB, width, MU);
+            break;
+        }
         case (D_MANDELBROT):
         {
             /* Do nothing */
@@ -764,10 +833,10 @@ void draw_billiard_half(int domain, int pattern, int top)      /* draws the bill
 }
 
 
-void draw_billiard_comp()      /* draws the billiard boundary */
+void draw_billiard_comp(int fade, double fade_value)      /* draws the billiard boundary */
 {
-    draw_billiard_half(B_DOMAIN, CIRCLE_PATTERN, 1);
-    draw_billiard_half(B_DOMAIN_B, CIRCLE_PATTERN_B, 0);
+    draw_billiard_half(B_DOMAIN, CIRCLE_PATTERN, 1, fade, fade_value);
+    draw_billiard_half(B_DOMAIN_B, CIRCLE_PATTERN_B, 0, fade, fade_value);
 }
 
 
@@ -978,14 +1047,15 @@ void draw_wave_comp_highres_palette(int size, double *phi[NX], double *psi[NX], 
                         color_scheme(COLOR_SCHEME, LOG_SHIFT + LOG_SCALE*log(energy), scale, time, rgb);
                         break;
                     }
-//                     case (P_LOG_MEAN_ENERGY):
-//                     {
-//                         energy = compute_energy(phi, psi, xy_in, i, j);
-//                         if (energy == 0.0) energy = 1.0e-20;
-//                         total_energy[i][j] += energy;
-//                         color_scheme(COLOR_SCHEME, LOG_SCALE*log(total_energy[i][j]/(double)(time+1)), scale, time, rgb);
-//                         break;
-//                     }
+                    case (P_LOG_MEAN_ENERGY):
+                    {
+                        energy = compute_energy(phi, psi, xy_in, i, j);
+                        if (energy == 0.0) energy = 1.0e-20;
+                        total_energy[i][j] += energy;
+                        energy = LOG_SHIFT + LOG_SCALE*log(total_energy[i][j]/(double)(time+1));
+                        color_scheme_palette(COLOR_SCHEME, palette, energy, scale, time, rgb);
+                        break;
+                    }
                 }
                     
 //                 if (PLOT == P_AMPLITUDE)
@@ -1014,7 +1084,8 @@ void draw_wave_comp_highres_palette(int size, double *phi[NX], double *psi[NX], 
     glEnd ();
     
     /* draw horizontal mid line */
-    glColor3f(1.0, 1.0, 1.0);
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
     glBegin(GL_LINE_STRIP);
     xy_to_pos(XMIN, 0.5*(YMIN+YMAX), pos);
     glVertex2d(pos[0], pos[1]);
@@ -1202,3 +1273,109 @@ void print_energies(double energies[6], double top_energy, double bottom_energy)
     
 }
 
+void init_ior_2d_comp(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
+/* compute variable index of refraction */
+/* should be at some point merged with 3D version in suv_wave_3d.c */
+{
+    int i, j, k, n, inlens, ncircles;
+    double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
+    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
+    double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
+    static double xc_stat[NGRIDX*NGRIDY], yc_stat[NGRIDX*NGRIDY], sigma_stat;
+    static int first = 1;
+    t_circle circles[NMAXCIRCLES];
+    
+    rgb[0] = 1.0;
+    rgb[1] = 1.0;
+    rgb[2] = 1.0;
+    
+    if (VARIABLE_IOR)
+    {
+        switch (IOR) {
+            case (IOR_LENS_WALL):
+            {
+                printf("Initializing IOR_LENS_WALL\n");
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY/2; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        if ((vabs(x) < 0.05)&&(vabs(y) > MUB)) tcc_table[i][j] = 0.0;
+                        else 
+                        {
+                            if (xy_in[i][j] != 0) tcc_table[i][j] = courant2;
+                            else tcc_table[i][j] = courantb2;
+                        }
+                    }
+                    for (j=NY/2; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        if ((vabs(x) < 0.05)&&(vabs(y) > MU)) tcc_table[i][j] = 0.0;
+                        else 
+                        {
+                            if (xy_in[i][j] != 0) tcc_table[i][j] = courant2;
+                            else tcc_table[i][j] = courantb2;
+                        }
+                    }
+                }
+                
+                break;
+            }
+            case (IOR_LENS_OBSTACLE):
+            {
+                printf("Initializing IOR_LENS_OBSTACLE\n");
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY/2; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        if ((vabs(x) < 0.05)&&(vabs(y) < MUB)) tcc_table[i][j] = 0.0;
+                        else 
+                        {
+                            if (xy_in[i][j] != 0) tcc_table[i][j] = courant2;
+                            else tcc_table[i][j] = courantb2;
+                        }
+                    }
+                    for (j=NY/2; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        if ((vabs(x) < 0.05)&&(vabs(y) < MU)) tcc_table[i][j] = 0.0;
+                        else 
+                        {
+                            if (xy_in[i][j] != 0) tcc_table[i][j] = courant2;
+                            else tcc_table[i][j] = courantb2;
+                        }
+                    }
+                }
+                
+                break;
+            }
+            default:
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        tcc_table[i][j] = COURANT;
+                    }
+                }
+            }
+        }
+    }
+    else
+    {
+        #pragma omp parallel for private(i,j)
+        for (i=0; i<NX; i++){
+            for (j=0; j<NY; j++){
+                if (xy_in[i*NY+j] != 0)
+                {
+                    tcc_table[i][j] = courant2;
+                }
+                else if (TWOSPEEDS)
+                {
+                    tcc_table[i][j] = courantb2;
+                }
+            }
+        }
+    }
+}

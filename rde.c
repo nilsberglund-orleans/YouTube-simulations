@@ -396,6 +396,11 @@
 #define WAVE_PACKET_RADIUS 20            /* radius of wave packets */
 #define OSCIL_LEFT_YSHIFT 25.0   /* y-dependence of left oscillation (for non-horizontal waves) */
 #define DRAW_WAVE_PROFILE 1     /* set to 1 to draw a profile of the wave */
+#define MU_B 1.0           /* parameter controlling the dimensions of domain */
+#define GAMMA 0.0          /* damping factor in wave equation */
+#define GAMMAB 0.0         /* damping factor in wave equation */
+#define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
+#define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
 /* end of constants added only for compatibility with wave_common.c */
 
 

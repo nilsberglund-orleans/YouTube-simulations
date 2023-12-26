@@ -256,6 +256,10 @@
 #define OSCIL_LEFT_YSHIFT 0.0   /* y-dependence of left oscillation (for non-horizontal waves) */
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 #define OSCILLATING_SOURCE_PERIOD 20    /* period of oscillating source */
+#define MU_B 1.0           /* parameter controlling the dimensions of domain */
+#define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
+#define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
+#define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
 /* end of constants only used by sub_wave and sub_maze */
 
 #include "global_pdes.c"

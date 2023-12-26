@@ -1,21 +1,5 @@
 /* global variables and definitions used by sub_wave_3d.c */
 
-/* plot types used by wave_3d */
-
-#define P_3D_AMPLITUDE  101     /* height/color depends on amplitude - DEPRECATED, instead use set SHADE_3D to 0 */
-#define P_3D_ANGLE 102          /* height/color depends on angle with fixed direction - TODO */
-#define P_3D_AMP_ANGLE 103      /* height/color depends on amplitude, luminosity depends on angle */
-#define P_3D_ENERGY 104         /* height/color depends on energy, luminosity depends on angle */
-#define P_3D_LOG_ENERGY 105     /* height/color depends on logarithm of energy, luminosity depends on angle */
-#define P_3D_TOTAL_ENERGY 106   /* height/color depends on total energy over time, luminosity depends on angle */
-#define P_3D_LOG_TOTAL_ENERGY 107 /* height/color depends on log on total energy over time, luminosity depends on angle */
-#define P_3D_MEAN_ENERGY 108      /* height/color depends on energy averaged over time, luminosity depends on angle */
-#define P_3D_LOG_MEAN_ENERGY 109  /* height/color depends on log on energy averaged over time, luminosity depends on angle */
-
-#define P_3D_PHASE 111          /* phase of wave */
-#define P_3D_FLUX_INTENSITY 112    /* energy flux intensity */
-#define P_3D_FLUX_DIRECTION 113    /* energy flux direction */
-
 /* Choice of simulated reaction-diffusion equation in rde.c */
 
 #define E_HEAT 0            /* heat equation */
@@ -73,6 +57,8 @@
 #define DEM_EARTH 0         /* DEM of Earth */
 #define DEM_MARS 1          /* DEM of Mars */
 #define DEM_MOON 2          /* DEM of the Moon */
+#define DEM_VENUS 3         /* DEM of Venus */
+#define DEM_MERCURY 4       /* DEM of Mercury */
 
 /* macros to avoid unnecessary computations in 3D plots */
 
@@ -93,8 +79,8 @@
 
 #define COMPUTE_TOTAL_ENERGY ((ZPLOT == P_3D_TOTAL_ENERGY)||(CPLOT == P_3D_TOTAL_ENERGY)||(ZPLOT == P_3D_LOG_TOTAL_ENERGY)||(CPLOT == P_3D_LOG_TOTAL_ENERGY)||(ZPLOT == P_3D_MEAN_ENERGY)||(CPLOT == P_3D_MEAN_ENERGY)||(ZPLOT == P_3D_LOG_MEAN_ENERGY)||(CPLOT == P_3D_LOG_MEAN_ENERGY)||(ZPLOT_B == P_3D_TOTAL_ENERGY)||(CPLOT_B == P_3D_TOTAL_ENERGY)||(ZPLOT_B == P_3D_LOG_TOTAL_ENERGY)||(CPLOT_B == P_3D_LOG_TOTAL_ENERGY)||(ZPLOT_B == P_3D_MEAN_ENERGY)||(CPLOT_B == P_3D_MEAN_ENERGY)||(ZPLOT_B == P_3D_LOG_MEAN_ENERGY)||(CPLOT_B == P_3D_LOG_MEAN_ENERGY))
 
-#define PLANET ((B_DOMAIN == D_SPHERE_EARTH)||(B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON))
-#define OTHER_PLANET ((B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON))
+#define PLANET ((B_DOMAIN == D_SPHERE_EARTH)||(B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON)||(B_DOMAIN == D_SPHERE_VENUS)||(B_DOMAIN == D_SPHERE_MERCURY))
+#define OTHER_PLANET ((B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON)||(B_DOMAIN == D_SPHERE_VENUS)||(B_DOMAIN == D_SPHERE_MERCURY))
 
 #define NMAXCIRC_SPHERE 100     /* max number of circles on sphere */
 

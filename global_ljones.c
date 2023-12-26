@@ -13,10 +13,11 @@
 
 #define NMAXCIRCLES 100000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define MAXNEIGH 20         /* max number of neighbours kept in memory */
-#define NMAXOBSTACLES 100   /* max number of obstacles */
+#define NMAXOBSTACLES 1000  /* max number of obstacles */
 #define NMAXSEGMENTS 1000   /* max number of repelling segments */
 #define NMAXGROUPS 50       /* max number of groups of segments */
 #define NMAXCOLLISIONS 200000   /* max number of collisions */
+#define NMAXPARTNERS 10     /* max number of partners in molecule */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -46,6 +47,7 @@
 #define O_HLINE_HOLE_SPOKES 181    /* tips of spokes for S_HLINE_HOLE_SPOKES segment pattern */
 #define O_CIRCLE 4          /* one circle at the origin */
 #define O_FOUR_CIRCLES 5    /* four circles  */
+#define O_HEX 6             /* hexagonal lattice */
 
 /* pattern of additional repelling segments */
 #define S_RECTANGLE 0       /* segments forming a rectangle */
@@ -79,6 +81,8 @@
 #define S_AIRFOIL 24            /* exterior of an air foil */
 #define S_COANDA 25             /* wall for Coanda effect */
 #define S_COANDA_SHORT 26       /* shorter wall for Coanda effect */
+#define S_CYLINDER 27           /* walls at top and bottom, for cylindrical b.c. */
+#define S_TREE 28               /* Christmas tree(s) */
 
 /* particle interaction */
 
@@ -121,7 +125,7 @@
 #define TH_VERTICAL 0       /* only particles at the right of x = PARTIAL_THERMO_SHIFT are coupled */
 #define TH_INSEGMENT 1      /* only particles in region defined by segments are coupled */
 #define TH_INBOX 2          /* only particles in a given box are coupled */
-#define TH_LAYER 3          /* only particles above -LAMBDA are coupled */
+#define TH_LAYER 3          /* only particles above PARTIAL_THERMO_HEIGHT are coupled */
 #define TH_LAYER_TYPE2 4    /* only particles above highest type 2 particle are coupled */
 
 /* Gravity schedules */
@@ -221,6 +225,20 @@
 #define IP_X 0      /* color depends on x coordinate of initial position */
 #define IP_Y 1      /* color depends on y coordinate of initial position */
 
+/* Interaction types for polyatomic molecules */
+
+#define POLY_STAR 0     /* star-shaped graph (central molecule attracts outer ones) */
+#define POLY_ALL 1      /* all-to-all coupling */
+#define POLY_WATER 2    /* star-shaped with a 120° separation between anions */
+
+/* Background color schemes */
+
+#define BG_NONE 0       /* no background color */
+#define BG_DENSITY 1    /* background color depends on number of particles */
+#define BG_CHARGE 2     /* background color depends on charge density */
+#define BG_EKIN 3       /* background color depends on kinetic energy */
+#define BG_FORCE 4      /* background color depends on total force */
+
 /* Color schemes */
 
 #define C_LUM 0          /* color scheme modifies luminosity (with slow drift of hue) */
@@ -282,6 +300,9 @@ typedef struct
     double spin_freq;           /* angular frequency of spin-spin interaction */
     double color_hue;           /* color hue of particle, for P_INITIAL_POS plot type */
     int color_rgb[3];           /* RGB colors code of particle, for use in ljones_movie.c */
+    int partner[NMAXPARTNERS];  /* partners particle for option PAIR_PARTICLES */
+    short int npartners;        /* number of partner particles */
+    double partner_eqd[NMAXPARTNERS];   /* equilibrium distances between partners */
 } t_particle;
 
 typedef struct
@@ -290,6 +311,9 @@ typedef struct
     int particles[HASHMAX];     /* numbers of particles in cell */
     int nneighb;                /* number of neighbouring cells */
     int neighbour[9];           /* numbers of neighbouring cells */
+    double x1, y1, x2, y2;      /* coordinates of hashcell corners */
+    double hue1, hue2;          /* color hues */
+    double charge;              /* charge of fixed obstacles */
 } t_hashgrid;
 
 typedef struct
@@ -314,6 +338,7 @@ typedef struct
 {
     double xc, yc, radius;      /* center and radius of circle */
     short int active;           /* circle is active */
+    double charge;              /* charge of obstacle, for EM simulations */
 } t_obstacle;
 
 typedef struct
@@ -384,6 +409,7 @@ typedef struct
     double omega;               /* angular speed of obstacle */
     double bdry_fx, bdry_fy;    /* components of boundary force */
     double efield, bfield;      /* electric and magnetic field */
+    double prop;                /* proportion of types */
 } t_lj_parameters;
 
 int ncircles, nobstacles, nsegments, ngroups = 1, counter = 0;

@@ -2444,7 +2444,7 @@ int xy_in_arc(double x, double y, t_arc arc)
 int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_circle *circles)
 /* returns 1 if (x,y) represents a point in the billiard */
 {
-    double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, alpha, s, a, r, height, ca, sa, l, ht;
+    double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, y3, u, v, u1, v1, dx, dy, width, alpha, s, a, r, height, ca, sa, l, ht, xshift, zz[9][2], x5, x6, f, fp;
     int i, j, k, k1, k2, condition = 0, m;
     static int first = 1, nsides;
     static double h, hh, ra, rb, ll, salpha;
@@ -3025,6 +3025,82 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             if ((x1 > MU)&&(x1 < MU + width)) return(1);
             return(0);
         }   
+        case (D_WAVEGUIDES_W):
+        {
+            x1 = vabs(x);
+            
+            /* upper fiber */
+            width = LAMBDA - 2.0*MU;
+            height = MU + width;
+            if (y > MU + width + height) return(0);
+            if (y >= height)
+            {
+                r = module2(x1, y-height);
+                if ((r > MU)&&(r < MU + width)) return(1);
+                if ((y < height + MU)&&(x1 > LAMBDA + MU)&&(x1 < LAMBDA + MU + width)) return(1);
+                return(0);
+            }
+            else
+            {
+                r = module2(x1-LAMBDA, y-height);
+                if ((r > MU)&&(r < MU + width)) return(1);
+            }
+            
+            /* lower fiber */
+            height = -MU - width;
+            width = LAMBDA - 2.0*MU_B;
+            if (y < -MU_B - width + height) return(0);
+            if (y >= +height)
+            {
+                r = module2(x1, y-height);
+                if ((r > MU_B)&&(r < MU_B + width)) return(1);
+                if ((y < height + MU_B)&&(x1 > LAMBDA + MU_B)&&(x1 < LAMBDA + MU_B + width)) return(1);
+                return(0);
+            }
+            else
+            {
+                r = module2(x1-LAMBDA, y-height);
+                if ((r > MU_B)&&(r < MU_B + width)) return(1);
+            }
+            
+            return(0);
+        }   
+        case (D_WAVEGUIDES_COUPLED):
+        {
+            x1 = vabs(x);
+            y1 = vabs(y);
+            
+            width = 0.03;
+            b = 1.0*(1.0 - 2.0*MU - width);
+            a = MU + 0.5*width - b;
+            x6 = x1*x1*x1;
+            x5 = x6*x1*x1;
+            x6 = x5*x1;
+            
+            f = a + b*(1.0 + 2.0*x6)/(1.0 + x6);
+            fp = 6.0*b*x5/((1.0 + x6)*(1.0 + x6));
+            
+            return(vabs(f - y1) < MU*sqrt(1.0 + fp*fp));
+        }
+        case (D_WAVEGUIDE_S):
+        {
+            a = 0.5*(1.0 - MU);
+            if (x < 0.0)
+            {
+                x = -x;
+                y = -y;
+            }
+            if (x < LAMBDA)
+            {
+                if (vabs(y - 2.0*a) < MU) return(1);
+                if (vabs(y) < MU) return(1);
+                if (vabs(y + 2.0*a) < MU) return(1);
+                return(0);
+            }
+            r = module2(x-LAMBDA, y-a);
+            return(vabs(r - a) < MU);
+            
+        }
         case (D_MAZE):
         {
             for (i=0; i<npolyrect; i++)
@@ -3136,6 +3212,125 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             a = LAMBDA - 0.25;
             if (x > 0) return ((x+a)*(x+a) + y*y > LAMBDA*LAMBDA);
             return ((x-a)*(x-a) + y*y > LAMBDA*LAMBDA);
+        }
+        case (D_LENS_WALL):
+        {
+            if (vabs(y) > MU) return(1);
+            a = LAMBDA - 0.25;
+            if (x > 0) return ((x+a)*(x+a) + y*y > LAMBDA*LAMBDA);
+            return ((x-a)*(x-a) + y*y > LAMBDA*LAMBDA);
+        }
+        case (D_TWO_LENSES_WALL):
+        {
+            width = 0.2;
+            a = 1.9;
+            b = 1.9 - 2.0*LAMBDA + 2.0*width;
+            x1 = vabs(x);
+            if (module2(x1 - a, y) > LAMBDA) return(1);
+            if (module2(x1 - b, y) > LAMBDA) return(1);
+            return(0);
+        }
+        case (D_TWO_LENSES_OBSTACLE):
+        {
+            width = 0.2;
+            a = 1.9;
+            b = 1.9 - 2.0*LAMBDA + 2.0*width;
+            x1 = vabs(x);
+            if (module2(x1 - a, y) > LAMBDA) return(1);
+            if (module2(x1 - b, y) > LAMBDA) return(1);
+            return(0);
+        }
+        case (D_FRESNEL_ZONE_PLATE):
+        {
+            a = 6.25;
+            b = 0.125;
+            if (vabs(x + LAMBDA) >= MU) return(1);
+            return(cos(DPI*(a*y*y + b)) < 0.0);
+        }
+        case (D_FRESNEL_ZONE_PLATE_INV):
+        {
+            a = 6.25;
+            if (vabs(x + LAMBDA) >= MU) return(1);
+            return(cos(DPI*a*y*y) > 0.0);
+        }
+        case (D_LENS_ROTATED):
+        {
+            ca = cos(APOLY*PID);
+            sa = sin(APOLY*PID);
+            x1 = x*ca + y*sa;
+            y1 = -x*sa + y*ca;
+            if (vabs(y1) > MU) return(1);
+            a = LAMBDA - 0.25;
+            if (x1 > 0) return ((x1+a)*(x1+a) + y1*y1 > LAMBDA*LAMBDA);
+            return ((x1-a)*(x1-a) + y1*y1 > LAMBDA*LAMBDA);
+        }
+        case (D_LENS_CONCAVE):
+        {
+            width = 0.1;
+            x1 = vabs(x);
+            if (vabs(y) > MU) return(1);
+            return((x1 - LAMBDA - width)*(x1 - LAMBDA - width) + y*y < LAMBDA*LAMBDA);
+        }
+        case (D_LENS_CONVEX_CONCAVE):
+        {
+            if (vabs(y) > MU) return(1);
+            xshift = 0.6;
+            if (x > 0.0)
+            {
+                x1 = x - xshift;
+                a = LAMBDA - 0.25;
+                if (x1 > 0) return ((x1+a)*(x1+a) + y*y > LAMBDA*LAMBDA);
+                return ((x1-a)*(x1-a) + y*y > LAMBDA*LAMBDA);
+            }
+            else
+            {
+                width = 0.1;
+                x1 = vabs(x + xshift);
+                return((x1 - LAMBDA - width)*(x1 - LAMBDA - width) + y*y < LAMBDA*LAMBDA);
+            }
+        }
+        case (D_TREE):
+        {
+            /* upper triangle */
+            h = 1.5*LAMBDA;
+            r = 1.5*LAMBDA;
+            x1 = vabs(x);
+            y1 = y - h;
+            zz[0][0] = r*cos(PI/6.0);   zz[0][1] = -0.5*r;
+            zz[1][0] = 0.0;             zz[1][1] = r;
+            zz[2][0] = 0.0;             zz[2][1] = -0.5*r;
+            
+            if (y1 > 0.95*zz[1][1]) return(1);
+            
+            /* middle triangle */
+            h = 0.25*LAMBDA;
+            r = 2.0*LAMBDA;
+            y2 = y - h;
+            zz[3][0] = r*cos(PI/6.0);   zz[3][1] = -0.5*r;
+            zz[4][0] = 0.0;             zz[4][1] = r;
+            zz[5][0] = 0.0;             zz[5][1] = -0.5*r;
+            
+            /* bottom triangle */
+            h = -1.5*LAMBDA;
+            r = 3.0*LAMBDA;
+            y3 = y - h;
+            zz[6][0] = r*cos(PI/6.0);   zz[6][1] = -0.5*r;
+            zz[7][0] = 0.0;             zz[7][1] = r;
+            zz[8][0] = 0.0;             zz[8][1] = -0.5*r;
+            
+            if (xy_in_triangle(x1, y1, zz[0], zz[1], zz[2])) return(0);
+            if (xy_in_triangle(x1, y2, zz[3], zz[4], zz[5])) return(0);
+            if (xy_in_triangle(x1, y3, zz[6], zz[7], zz[8])) return(0);
+            
+            if (xy_in_triangle(0.9*x1, 0.9*y1, zz[0], zz[1], zz[2])) return(1);
+            if (xy_in_triangle(0.9*x1, 0.9*y2, zz[3], zz[4], zz[5])) return(1);
+            if (xy_in_triangle(0.9*x1, 0.9*y3, zz[6], zz[7], zz[8])) return(1);
+            
+            if (xy_in_triangle(0.8*x1, 0.8*y1, zz[0], zz[1], zz[2])) return(2);
+            if (xy_in_triangle(0.8*x1, 0.8*y2, zz[3], zz[4], zz[5])) return(2);
+            if (xy_in_triangle(0.8*x1, 0.8*y3, zz[6], zz[7], zz[8])) return(2);
+
+            return(1);
         }
         case (D_MENGER):       
         {
@@ -3347,7 +3542,7 @@ void hex_transfo(double u, double v, double *x, double *y)
 
 void draw_billiard(int fade, double fade_value)      /* draws the billiard boundary */
 {
-    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax, height, xmax, ca, sa;
+    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax, height, xmax, ca, sa, xshift, x5, x6, f, fp;
     int i, j, k, k1, k2, mr2, ntiles;
     static int first = 1, nsides;
     static double h, hh, sqr3, ll, salpha, arcangle;
@@ -4298,6 +4493,179 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             
             break;
         }
+        case (D_WAVEGUIDES_W):
+        {
+            /* upper waveguide */
+            width = LAMBDA - 2.0*MU;
+            height = MU + width;
+
+            draw_circle_arc(0.0, height, MU, 0.0, PI, NSEG);
+            draw_circle_arc(0.0, height, MU + width, 0.0, PI, NSEG);
+            
+            draw_circle_arc(LAMBDA, height, MU, PI, PI, NSEG);
+            draw_circle_arc(LAMBDA, height, MU + width, PI, PI, NSEG);
+            
+            draw_circle_arc(-LAMBDA, height, MU, PI, PI, NSEG);
+            draw_circle_arc(-LAMBDA, height, MU + width, PI, PI, NSEG);
+            
+            draw_line(LAMBDA + MU, height, LAMBDA + MU, height + MU);
+            draw_line(LAMBDA + MU, height + MU, LAMBDA + MU + width, height + MU);
+            draw_line(LAMBDA + MU + width, height + MU, LAMBDA + MU + width, height);
+            
+            draw_line(-LAMBDA - MU, height, -LAMBDA - MU, height + MU);
+            draw_line(-LAMBDA - MU, height + MU, -LAMBDA - MU - width, height + MU);
+            draw_line(-LAMBDA - MU - width, height + MU, -LAMBDA - MU - width, height);
+            
+            /* lower waveguide */
+            height = -MU - width;
+            width = LAMBDA - 2.0*MU_B;
+            
+            draw_circle_arc(0.0, height, MU_B, 0.0, PI, NSEG);
+            draw_circle_arc(0.0, height, MU_B + width, 0.0, PI, NSEG);
+            
+            draw_circle_arc(LAMBDA, height, MU_B, PI, PI, NSEG);
+            draw_circle_arc(LAMBDA, height, MU_B + width, PI, PI, NSEG);
+            
+            draw_circle_arc(-LAMBDA, height, MU_B, PI, PI, NSEG);
+            draw_circle_arc(-LAMBDA, height, MU_B + width, PI, PI, NSEG);
+            
+            draw_line(LAMBDA + MU_B, height, LAMBDA + MU_B, height + MU_B);
+            draw_line(LAMBDA + MU_B, height + MU_B, LAMBDA + MU_B + width, height + MU_B);
+            draw_line(LAMBDA + MU_B + width, height + MU_B, LAMBDA + MU_B + width, height);
+            
+            draw_line(-LAMBDA - MU_B, height, -LAMBDA - MU_B, height + MU_B);
+            draw_line(-LAMBDA - MU_B, height + MU_B, -LAMBDA - MU_B - width, height + MU_B);
+            draw_line(-LAMBDA - MU_B - width, height + MU_B, -LAMBDA - MU_B - width, height);
+            
+            break;
+        }
+        case (D_WAVEGUIDES_COUPLED):
+        {
+            width = 0.03;
+            b = 1.0*(1.0 - 2.0*MU - width);
+            a = MU + 0.5*width - b;
+            
+            if ((DRAW_WAVE_PROFILE)&&(VERTICAL_WAVE_PROFILE))
+                dx = (XMAX - XMIN - 0.06)/(double)NSEG;
+            else dx = (XMAX - XMIN + 0.1)/(double)NSEG;
+            
+            x1 = XMIN - 0.1;
+            y1 = 1.0;
+            for (i=0; i<NSEG; i++)
+            {
+                x2 = XMIN - 0.1 + (double)i*dx;
+                x6 = x2*x2*x2;
+                x5 = x6*x2*x2;
+                x6 = x5*x2;
+            
+                f = a + b*(1.0 + 2.0*x6)/(1.0 + x6);
+                fp = 6.0*b*x5/((1.0 + x6)*(1.0 + x6));
+                
+                y2 = f + MU*sqrt(1.0 + fp*fp);
+                
+                draw_line(x1, y1, x2, y2);
+                x1 = x2;
+                y1 = y2;
+            }
+            
+            x1 = XMIN - 0.1;
+            y1 = 1.0;
+            for (i=0; i<NSEG; i++)
+            {
+                x2 = XMIN - 0.1 + (double)i*dx;
+                x6 = x2*x2*x2;
+                x5 = x6*x2*x2;
+                x6 = x5*x2;
+            
+                f = a + b*(1.0 + 2.0*x6)/(1.0 + x6);
+                fp = 6.0*b*x5/((1.0 + x6)*(1.0 + x6));
+                
+                y2 = f - MU*sqrt(1.0 + fp*fp);
+                
+                draw_line(x1, y1, x2, y2);
+                x1 = x2;
+                y1 = y2;
+            }
+            
+            x1 = XMIN - 0.1;
+            y1 = -1.0;
+            for (i=0; i<NSEG; i++)
+            {
+                x2 = XMIN - 0.1 + (double)i*dx;
+                x6 = x2*x2*x2;
+                x5 = x6*x2*x2;
+                x6 = x5*x2;
+            
+                f = a + b*(1.0 + 2.0*x6)/(1.0 + x6);
+                fp = 6.0*b*x5/((1.0 + x6)*(1.0 + x6));
+                
+                y2 = -(f + MU*sqrt(1.0 + fp*fp));
+                
+                draw_line(x1, y1, x2, y2);
+                x1 = x2;
+                y1 = y2;
+            }
+            
+            x1 = XMIN - 0.1;
+            y1 = -1.0;
+            for (i=0; i<NSEG; i++)
+            {
+                x2 = XMIN - 0.1 + (double)i*dx;
+                x6 = x2*x2*x2;
+                x5 = x6*x2*x2;
+                x6 = x5*x2;
+            
+                f = a + b*(1.0 + 2.0*x6)/(1.0 + x6);
+                fp = 6.0*b*x5/((1.0 + x6)*(1.0 + x6));
+                
+                y2 = -f + MU*sqrt(1.0 + fp*fp);
+                
+                draw_line(x1, y1, x2, y2);
+                x1 = x2;
+                y1 = y2;
+            }
+            
+            x2 = LAMBDA;
+            x6 = x2*x2*x2;
+            x5 = x6*x2*x2;
+            x6 = x5*x2;
+            
+            f = a + b*(1.0 + 2.0*x6)/(1.0 + x6);
+            fp = 6.0*b*x5/((1.0 + x6)*(1.0 + x6));
+                
+            y1 = f - MU*sqrt(1.0 + fp*fp);
+            y2 = f + MU*sqrt(1.0 + fp*fp);
+            
+            draw_line(x2, YMIN, x2, -y2);
+            draw_line(x2, -y1, x2, y1);
+            draw_line(x2, y2, x2, YMAX);
+            draw_line(-x2, YMIN, -x2, -y2);
+            draw_line(-x2, -y1, -x2, y1);
+            draw_line(-x2, y2, -x2, YMAX);
+            
+            break;
+        }
+        case (D_WAVEGUIDE_S):
+        {
+            a = 0.5*(1.0 - MU);
+            
+            draw_circle_arc(LAMBDA, a, a-MU, -PID, PI, NSEG);
+            draw_circle_arc(LAMBDA, a, a+MU, -PID, PI, NSEG);
+            draw_circle_arc(-LAMBDA, -a, a-MU, PID, PI, NSEG);
+            draw_circle_arc(-LAMBDA, -a, a+MU, PID, PI, NSEG);
+            
+            draw_line(LAMBDA, 1.0, -LAMBDA, 1.0);
+            draw_line(-LAMBDA, 1.0, -LAMBDA, 2.0*a-MU);
+            draw_line( -LAMBDA, 2.0*a-MU, LAMBDA, 2.0*a-MU);
+            
+            draw_line(-LAMBDA, MU, LAMBDA, MU);
+            draw_line(-LAMBDA, -MU, LAMBDA, -MU);
+            
+            draw_line(-LAMBDA, -1.0, LAMBDA, -1.0);
+            draw_line(LAMBDA, -1.0, LAMBDA, -2.0*a+MU);
+            draw_line(LAMBDA, -2.0*a+MU, -LAMBDA, -2.0*a+MU);
+            break;
+        }
         case (D_CIRCLE_SEGMENT):
         {
             glLineWidth(BOUNDARY_WIDTH);
@@ -4558,6 +4926,167 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             draw_line(ll, MU, -ll, MU);
             draw_circle_arc(a, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
             draw_line(-ll, -MU, ll, -MU);
+            break;
+        }
+        case (D_LENS_WALL):
+        {
+            a = LAMBDA - 0.25;
+            width = 0.05;
+            if (first)
+            {
+                arcangle = asin(MU/LAMBDA);
+                ll = LAMBDA*cos(arcangle) - a;
+                first = 0;
+            }
+            
+            draw_circle_arc(-a, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_line(ll, MU, -ll, MU);
+            draw_circle_arc(a, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            draw_line(-ll, -MU, ll, -MU);
+            
+            draw_rectangle(-width, MU, width, YMAX + 1.0);
+            draw_rectangle(-width, YMIN-1.0, width, -MU);
+            break;
+        }
+        case (D_TWO_LENSES_WALL):
+        {
+            width = 0.2;
+            a = 1.9;
+            b = 1.9 - 2.0*LAMBDA + 2.0*width;
+            if (first)
+            {
+                arcangle = acos(1.0 - width/LAMBDA);
+                first = 0;
+            }
+            draw_circle_arc(a, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(b, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(-a, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(-b, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            
+            width = 0.05;
+            draw_rectangle(-width, MU, width, YMAX + 1.0);
+            draw_rectangle(-width, YMIN-1.0, width, -MU);
+            break;
+        }
+        case (D_FRESNEL_ZONE_PLATE):
+        {
+            a = 6.25;
+            b = 0.125;
+//             y = sqrt(1.0/(6.0*a));
+            y = sqrt((0.25 - b)/a);
+            draw_rectangle(-LAMBDA - MU, -y, -LAMBDA + MU, y);
+            for (i=1; i<(int)(a*a+1); i++)
+            {
+                x = sqrt((-0.25 - b + (double)i)/a);
+                y = sqrt((0.25 - b + (double)i)/a);
+                draw_rectangle(-LAMBDA - MU, x, -LAMBDA + MU, y);
+                draw_rectangle(-LAMBDA - MU, -x, -LAMBDA + MU, -y);
+            }
+            break;
+        }
+        case (D_FRESNEL_ZONE_PLATE_INV):
+        {
+            a = 6.25;
+            for (i=0; i<2*(int)a; i++)
+            {
+                x = sqrt((0.25 + (double)i)/a);
+                y = sqrt((-0.25 + (double)(i+1))/a);
+                draw_rectangle(-LAMBDA - MU, x, -LAMBDA + MU, y);
+                draw_rectangle(-LAMBDA - MU, -x, -LAMBDA + MU, -y);
+            }
+            break;
+        }
+        case (D_TWO_LENSES_OBSTACLE):
+        {
+            width = 0.2;
+            a = 1.9;
+            b = 1.9 - 2.0*LAMBDA + 2.0*width;
+            if (first)
+            {
+                arcangle = acos(1.0 - width/LAMBDA);
+                first = 0;
+            }
+            draw_circle_arc(a, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(b, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(-a, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_circle_arc(-b, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            
+            width = 0.05;
+            draw_rectangle(-width, -MU, width, MU);
+            break;
+        }
+        case (D_LENS_ROTATED):
+        {
+            ca = cos(APOLY*PID);
+            sa = sin(APOLY*PID);
+            a = LAMBDA - 0.25;
+            if (first)
+            {
+                arcangle = asin(MU/LAMBDA);
+                ll = LAMBDA*cos(arcangle) - a;
+                first = 0;
+            }
+            draw_circle_arc(-a*ca, -a*sa, LAMBDA, -arcangle + APOLY*PID, 2.0*arcangle, NSEG);
+            draw_line(ll*ca - MU*sa, ll*sa + MU*ca, -ll*ca - MU*sa, -ll*sa + MU*ca);
+            draw_circle_arc(a*ca, a*sa, LAMBDA, PI-arcangle + APOLY*PID, 2.0*arcangle, NSEG);
+            draw_line(-ll*ca + MU*sa, -ll*sa - MU*ca, ll*ca + MU*sa, ll*sa - MU*ca);
+            break;
+        }
+        case (D_LENS_CONCAVE):
+        {
+            arcangle = asin(MU/LAMBDA);
+            width = 0.1;
+            a = LAMBDA + width - sqrt(LAMBDA*LAMBDA - MU*MU);
+            draw_circle_arc(LAMBDA + width, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            draw_line(a, MU, -a, MU);
+            draw_circle_arc(-LAMBDA - width, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_line(a, -MU, -a, -MU);
+            break;
+        }
+        case (D_LENS_CONVEX_CONCAVE):
+        {
+            xshift = 0.6;
+            
+            a = LAMBDA - 0.25;
+            if (first)
+            {
+                arcangle = asin(MU/LAMBDA);
+                ll = LAMBDA*cos(arcangle) - a;
+                first = 0;
+            }
+            
+            draw_circle_arc(xshift-a, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_line(xshift+ll, MU, xshift-ll, MU);
+            draw_circle_arc(xshift+a, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            draw_line(xshift-ll, -MU, xshift+ll, -MU);
+            
+            width = 0.1;
+            a = LAMBDA + width - sqrt(LAMBDA*LAMBDA - MU*MU);
+            draw_circle_arc(LAMBDA + width - xshift, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
+            draw_line(a - xshift, MU, -a - xshift, MU);
+            draw_circle_arc(-LAMBDA - width - xshift, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
+            draw_line(a - xshift, -MU, -a - xshift, -MU);
+            break;
+        }
+        case (D_TREE):
+        {
+//             h = LAMBDA;
+//             r = 2.0*LAMBDA;
+//             
+//             x1 = r*cos(PI/6.0);
+//             y1 = -h;
+//             y2 = r;
+//             
+//             x1 = x1/0.8;
+//             y1 = h + y1/0.8;
+//             x2 = 0.0;
+//             y2 = h + y2/0.8;
+//             
+//             draw_line(x1, y1, x2, y2);
+//             draw_line(x2, y2, -x1, y1);
+//             draw_line(-x1, y1, x1, y1);
+            
+            /* do nothing */
             break;
         }
         case (D_MENGER):
@@ -5210,6 +5739,12 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
             {
                 value = min + 1.0*dy*(double)(j - jmin);
                 color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+             case (P_3D_LOG_MEAN_ENERGY):
+            {
+                value = LOG_SCALE*dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
                 break;
             }
             default:
@@ -5893,13 +6428,13 @@ double oscillating_bc(int time, int j)
     }
 }
 
-void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
+void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_table[NX], double ior_angle)
 /* compute variable index of refraction */
 /* should be at some point merged with 3D version in suv_wave_3d.c */
 {
     int i, j, k, n, inlens, ncircles;
     double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
-    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
+    double a, u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
     double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
     static double xc_stat[NGRIDX*NGRIDY], yc_stat[NGRIDX*NGRIDY], sigma_stat;
     static int first = 1;
@@ -5935,7 +6470,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                         {
 //                             tc[i*NY+j] = COURANT;
                             tcc_table[i][j] = courant2;
-//                             tgamma[i*NY+j] = GAMMA;
+                            tgamma_table[i][j] = GAMMA;
                         }
                         else 
                         {
@@ -5943,7 +6478,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                             if (speed < 0.01) speed = 0.01;
                             tcc_table[i][j] = courant2*speed;
 //                             tc[i*NY+j] = COURANT*sqrt(speed);
-//                             tgamma[i*NY+j] = GAMMA;
+                            tgamma_table[i][j] = GAMMA;
                         }
                     }
                 }
@@ -5971,7 +6506,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                         {
 //                             tc[i*NY+j] = COURANT;
                             tcc_table[i][j] = courant2;
-//                             tgamma[i*NY+j] = GAMMA;
+                            tgamma_table[i][j] = GAMMA;
                         }
                         else 
                         {
@@ -5980,7 +6515,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                             else if (speed > 10.0) speed = 10.0;
                             tcc_table[i][j] = courant2*speed;
 //                             tc[i*NY+j] = COURANT*sqrt(speed);
-//                             tgamma[i*NY+j] = GAMMA;
+                            tgamma_table[i][j] = GAMMA;
                         }
                     }
                 }
@@ -5998,7 +6533,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                         else c = COURANT*(1.3 - 0.9*r2);
 //                         tc[i*NY+j] = c;
                         tcc_table[i][j] = c;
-//                         tgamma[i*NY+j] = GAMMA;
+                        tgamma_table[i][j] = GAMMA;
                     }
                 }
                 break;
@@ -6033,13 +6568,13 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                         else c = COURANT;
 //                         tc[i*NY+j] = c;
                         tcc_table[i][j] = c*c;
-//                         tgamma[i*NY+j] = GAMMA;
+                        tgamma_table[i][j] = GAMMA;
                     }
                     else
                     {
 //                         tc[i*NY+j] = 0.0;
                         tcc_table[i][j] = 0.0;
-//                         tgamma[i*NY+j] = 0.0;
+                        tgamma_table[i][j] = 0.0;
                     }
                 }
                 break;
@@ -6074,6 +6609,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
 //                         sum = tanh(sum);
 //                         printf("%.3lg\n", sum);
                         tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tgamma_table[i][j] = GAMMA;
                     }
                 }
                 break;
@@ -6113,6 +6649,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                         sum = tanh(sum);
 //                         printf("%.3lg\n", sum);
                         tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tgamma_table[i][j] = GAMMA;
                     }
                 }
                 break;
@@ -6160,6 +6697,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
 //                         sum = tanh(sum);
 //                         printf("%.3lg\n", sum);
                         tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tgamma_table[i][j] = GAMMA;
                     }
                 }
                 break;
@@ -6203,6 +6741,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                             sum += exp(-r2/(sigma_stat));
                         }
                         tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tgamma_table[i][j] = GAMMA;
                     }
                 }
                 break;
@@ -6238,6 +6777,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                         sum = tanh(sum);
 //                         printf("%.3lg\n", sum);
                         tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tgamma_table[i][j] = GAMMA;
                     }
                 }
                 
@@ -6274,17 +6814,203 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                         sum = tanh(sum);
 //                         printf("%.3lg\n", sum);
                         tcc_table[i][j] = COURANT*sum + COURANTB*(1.0-sum);
+                        tgamma_table[i][j] = GAMMA;
                     }
                 }
                 
                 break;
-            }default:
+            }
+            case (IOR_LENS_WALL):
+            {
+                printf("Initializing IOR_LENS_WALL\n");
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        if ((vabs(x) < 0.05)&&(vabs(y) > MU)) 
+                        {
+                            tcc_table[i][j] = 0.0;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else 
+                        {
+                            if (xy_in[i][j] != 0) 
+                            {
+                                tcc_table[i][j] = courant2;
+                                tgamma_table[i][j] = GAMMA;
+                            }
+                            else 
+                            {
+                                tcc_table[i][j] = courantb2;
+                                tgamma_table[i][j] = GAMMAB;
+                            }
+                        }
+                    }
+                }
+                
+                break;
+            }
+            case (IOR_LENS_OBSTACLE):
+            {
+                printf("Initializing IOR_LENS_OBSTACLE\n");
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        if ((vabs(x) < 0.05)&&(vabs(y) < MU))
+                        {
+                            tcc_table[i][j] = 0.0;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else 
+                        {
+                            if (xy_in[i][j] != 0) 
+                            {
+                                tcc_table[i][j] = courant2;
+                                tgamma_table[i][j] = GAMMA;
+                            }
+                            else 
+                            {
+                                tcc_table[i][j] = courantb2;
+                                tgamma_table[i][j] = GAMMAB;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_LENS_CONCAVE):
+            {
+                a = LAMBDA + 0.1 - sqrt(LAMBDA*LAMBDA - MU*MU); 
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        if ((vabs(x) < a)&&(vabs(y) > MU))
+                        {
+                            tcc_table[i][j] = 0.0;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else 
+                        {
+                            if (xy_in[i][j] != 0) 
+                            {
+                                tcc_table[i][j] = courant2;
+                                tgamma_table[i][j] = GAMMA;
+                            }
+                            else 
+                            {
+                                tcc_table[i][j] = courantb2;
+                                tgamma_table[i][j] = GAMMAB;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_LENS_CONVEX_CONCAVE):
+            {
+                a = LAMBDA + 0.1 - sqrt(LAMBDA*LAMBDA - MU*MU) + 0.6; 
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        if ((vabs(x) < a)&&(vabs(y) > MU))
+                        {
+                            tcc_table[i][j] = 0.0;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else 
+                        {
+                            if (xy_in[i][j] != 0) 
+                            {
+                                tcc_table[i][j] = courant2;
+                                tgamma_table[i][j] = GAMMA;
+                            }
+                            else 
+                            {
+                                tcc_table[i][j] = courantb2;
+                                tgamma_table[i][j] = GAMMAB;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_TREE):
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        switch (xy_in[i][j]) {
+                            case (0):
+                            {
+                                tcc_table[i][j] = courantb2;
+                                tgamma_table[i][j] = GAMMAB;
+                                break;
+                            }
+                            case (1):
+                            {
+                                tcc_table[i][j] = courant2;
+                                tgamma_table[i][j] = GAMMA;
+                                break;
+                            }
+                            case (2):
+                            {
+                                tcc_table[i][j] = 0.0;
+                                tgamma_table[i][j] = GAMMA;
+                                break;
+                            }
+                            case (3):
+                            {
+                                tcc_table[i][j] = courant2;
+                                tgamma_table[i][j] = GAMMA;
+                                break;
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_WAVE_GUIDES_COUPLED):
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        if (xy_in[i][j]) 
+                        {
+                            tcc_table[i][j] = courant2;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else if (vabs(x) > LAMBDA)
+                        {
+                            tcc_table[i][j] = 0.0;
+                            tgamma_table[i][j] = 1.0;                            
+                        }
+                        else
+                        {
+                            tcc_table[i][j] = courantb2;
+                            tgamma_table[i][j] = GAMMAB;
+                        }
+                    }
+                }
+                break;
+            }
+            default:
             {
                 for (i=0; i<NX; i++){
                     for (j=0; j<NY; j++){
 //                         tc[i*NY+j] = COURANT;
                         tcc_table[i][j] = COURANT;
-//                         tgamma[i*NY+j] = GAMMA;
+                        tgamma_table[i][j] = GAMMA;
                     }
                 }
             }
@@ -6299,14 +7025,14 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
                 {
 //                     tc[i*NY+j] = COURANT;
                     tcc_table[i][j] = courant2;
-//                     if (xy_in[i*NY+j] == 1) tgamma[i*NY+j] = GAMMA;
-//                     else tgamma[i*NY+j] = GAMMAB;
+                    if (xy_in[i][j] == 1) tgamma_table[i][j] = GAMMA;
+                    else tgamma_table[i][j] = GAMMAB;
                 }
                 else if (TWOSPEEDS)
                 {
 //                     tc[i*NY+j] = COURANTB;
                     tcc_table[i][j] = courantb2;
-//                     tgamma[i*NY+j] = GAMMAB;
+                    tgamma_table[i][j] = GAMMAB;
                 }
             }
         }
@@ -6576,3 +7302,90 @@ void add_wave_packets(double *phi[NX], double *psi[NX], short int * xy_in[NX], t
     if (local) add_wave_packets_locally(phi, psi, packet, time, radius, add_period, type_envelope);
     else add_wave_packets_globally(phi, psi, xy_in, packet, time);
 }
+
+int old_source_schedule(int i)
+{
+    int mod;
+    
+    if (i < 200) return(0);
+    mod = i%(10*OSCILLATING_SOURCE_PERIOD);
+    if ((mod < 2*OSCILLATING_SOURCE_PERIOD)&&(rand()%3 < 2)) return(1);
+    return(0);
+}
+
+void old_init_input_signal()
+{
+    int i;
+ 
+    for (i=0; i<NSTEPS; i++) input_signal[i] = old_source_schedule(i);
+}
+
+
+int init_input_signal()
+{
+    int i, j, k, mod, ldash, ldot, lspace, linter, initial_time;
+    char text[200] = "dddd_dD_dDDd_dDDd_DdDD__Dd_d_dDD__DdDD_d_dD_dDd__ddDDD_DDDDD_ddDDD_ddddD", c;
+    
+    ldash = 12;
+    ldot = 3;
+    linter = 30;
+    lspace = 36;
+    initial_time = 200;
+        
+    for (i=0; i<initial_time; i++) input_signal[i] = 0;
+    
+    j = 0;
+    while (i < NSTEPS)
+    {
+        while (j < strlen(text))
+        {
+            c = text[j];
+            
+            switch(c) {
+                case ('D'):
+                {
+                    for (k=0; k<ldash; k++) 
+                    {
+                        input_signal[i] = 1;
+                        i++;
+                    }
+                    break;
+                }
+                case ('d'):
+                {
+                    for (k=0; k<ldot; k++) 
+                    {
+                        input_signal[i] = 1;
+                        i++;
+                    }
+                    break;
+                }
+                case ('_'):
+                {
+                    for (k=0; k<lspace; k++) 
+                    {
+                        input_signal[i] = 0;
+                        i++;
+                    }
+                    break;
+                }
+            }
+            
+            for (k=0; k<linter; k++) 
+            {
+                input_signal[i] = 0;
+                i++;
+            }
+            
+            j++;
+        }
+        
+        input_signal[i] = 0;
+        i++;
+    }
+    
+    for (i=0; i<NSTEPS; i++) printf("%i ", input_signal[i]);
+    
+    printf("\n\n j = %i, string length = %i\n", j, (int)strlen(text));
+}
+

@@ -291,6 +291,9 @@
 #define POTENTIAL 10
 #define POT_FACT 20.0
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
+#define MU_B 1.0           /* parameter controlling the dimensions of domain */
+#define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
+#define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
 /* end of constants only used by sub_wave and sub_maze */
 
 

@@ -66,6 +66,9 @@
 #define D_LSHAPE 50             /* L-shaped billiard (surface of genus 2) */
 #define D_WAVEGUIDE 51          /* wave guide */
 #define D_WAVEGUIDE_W 52        /* W-shaped wave guide */
+#define D_WAVEGUIDES_W 521      /* two W-shaped wave guides */
+#define D_WAVEGUIDES_COUPLED 522    /* two coupled wave guides */
+#define D_WAVEGUIDE_S 523       /* S-shaped wave guide */
 #define D_MAZE 53               /* maze */
 #define D_MAZE_CLOSED 54        /* closed maze */
 #define D_MAZE_CHANNELS 541     /* maze with two channels attached */
@@ -78,10 +81,20 @@
 #define D_LENSES_RING 59        /* several lenses forming a ring */
 #define D_MAZE_CIRCULAR 60      /* circular maze */
 #define D_LENS 61               /* symmetric lens made of circular faces */
+#define D_LENS_WALL 62          /* symmetric lens made of circular faces with separating wall (to use with IOR_LENS_WALL) */
+#define D_TWO_LENSES_WALL 63    /* two lenses separated by a wall with a hole (to use with IOR_LENS_WALL) */
+#define D_TWO_LENSES_OBSTACLE 64    /* two lenses with an obstacle in between (to use with IOR_LENS_OBSTACLE) */
+#define D_FRESNEL_ZONE_PLATE 65 /* Fresnel zone plate */
+#define D_FRESNEL_ZONE_PLATE_INV 66 /* Fresnel zone plate, with central hole */
+#define D_LENS_ROTATED 67       /* rotated lens */
+#define D_LENS_CONCAVE 68       /* biconcave lens (to use with IOR_LENS_CONCAVE) */
+#define D_LENS_CONVEX_CONCAVE 69    /* a convex and a biconcave lens (to use with IOR_LENS_CONVEX_CONCAVE) */
 
 #define D_WING 70               /* complement of wing-shaped domain */
 #define D_TESLA 71              /* Tesla valve */
 #define D_TESLA_FOUR 72         /* four Tesla valves */
+
+#define D_TREE 73               /* Christmas tree, to use with IOR_TREE */
 
 /* for wave_sphere.c */
 
@@ -93,6 +106,11 @@
 #define D_SPHERE_JULIA_CUBIC 85 /* Julia set for cubic polynomial on Riemann sphere */
 #define D_SPHERE_MARS 86        /* map of Mars */
 #define D_SPHERE_MOON 87        /* map of the Moon */
+#define D_SPHERE_VENUS 88       /* map of Venus */
+#define D_SPHERE_MERCURY 89     /* map of Mercury */
+#define D_SPHERE_MAZE 100       /* circular maze on the sphere */
+#define D_SPHERE_MAZE_SPIRAL 101 /* circular maze on the sphere with slanted walls */
+#define D_SPHERE_MAZE_WAVE 102  /* circular maze on the sphere with wavy walls */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
@@ -152,8 +170,14 @@
 #define IOR_PERIODIC_WELLS_ROTATING_LARGE 7   /* periodic superposition rotating in time, larger area */
 #define IOR_POISSON_WELLS 8     /* wells located on a random Poisson disc process */
 #define IOR_PPP_WELLS 9         /* wells located on a Poisson point process */
+#define IOR_LENS_WALL 10        /* lens with separating wall (to use with D_LENS_WALL) */
+#define IOR_LENS_OBSTACLE 11    /* lens with separating wall (to use with D_TWO_LENSES_OBSTACLE) */
+#define IOR_LENS_CONCAVE 12     /* lens with separating wall (to use with D_LENS_CONCAVE) */
+#define IOR_LENS_CONVEX_CONCAVE 13     /* lens with separating wall (to use with D_LENS_CONVEX_CONCAVE) */
+#define IOR_TREE 14             /* Christmas tree, to use with D_TREE */
+#define IOR_WAVE_GUIDES_COUPLED 15  /* coupled wave guides */
 
-#define IOR_EARTH_DEM 10        /* digital elevation model (for waves on sphere) */
+#define IOR_EARTH_DEM 20        /* digital elevation model (for waves on sphere) */
 
 /* Boundary conditions */
 
@@ -206,6 +230,22 @@
 #define P_PHASE 11         /* plot phase of wave function */
 #define P_REAL 12          /* plot real part */
 #define P_IMAGINARY 13     /* plot imaginary part */
+
+/* plot types used by wave_3d */
+
+#define P_3D_AMPLITUDE  101     /* height/color depends on amplitude - DEPRECATED, instead use set SHADE_3D to 0 */
+#define P_3D_ANGLE 102          /* height/color depends on angle with fixed direction - TODO */
+#define P_3D_AMP_ANGLE 103      /* height/color depends on amplitude, luminosity depends on angle */
+#define P_3D_ENERGY 104         /* height/color depends on energy, luminosity depends on angle */
+#define P_3D_LOG_ENERGY 105     /* height/color depends on logarithm of energy, luminosity depends on angle */
+#define P_3D_TOTAL_ENERGY 106   /* height/color depends on total energy over time, luminosity depends on angle */
+#define P_3D_LOG_TOTAL_ENERGY 107 /* height/color depends on log on total energy over time, luminosity depends on angle */
+#define P_3D_MEAN_ENERGY 108      /* height/color depends on energy averaged over time, luminosity depends on angle */
+#define P_3D_LOG_MEAN_ENERGY 109  /* height/color depends on log on energy averaged over time, luminosity depends on angle */
+
+#define P_3D_PHASE 111          /* phase of wave */
+#define P_3D_FLUX_INTENSITY 112    /* energy flux intensity */
+#define P_3D_FLUX_DIRECTION 113    /* energy flux direction */
 
 
 /* Color schemes */
@@ -365,6 +405,8 @@ int npolyline = NMAXPOLY;           /* actual length of polyline */
 int npolyrect = NMAXPOLY;           /* actual number of polyrect */
 int npolyrect_rot = NMAXPOLY;       /* actual number of rotated polyrect */
 int npolyarc = NMAXPOLY;            /* actual number of arcs */
+
+short int input_signal[NSTEPS];     /* time-dependent source signal */
 
 t_circle circles[NMAXCIRCLES];      /* circular scatterers */
 t_polygon polygons[NMAXCIRCLES];    /* polygonal scatterers */

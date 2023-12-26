@@ -2,6 +2,14 @@
 /* Note: a possible improvement would be to use pointers instead of integers */
 /* when referencing other hashgrid cells or particles */ 
 
+ double module2(double x, double y)   /* Euclidean norm */
+ {
+	double m;
+
+	m = sqrt(x*x + y*y);
+	return(m);
+ }
+
 int bc_grouped(int bc)
 /* regroup boundary conditions by type: rectangular = 0, periodic = 1, Klein = 2, Boy = 3, L shape = 4, ... */
 {
@@ -67,6 +75,41 @@ int hash_cell(double x, double y)
     
     return(mhash(i,j));
 //     printf("Mapped (%.3f,%.3f) to (%i, %i)\n", x, y, ij[0], ij[1]);
+}
+
+
+void init_hashcell_coordinates(t_hashgrid hashgrid[HASHX*HASHY])
+/* initialise coordinates of corners of hashcells, needed for option COLOR_BACKGROUND */
+{
+    static int first = 1;
+    static double lx, ly, padding, dx, dy;
+    int i, j, n;
+    double x, y;
+    
+    if (first)
+    {
+        if (!NO_WRAP_BC) padding = 0.0;
+        else padding = HASHGRID_PADDING;
+        lx = BCXMAX - BCXMIN + 2.0*padding;
+        ly = BCYMAX - (BCYMIN) + 2.0*padding;
+        dx = 1.0*lx/(double)HASHX;
+        dy = 1.0*ly/(double)HASHY;
+        first = 0;
+    }
+    
+    for (i=0; i<HASHX; i++)
+        for (j=0; j<HASHY; j++)
+        {
+            x = BCXMIN - padding + (double)i*dx;
+            y = BCYMIN - padding + (double)j*dy;
+            n = mhash(i, j);
+            hashgrid[n].x1 = x;
+            hashgrid[n].y1 = y;
+            hashgrid[n].x2 = x + dx;
+            hashgrid[n].y2 = y + dy;
+            hashgrid[n].charge = 0.0;
+        }
+    
 }
 
 
@@ -368,7 +411,10 @@ void init_hashgrid(t_hashgrid hashgrid[HASHX*HASHY])
 //         }
 // //         sleep(1);
 //     }
-    sleep(1);
+
+    if (COLOR_BACKGROUND) init_hashcell_coordinates(hashgrid);
+    
+//     sleep(1);
 }
 
 void update_hashgrid(t_particle* particle, t_hashgrid* hashgrid, int verbose)

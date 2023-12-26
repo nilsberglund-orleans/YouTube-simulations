@@ -894,8 +894,7 @@ double wave_value(int i, int j, double *phi[NX], double *psi[NX], double *total_
         case (P_LOG_ENERGY):
         {
             energy = compute_energy(phi, psi, xy_in, i, j);
-//                       energy = LOG_SHIFT + LOG_SCALE*log(energy);
-//                         if (energy < 0.0) energy = 0.0;
+            if (energy < 1.0e-20) energy = 1.0e-20;
             value = LOG_SHIFT + LOG_SCALE*log(energy);
             color_scheme_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
             break;
@@ -947,8 +946,8 @@ double wave_value(int i, int j, double *phi[NX], double *psi[NX], double *total_
 }
 
 
-void draw_wave_profile(double *values, int size, int fade, double fade_value)
-/* draw a profile of the wave, if option DRAW_WAVE_PROFILE is active */
+void draw_wave_profile_horizontal(double *values, int size, int fade, double fade_value)
+/* draw a horizontal profile of the wave, if option DRAW_WAVE_PROFILE is active */
 {
     int i, k;
     double vmin, vmax, deltav, a, b, y;
@@ -976,6 +975,7 @@ void draw_wave_profile(double *values, int size, int fade, double fade_value)
         if (values[i*NY+jmin] > vmax) vmax = values[i*NY+jmin];
         if (values[i*NY+jmin] < vmin) vmin = values[i*NY+jmin];        
     }
+//     if (vmax <= vmin) vmax = vmin + 0.01;
     if ((vmin < 0.0)&&(vmax > 0.0))
     {
         if (vmax > -vmin) vmin = -vmax;
@@ -983,7 +983,7 @@ void draw_wave_profile(double *values, int size, int fade, double fade_value)
     }
 //     printf("vmin = %.3lg, vmax = %.3lg\n", vmin, vmax);
     deltav = vmax-vmin;
-    if (deltav == 0.0) deltav = 0.01;
+    if (deltav <= 0.0) deltav = 0.01;
     a = deltaj/deltav;
     b = ymin - a*vmin;
 
@@ -1008,6 +1008,249 @@ void draw_wave_profile(double *values, int size, int fade, double fade_value)
 }
 
 
+void draw_wave_profile_vertical(double *values, int size, int fade, double fade_value)
+/* draw a vertical profile of the wave, if option DRAW_WAVE_PROFILE is active */
+{
+    int j, k;
+    double vmin, vmax, deltav, a, b, x;
+    static int imin, imax, jmin, jmax, imid, d, first = 1;
+    static double deltai, xmin;
+    
+    if (first)
+    {        
+        jmin = 50;
+        jmax = NY - 50;
+        imin = NX - 150;
+        imax = NX - 50;
+        imid = (imin + imax)/2;
+        imid -= (imid%size);
+        d = (imax - imin)/10 + 1;
+        deltai = (double)(imax - imin - 2*d); 
+        xmin = (double)(imin + d);
+        first = 0;
+    }
+    
+    vmin = 1.0e10;
+    vmax = -vmin;
+    for (j=jmin; j<jmax; j+=size)
+    {
+        if (values[imin*NY+j] > vmax) vmax = values[imin*NY+j];
+        if (values[imin*NY+j] < vmin) vmin = values[imin*NY+j];        
+    }
+//     if ((vmin < 0.0)&&(vmax > 0.0))
+    {
+        if (vmax > -vmin) vmin = -vmax;
+        else if (vmax < -vmin) vmax = -vmin;
+    }
+//     else if (vmax > 0.0) vmin = 0.0;
+//     else if (vmin < 0.0) vmax = 0.0;
+//     printf("vmin = %.3lg, vmax = %.3lg\n", vmin, vmax);
+    deltav = vmax-vmin;
+    if (deltav <= 0.0) deltav = 0.01;
+    a = deltai/deltav;
+    b = xmin - a*vmin;
+
+    erase_area_ij(imin, jmin, imax, jmax);
+    
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINE_STRIP);
+    for (j=jmin; j<jmax; j+=size)
+    {
+        x = a*values[imin*NY+j] + b;
+        glVertex2d(x, (double)j);
+    }
+    glEnd();
+    
+    glBegin(GL_LINE_LOOP);
+    glVertex2i(imin, jmin);
+    glVertex2i(imax, jmin);
+    glVertex2i(imax, jmax);
+    glVertex2i(imin, jmax);
+    glEnd();
+}
+
+
+void draw_wave_profile(double *values, int size, int fade, double fade_value)
+/* draw a profile of the wave, if option DRAW_WAVE_PROFILE is active */
+{
+    if (VERTICAL_WAVE_PROFILE) draw_wave_profile_vertical(values, size, fade, fade_value);
+    else draw_wave_profile_horizontal(values, size, fade, fade_value);
+}
+
+void draw_exit_timeseries(double *values, int size, int fade, double fade_value)
+/* draw a profile of the wave, if option DRAW_WAVE_TIMESERIES is active */
+{
+    int t, t1, s, padding = 50, nvals = 200;
+    double a, b, deltav, x, y, wmin, wmax;
+    static int ij[2], ij_test[2], imin, imax, jmin, jmax, jmid, itest, jtest, counter = 0, first  = 1, window = 3;
+    static double timeseries[200], average[200], vmin, vmax, ymin, deltaj, deltai;
+    
+    if (first)
+    {
+        xy_to_ij(LAMBDA, -1.0 + MU, ij);
+//         xy_to_ij(LAMBDA - 0.1*MU, -1.0 + MU, ij_test);
+        xy_to_ij(LAMBDA, -1.0 + MU, ij_test);
+        imin = ij[0];
+        imax = NX - padding;
+        jmin = padding;
+        jmax = 2*ij[1] - jmin;
+        jmid = (jmin + jmax)/2;
+        ymin = (double)(jmin);
+        itest = ij_test[0];
+        jtest = ij_test[1];
+        deltai = (double)(imax - imin)/(double)nvals;
+        deltaj = (double)(jmax - jmin); 
+        vmin = 1.0e10;
+        vmax = -vmin;
+        for (t=0; t<nvals; t++) timeseries[t] = 0.0;
+        first = 0;
+    }
+    
+    timeseries[counter] = values[itest*NY + jtest] + values[(itest-1)*NY + jtest] + values[(itest)*NY + jtest + 1] + values[(itest-1)*NY + jtest + 1];
+    counter++;
+    if (counter == nvals) counter = 0;
+    
+//     for (t=0; t<nvals; t++) printf("val[%i] = %.3lg\n", t, timeseries[t]);
+        
+    for (t=0; t<nvals; t++)
+    {
+        if (timeseries[t] > vmax) vmax = timeseries[t];
+        if (timeseries[t] < vmin) vmin = timeseries[t];        
+    }
+    if (vmax > -vmin) vmin = -vmax;
+    else if (vmax < -vmin) vmax = -vmin;
+    
+    printf("vmin = %.3lg, vmax = %.3lg\n", vmin, vmax);
+    deltav = vmax-vmin;
+    if (deltav <= 0.0) deltav = 0.01;
+    a = deltaj/deltav;
+    b = ymin - a*vmin;
+    
+    /* compute average */
+    for (t=window; t<nvals-window; t++)
+    {
+        average[t] = 0.0;
+        for (s=-window; s<window; s++) 
+        {
+            t1 = counter - t + s;
+            if (t1 < 0) t1 += nvals;
+            if (t1 > nvals-1) t1 -= nvals;
+            average[t] += timeseries[t1]*timeseries[t1];
+        }
+        average[t] = sqrt(average[t]*0.5/(double)window);
+    }
+        
+    erase_area_ij(imin, jmin, imax, jmax);
+    
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    
+    glBegin(GL_LINE_STRIP);
+    for (t=0; t<nvals; t++)
+    {
+        t1 = counter - t;
+        if (t1 < 0) t1 += nvals;
+        x = (double)imin + deltai*(double)t;
+        y = a*timeseries[t1] + b;
+        glVertex2d(x, y);
+    }
+    glEnd();
+    
+    /* draw average */
+    if (fade) glColor3f(fade_value, 0.0, 0.0);
+    else glColor3f(1.0, 0.0, 0.0);
+    glBegin(GL_LINE_STRIP);
+    for (t1=window; t1<nvals-window; t1++)
+    {
+        x = (double)imin + deltai*(double)t1;
+        y = a*average[t1] + b;
+        glVertex2d(x, y);
+    }
+    glEnd();
+    glBegin(GL_LINE_STRIP);
+    for (t1=window; t1<nvals-window; t1++)
+    {
+        x = (double)imin + deltai*(double)t1;
+        y = -a*average[t1] + b;
+        glVertex2d(x, y);
+    }
+    glEnd();
+    
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    
+    glBegin(GL_LINE_LOOP);
+    glVertex2i(imin, jmin);
+    glVertex2i(imax, jmin);
+    glVertex2i(imax, jmax);
+    glVertex2i(imin, jmax);
+    glEnd();
+}
+
+
+void draw_entrance_timeseries(double *values, int size, int fade, double fade_value)
+/* draw a profile of the wave, if option DRAW_WAVE_TIMESERIES is active */
+{
+    int t, t1, padding = 50, nvals = 200;
+    double vmin, vmax, deltav, x, y;
+    static int ij[2], imin, imax, jmin, jmax, jmid, itest, jtest, counter = 0, first  = 1, 
+    time = 0;
+    static double ymin, deltaj, deltai, a, b;
+    
+    if (first)
+    {
+        xy_to_ij(-LAMBDA, 1.0 - MU, ij);
+        imin = padding;
+        imax = ij[0];
+        jmax = NY - padding;
+        jmin = 2*ij[1] - jmax;
+        jmid = (jmin + jmax)/2;
+        ymin = (double)(jmin);
+        deltai = (double)(imax - imin)/(double)nvals;
+        deltaj = (double)(jmax - jmin); 
+        b = (double)jmin + 0.25*deltaj;
+        a = 0.5*deltaj;
+        
+        first = 0;
+    }
+    
+    counter++;
+        
+    erase_area_ij(imin, jmin, imax, jmax);
+    
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    
+//     glEnable(GL_SCISSOR_TEST);
+//     glScissor(imin, jmin, imax-imin, jmax-jmin);
+    glBegin(GL_LINE_STRIP);
+    for (t=0; t<nvals; t++)
+    {
+        t1 = counter - t + nvals;
+        if (t1 >= NSTEPS) t1 = NSTEPS;
+        x = (double)imin + deltai*(double)t;
+        y = a*(double)input_signal[t1] + b;
+        glVertex2d(x, y);
+    }
+    glEnd();
+//     glDisable(GL_SCISSOR_TEST);
+    
+    glBegin(GL_LINE_LOOP);
+    glVertex2i(imin, jmin);
+    glVertex2i(imax, jmin);
+    glVertex2i(imax, jmax);
+    glVertex2i(imin, jmax);
+    glEnd();
+}
+
+void draw_wave_timeseries(double *values, int size, int fade, double fade_value)
+/* draw a profile of the wave, if option DRAW_WAVE_TIMESERIES is active */
+{
+    draw_exit_timeseries(values, size, fade, fade_value);
+    draw_entrance_timeseries(values, size, fade, fade_value);
+}
+
 void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], double *total_flux, short int *xy_in[NX], double scale, int time, int plot, int palette, int fade, double fade_value)
 /* same as draw_wave_highres, but with color scheme option */
 {
@@ -1017,7 +1260,7 @@ void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], doubl
     static double dtinverse = ((double)NX)/(COURANT*(XMAX-XMIN)), dx = (XMAX-XMIN)/((double)NX);
     double *values;
     
-    if (DRAW_WAVE_PROFILE) values = (double *)malloc(NX*NY*sizeof(double));
+    if ((DRAW_WAVE_PROFILE)||(DRAW_WAVE_TIMESERIES)) values = (double *)malloc(NX*NY*sizeof(double));
 
     glBegin(GL_QUADS);
     
@@ -1030,7 +1273,7 @@ void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], doubl
             {
                 value = wave_value(i, j, phi, psi, total_energy, total_flux, xy_in, scale, time, plot, palette, rgb);
                 
-                if (DRAW_WAVE_PROFILE) values[i*NY+j] = value;
+                if ((DRAW_WAVE_PROFILE)||(DRAW_WAVE_TIMESERIES)) values[i*NY+j] = value;
                 
                 if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
                 glColor3f(rgb[0], rgb[1], rgb[2]);
@@ -1044,11 +1287,10 @@ void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], doubl
 
     glEnd ();
     
-    if (DRAW_WAVE_PROFILE) 
-    {
-        draw_wave_profile(values, size, fade, fade_value);
-        free(values);
-    }
+    if (DRAW_WAVE_TIMESERIES) draw_wave_timeseries(values, size, fade, fade_value);
+    if (DRAW_WAVE_PROFILE) draw_wave_profile(values, size, fade, fade_value);
+    if ((DRAW_WAVE_PROFILE)||(DRAW_WAVE_TIMESERIES)) free(values);
+    
 }
 
 /* modified function for "flattened" wave tables */

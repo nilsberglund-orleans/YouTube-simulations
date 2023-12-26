@@ -49,10 +49,9 @@
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
 #define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
-#define IOR 9               /* choice of index of refraction, see list in global_pdes.c */
+#define IOR 13               /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.5 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
-
 
 /* General geometrical parameters */
 
@@ -63,33 +62,16 @@
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
-#define YMIN -0.397916667
-#define YMAX 1.997916667	/* y interval for 9/16 aspect ratio */
-// #define YMIN -1.197916667
-// #define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
+#define YMIN -1.197916667
+#define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
 
 #define HIGHRES 1       /* set to 1 if resolution of grid is double that of displayed image */
-
-// #define WINWIDTH 	1280  /* window width */
-// #define WINHEIGHT 	720   /* window height */
-// 
-// // #define NX 640          /* number of grid points on x axis */
-// // #define NY 360          /* number of grid points on y axis */
-// // #define NX 1280          /* number of grid points on x axis */
-// // #define NY 720          /* number of grid points on y axis */
-// #define NX 2560          /* number of grid points on x axis */
-// #define NY 1440          /* number of grid points on y axis */
-// 
-// #define XMIN -2.0
-// #define XMAX 2.0	/* x interval  */
-// #define YMIN -1.125
-// #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
 #define JULIA_SCALE 1.0 /* scaling for Julia sets */
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 20        /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 521        /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 103   /* pattern of circles or polygons, see list in global_pdes.c */
 
@@ -102,9 +84,10 @@
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 1.0	    /* parameter controlling the dimensions of domain */
-#define MU 0.005            /* parameter controlling the dimensions of domain */
+#define MU 0.48             /* parameter controlling the dimensions of domain */
+#define MU_B 0.42           /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
-#define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define APOLY -0.666666666666          /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 6            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
@@ -112,7 +95,6 @@
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
 #define NGRIDX 60           /* number of grid point for grid of disks */
 #define NGRIDY 10           /* number of grid point for grid of disks */
-// #define NGRIDY 18            /* number of grid point for grid of disks */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
@@ -130,38 +112,38 @@
 
 /* Physical parameters of wave equation */
 
-#define TWOSPEEDS 0          /* set to 1 to replace hardcore boundary by medium with different speed */
-#define OSCILLATE_LEFT 1     /* set to 1 to add oscilating boundary condition on the left */
+#define TWOSPEEDS 1          /* set to 1 to replace hardcore boundary by medium with different speed */
+#define OSCILLATE_LEFT 0     /* set to 1 to add oscilating boundary condition on the left */
 #define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
 #define OSCILLATION_SCHEDULE 0  /* oscillation schedule, see list in global_pdes.c */
 
-#define OMEGA 0.024        /* frequency of periodic excitation */
+#define OMEGA 0.01         /* frequency of periodic excitation */
 #define AMPLITUDE 1.0      /* amplitude of periodic excitation */ 
 #define ACHIRP 0.25        /* acceleration coefficient in chirp */
 #define DAMPING 0.0        /* damping of periodic excitation */
-#define COURANT 0.1        /* Courant number */
-#define COURANTB 0.01      /* Courant number in medium B */
+#define COURANT 0.06       /* Courant number */
+#define COURANTB 0.18       /* Courant number in medium B */
 #define GAMMA 0.0          /* damping factor in wave equation */
-#define GAMMAB 0.0         /* damping factor in wave equation */
+#define GAMMAB 0.007            /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
 #define GAMMA_TOPBOT 1.0e-7     /* damping factor on boundary */
 #define KAPPA 0.0           /* "elasticity" term enforcing oscillations */
 #define KAPPA_SIDES 5.0e-4  /* "elasticity" term on absorbing boundary */
 #define KAPPA_TOPBOT 0.0    /* "elasticity" term on absorbing boundary */
-#define OSCIL_LEFT_YSHIFT -400.0   /* y-dependence of left oscillation (for non-horizontal waves) */
+#define OSCIL_LEFT_YSHIFT 0.0   /* y-dependence of left oscillation (for non-horizontal waves) */
 /* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
 /* The physical damping coefficient is given by GAMMA/(DT)^2 */
 /* Increasing COURANT speeds up the simulation, but decreases accuracy */
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
-#define ADD_OSCILLATING_SOURCE 0        /* set to 1 to add an oscillating wave source */
-#define OSCILLATING_SOURCE_PERIOD 30    /* period of oscillating source */
+#define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
+#define OSCILLATING_SOURCE_PERIOD 8     /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
 
 #define ADD_WAVE_PACKET_SOURCES 0       /* set to 1 to add several sources emitting wave packets */
-#define WAVE_PACKET_SOURCE_TYPE 1       /* type of wave packet sources */
-#define N_WAVE_PACKETS 15               /* number of wave packets */
-#define WAVE_PACKET_RADIUS 20            /* radius of wave packets */
+#define WAVE_PACKET_SOURCE_TYPE 2       /* type of wave packet sources */
+#define N_WAVE_PACKETS 2                /* number of wave packets */
+#define WAVE_PACKET_RADIUS 25            /* radius of wave packets */
 
 /* Boundary conditions, see list in global_pdes.c  */
 
@@ -169,11 +151,10 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 3600       /* number of frames of movie */
-// #define NSTEPS 500       /* number of frames of movie */
-#define NVID 7            /* number of iterations between images displayed on screen */
+#define NSTEPS 2700       /* number of frames of movie */
+#define NVID 20           /* number of iterations between images displayed on screen */
 #define NSEG 1000         /* number of segments of boundary */
-#define INITIAL_TIME 700      /* time after which to start saving frames */
+#define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
 #define PRINT_SPEED 0       /* print speed of moving source */
 #define PRINT_FREQUENCY 0       /* print frequency (for phased array) */
@@ -182,29 +163,26 @@
 #define PSLEEP 1         /* sleep time during pause */
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1        /* final sleeping time */
-#define MID_FRAMES 20    /* number of still frames between parts of two-part movie */
-#define END_FRAMES 100    /* number of still frames at end of movie */
+#define MID_FRAMES 100    /* number of still frames between parts of two-part movie */
+#define END_FRAMES 300    /* number of still frames at end of movie */
 #define FADE 1           /* set to 1 to fade at end of movie */
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 2.0            /* amplitude of initial condition */
-// #define INITIAL_VARIANCE 0.000015    /* variance of initial condition */
-#define INITIAL_VARIANCE 0.000025    /* variance of initial condition */
-#define INITIAL_WAVELENGTH  0.05  /* wavelength of initial condition */
+#define INITIAL_AMP 0.5            /* amplitude of initial condition */
+#define INITIAL_VARIANCE 0.000012   /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.05   /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 
 #define PLOT 0
-// #define PLOT 7
 
 #define PLOT_B 5        /* plot type for second movie */
 
 /* Color schemes */
 
-#define COLOR_PALETTE 18     /* Color palette, see list in global_pdes.c  */
-// #define COLOR_PALETTE 17      /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 12     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 17     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 13     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
@@ -215,9 +193,9 @@
 #define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-#define E_SCALE 50.0     /* scaling factor for energy representation */
+#define E_SCALE 40.0      /* scaling factor for energy representation */
 #define LOG_SCALE 1.0     /* scaling factor for energy log representation */
-#define LOG_SHIFT 1.5     /* shift of colors on log scale */
+#define LOG_SHIFT 1.25     /* shift of colors on log scale */
 #define FLUX_SCALE 5.0e3    /* scaling factor for enegy flux represtnation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 
@@ -229,14 +207,15 @@
 #define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
 
 #define DRAW_COLOR_SCHEME 1    /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 1.0     /* scale of color scheme bar */
+#define COLORBAR_RANGE 1.5     /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 0.4   /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
 #define CIRC_COLORBAR_B 0       /* set to 1 to draw circular color scheme */
 
-#define DRAW_WAVE_PROFILE 1     /* set to 1 to draw a profile of the wave */
-
+#define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
+#define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
+#define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
 #define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
 
 #define NXMAZE 8      /* width of maze */
@@ -275,7 +254,7 @@ double courant2, courantb2;  /* Courant parameters squared */
 // void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], double *psi_out[NX], 
 //                       short int *xy_in[NX])
 void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX], 
-                      short int *xy_in[NX], double *tcc[NX])
+                      short int *xy_in[NX], double *tcc[NX], double *tgamma[NX])
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 /* this version of the function has been rewritten in order to minimize the number of if-branches */
@@ -283,7 +262,7 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
     int i, j, iplus, iminus, jplus, jminus;
     double delta, x, y, c, cc, gamma, tb_shift;
     static long time = 0;
-    static double tc[NX][NY], tgamma[NX][NY];
+    static double tc[NX][NY];
     static short int first = 1;
     
     time++;
@@ -299,15 +278,21 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
                 if (xy_in[i][j] != 0)
                 {
                     tc[i][j] = COURANT;
-                    if (!VARIABLE_IOR) tcc[i][j] = courant2;
-                    if (xy_in[i][j] == 1) tgamma[i][j] = GAMMA;
-                    else tgamma[i][j] = GAMMAB;
+                    if (!VARIABLE_IOR) 
+                    {
+                        tcc[i][j] = courant2;
+                        if (xy_in[i][j] == 1) tgamma[i][j] = GAMMA;
+                        else tgamma[i][j] = GAMMAB;
+                    }
                 }
                 else if (TWOSPEEDS)
                 {
                     tc[i][j] = COURANTB;
-                    tcc[i][j] = courantb2;
-                    tgamma[i][j] = GAMMAB;
+                    if (!VARIABLE_IOR) 
+                    {
+                        tcc[i][j] = courantb2;
+                        tgamma[i][j] = GAMMAB;
+                    }
                 }
             }
         }
@@ -543,7 +528,7 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
 }
 
 
-void evolve_wave(double *phi[NX], double *psi[NX], double *tmp[NX], short int *xy_in[NX], double *tcc_table[NX])
+void evolve_wave(double *phi[NX], double *psi[NX], double *tmp[NX], short int *xy_in[NX], double *tcc_table[NX], double *tgamma_table[NX])
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 {
@@ -553,11 +538,11 @@ void evolve_wave(double *phi[NX], double *psi[NX], double *tmp[NX], short int *x
     // At the beginning w[t] is saved in phi, w[t-1] in psi and tmp is space
     // for the next wave state w[t+1]. Take w[t] and w[t-1] to calculate the
     // next wave state. Write this new state in temp
-    evolve_wave_half(phi, psi, tmp, xy_in, tcc_table);
+    evolve_wave_half(phi, psi, tmp, xy_in, tcc_table, tgamma_table);
     // now w[t] is saved in tmp, w[t-1] in phi and the result is written to psi
-    evolve_wave_half(tmp, phi, psi, xy_in, tcc_table);
+    evolve_wave_half(tmp, phi, psi, xy_in, tcc_table, tgamma_table);
     // now w[t] is saved in psi, w[t-1] in tmp and the result is written to phi
-    evolve_wave_half(psi, tmp, phi, xy_in, tcc_table);
+    evolve_wave_half(psi, tmp, phi, xy_in, tcc_table, tgamma_table);
     // now w[t] is saved in phi, w[t-1] in psi and tmp is free again to take
     // the new wave state w[t+1] in the next call to this function, thus
     // matching the given parameter names again
@@ -584,11 +569,10 @@ void draw_color_bar_palette(int plot, double range, int palette, int circular, i
         draw_color_scheme_palette_fade(XMAX - 1.5*width, YMIN + 0.1, XMAX - 0.5*width, YMAX - 0.1, plot, -range, range, palette, fade, fade_value);
 }
 
-
 void animation()
 {
     double time, scale, ratio, startleft[2], startright[2], sign = 1.0, r2, xy[2], fade_value, yshift, speed = 0.0, a, b, c, x, y, angle = 0.0, x1, sign1, ior_angle = 0.0, omega, phase_shift; 
-    double *phi[NX], *psi[NX], *tmp[NX], *total_energy[NX], *color_scale[NX], *total_flux, *tcc_table[NX];
+    double *phi[NX], *psi[NX], *tmp[NX], *total_energy[NX], *color_scale[NX], *total_flux, *tcc_table[NX], *tgamma_table[NX];
     short int *xy_in[NX];
     int i, j, k, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, p, q, first_source = 1;
     static int counter = 0;
@@ -612,6 +596,7 @@ void animation()
         xy_in[i] = (short int *)malloc(NY*sizeof(short int));
         color_scale[i] = (double *)malloc(NY*sizeof(double));
         tcc_table[i] = (double *)malloc(NX*sizeof(double));
+        tgamma_table[i] = (double *)malloc(NX*sizeof(double));
     }
     
     if (MEAN_FLUX) total_flux = (double *)malloc(4*NX*NY*sizeof(double));
@@ -638,6 +623,8 @@ void animation()
     init_polyrect_arc(polyrectrot, polyarc, &npolyrect_rot, &npolyarc);
     printf("Rotated rectangles and arcs initialized\n");
     printf("%i rotated rectangles, %i arcs\n", npolyrect_rot, npolyarc);
+    
+    if (DRAW_WAVE_TIMESERIES) init_input_signal();
     
     courant2 = COURANT*COURANT;
     courantb2 = COURANTB*COURANTB;
@@ -667,9 +654,7 @@ void animation()
     if (MEAN_FLUX) 
         for (i=0; i<4*NX*NY; i++)
             total_flux[i] = 0.0;
-    
-    if (VARIABLE_IOR) init_ior_2d(xy_in, tcc_table, ior_angle);
-    
+
     ratio = (XMAX - XMIN)/8.4;  /* for Tokarsky billiard */
     
 //     isospectral_initial_point(0.2, 0.0, startleft, startright);    /* for isospectral billiards */
@@ -682,8 +667,10 @@ void animation()
 //     printf("xleft = (%.3f, %.3f) xright = (%.3f, %.3f)\n", xin_left, yin_left, xin_right, yin_right);
     
     init_wave_flat(phi, psi, xy_in);
+    
+    if (VARIABLE_IOR) init_ior_2d(xy_in, tcc_table, tgamma_table, ior_angle);
 
-//     init_circular_wave(-0.5, 0.0, phi, psi, xy_in);
+//     init_circular_wave(-1.5, 0.0, phi, psi, xy_in);
 //     x = XMIN + (XMAX - XMIN)*rand()/RAND_MAX;
 //     y = YMIN + (YMAX - YMIN)*rand()/RAND_MAX;
 //     init_circular_wave(0.0, -0.8, phi, psi, xy_in);
@@ -773,8 +760,7 @@ void animation()
         else draw_wave_epalette(phi, psi, total_energy, total_flux, color_scale, xy_in, scale, i, PLOT, COLOR_PALETTE, 0, 1.0);
         for (j=0; j<NVID; j++) 
         {
-//             evolve_wave(phi, psi, phi_tmp, psi_tmp, xy_in);
-            evolve_wave(phi, psi, tmp, xy_in, tcc_table);
+            evolve_wave(phi, psi, tmp, xy_in, tcc_table, tgamma_table);
             if (SAVE_TIME_SERIES)
             {
                 wave_value = (long int)(phi[sample_left[0]][sample_left[1]]*1.0e16);
@@ -795,8 +781,9 @@ void animation()
         if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == 1))
         {
             if (ALTERNATE_OSCILLATING_SOURCE) sign = -sign;
-            add_circular_wave(sign, -0.5, 0.0, phi, psi, xy_in);
-
+            add_circular_wave(sign, -1.5, 0.8, phi, psi, xy_in);
+            add_circular_wave(sign, -1.5, -0.35, phi, psi, xy_in);
+        
 //             p = phased_array_schedule(i);
             
 //             phase_shift = 0.02 + 0.06*(double)i/(double)NSTEPS;
@@ -873,14 +860,14 @@ void animation()
 //             speed = speed/c;
 //             speed = 120.0*speed/((double)NVID*COURANT);
         }
-        if (ADD_WAVE_PACKET_SOURCES) add_wave_packets(phi, psi, xy_in, packet, i, WAVE_PACKET_RADIUS, 0, 10, 1);
+        if (ADD_WAVE_PACKET_SOURCES) add_wave_packets(phi, psi, xy_in, packet, i, WAVE_PACKET_RADIUS, 1, 4, 2);
         if (PRINT_SPEED) print_speed(speed, 0, 1.0);
         if (PRINT_FREQUENCY) print_frequency(phase_shift, 0, 1.0);
         if ((VARIABLE_IOR)&&(REFRESH_IOR)&&(i%3 == 0))
         {
             ior_angle = ior_angle_schedule(i);
             printf("IOR angle = %.5lg\n", ior_angle); 
-            init_ior_2d(xy_in, tcc_table, ior_angle);
+            init_ior_2d(xy_in, tcc_table, tgamma_table, ior_angle);
             printf("speed = %.5lg\n", tcc_table[3*NX/4][NY/2]);
         }
 
@@ -987,6 +974,7 @@ void animation()
         free(xy_in[i]);
         free(color_scale[i]);
         free(tcc_table[i]);
+        free(tgamma_table[i]);
     }
     
     if (MEAN_FLUX) free(total_flux);
