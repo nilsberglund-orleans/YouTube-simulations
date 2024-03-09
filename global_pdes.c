@@ -69,6 +69,9 @@
 #define D_WAVEGUIDES_W 521      /* two W-shaped wave guides */
 #define D_WAVEGUIDES_COUPLED 522    /* two coupled wave guides */
 #define D_WAVEGUIDE_S 523       /* S-shaped wave guide */
+#define D_WAVEGUIDE_S_SHORT 524 /* short S-shaped wave guide */
+#define D_WAVEGUIDES_COUPLED_N 525    /* two coupled wave guides, narrow variant */
+#define D_WAVEGUIDE_BADSPLICE 526     /* badly spliced fibers, to use with IOR_WAVE_GUIDE_COATED */
 #define D_MAZE 53               /* maze */
 #define D_MAZE_CLOSED 54        /* closed maze */
 #define D_MAZE_CHANNELS 541     /* maze with two channels attached */
@@ -95,6 +98,9 @@
 #define D_TESLA_FOUR 72         /* four Tesla valves */
 
 #define D_TREE 73               /* Christmas tree, to use with IOR_TREE */
+#define D_MICHELSON 74          /* Michelson interferometer, to use with IOR_MICHELSON */
+#define D_MICHELSON_MOVING 741  /* moving Michelson interferometer, to use with IOR_MICHELSON */
+#define D_RITCHEY_CHRETIEN 75   /* Ritchey-Chrétien telescope */
 
 /* for wave_sphere.c */
 
@@ -176,6 +182,9 @@
 #define IOR_LENS_CONVEX_CONCAVE 13     /* lens with separating wall (to use with D_LENS_CONVEX_CONCAVE) */
 #define IOR_TREE 14             /* Christmas tree, to use with D_TREE */
 #define IOR_WAVE_GUIDES_COUPLED 15  /* coupled wave guides */
+#define IOR_WAVE_GUIDES_COUPLED_B 151  /* coupled wave guides, variant where only corners are reflecting */
+#define IOR_WAVE_GUIDE_COATED 16   /* short coated S-shaped optical fiber, to use with D_WAVEGUIDE_S_SHORT */
+#define IOR_MICHELSON 17        /* Michelson interferometer, to use with D_MICHELSON */
 
 #define IOR_EARTH_DEM 20        /* digital elevation model (for waves on sphere) */
 
@@ -196,12 +205,17 @@
 #define OSC_SLOWING 1   /* oscillation of slowing frequency (anti-chirp) */
 #define OSC_WAVE_PACKET 2   /* Gaussian wave packet */
 #define OSC_CHIRP 3     /* chirp (linearly accelerating frequency) */
+#define OSC_BEAM 4      /* periodic oscillation modulated by y cut-off */
+#define OSC_BEAM_GAUSSIAN 41  /* periodic oscillation modulated by Gaussian in y */
+#define OSC_BEAM_SINE 42  /* periodic oscillation modulated by sine in y */
+#define OSC_BEAM_TWOPERIODS 5 /* sum of two periodic oscillations modulated by y cut-off */
 
 /* Wave packet types */
 
 #define WP_RANDOM1 0    /* random, variant 1 */
 #define WP_RANDOM2 1    /* random, variant 2 */
 #define WP_PAIR 2       /* 2 sources */
+#define WP_FIVE 3       /* 5 sources with different envelope */
 
 /* Wave packet envelope types */
 
@@ -224,6 +238,8 @@
 #define P_LOG_MEAN_ENERGY 5  /* log of energy averaged over time */
 #define P_ENERGY_FLUX 6     /* energy flux */
 #define P_TOTAL_ENERGY_FLUX 7    /* energy flux averaged over time */
+#define P_AVERAGE_ENERGY 8  /* energy averaged over sliding window */
+#define P_LOG_AVERAGE_ENERGY 9  /* log of energy averaged over sliding window */
 
 /* For Schrodinger equation */
 #define P_MODULE 10        /* plot module of wave function squared */
@@ -425,3 +441,5 @@ t_vertex polyline_b[NMAXPOLY];        /* vertices of polygonal line */
 // double julia_x = -0.5, julia_y = 0.5;    /* parameters for Julia sets */
 // double julia_x = 0.33267, julia_y = 0.06395;    /* parameters for Julia sets */
 double julia_x = 0.37468, julia_y = 0.21115;    /* parameters for Julia sets */
+double wave_source_x, wave_source_y;    /* position of wave source */
+double michelson_position = 0.0;        /* position of mirror in Michelson interferometer */

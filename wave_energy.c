@@ -228,6 +228,22 @@
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
+#define WALL_WIDTH 0.1      /* width of wall separating lenses */
+#define OSCIL_YMAX 0.35      /* defines oscillation range */
+#define MESSAGE_LDASH 14         /* length of dash for Morse code message */
+#define MESSAGE_LDOT 8           /* length of dot for Morse code message */
+#define MESSAGE_LINTERVAL 54     /* length of interval between dashes/dots for Morse code message */
+#define MESSAGE_LINTERLETTER 60  /* length of interval between letters for Morse code message */
+#define MESSAGE_LSPACE 48        /* length of space for Morse code message */
+#define MESSAGE_INITIAL_TIME 100 /* initial time before starting message for Morse code message */    
+#define AVRG_E_FACTOR 0.95   /* controls time window size in P_AVERAGE_ENERGY scheme */
+#define HORIZONTAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
+#define WAVE_PROFILE_X 2.1      /* value of x to sample wave profile */
+#define WAVE_PROFILE_Y -1.0      /* value of y to sample wave profile */
+#define PROFILE_AT_BOTTOM 1     /* draw wave profile at bottom instead of top */
+#define AVERAGE_WAVE_PROFILE 1  /* set to 1 to draw time-average of wave profile squared*/
+#define TIMESERIES_NVALUES 400  /* number of values plotted in time series */
+#define DRAW_WAVE_SOURCE 0      /* set to 1 to draw source of wave at (wave_source_x, wave_source_y) */
 /* end of constants only used by sub_wave and sub_maze */
 
 #include "global_pdes.c"        /* constants and global variables */

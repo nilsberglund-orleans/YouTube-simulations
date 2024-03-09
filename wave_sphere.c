@@ -40,7 +40,7 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
@@ -48,22 +48,16 @@
 
 #define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1150  /* window height */
-// // // #define NX 2500          /* number of grid points on x axis */
-// // // #define NY 1250          /* number of grid points on y axis */
 #define NX 2560          /* number of grid points on x axis */
 #define NY 1280           /* number of grid points on y axis */
-// #define NX 1280          /* number of grid points on x axis */
-// #define NY 640           /* number of grid points on y axis */
-// #define NX 2048         /* number of grid points on x axis */
-// #define NY 1024         /* number of grid points on y axis */
-// #define NX 3064         /* number of grid points on x axis */
-// #define NY 1536         /* number of grid points on y axis */
-// #define NX 1024         /* number of grid points on x axis */
-// #define NY 512         /* number of grid points on y axis */
+// #define NX 2048          /* number of grid points on x axis */
+// #define NY 1024          /* number of grid points on y axis */
+// #define NX 1024          /* number of grid points on x axis */
+// #define NY 512           /* number of grid points on y axis */
 
-#define DPOLE 20         /* safety distance to poles */
+#define DPOLE 30         /* safety distance to poles */
 #define SMOOTHPOLE 0.1     /* smoothing coefficient at poles */
-#define ZERO_MERIDIAN 180.0     /* choice of zero meridian (will be at left/right boundary of 2d plot) */
+#define ZERO_MERIDIAN 190.0     /* choice of zero meridian (will be at left/right boundary of 2d plot) */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
@@ -80,6 +74,7 @@
 
 /* Choice of the billiard table */
 
+// #define B_DOMAIN 999         /* choice of domain shape, see list in global_pdes.c */
 #define B_DOMAIN 84         /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 33   /* pattern of circles or polygons, see list in global_pdes.c */
@@ -88,8 +83,8 @@
 #define B_DOMAIN_B 20       /* second domain shape, for comparisons */
 #define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
 
-#define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
-#define IOR 10              /* choice of index of refraction, see list in global_pdes.c */
+#define VARIABLE_IOR 1      /* set to 1 for a variable index of refraction */
+#define IOR 20              /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.0 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
 
@@ -109,6 +104,7 @@
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
 #define NGRIDX 30            /* number of grid point for grid of disks */
 #define NGRIDY 18            /* number of grid point for grid of disks */
+#define WALL_WIDTH 0.6      /* width of wall separating lenses */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
@@ -136,10 +132,11 @@
 #define AMPLITUDE 0.8     /* amplitude of periodic excitation */ 
 #define ACHIRP 0.2        /* acceleration coefficient in chirp */
 #define DAMPING 0.0       /* damping of periodic excitation */
-#define COURANT 0.05       /* Courant number */
-#define COURANTB 0.002    /* Courant number in medium B */
-#define GAMMA 0.0          /* damping factor in wave equation */
-#define GAMMAB 1.0e-2         /* damping factor in wave equation */
+#define COURANT 0.08       /* Courant number */
+#define COURANTB 0.005     /* Courant number in medium B */
+// #define GAMMA 2.0e-6         /* damping factor in wave equation */
+#define GAMMA 0.0         /* damping factor in wave equation */
+#define GAMMAB 0.0        /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
 #define GAMMA_TOPBOT 1.0e-7     /* damping factor on boundary */
 #define KAPPA 0.0           /* "elasticity" term enforcing oscillations */
@@ -160,19 +157,29 @@
 #define N_WAVE_PACKETS 15               /* number of wave packets */
 #define WAVE_PACKET_RADIUS 20            /* radius of wave packets */
 
+#define ADD_FORCING 0       /* set to 1 to add periodic forcing */
+#define FORCING_AMP 0.0     /* amplitude of periodic forcing */
+#define FORCING_CONST_AMP 1.0-10    /* amplitude of periodic forcing */
+#define FORCING_PERIOD 2400  /* period of forcing */
+
+#define DRIFT_WAVE 0        /* add drift of wave to the right (experimental) */
+#define DRIFT_FREQ 5        /* frequency of drift adding (experimental) */
+
+#define MOVING_FRAME 0      /* set to 1 to use wave equation in moving frame */
+#define VOVERC 0.025          /* moving frame speed over wave speed */
+
 /* Boundary conditions, see list in global_pdes.c  */
 
-// #define B_COND 1
 #define B_COND 2
 
 #define PRECOMPUTE_BC 0     /* set to 1 to compute neighbours for Laplacian in advance */
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 2400       /* number of frames of movie */
+#define NSTEPS 1500       /* number of frames of movie */
 // #define NSTEPS 500         /* number of frames of movie */
-#define NVID 4            /* number of iterations between images displayed on screen */
-// #define NVID 10            /* number of iterations between images displayed on screen */
+// #define NVID 6            /* number of iterations between images displayed on screen */
+#define NVID 10            /* number of iterations between images displayed on screen */
 #define NSEG 1000          /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
@@ -188,7 +195,7 @@
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 1.0            /* amplitude of initial condition */
+#define INITIAL_AMP 0.03           /* amplitude of initial condition */
 #define INITIAL_VARIANCE 0.00005    /* variance of initial condition */
 #define INITIAL_WAVELENGTH  0.002  /* wavelength of initial condition */
 
@@ -203,8 +210,8 @@
 #define CHANGE_LUMINOSITY 1     /* set to 1 to let luminosity depend on energy flux intensity */
 #define FLUX_WINDOW 30          /* size of averaging window of flux intensity */
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of plot */
-#define SHADE_3D 1              /* set to 1 to change luminosity according to normal vector */
-#define SHADE_2D 0              /* set to 1 to change luminosity according to normal vector to plane */
+#define SHADE_3D 0              /* set to 1 to change luminosity according to normal vector */
+#define SHADE_2D 1              /* set to 1 to change luminosity according to normal vector to plane */
 #define SHADE_WAVE 1            /* set to 1 to have luminosity depend on wave height */
 #define NON_DIRICHLET_BC 0      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
 #define FLOOR_ZCOORD 1          /* set to 1 to draw only facets with z not too negative */
@@ -223,7 +230,7 @@
 /* 3D representation */
 
 #define REPRESENTATION_3D 1     /* choice of 3D representation */ 
-#define PLOT_2D 0               /* switch to 2D representation, equirectangular projection */
+#define PLOT_2D 1               /* switch to 2D representation, equirectangular projection */
 #define PHISHIFT 0.0            /* shift of phi in 2D plot (in degrees) */
 #define FLOODING 1              /* set to 1 to draw waves above altitude (for Earth representations) */
 
@@ -231,7 +238,7 @@
 #define REP_PROJ_3D 1       /* projection on plane orthogonal to observer line of sight */
 
 #define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
-#define ROTATE_ANGLE 720.0   /* total angle of rotation during simulation */
+#define ROTATE_ANGLE -360.0   /* total angle of rotation during simulation */
 // #define ROTATE_ANGLE -50.0   /* total angle of rotation during simulation */
 #define ROTATE_VIEW_WHILE_FADE 1    /* set to 1 to keep rotating viewpoint during fade */
 
@@ -251,8 +258,8 @@
 #define COLOR_SCHEME 3   /* choice of color scheme, see list in global_pdes.c  */
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
-#define SLOPE 0.5        /* sensitivity of color on wave amplitude */
-#define VSCALE_AMPLITUDE 1.5   /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define VSCALE_AMPLITUDE 50.0  /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define VSCALE_ENERGY 5.0     /* additional scaling factor for color scheme P_3D_ENERGY */
 #define PHASE_FACTOR 20.0      /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
@@ -273,6 +280,13 @@
 #define HUEMEAN 240.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -200.0    /* amplitude of variation of hue for color scheme C_HUE */
 
+#define MESSAGE_LDASH 14         /* length of dash for Morse code message */
+#define MESSAGE_LDOT 8           /* length of dot for Morse code message */
+#define MESSAGE_LINTERVAL 54     /* length of interval between dashes/dots for Morse code message */
+#define MESSAGE_LINTERLETTER 60  /* length of interval between letters for Morse code message */
+#define MESSAGE_LSPACE 48        /* length of space for Morse code message */
+#define MESSAGE_INITIAL_TIME 100 /* initial time before starting message for Morse code message */    
+
 #define NXMAZE 8      /* width of maze */
 #define NYMAZE 32      /* height of maze */
 #define MAZE_MAX_NGBH 5     /* max number of neighbours of maze cell */
@@ -280,17 +294,28 @@
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_WIDTH 0.02     /* half width of maze walls */
 
-#define DRAW_COLOR_SCHEME 1       /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 6.0      /* scale of color scheme bar */
+#define DRAW_COLOR_SCHEME 0       /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 3.0      /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 6.0    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0     /* set to 1 to draw color scheme horizontally */
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
 #define CIRC_COLORBAR_B 0       /* set to 1 to draw circular color scheme */
+#define DRAW_MOON_POSITION 0    /* set to 1 to draw position of Moon (for tide simulation) */
 
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
+#define TIMESERIES_NVALUES 400  /* number of values plotted in time series */
 #define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
+#define OSCIL_YMAX 0.35      /* defines oscillation range */
+#define AVRG_E_FACTOR 0.95   /* controls time window size in P_AVERAGE_ENERGY scheme */
+#define HORIZONTAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
+#define WAVE_PROFILE_X 2.1      /* value of x to sample wave profile */
+#define WAVE_PROFILE_Y -1.0      /* value of y to sample wave profile */
+#define PROFILE_AT_BOTTOM 0     /* draw wave profile at bottom instead of top */
+#define AVERAGE_WAVE_PROFILE 0  /* set to 1 to draw time-average of wave profile squared*/
+#define TIMESERIES_NVALUES 400  /* number of values plotted in time series */
+#define DRAW_WAVE_SOURCE 0      /* set to 1 to draw source of wave at (wave_source_x, wave_source_y) */
 
 #define ADD_POTENTIAL 0         /* set to 1 to add potential to z coordinate */
 #define POTENTIAL 10
@@ -299,7 +324,7 @@
 
 /* For debugging purposes only */
 #define FLOOR 1         /* set to 1 to limit wave amplitude to VMAX */
-#define VMAX 10.0       /* max value of wave amplitude */
+#define VMAX 5.0       /* max value of wave amplitude */
 
 /* Parameters controlling 3D projection */
 
@@ -307,29 +332,31 @@ double u_3d[2] = {0.75, -0.45};     /* projections of basis vectors for REP_AXO_
 double v_3d[2] = {-0.75, -0.45};
 double w_3d[2] = {0.0, 0.015};
 double light[3] = {-0.816496581, -0.40824829, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
-double observer[3] = {-6.0, -3.0, 4.5};    /* location of observer for REP_PROJ_3D representation */ 
+double observer[3] = {-5.0, -5.0, 3.5};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
 #define ADD_DEM 1               /* add DEM (digital elevation model) */
-#define ADD_NEGATIVE_DEM 0      /* add DEM with bathymetric data */
-#define RSCALE_DEM 0.075          /* scaling factor of radial component for DEM */
-#define SMOOTH_DEM 0            /* set to 1 to smoothen DEM (to make altitude less constant) */
-#define DEM_SMOOTH_STEPS 5      /* number of smoothening steps */
-#define DEM_SMOOTH_HEIGHT 0.5   /* relative height below which to smoothen */
+#define ADD_NEGATIVE_DEM 1      /* add DEM with bathymetric data */
+#define RSCALE_DEM 0.1         /* scaling factor of radial component for DEM */
+#define SMOOTH_DEM 5            /* set to 1 to smoothen DEM (to make altitude less constant) */
+#define DEM_SMOOTH_STEPS 1      /* number of smoothening steps */
+#define DEM_SMOOTH_HEIGHT 2.0   /* relative height below which to smoothen */
 #define DEM_MAXHEIGHT 9000.0     /* max height of DEM (estimated from Everest/Olympus Mons) */
+#define DEM_MAXDEPTH -10000     /* max depth of DEM */
 #define PLANET_SEALEVEL 0.0      /* sea level for flooded planet */
-// #define PLANET_SEALEVEL 3850.0      /* sea level for flooded planet */
 #define VENUS_NODATA_FACTOR 0.5     /* altitude to assign to DEM points without data (fraction of mean altitude) */
+#define TRANSPARENT_WAVE 0      /* set to 1 for waves to be "transparent" */
 
-#define RSCALE 0.025             /* scaling factor of radial component */
-#define RMAX 1.5               /* max value of radial component */
+#define RSCALE 1.0             /* scaling factor of radial component */
+#define RMAX 10.0               /* max value of radial component */
+#define Z_SCALING_FACTOR 0.8    /* overall scaling factor of z axis for REP_PROJ_3D representation */
 #define RMIN 0.5               /* min value of radial component */
 #define Z_SCALING_FACTOR 0.8   /* overall scaling factor of z axis for REP_PROJ_3D representation */
 #define XY_SCALING_FACTOR 2.2   /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0         /* max value of z coordinate for REP_PROJ_3D representation */
 #define XSHIFT_3D 0.0           /* overall x shift for REP_PROJ_3D representation */
 #define YSHIFT_3D 0.0           /* overall y shift for REP_PROJ_3D representation */
-#define COS_VISIBLE -0.7        /* limit on cosine of normal to shown facets */
+#define COS_VISIBLE -0.3        /* limit on cosine of normal to shown facets */
 
 #include "global_pdes.c"        /* constants and global variables */
 #include "global_3d.c"          /* constants and global variables */
@@ -344,18 +371,88 @@ FILE *time_series_left, *time_series_right, *image_file;
 
 double courant2, courantb2;  /* Courant parameters squared */
 
+void compute_forcing_schedule(int t, t_wave_sphere wsphere[NX*NY])
+/* compute periodic forcing */
+{
+    int i, j;
+    double phase;
+    
+    phase = DPI*(double)t/(double)FORCING_PERIOD + ZERO_MERIDIAN*PI/180.0 + 0.5*PID;
+    
+    for (i=0; i<NX; i++) for (j=0.0; j<NY; j++)
+    {
+        wsphere[i*NY+j].force = FORCING_AMP*wsphere[i*NY+j].stheta*sin(2.0*(wsphere[i*NY+j].phi - phase));
+        wsphere[i*NY+j].force += FORCING_CONST_AMP*wsphere[i*NY+j].stheta*cos(2.0*(wsphere[i*NY+j].phi));
+    }
+    
+    moon_position = (int)((double)NX*(phase/DPI + 0.625));
+    while (moon_position < 0) moon_position += NX;
+    while (moon_position >= NX) moon_position -= NX;
+    
+//     i = NX/2;
+    i = moon_position;
+    printf("Phase = %.5lg, Forcing at i = %i: %.5lg, Moon position = %i\n", phase, i, wsphere[i*NY+NY/2].force, moon_position);
+}
+
+
+void shift_fields(double phi[NX*NY], short int xy_in[NX*NY])
+/* EXPERIMENTAL */
+{
+    int i, j;
+    double temp;
+    
+    #pragma omp parallel for private(j,i)
+//     for (j=DPOLE; j<NY-DPOLE; j++)
+    for (j=0; j<NY; j++)
+    {
+        temp = phi[j];
+        for (i=0; i<NX-1; i++) if (xy_in[i*NY+j])
+        {
+            phi[i*NY+j] = phi[(i+1)*NY+j];
+        }
+        if (xy_in[j]) 
+        {
+            phi[(NX-1)*NY+j] = temp;
+        }
+    }
+    
+//     for (j=0; j<NY; j++)
+//     {
+//         temp = phi[(NX-1)*NY+j];
+//         for (i=NX-1; i>1; i--) if (xy_in[i*NY+j])
+//         {
+//             phi[i*NY+j] = phi[(i-1)*NY+j];
+//         }
+//         if (xy_in[j]) 
+//         {
+//             phi[j] = temp;
+//         }
+//     }
+    
+    /* smoothing at poles */
+    for (j=0; j<DPOLE; j++)
+        for (i=0; i<NX; i++)
+            phi[i*NY+j] = 0.0;
+    
+    for (j=NY-DPOLE; j<NY; j++)
+        for (i=0; i<NX; i++)
+            phi[i*NY+j] = 0.0;
+}
+
 
 void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out[NX*NY], 
-                      short int xy_in[NX*NY], double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY])
+                      short int xy_in[NX*NY], double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY], t_wave_sphere wsphere[NX*NY], int t)
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 /* this version of the function has been rewritten in order to minimize the number of if-branches */
 {
     int i, j, iplus, iminus, jplus, jminus, jtop, jbot;
-    double delta, x, y, c, cc, gamma, sintheta, cottheta, invstheta, sum, avrg;
+    double delta, x, y, c, cc, gamma, sintheta, cottheta, invstheta, sum, avrg, force;
+    double tmp_phi[NY];
     static long time = 0;
     static short int first = 1;
-    static double dphi, dtheta, cphiphi, ctheta;
+    static double dphi, dtheta, cphiphi, ctheta, dt, vdrift;
+    static int counter = 0;
     
     if (first)
     {
@@ -363,8 +460,10 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
         dtheta = PI/(double)NY;
         cphiphi = dphi*dphi/(dtheta*dtheta);
         ctheta = dphi*dphi/(2.0*dtheta);
+        dt = (double)NVID*COURANT*(XMAX-XMIN)/((double)NX);
+        vdrift = COURANT*VOVERC;
         
-        printf("dphi = %.5lg, dtheta = %.5lg, cphiphi = %.5lg, ctheta = %.5lg\n", dphi, dtheta, cphiphi, ctheta); 
+        printf("dphi = %.5lg, dtheta = %.5lg, cphiphi = %.5lg, ctheta = %.5lg, dt = %.5lg\n", dphi, dtheta, cphiphi, ctheta, dt); 
         
         first = 0;
     }
@@ -374,11 +473,15 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
     #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta,x,y)
     /* evolution in the bulk */
     for (j=DPOLE; j<NY-DPOLE; j++){
-        sintheta = sin(j*dtheta);
+//         sintheta = sin(j*dtheta);
+        /* NEW: used wsphere to accelerate computation */
+        sintheta = wsphere[i*NY+j].stheta;
 //         invstheta = 1.0/(sintheta*sintheta);
         invstheta = 1.0/(sintheta*sintheta + SMOOTHPOLE*SMOOTHPOLE);
 //         cottheta = ctheta*cos(j*dtheta)/sintheta;
-        cottheta = ctheta*cos(j*dtheta)/(sintheta + SMOOTHPOLE);
+//         cottheta = ctheta*cos(j*dtheta)/(sintheta + SMOOTHPOLE);
+        cottheta = ctheta*wsphere[i*NY+j].ctheta/(sintheta + SMOOTHPOLE);
+        
         
         for (i=1; i<NX-1; i++){
             if ((TWOSPEEDS)||(xy_in[i*NY+j] != 0)){
@@ -397,15 +500,29 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
 
                 /* evolve phi */
                 phi_out[i*NY+j] = -y + 2*x + tcc[i*NY+j]*delta - KAPPA*x - tgamma[i*NY+j]*(x-y);
+                
+                if (ADD_FORCING) phi_out[i*NY+j] += wsphere[i*NY+j].force*dt;
+                
+                if (MOVING_FRAME)
+                {
+//                     phi_out[i*NY+j] += vdrift*wsphere[i*NY+j].stheta*(phi_in[(i+1)*NY+j] - phi_in[(i-1)*NY+j] - psi_in[(i+1)*NY+j] + psi_in[(i-1)*NY+j]);
+                    phi_out[i*NY+j] += VOVERC*tc[i*NY+j]*wsphere[i*NY+j].stheta*(phi_in[(i+1)*NY+j] - phi_in[(i-1)*NY+j] - psi_in[(i+1)*NY+j] + psi_in[(i-1)*NY+j]);
+                    /* the .stheta factor is not really correct, but prevents instability */
+                }
+                
+                /* optional: add const*delta to smoothen ? */
             }
         }
     }
     
     /* evolution at longitude zero */
     for (j=DPOLE; j<NY-DPOLE; j++){
-        sintheta = sin(j*dtheta);
-        invstheta = 1.0/(sintheta*sintheta);
-        cottheta = ctheta*cos(j*dtheta)/sintheta;
+//         sintheta = sin(j*dtheta);
+        sintheta = wsphere[j].stheta;
+        invstheta = 1.0/(sintheta*sintheta + SMOOTHPOLE*SMOOTHPOLE);
+//         cottheta = ctheta*cos(j*dtheta)/(sintheta + SMOOTHPOLE);
+        cottheta = ctheta*wsphere[j].ctheta/(sintheta + SMOOTHPOLE);
+        
         
         /* i = 0 */
         if ((TWOSPEEDS)||(xy_in[j] != 0)){
@@ -424,6 +541,16 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
 
             /* evolve phi */
             phi_out[j] = -y + 2*x + tcc[j]*delta - KAPPA*x - tgamma[j]*(x-y);
+            
+            if (ADD_FORCING) phi_out[j] += wsphere[j].force*dt;
+            
+            if (MOVING_FRAME)
+            {
+//                 phi_out[j] += vdrift*wsphere[j].stheta*(phi_in[NY+j] - phi_in[(NX-1)*NY+j] - psi_in[NY+j] + psi_in[(NX-1)*NY+j]);
+                phi_out[j] += VOVERC*tc[j]*wsphere[j].stheta*(phi_in[NY+j] - phi_in[(NX-1)*NY+j] - psi_in[NY+j] + psi_in[(NX-1)*NY+j]);
+            }
+//             if (j%100==0) 
+//                 printf("tcc*delta = %.5lg, forcing = %.5lg\n", tcc[j]*delta, forcing_schedule(t, i, 0, wsphere)*dt);
         }
         
         /* i = NX-1 */
@@ -443,64 +570,32 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
 
             /* evolve phi */
             phi_out[(NX-1)*NY+j] = -y + 2*x + tcc[(NX-1)*NY+j]*delta - KAPPA*x - tgamma[(NX-1)*NY+j]*(x-y);
+            
+            if (ADD_FORCING) phi_out[(NX-1)*NY + j] += wsphere[(NX-1)*NY + j].force*dt;
+            
+            if (MOVING_FRAME)
+            {
+//                 phi_out[(NX-1)*NY+j] += vdrift*wsphere[(NX-1)*NY+j].stheta*(phi_in[j] - phi_in[(NX-2)*NY+j] - psi_in[j] + psi_in[(NX-2)*NY+j]);
+                phi_out[(NX-1)*NY+j] += VOVERC*tc[i*NY+j]*wsphere[(NX-1)*NY+j].stheta*(phi_in[j] - phi_in[(NX-2)*NY+j] - psi_in[j] + psi_in[(NX-2)*NY+j]);
+            }
         }
     }
     
     /* compute average at north pole */
     sum = 0.0;
-    for (i=0; i<NX; i++) sum += phi_out[i*NY + DPOLE];
+//     for (i=0; i<NX; i++) sum += phi_out[i*NY + DPOLE];
+    for (i=0; i<NX; i++) sum += phi_out[i*NY + DPOLE - 1];
     avrg = sum/(double)NX;
     for (i=0; i<NX; i++) for (j=0; j<DPOLE; j++)
         phi_out[i*NY + j] = avrg;
-//     {
-//         x = phi_in[(NX-1)*NY+j];
-//         y = psi_in[(NX-1)*NY+j];
-//         phi_out[(NX-1)*NY+j] = -y + 2*x + tcc[(NX-1)*NY+j]*avrg - KAPPA*x - tgamma[(NX-1)*NY+j]*(x-y);
-// //         
-//     }
     
     /* compute average at south pole */
     sum = 0.0;
-    for (i=0; i<NX; i++) sum += phi_out[i*NY + NY-1-DPOLE];
+//     for (i=0; i<NX; i++) sum += phi_out[i*NY + NY-1-DPOLE];
+    for (i=0; i<NX; i++) sum += phi_out[i*NY + NY-DPOLE];
     avrg = sum/(double)NX;
     for (i=0; i<NX; i++) for (j=NY-DPOLE; j<NY; j++) 
         phi_out[i*NY + j] = avrg;
-//     {
-//         x = phi_in[(NX-1)*NY+j];
-//         y = psi_in[(NX-1)*NY+j];
-//         phi_out[(NX-1)*NY+j] = -y + 2*x + tcc[(NX-1)*NY+j]*avrg - KAPPA*x - tgamma[(NX-1)*NY+j]*(x-y);
-// //         
-//     }
-    
-//     /* north pole, j = 0 */
-//     if ((TWOSPEEDS)||(xy_in[0] != 0)){
-//         x = phi_in[0];
-//         y = psi_in[0];
-//         
-//         /* discretized Laplacian */
-//         delta = cphiphi*(phi_in[1] + phi_in[(NX/4)*NY+1] + phi_in[(NX/2)*NY+1] + phi_in[(3*NX/4)*NY+1] - 4.0*x);
-//         
-//         /* evolve phi */
-//         phi_out[0] = -y + 2*x + tcc[0]*delta - KAPPA*x - tgamma[0]*(x-y);
-//         
-//         /* set same values for all i */
-//         for (i=1; i<NX; i++) phi_out[i*NY] = phi_out[0];
-//     }
-//     
-//     /* south pole, j = NY-1 */
-//     if ((TWOSPEEDS)||(xy_in[NY-1] != 0)){
-//         x = phi_in[NY-1];
-//         y = psi_in[NY-1];
-//         
-//         /* discretized Laplacian */
-//         delta = cphiphi*(phi_in[NY-2] + phi_in[(NX/4)*NY+NY-2] + phi_in[(NX/2)*NY+NY-2] + phi_in[(3*NX/4)*NY+NY-2] - 4.0*x);
-//         
-//         /* evolve phi */
-//         phi_out[NY-1] = -y + 2*x + tcc[0]*delta - KAPPA*x - tgamma[0]*(x-y);
-//         
-//         /* set same values for all i */
-//         for (i=1; i<NX; i++) phi_out[i*NY+NY-1] = phi_out[NY-1];
-//     }
     
     /* for debugging purposes/if there is a risk of blow-up */
     if (FLOOR) for (i=0; i<NX; i++){
@@ -516,14 +611,13 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
 
 
 void evolve_wave(double phi[NX*NY], double psi[NX*NY], double tmp[NX*NY], short int xy_in[NX*NY],
-    double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY], t_laplacian laplace[NX*NY], t_laplacian laplace1[NX*NY], 
-    t_laplacian laplace2[NX*NY])
+    double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY], t_laplacian laplace[NX*NY], t_laplacian laplace1[NX*NY], t_laplacian laplace2[NX*NY], t_wave_sphere wsphere[NX*NY], int t)
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 {
-    evolve_wave_half(phi, psi, tmp, xy_in, tc, tcc, tgamma);
-    evolve_wave_half(tmp, phi, psi, xy_in, tc, tcc, tgamma);
-    evolve_wave_half(psi, tmp, phi, xy_in, tc, tcc, tgamma);
+    evolve_wave_half(phi, psi, tmp, xy_in, tc, tcc, tgamma, wsphere, t);
+    evolve_wave_half(tmp, phi, psi, xy_in, tc, tcc, tgamma, wsphere, t);
+    evolve_wave_half(psi, tmp, phi, xy_in, tc, tcc, tgamma, wsphere, t);
 }
 
 
@@ -620,7 +714,7 @@ void animation()
     double *phi, *psi, *tmp, *color_scale, *tc, *tcc, *tgamma;
 //     double *total_energy;
     short int *xy_in;
-    int i, j, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, k, p, q;
+    int i, j, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, k, p, q, drift_counter = 0;
     static int counter = 0, first_source = 1;
     long int wave_value;
     t_wave *wave;
@@ -734,47 +828,16 @@ void animation()
 //         add_circular_wave_mod(1.0, lambda1*cos(((double)j+0.5)*angle), lambda1*sin(((double)j+0.5)*angle), phi, psi, xy_in);
         
     /* Kilauea, Hawaii, USA */
-    init_circular_wave_sphere(155.2867*PI/180.0, 19.42109*PI/180.0, phi, psi, xy_in, wsphere);
+//     init_circular_wave_sphere(155.2867*PI/180.0, 19.42109*PI/180.0, phi, psi, xy_in, wsphere);
     
-    /* Mount Etna, Sicily, Italy */
-    add_circular_wave_sphere(1.0, -14.9950*PI/180.0, 37.7550*PI/180.0, phi, psi, xy_in, wsphere);
-    
-    /* Eyjafjallajökull, Iceland */
-    add_circular_wave_sphere(1.0, 19.61333*PI/180.0, 63.62000*PI/180.0, phi, psi, xy_in, wsphere);
+//     init_moving_tidal_wave_sphere(0.0, 0.05, 0.025, phi, psi, xy_in, wsphere);
 
-    /* Mount Vesuvius, Italy */
-    add_circular_wave_sphere(1.0, -14.433*PI/180.0, 40.817*PI/180.0, phi, psi, xy_in, wsphere);
-
-    /* Sakurajima, Japan */
-    add_circular_wave_sphere(1.0, -130.65806*PI/180.0, 31.58056*PI/180.0, phi, psi, xy_in, wsphere);
-
-    /* Mount Merapi, Indonesia */
-    add_circular_wave_sphere(1.0, -110.44611*PI/180.0, -7.54139*PI/180.0, phi, psi, xy_in, wsphere);
+    init_moving_tidal_wave_sphere(0.0, 2.5, 1.25, phi, psi, xy_in, wsphere);
     
-    /* Ulawun, Papua New Guinea */
-    add_circular_wave_sphere(1.0, -151.33333*PI/180.0, -5.05000*PI/180.0, phi, psi, xy_in, wsphere);
+//     init_circular_wave_sphere(0.0, -0.5, phi, psi, xy_in, wsphere);
     
-    /* Santa María, Guatemala */
-    add_circular_wave_sphere(1.0, 91.55167*PI/180.0, 14.75556*PI/180.0, phi, psi, xy_in, wsphere);
+//      init_wave_flat_sphere(phi, psi, xy_in, wsphere);
     
-    /*  Mount Erebus, Antarctica */
-    add_circular_wave_sphere(1.0, -167.15333*PI/180.0, -77.52972*PI/180.0, phi, psi, xy_in, wsphere);
-    
-    /*  Piton de la Fournaise, Reunion island, Indian Ocean */
-    add_circular_wave_sphere(0.75, -55.70889*PI/180.0, -21.24250*PI/180.0, phi, psi, xy_in, wsphere);
-
-    /*  Soufrière Hills, Montserrat */
-    add_circular_wave_sphere(0.75, 62.1773*PI/180.0, 16.7103*PI/180.0, phi, psi, xy_in, wsphere);
-    
-    /*  Axial Seamount, Pacific Ocean */
-    add_circular_wave_sphere(0.5, 130.00*PI/180.0, 45.95*PI/180.0, phi, psi, xy_in, wsphere);
-    
-    /*  Havre Seamount, New Zealand */
-    add_circular_wave_sphere(0.5, 179.968611*PI/180.0, -31.120278*PI/180.0, phi, psi, xy_in, wsphere);
-
-    /*  Boomerang Seamount, Indian Ocean */
-    add_circular_wave_sphere(0.5, -77.825*PI/180.0, -37.721*PI/180.0, phi, psi, xy_in, wsphere);
-
 //     init_wave_flat_sphere(phi, psi, xy_in, wsphere);
 //     for (j=0; j<6; j++)
 //         add_circular_wave_sphere(1.0, (double)j*PI/3.0, 0.925*PID, phi, psi, xy_in, wsphere);
@@ -840,10 +903,13 @@ void animation()
             reset_view = 1;
         }
         
+        if (ADD_FORCING) compute_forcing_schedule(i, wsphere);
+        
         draw_wave_sphere(0, phi, psi, xy_in, wave, wsphere, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
+        
         for (j=0; j<NVID; j++) 
         {
-            evolve_wave(phi, psi, tmp, xy_in, tc, tcc, tgamma, laplace, laplace1, laplace2);
+            evolve_wave(phi, psi, tmp, xy_in, tc, tcc, tgamma, laplace, laplace1, laplace2, wsphere, i);
             if (SAVE_TIME_SERIES)
             {
                 wave_value = (long int)(phi[sample_left[0]*NY+sample_left[1]]*1.0e16);
@@ -852,9 +918,31 @@ void animation()
                 fprintf(time_series_right, "%019ld\n", wave_value);
                 if ((j == 0)&&(i%10 == 0)) printf("Frame %i of %i\n", i, NSTEPS);
 //                 fprintf(time_series_right, "%.15f\n", phi[sample_right[0]][sample_right[1]]);
+                
+                /* Experimental */
+                if (DRIFT_WAVE)
+                {
+                    if (drift_counter == DRIFT_FREQ)
+                    {
+                        shift_fields(phi, xy_in);
+                        shift_fields(psi, xy_in);
+                        shift_fields(tmp, xy_in);    /* needed? */    
+                        drift_counter = 0;
+                    }
+                    else drift_counter++;
+                }
             }
 //             if (i % 10 == 9) oscillate_linear_wave(0.2*scale, 0.15*(double)(i*NVID + j), -1.5, YMIN, -1.5, YMAX, phi, psi);
         }
+        
+        /* Experimental */
+//         if (DRIFT_WAVE != 0)
+//             if (i%DRIFT_FREQ == 0)
+//             {
+//                 shift_fields(phi, xy_in);
+//                 shift_fields(psi, xy_in);
+//                 shift_fields(tmp, xy_in);    /* needed? */        
+//             }
         
 //         draw_billiard();
         

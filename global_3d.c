@@ -86,6 +86,7 @@
 
 int global_time = 0;
 double max_depth = 1.0;
+int moon_position;
 
 /* structure used for color and height representations */
 /* possible extra fields: zfield, cfield, interpolated coordinates */
@@ -148,12 +149,15 @@ typedef struct
     double ctheta, stheta, cottheta;   /* cos, sin and cotangent of theta */
     double x, y, z;             /* x, y, z coordinates of point on sphere */
     double radius;              /* radius with wave height */
+    double radius_dem;          /* radius with digital elevation model */
     double r, g, b;             /* RGB values for image */
     short int indomain;         /* has value 1 if lattice point is in domain */
+    short int draw_wave;        /* has value 1 if wave instead of DEM is drawn */
     double x2d, y2d;            /* x and y coordinates for 2D representation */
     double altitude;            /* altitude in case of Earth with digital elevation model */
     double cos_angle;           /* cosine of light angle */
     double cos_angle_sphere;    /* cosing of light angle for perfect sphere */
+    double force;             /* external forcing */
 } t_wave_sphere;
 
 

@@ -17,7 +17,7 @@
 #define NMAXSEGMENTS 1000   /* max number of repelling segments */
 #define NMAXGROUPS 50       /* max number of groups of segments */
 #define NMAXCOLLISIONS 200000   /* max number of collisions */
-#define NMAXPARTNERS 10     /* max number of partners in molecule */
+#define NMAXPARTNERS 30     /* max number of partners in molecule */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -75,6 +75,7 @@
 #define S_HLINE_HOLE_SPOKES 181    /* horizontal line with a hole in the bottom and extra spokes */
 #define S_EXT_CIRCLE_RECT 19    /* particles outside a circle and a rectangle */
 #define S_BIN_OPENING 20        /* bin containing particles opening at deactivation time */
+#define S_BIN_LARGE 201         /* larger bin */
 #define S_POLYGON_EXT 21        /* exterior of a regular polygon */
 #define S_WEDGE_EXT 22          /* exterior of a wedge */ 
 #define S_MIXER 23              /* exterior of a blender made of rectangles */
@@ -83,6 +84,7 @@
 #define S_COANDA_SHORT 26       /* shorter wall for Coanda effect */
 #define S_CYLINDER 27           /* walls at top and bottom, for cylindrical b.c. */
 #define S_TREE 28               /* Christmas tree(s) */
+#define S_CONE 29               /* cone */
 
 /* particle interaction */
 
@@ -127,11 +129,26 @@
 #define TH_INBOX 2          /* only particles in a given box are coupled */
 #define TH_LAYER 3          /* only particles above PARTIAL_THERMO_HEIGHT are coupled */
 #define TH_LAYER_TYPE2 4    /* only particles above highest type 2 particle are coupled */
+#define TH_RING 5           /* only particles outside disc of radius PARTIAL_THERMO_WIDTH are coupled */
+#define TH_RING_EXPAND 6    /* only particles outside disc of radius changing from PARTIAL_THERMO_RIN to PARTIAL_THERMO_RFIN are coupled */
+#define TH_INIT 7           /* only particles in region defined by INITXMIN, etc are coupled */
+#define TH_THERMO 8         /* only particles in region defined by THERMOXMIN, etc are coupled */
+#define TH_CONE 9           /* cone defined by S_CONE */
+
+/* temperature schedules */
+
+#define TS_EXPONENTIAL 0     /* temperature follows an exponential in time */
+#define TS_CYCLING 1         /* temperature cycling */
+#define TS_PERIODIC 2        /* periodic time dependence */
+#define TS_LINEAR 3          /* linear time dependence */
+#define TS_COSINE 4          /* periodic time dependence, cosine */
+#define TS_EXPCOS 5          /* periodic time dependence, exponential of cosine */
+#define TS_ASYM_EXPCOS 6     /* periodic time dependence, asymmetric exponential of cosine */
 
 /* Gravity schedules */
 
 #define G_INCREASE_RELEASE 1    /* slow increase and instant release */
-#define G_INCREASE_DECREASE 2   /* slow increase an decrease */
+#define G_INCREASE_DECREASE 2   /* slow increase and decrease */
 
 /* Rocket shapes */
 
@@ -170,9 +187,14 @@
 #define CHEM_BZ 14          /* simplified Belousov-Zhabotinski reaction with 6 types (Oregonator) */
 #define CHEM_BRUSSELATOR 15 /* Brusselator oscillating reaction */
 #define CHEM_ABDACBE 16     /* A + B -> D, A + C -> B + E */
+#define CHEM_H2O_H_OH 20    /* H2O <-> H+ + OH- */
+#define CHEM_2H2O_H3O_OH 21 /* 2 H2O <-> H3O+ + OH- */
+#define CHEM_AGGREGATION 22 /* agregation of molecules coming close */
+#define CHEM_AGGREGATION_CHARGE 23 /* agregation of charged molecules coming close */
 
 /* Initial conditions for chemical reactions */
 
+#define IC_NOTHING 99      /* do not change particle types */
 #define IC_UNIFORM 0       /* all particles have type 1 */
 #define IC_UNIFORM2 20     /* all particles have type 2 */
 #define IC_RANDOM_UNIF 1   /* particle type chosen uniformly at random */
@@ -212,8 +234,13 @@
 #define P_INITIAL_POS 11  /* colors depend on initial position of particle */
 #define P_NUMBER 12       /* colors depend on particle number */
 #define P_EMEAN 13        /* averaged kinetic energy (with exponential damping) */
+#define P_LOG_EMEAN 131   /* log of averaged kinetic energy (with exponential damping) */
 #define P_DIRECT_EMEAN 14 /* averaged version of P_DIRECT_ENERGY */
 #define P_NOPARTICLE 15   /* particles are not drawn (only the links between them) */
+#define P_NPARTNERS 16    /* number of partners */
+#define P_CHARGE 17       /* colors represent charge */
+#define P_MOL_ANGLE 18    /* orientation of molecule defined by partners */
+#define P_CLUSTER 19      /* colors depend on connected component */
 
 /* Rotation schedules */
 
@@ -230,6 +257,12 @@
 #define POLY_STAR 0     /* star-shaped graph (central molecule attracts outer ones) */
 #define POLY_ALL 1      /* all-to-all coupling */
 #define POLY_WATER 2    /* star-shaped with a 120° separation between anions */
+#define POLY_SOAP 3     /* polymers with all-to-all coupling and polar end */
+#define POLY_SOAP_B 4   /* polymers with pairwise coupling and polar end */
+#define POLY_PLUSMINUS 5    /* polymers with ends of opposite charge */
+#define POLY_HYDRA 6        /* star-shaped with longer arms */
+#define POLY_HYDRA_RIGID 61 /* star-shaped with longer arms and rigid first ring */
+// #define POLY_GLUE 99    /* dummy value for option CHEM_AGGREGATION */
 
 /* Background color schemes */
 
@@ -238,6 +271,11 @@
 #define BG_CHARGE 2     /* background color depends on charge density */
 #define BG_EKIN 3       /* background color depends on kinetic energy */
 #define BG_FORCE 4      /* background color depends on total force */
+
+/* Particle add regions */
+
+#define ADD_RECTANGLE 0     /* rectangular region, defined by ADDXMIN, etc */
+#define ADD_RING 1          /* ring_shaped region, defined by ADDRMIN, ADDRMAX */
 
 /* Color schemes */
 
@@ -300,9 +338,12 @@ typedef struct
     double spin_freq;           /* angular frequency of spin-spin interaction */
     double color_hue;           /* color hue of particle, for P_INITIAL_POS plot type */
     int color_rgb[3];           /* RGB colors code of particle, for use in ljones_movie.c */
-    int partner[NMAXPARTNERS];  /* partners particle for option PAIR_PARTICLES */
+    int partner[NMAXPARTNERS];  /* partner particles for option PAIR_PARTICLES */
     short int npartners;        /* number of partner particles */
     double partner_eqd[NMAXPARTNERS];   /* equilibrium distances between partners */
+    int p0, p1;                 /* numbers of two first partners (for P_MOL_ANGLE color scheme) */
+    int cluster;                /* number of cluster */
+    short int tested, cactive;     /* for cluster search */
 } t_particle;
 
 typedef struct
@@ -410,7 +451,10 @@ typedef struct
     double bdry_fx, bdry_fy;    /* components of boundary force */
     double efield, bfield;      /* electric and magnetic field */
     double prop;                /* proportion of types */
+    double thermo_radius;       /* radius of thermostat region */
 } t_lj_parameters;
+
+
 
 int ncircles, nobstacles, nsegments, ngroups = 1, counter = 0;
 

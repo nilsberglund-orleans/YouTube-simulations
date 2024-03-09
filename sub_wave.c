@@ -632,6 +632,15 @@ void draw_tpolygon(t_polygon polygon)
     glEnd();
 }
 
+double michelson_schedule(int i)
+{
+    double t;
+
+    t = (double)(i - INITIAL_TIME)/(double)NSTEPS;
+    return(4.0*t*WALL_WIDTH);
+//     return(2.0*t*WALL_WIDTH);
+}   
+
 
 int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern)
 /* initialise the arrays circlex, circley, circlerad and circleactive */
@@ -2444,7 +2453,7 @@ int xy_in_arc(double x, double y, t_arc arc)
 int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_circle *circles)
 /* returns 1 if (x,y) represents a point in the billiard */
 {
-    double l2, r2, r2mu, omega, b, c, angle, z, x1, y1, x2, y2, y3, u, v, u1, v1, dx, dy, width, alpha, s, a, r, height, ca, sa, l, ht, xshift, zz[9][2], x5, x6, f, fp;
+    double l2, r1, r2, r2mu, omega, b, c, d, angle, z, x1, y1, x2, y2, y3, u, v, u1, v1, dx, dy, width, alpha, s, a, r, height, ca, sa, l, ht, xshift, zz[9][2], x5, x6, f, fp, h1;
     int i, j, k, k1, k2, condition = 0, m;
     static int first = 1, nsides;
     static double h, hh, ra, rb, ll, salpha;
@@ -3067,7 +3076,7 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
         }   
         case (D_WAVEGUIDES_COUPLED):
         {
-            x1 = vabs(x);
+            x1 = vabs(x)*2.0/XMAX;
             y1 = vabs(y);
             
             width = 0.03;
@@ -3081,6 +3090,26 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             fp = 6.0*b*x5/((1.0 + x6)*(1.0 + x6));
             
             return(vabs(f - y1) < MU*sqrt(1.0 + fp*fp));
+        }
+        case (D_WAVEGUIDES_COUPLED_N):
+        {
+            x1 = vabs(x);
+            y1 = vabs(y);
+            
+            width = 0.01;
+            b = 1.0*(1.0 - 2.0*MU - width);
+            a = MU + 0.5*width - b;
+            c = 15.0;
+            x6 = x1*x1*x1;
+            x5 = x6*x1*x1;
+            x6 = x5*x1;
+            
+            f = a + b*(1.0 + 2.0*c*x6)/(1.0 + c*x6);
+            fp = 6.0*b*c*x5/((1.0 + c*x6)*(1.0 + c*x6));
+            
+            if (vabs(f - y1) < 0.9*MU*sqrt(1.0 + fp*fp)) return(1);
+            if (vabs(f - y1) < MU*sqrt(1.0 + fp*fp)) return(2);
+            return(0);
         }
         case (D_WAVEGUIDE_S):
         {
@@ -3099,7 +3128,40 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             }
             r = module2(x-LAMBDA, y-a);
             return(vabs(r - a) < MU);
-            
+        }
+        case (D_WAVEGUIDE_S_SHORT):
+        {
+            a = -1.0 + MU;
+            if (y < 0.0)
+            {
+                x = -x;
+                y = -y;
+            }
+            if (x < -LAMBDA)
+            {
+                if (vabs(y - 1.0 + MU) > MU) return(0);
+                if (vabs(y - 1.0 + MU) > 0.8*MU) return(2);
+                return(1);
+            }
+            r = module2(x-a, y);
+            if (vabs(r - 1.0 + MU) < 0.8*MU) return(1);
+            if (vabs(r - 1.0 + MU) < MU) return(2);
+            return(0);
+        }
+        case (D_WAVEGUIDE_BADSPLICE):
+        {
+            if (x < 0.0) 
+            {
+                y1 = vabs(vabs(y) - 0.5);
+            }
+            else
+            {
+                if (y > 0.0) y1 = vabs(y - 0.5 - MU);
+                else y1 = vabs(y + 0.5 - MU_B);
+            }
+            if (y1 < 0.9*LAMBDA) return(1);
+            if (y1 < LAMBDA) return(2);
+            return(0);
         }
         case (D_MAZE):
         {
@@ -3226,6 +3288,7 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             a = 1.9;
             b = 1.9 - 2.0*LAMBDA + 2.0*width;
             x1 = vabs(x);
+            if ((x1 < WALL_WIDTH)&&(vabs(y) > MU)) return(2);
             if (module2(x1 - a, y) > LAMBDA) return(1);
             if (module2(x1 - b, y) > LAMBDA) return(1);
             return(0);
@@ -3331,6 +3394,54 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             if (xy_in_triangle(0.8*x1, 0.8*y3, zz[6], zz[7], zz[8])) return(2);
 
             return(1);
+        }
+        case (D_MICHELSON):
+        {
+            if ((vabs(x) > LAMBDA)&&(vabs(y) > LAMBDA)) return(2);
+            r = 0.5*sqrt(2.0);
+            h = YMAX - 0.5*WALL_WIDTH;
+            x1 = (x + y)*r;
+            y1 = (-x + y)*r;
+            if ((vabs(y1) < 0.5*WALL_WIDTH)&&(vabs(x1) < LAMBDA*sqrt(2.0))) return(1);
+            if ((vabs(x - h) < 0.5*WALL_WIDTH)&&(vabs(y) < LAMBDA)) return(2);
+            if ((vabs(x) < LAMBDA)&&(vabs(y - h) < 0.5*WALL_WIDTH)) return(2);
+            return(0);
+        }
+        case (D_MICHELSON_MOVING):
+        {
+            if ((vabs(x) > LAMBDA)&&(vabs(y) > LAMBDA)) return(2);
+            r = 0.5*sqrt(2.0);
+            h = YMAX - MU - 0.5*WALL_WIDTH;
+            h1 = YMAX - MU - 0.5*WALL_WIDTH + michelson_position;
+            x1 = (x + y)*r;
+            y1 = (-x + y)*r;
+            if ((vabs(y1) < 0.5*WALL_WIDTH)&&(vabs(x1) < LAMBDA*sqrt(2.0))) return(1);
+            if ((vabs(x - h1) < 0.5*WALL_WIDTH)&&(vabs(y) < LAMBDA)) return(2);
+            if ((vabs(x) < LAMBDA)&&(vabs(y - h) < 0.5*WALL_WIDTH)) return(2);
+            return(0);
+        }
+        case (D_RITCHEY_CHRETIEN):
+        {
+            /* LAMBDA is magnification M */
+            d = 2.5;
+            b = 3.5;
+            r1 = 2.0*(d + b/LAMBDA);
+            r2 = 6.0/(LAMBDA - 1.0);
+            x1 = 0.5*d - r1;
+            x2 = -0.5*d - r2;
+            y1 = vabs(y);
+            if (x < 0.0)
+            {
+                if (y1 > 0.3) return(1);
+                if (x < -0.5*d - WALL_WIDTH) return(1);
+                return(module2(x-x2, y1) > r2);
+            }
+            else
+            {
+                if (y1 < MU) return(1);
+                if (x > 0.5*d + WALL_WIDTH) return(1);
+                return(module2(x-x1, y1) < r1);
+            }
         }
         case (D_MENGER):       
         {
@@ -3542,10 +3653,11 @@ void hex_transfo(double u, double v, double *x, double *y)
 
 void draw_billiard(int fade, double fade_value)      /* draws the billiard boundary */
 {
-    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, ymax, height, xmax, ca, sa, xshift, x5, x6, f, fp;
+    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, d, r1, r2, ymax, height, xmin, xmax, ca, sa, xshift, x5, x6, f, fp, xratio, w;
     int i, j, k, k1, k2, mr2, ntiles;
     static int first = 1, nsides;
     static double h, hh, sqr3, ll, salpha, arcangle;
+    char message[100];
 
     if (fade)
     {
@@ -4542,18 +4654,21 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
         case (D_WAVEGUIDES_COUPLED):
         {
             width = 0.03;
+            xratio = XMAX/2.0;
             b = 1.0*(1.0 - 2.0*MU - width);
             a = MU + 0.5*width - b;
             
             if ((DRAW_WAVE_PROFILE)&&(VERTICAL_WAVE_PROFILE))
                 dx = (XMAX - XMIN - 0.06)/(double)NSEG;
             else dx = (XMAX - XMIN + 0.1)/(double)NSEG;
+            dx = dx/xratio;
+            xmin = XMIN/xratio;
             
-            x1 = XMIN - 0.1;
+            x1 = xmin - 0.1;
             y1 = 1.0;
             for (i=0; i<NSEG; i++)
             {
-                x2 = XMIN - 0.1 + (double)i*dx;
+                x2 = xmin - 0.1 + (double)i*dx;
                 x6 = x2*x2*x2;
                 x5 = x6*x2*x2;
                 x6 = x5*x2;
@@ -4563,16 +4678,16 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 
                 y2 = f + MU*sqrt(1.0 + fp*fp);
                 
-                draw_line(x1, y1, x2, y2);
+                draw_line(x1*xratio, y1, x2*xratio, y2);
                 x1 = x2;
                 y1 = y2;
             }
             
-            x1 = XMIN - 0.1;
+            x1 = xmin - 0.1;
             y1 = 1.0;
             for (i=0; i<NSEG; i++)
             {
-                x2 = XMIN - 0.1 + (double)i*dx;
+                x2 = xmin - 0.1 + (double)i*dx;
                 x6 = x2*x2*x2;
                 x5 = x6*x2*x2;
                 x6 = x5*x2;
@@ -4582,16 +4697,16 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 
                 y2 = f - MU*sqrt(1.0 + fp*fp);
                 
-                draw_line(x1, y1, x2, y2);
+                draw_line(x1*xratio, y1, x2*xratio, y2);
                 x1 = x2;
                 y1 = y2;
             }
             
-            x1 = XMIN - 0.1;
+            x1 = xmin - 0.1;
             y1 = -1.0;
             for (i=0; i<NSEG; i++)
             {
-                x2 = XMIN - 0.1 + (double)i*dx;
+                x2 = xmin - 0.1 + (double)i*dx;
                 x6 = x2*x2*x2;
                 x5 = x6*x2*x2;
                 x6 = x5*x2;
@@ -4601,16 +4716,16 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 
                 y2 = -(f + MU*sqrt(1.0 + fp*fp));
                 
-                draw_line(x1, y1, x2, y2);
+                draw_line(x1*xratio, y1, x2*xratio, y2);
                 x1 = x2;
                 y1 = y2;
             }
             
-            x1 = XMIN - 0.1;
+            x1 = xmin - 0.1;
             y1 = -1.0;
             for (i=0; i<NSEG; i++)
             {
-                x2 = XMIN - 0.1 + (double)i*dx;
+                x2 = xmin - 0.1 + (double)i*dx;
                 x6 = x2*x2*x2;
                 x5 = x6*x2*x2;
                 x6 = x5*x2;
@@ -4620,12 +4735,12 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 
                 y2 = -f + MU*sqrt(1.0 + fp*fp);
                 
-                draw_line(x1, y1, x2, y2);
+                draw_line(x1*xratio, y1, x2*xratio, y2);
                 x1 = x2;
                 y1 = y2;
             }
             
-            x2 = LAMBDA;
+            x2 = LAMBDA/xratio;
             x6 = x2*x2*x2;
             x5 = x6*x2*x2;
             x6 = x5*x2;
@@ -4636,6 +4751,8 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             y1 = f - MU*sqrt(1.0 + fp*fp);
             y2 = f + MU*sqrt(1.0 + fp*fp);
             
+            x2 = LAMBDA;
+            
             draw_line(x2, YMIN, x2, -y2);
             draw_line(x2, -y1, x2, y1);
             draw_line(x2, y2, x2, YMAX);
@@ -4643,6 +4760,126 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             draw_line(-x2, -y1, -x2, y1);
             draw_line(-x2, y2, -x2, YMAX);
             
+            break;
+        }
+        case (D_WAVEGUIDES_COUPLED_N):
+        {
+            width = 0.01;
+            xratio = XMAX/2.0;
+            b = 1.0*(1.0 - 2.0*MU - width);
+            a = MU + 0.5*width - b;
+            c = 15.0;
+            
+            if ((DRAW_WAVE_PROFILE)&&(VERTICAL_WAVE_PROFILE))
+                dx = (XMAX - XMIN - 0.06)/(double)NSEG;
+            else dx = (XMAX - XMIN + 0.1)/(double)NSEG;
+            dx = dx/xratio;
+            xmin = XMIN/xratio;
+            
+            x1 = xmin - 0.1;
+            y1 = 1.0;
+            for (i=0; i<NSEG; i++)
+            {
+                x2 = xmin - 0.1 + (double)i*dx;
+                x6 = x2*x2*x2;
+                x5 = x6*x2*x2;
+                x6 = x5*x2;
+            
+                f = a + b*(1.0 + 2.0*c*x6)/(1.0 + c*x6);
+                fp = 6.0*b*c*x5/((1.0 + c*x6)*(1.0 + c*x6));
+                
+                y2 = f + MU*sqrt(1.0 + fp*fp);
+                
+                draw_line(x1*xratio, y1, x2*xratio, y2);
+                x1 = x2;
+                y1 = y2;
+            }
+            
+            x1 = xmin - 0.1;
+            y1 = 1.0;
+            for (i=0; i<NSEG; i++)
+            {
+                x2 = xmin - 0.1 + (double)i*dx;
+                x6 = x2*x2*x2;
+                x5 = x6*x2*x2;
+                x6 = x5*x2;
+            
+                f = a + b*(1.0 + 2.0*c*x6)/(1.0 + c*x6);
+                fp = 6.0*b*c*x5/((1.0 + c*x6)*(1.0 + c*x6));
+                
+                y2 = f - MU*sqrt(1.0 + fp*fp);
+                
+                draw_line(x1*xratio, y1, x2*xratio, y2);
+                x1 = x2;
+                y1 = y2;
+            }
+            
+            x1 = xmin - 0.1;
+            y1 = -1.0;
+            for (i=0; i<NSEG; i++)
+            {
+                x2 = xmin - 0.1 + (double)i*dx;
+                x6 = x2*x2*x2;
+                x5 = x6*x2*x2;
+                x6 = x5*x2;
+            
+                f = a + b*(1.0 + 2.0*c*x6)/(1.0 + c*x6);
+                fp = 6.0*b*c*x5/((1.0 + c*x6)*(1.0 + c*x6));
+                
+                y2 = -(f + MU*sqrt(1.0 + fp*fp));
+                
+                draw_line(x1*xratio, y1, x2*xratio, y2);
+                x1 = x2;
+                y1 = y2;
+            }
+            
+            x1 = xmin - 0.1;
+            y1 = -1.0;
+            for (i=0; i<NSEG; i++)
+            {
+                x2 = xmin - 0.1 + (double)i*dx;
+                x6 = x2*x2*x2;
+                x5 = x6*x2*x2;
+                x6 = x5*x2;
+            
+                f = a + b*(1.0 + 2.0*c*x6)/(1.0 + c*x6);
+                fp = 6.0*b*c*x5/((1.0 + c*x6)*(1.0 + c*x6));
+                
+                y2 = -f + MU*sqrt(1.0 + fp*fp);
+                
+                draw_line(x1*xratio, y1, x2*xratio, y2);
+                x1 = x2;
+                y1 = y2;
+            }
+            
+            x2 = LAMBDA/xratio;
+            x6 = x2*x2*x2;
+            x5 = x6*x2*x2;
+            x6 = x5*x2;
+            
+            f = a + b*(1.0 + 2.0*c*x6)/(1.0 + c*x6);
+            fp = 6.0*b*c*x5/((1.0 + c*x6)*(1.0 + c*x6));
+                
+            y1 = f - MU*sqrt(1.0 + fp*fp);
+            y2 = f + MU*sqrt(1.0 + fp*fp);
+            
+            x2 = LAMBDA;
+            b = 0.7;
+            
+            draw_line(x2, YMIN, x2, -y2);
+            draw_line(x2, -y1, x2, -b);
+            draw_line(x2, -b, XMAX, -b);
+            draw_line(XMAX, b, x2, b);
+            draw_line(x2, b, x2, y1);
+            draw_line(x2, y2, x2, YMAX);
+            
+            draw_line(-x2, YMIN, -x2, -y2);
+            draw_line(-x2, -y1, -x2, -b);
+            draw_line(-x2, -b, XMIN, -b);
+            draw_line(XMIN, b, -x2, b);
+            draw_line(-x2, b, -x2, y1);
+            draw_line(-x2, y2, -x2, YMAX);
+                        
             break;
         }
         case (D_WAVEGUIDE_S):
@@ -4664,6 +4901,32 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             draw_line(-LAMBDA, -1.0, LAMBDA, -1.0);
             draw_line(LAMBDA, -1.0, LAMBDA, -2.0*a+MU);
             draw_line(LAMBDA, -2.0*a+MU, -LAMBDA, -2.0*a+MU);
+            break;
+        }
+        case (D_WAVEGUIDE_S_SHORT):
+        {
+            a = -1.0 + MU;
+            
+            draw_circle_arc(-1.0+MU, 0.0, 1.0-2.0*MU, 0.0, PID, NSEG);
+            draw_circle_arc(-1.0+MU, 0.0, 1.0, 0.0, PID, NSEG);
+            draw_circle_arc(1.0-MU, 0.0, 1.0-2.0*MU, PI, PID, NSEG);
+            draw_circle_arc(1.0-MU, 0.0, 1.0, PI, PID, NSEG);
+            
+            draw_line(-1.0, 1.0, -1.0+MU, 1.0);
+            draw_line(-1.0, 1.0, -1.0, 1.0-2.0*MU);
+            draw_line(-1.0, 1.0-2.0*MU, -1.0+MU, 1.0-2.0*MU);
+            draw_line(1.0, -1.0, 1.0-MU, -1.0);
+            draw_line(1.0, -1.0, 1.0, -1.0+2.0*MU);
+            draw_line(1.0, -1.0+2.0*MU, 1.0-MU, -1.0+2.0*MU);
+            
+            break;
+        }
+        case (D_WAVEGUIDE_BADSPLICE):
+        {
+            draw_rectangle(XMIN-1.0, 0.5-LAMBDA, 0.0, 0.5+LAMBDA);
+            draw_rectangle(0.0, 0.5-LAMBDA+MU, XMAX + 1.0, 0.5+LAMBDA+MU);
+            draw_rectangle(XMIN-1.0, -0.5-LAMBDA, 0.0, -0.5+LAMBDA);
+            draw_rectangle(0.0, -0.5-LAMBDA+MU_B, XMAX + 1.0, -0.5+LAMBDA+MU_B);
             break;
         }
         case (D_CIRCLE_SEGMENT):
@@ -4963,7 +5226,7 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             draw_circle_arc(-a, 0.0, LAMBDA, -arcangle, 2.0*arcangle, NSEG);
             draw_circle_arc(-b, 0.0, LAMBDA, PI-arcangle, 2.0*arcangle, NSEG);
             
-            width = 0.05;
+            width = WALL_WIDTH;
             draw_rectangle(-width, MU, width, YMAX + 1.0);
             draw_rectangle(-width, YMIN-1.0, width, -MU);
             break;
@@ -5087,6 +5350,91 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
 //             draw_line(-x1, y1, x1, y1);
             
             /* do nothing */
+            break;
+        }
+        case (D_MICHELSON):
+        {
+            w = 0.25*sqrt(2.0)*WALL_WIDTH;
+            h = YMAX - 0.5*WALL_WIDTH;
+            glBegin(GL_LINE_LOOP);
+            xy_to_pos(LAMBDA + w, LAMBDA - w, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(LAMBDA - w, LAMBDA + w, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(-LAMBDA - w, -LAMBDA + w, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(-LAMBDA + w, -LAMBDA - w, pos);
+            glVertex2d(pos[0], pos[1]);
+            glEnd();  
+            draw_rectangle(h - 0.5*WALL_WIDTH, -LAMBDA, h + 0.5*WALL_WIDTH, LAMBDA);
+            draw_rectangle(-LAMBDA, h - 0.5*WALL_WIDTH, LAMBDA, h + 0.5*WALL_WIDTH);
+            draw_rectangle(LAMBDA, LAMBDA, XMAX + 1.0, YMAX + 1.0);
+            draw_rectangle(LAMBDA, -LAMBDA, XMAX + 1.0, YMIN - 1.0);
+            draw_rectangle(-LAMBDA, -LAMBDA, XMIN - 1.0, YMIN - 1.0);
+            draw_rectangle(-LAMBDA, LAMBDA, XMIN - 1.0, YMAX + 1.0);
+            break;
+        }
+        case (D_MICHELSON_MOVING):
+        {
+            w = 0.25*sqrt(2.0)*WALL_WIDTH;
+            h = YMAX - MU - 0.5*WALL_WIDTH;
+            glBegin(GL_LINE_LOOP);
+            xy_to_pos(LAMBDA + w, LAMBDA - w, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(LAMBDA - w, LAMBDA + w, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(-LAMBDA - w, -LAMBDA + w, pos);
+            glVertex2d(pos[0], pos[1]);
+            xy_to_pos(-LAMBDA + w, -LAMBDA - w, pos);
+            glVertex2d(pos[0], pos[1]);
+            glEnd();  
+            draw_rectangle(h - 0.5*WALL_WIDTH + michelson_position, -LAMBDA, h + 0.5*WALL_WIDTH + michelson_position, LAMBDA);
+            draw_rectangle(-LAMBDA, h - 0.5*WALL_WIDTH, LAMBDA, h + 0.5*WALL_WIDTH);
+            draw_rectangle(LAMBDA, LAMBDA, XMAX + 1.0, YMAX + 1.0);
+            draw_rectangle(LAMBDA, -LAMBDA, XMAX + 1.0, YMIN - 1.0);
+            draw_rectangle(-LAMBDA, -LAMBDA, XMIN - 1.0, YMIN - 1.0);
+            draw_rectangle(-LAMBDA, LAMBDA, XMIN - 1.0, YMAX + 1.0);
+            
+            x = h - 0.5*WALL_WIDTH + michelson_schedule(INITIAL_TIME);
+            draw_line(x, LAMBDA, x, LAMBDA + WALL_WIDTH);
+            draw_line(x, -LAMBDA, x, -LAMBDA - WALL_WIDTH);
+            
+            if (fade) glColor3f(fade_value, fade_value, fade_value);
+            else glColor3f(1.0, 1.0, 1.0);
+            xy_to_pos(YMAX - MU - 0.1*XMAX, LAMBDA + 0.1*YMAX + 0.1, pos);
+//             xy_to_pos(YMAX - MU - 0.3*XMAX, LAMBDA + 0.1*YMAX + 0.1, pos);
+            sprintf(message, "Mirror position");
+            write_text(pos[0], pos[1], message);
+            xy_to_pos(YMAX - MU - 0.1*XMAX, LAMBDA + 0.1*YMAX, pos);
+            /* wavelength eyeballed from simulation result, should be improved */
+            sprintf(message, "%.3f wavelengths", michelson_position/0.0667);
+            write_text(pos[0], pos[1], message);
+            break;
+        }
+        case (D_RITCHEY_CHRETIEN):
+        {
+            d = 2.5;
+            b = 3.5;
+            r1 = 2.0*(d + b/LAMBDA);
+            r2 = 6.0/(LAMBDA - 1.0);
+            x1 = 0.5*d - r1;
+            x2 = -0.5*d - r2;
+            
+            alpha = asin(0.3/r2);
+            ca = cos(alpha);
+            draw_circle_arc(x2, 0.0, r2, -alpha, 2.0*alpha, NSEG);
+            draw_line(x2 + r2*ca, 0.3, -0.5*d - WALL_WIDTH, 0.3);
+            draw_line(-0.5*d - WALL_WIDTH, 0.3, -0.5*d - WALL_WIDTH, -0.3);
+            draw_line(-0.5*d - WALL_WIDTH, -0.3, x2 + r2*ca, -0.3);
+            
+            alpha = asin(MU/r1);
+            ca = cos(alpha);
+            draw_circle_arc(x1, 0.0, r1, alpha, 0.5*PID, NSEG);
+            draw_circle_arc(x1, 0.0, r1, -alpha, -0.5*PID, NSEG);
+            draw_line(x1 + r1*ca, MU, 0.5*d + WALL_WIDTH, MU);
+            draw_line(0.5*d + WALL_WIDTH, MU, 0.5*d + WALL_WIDTH, YMAX);
+            draw_line(x1 + r1*ca, -MU, 0.5*d + WALL_WIDTH, -MU);
+            draw_line(0.5*d + WALL_WIDTH, -MU, 0.5*d + WALL_WIDTH, YMIN);
             break;
         }
         case (D_MENGER):
@@ -5679,6 +6027,19 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
                 break;
             }
+            case (P_AVERAGE_ENERGY):
+            {
+                value = dy_e*(double)(j - jmin)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_LOG_AVERAGE_ENERGY):
+            {
+                value = LOG_SCALE*log(dy_e*(double)(j - jmin)*100.0/E_SCALE);
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
             case (P_PHASE):
             {
                 value = min + 1.0*dy*(double)(j - jmin);
@@ -5783,9 +6144,9 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
 void draw_circular_color_scheme_palette_fade(double x1, double y1, double radius, int plot, double min, double max, int palette, int fade, double fade_value)
 {
     int j, k;
-    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2];
+    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2], zscale = 0.9;
     
-    glBegin(GL_TRIANGLE_FAN);
+//     glBegin(GL_TRIANGLE_FAN);
     xy_to_pos(x1, y1, xy);
     glVertex2d(xy[0], xy[1]);
     dy = (max - min)/360.0;
@@ -5839,6 +6200,19 @@ void draw_circular_color_scheme_palette_fade(double x1, double y1, double radius
             {
                 value = dy_phase*(double)(j);
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_AVERAGE_ENERGY):
+            {
+                value = dy_e*(double)(j)*100.0/E_SCALE;
+                if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                else color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (P_LOG_AVERAGE_ENERGY):
+            {
+                value = LOG_SCALE*log(dy_e*(double)(j)*100.0/E_SCALE);
+                color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 1, rgb);
                 break;
             }
             case (P_PHASE):
@@ -5908,12 +6282,18 @@ void draw_circular_color_scheme_palette_fade(double x1, double y1, double radius
         if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
         glColor3f(rgb[0], rgb[1], rgb[2]);
         
-        xy_to_pos(x1 + radius*cos(dphi*(double)j), y1 + radius*sin(dphi*(double)j), xy);
+        glBegin(GL_TRIANGLE_FAN);
+        xy_to_pos(x1, y1, xy);
         glVertex2d(xy[0], xy[1]);
+        xy_to_pos(x1 + radius*cos(dphi*(double)(j-1)), y1 + zscale*radius*sin(dphi*(double)(j-1)), xy);
+        glVertex2d(xy[0], xy[1]);
+        xy_to_pos(x1 + radius*cos(dphi*(double)j), y1 + zscale*radius*sin(dphi*(double)j), xy);
+        glVertex2d(xy[0], xy[1]);
+        glEnd ();
     }
     xy_to_pos(x1 + radius*cos(dphi), y1 + radius*sin(dphi), xy);
-    glVertex2d(xy[0], xy[1]);
-    glEnd ();
+//     glVertex2d(xy[0], xy[1]);
+//     glEnd ();
     
     if (fade) glColor3f(fade_value, fade_value, fade_value);
     else glColor3f(1.0, 1.0, 1.0);
@@ -5924,7 +6304,7 @@ void draw_circular_color_scheme_palette_fade(double x1, double y1, double radius
     glBegin(GL_LINE_LOOP);
     for (j = 0; j < NSEG; j++)
     {               
-        xy_to_pos(x1 + radius*cos(dphi*(double)j), y1 + radius*sin(dphi*(double)j), xy);
+        xy_to_pos(x1 + radius*cos(dphi*(double)j), y1 + zscale*radius*sin(dphi*(double)j), xy);
         glVertex2d(xy[0], xy[1]);
         glVertex2d(xy[0], xy[1]);
     }
@@ -6388,7 +6768,8 @@ void compute_laplacian(double phi[NX*NY], t_laplacian laplace[NX*NY], double del
 
 double oscillating_bc(int time, int j)
 {
-    double t, phase, a, envelope, omega;
+    int ij[2], jmin, jmax;
+    double t, phase, a, envelope, omega, amp, dist2;
     
     switch (OSCILLATION_SCHEDULE)
     {
@@ -6413,7 +6794,8 @@ double oscillating_bc(int time, int j)
         {
             t = (double)time*OMEGA;
 //             a = 10.0;
-            a = 0.02/OMEGA;
+//             a = 0.02/OMEGA;
+            a = sqrt(INITIAL_VARIANCE)/OMEGA;
             phase = AMPLITUDE*cos(t);
             envelope = exp(-(t-0.2)*(t-0.2)/(a*a))*sqrt(DPI/a);
             return(phase*envelope);
@@ -6425,6 +6807,56 @@ double oscillating_bc(int time, int j)
             phase = t + ACHIRP*t*t;
             return(AMPLITUDE*sin(phase)*exp(-phase*DAMPING));
         }
+        case (OSC_BEAM):
+        {
+            xy_to_ij(0.0, OSCIL_YMAX, ij);
+            jmax = ij[1];
+            jmin = NY - jmax;
+            if (j < jmin) dist2 = (double)(jmin-1-j)*(YMAX-YMIN)/(double)NY;                
+            else if (j > jmax) dist2 = (double)(j - jmax)*(YMAX-YMIN)/(double)NY;
+            else dist2 = 0.0;
+            dist2 = 500.0*dist2*dist2;
+            t = (double)time*OMEGA;
+            amp = AMPLITUDE*cos(t)*exp(-(double)t*DAMPING);
+            amp *= exp(-dist2/INITIAL_VARIANCE);
+            return(amp);
+        }
+        case (OSC_BEAM_GAUSSIAN):
+        {
+            dist2 = (double)(j - NY/2)*(YMAX-YMIN)/(double)NY;  
+            dist2 = dist2*dist2;
+            t = (double)time*OMEGA;
+            amp = AMPLITUDE*cos(t)*exp(-(double)t*DAMPING);
+            amp *= exp(-dist2/INITIAL_VARIANCE);
+            return(amp);
+        }
+        case (OSC_BEAM_SINE):
+        {
+            xy_to_ij(0.0, OSCIL_YMAX, ij);
+            jmax = ij[1];
+            jmin = NY - jmax;
+            dist2 = (double)(j - NY/2)/(double)(jmax - NY/2); 
+            if (j > jmax) return(0.0);
+            if (j < jmin) return(0.0);
+            t = (double)time*OMEGA;
+            amp = AMPLITUDE*cos(t)*exp(-(double)t*DAMPING);
+            amp *= cos(PID*dist2);
+            return(amp);
+        }
+        case (OSC_BEAM_TWOPERIODS):
+        {
+            xy_to_ij(0.0, OSCIL_YMAX, ij);
+            jmax = ij[1];
+            jmin = NY - jmax;
+            if (j < jmin) dist2 = (double)(jmin-1-j)*(YMAX-YMIN)/(double)NY;                
+            else if (j > jmax) dist2 = (double)(j - jmax)*(YMAX-YMIN)/(double)NY;
+            else dist2 = 0.0;
+            dist2 = 500.0*dist2*dist2;
+            t = (double)time*OMEGA;
+            amp = AMPLITUDE*(0.5*cos(t) + 0.5*cos(sqrt(7.0)*t))*exp(-(double)t*DAMPING);
+            amp *= exp(-dist2/INITIAL_VARIANCE);
+            return(amp);
+        }
     }
 }
 
@@ -6433,7 +6865,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_tab
 /* should be at some point merged with 3D version in suv_wave_3d.c */
 {
     int i, j, k, n, inlens, ncircles;
-    double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
+    double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1, courant_med, courant_med2;
     double a, u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
     double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
     static double xc_stat[NGRIDX*NGRIDY], yc_stat[NGRIDX*NGRIDY], sigma_stat;
@@ -6835,16 +7267,21 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_tab
                         }
                         else 
                         {
-                            if (xy_in[i][j] != 0) 
+                            if (xy_in[i][j] == 1) 
                             {
                                 tcc_table[i][j] = courant2;
                                 tgamma_table[i][j] = GAMMA;
                             }
-                            else 
+                            else if (xy_in[i][j] == 0) 
                             {
                                 tcc_table[i][j] = courantb2;
                                 tgamma_table[i][j] = GAMMAB;
                             }
+                            else
+                            {
+                                tcc_table[i][j] = 0.0;
+                                tgamma_table[i][j] = 1.0;
+                            }                                
                         }
                     }
                 }
@@ -6985,12 +7422,89 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_tab
                         ij_to_xy(i, j, xy);
                         x = xy[0];
                         y = xy[1];
-                        if (xy_in[i][j]) 
+                        if (xy_in[i][j] == 1) 
                         {
                             tcc_table[i][j] = courant2;
                             tgamma_table[i][j] = GAMMA;
                         }
                         else if (vabs(x) > LAMBDA)
+                        {
+                            tcc_table[i][j] = 0.0;
+                            tgamma_table[i][j] = 1.0;                            
+                        }
+                        else
+                        {
+                            tcc_table[i][j] = courantb2;
+                            tgamma_table[i][j] = GAMMAB;
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_WAVE_GUIDES_COUPLED_B):
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        y = xy[1];
+                        if (xy_in[i][j] == 1) 
+                        {
+                            tcc_table[i][j] = courant2;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else if ((vabs(x) > LAMBDA)&&(vabs(y) > 0.7))
+                        {
+                            tcc_table[i][j] = 0.0;
+                            tgamma_table[i][j] = 1.0;                            
+                        }
+                        else
+                        {
+                            tcc_table[i][j] = courantb2;
+                            tgamma_table[i][j] = GAMMAB;
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_WAVE_GUIDE_COATED):
+            {
+                courant_med = 0.8*COURANT + 0.2*COURANTB;
+                courant_med2 = courant_med*courant_med;
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+//                         ij_to_xy(i, j, xy);
+//                         x = xy[0];
+//                         y = xy[1];
+                        if (xy_in[i][j] == 1) 
+                        {
+                            tcc_table[i][j] = courant2;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else if (xy_in[i][j] == 2)
+                        {
+                            tcc_table[i][j] = courant_med2;
+                            tgamma_table[i][j] = GAMMA;                            
+                        }
+                        else
+                        {
+                            tcc_table[i][j] = courantb2;
+                            tgamma_table[i][j] = GAMMAB;
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_MICHELSON):
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        if (xy_in[i][j] == 0) 
+                        {
+                            tcc_table[i][j] = courant2;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else if (xy_in[i][j] == 2)
                         {
                             tcc_table[i][j] = 0.0;
                             tgamma_table[i][j] = 1.0;                            
@@ -7102,7 +7616,6 @@ void init_wave_packets(t_wave_packet *packet, int radius)
                 packet[i].ix = ij[0];
                 packet[i].iy = ij[1]; 
             }
-            
             break;
         }
         case (WP_RANDOM2): 
@@ -7122,7 +7635,6 @@ void init_wave_packets(t_wave_packet *packet, int radius)
                 packet[i].ix = ij[0];
                 packet[i].iy = ij[1]; 
             }
-            
             break;
         }
         case (WP_PAIR):
@@ -7143,7 +7655,25 @@ void init_wave_packets(t_wave_packet *packet, int radius)
                 packet[i].ix = ij[0];
                 packet[i].iy = ij[1]; 
             }
-            
+            break;
+        }
+        case (WP_FIVE):
+        {
+            for (i=0; i<5; i++)
+            {
+                packet[i].xc = -1.75;
+                packet[i].yc = 0.3*(double)(i-2);
+                packet[i].period = OSCILLATING_SOURCE_PERIOD;
+                packet[i].amp = INITIAL_AMP;
+                packet[i].phase = 0.0;
+                packet[i].var_envelope = 550.0;
+                packet[i].time_shift = ((3*i)%5)*400;
+                
+                xy_to_ij(packet[i].xc, packet[i].yc, ij);
+                if(ij[0] <= radius) ij[0] = radius+1;
+                packet[i].ix = ij[0];
+                packet[i].iy = ij[1]; 
+            }
             break;
         }
     }
@@ -7266,32 +7796,35 @@ void add_circular_wave_loc(double factor, double x, double y, double *phi[NX], d
         }
 }
 
-void add_wave_packets_globally(double *phi[NX], double *psi[NX], short int * xy_in[NX], t_wave_packet *packet, int time)
+void add_wave_packets_globally(double *phi[NX], double *psi[NX], short int * xy_in[NX], t_wave_packet *packet, int time, int add_period, int type_envelope)
 /* add some wave packet sources */
 {
     int i, ij[2];
-    double amp, t, omega;
+    double amp, t, omega, wave_height;
     static int xmin, xmax, ymin, ymax, first=1;
     
     if (first)
     {
-        xy_to_ij(XMIN, -0.2*(YMAX - YMIN), ij);
+        xy_to_ij(XMIN, YMIN, ij);
         xmin = ij[0];
         ymin = ij[1];
-        xy_to_ij(XMIN + 0.15*(XMAX - XMIN), 0.2*(YMAX - YMIN), ij);
+        xy_to_ij(XMIN + 0.15*(XMAX - XMIN), YMAX, ij);
         xmax = ij[0];
         ymax = ij[1];
         first = 0;
     }
     
-    for (i=0; i<N_WAVE_PACKETS; i++)
+    if (time%add_period == 0) for (i=0; i<N_WAVE_PACKETS; i++)
     {
         t = (double)(time - packet[i].time_shift);
-        omega = DPI/packet[i].period;
-        amp = packet[i].amp*omega*sin(omega*t + packet[i].phase);
-        if (t > (double)packet[i].var_envelope) amp *= exp(-0.1*(t - (double)packet[i].var_envelope));
-        if (t < (double)packet[i].var_envelope + 100.0)
-            add_circular_wave_loc(amp, packet[i].xc, packet[i].yc, phi, psi, xy_in, xmin, xmax, ymin, ymax);
+        wave_height = wave_packet_height(t, packet[i], type_envelope);
+        add_circular_wave_loc(wave_height, packet[i].xc, packet[i].yc, phi, psi, xy_in, xmin, xmax, ymin, ymax);
+        
+//         omega = DPI/packet[i].period;
+//         amp = packet[i].amp*omega*sin(omega*t + packet[i].phase);
+//         if (t > (double)packet[i].var_envelope) amp *= exp(-0.1*(t - (double)packet[i].var_envelope));
+//         if (t < (double)packet[i].var_envelope + 100.0)
+//             add_circular_wave_loc(amp, packet[i].xc, packet[i].yc, phi, psi, xy_in, xmin, xmax, ymin, ymax);
     }
 }
 
@@ -7300,7 +7833,7 @@ void add_wave_packets(double *phi[NX], double *psi[NX], short int * xy_in[NX], t
 /* add some wave packet sources */
 {
     if (local) add_wave_packets_locally(phi, psi, packet, time, radius, add_period, type_envelope);
-    else add_wave_packets_globally(phi, psi, xy_in, packet, time);
+    else add_wave_packets_globally(phi, psi, xy_in, packet, time, add_period, type_envelope);
 }
 
 int old_source_schedule(int i)
@@ -7323,16 +7856,14 @@ void old_init_input_signal()
 
 int init_input_signal()
 {
-    int i, j, k, mod, ldash, ldot, lspace, linter, initial_time;
-    char text[200] = "dddd_dD_dDDd_dDDd_DdDD__Dd_d_dDD__DdDD_d_dD_dDd__ddDDD_DDDDD_ddDDD_ddddD", c;
-    
-    ldash = 12;
-    ldot = 3;
-    linter = 30;
-    lspace = 36;
-    initial_time = 200;
-        
-    for (i=0; i<initial_time; i++) input_signal[i] = 0;
+    int i, j, k, mod, tailcounter = 0;
+    char text[200] = "..|--/-...|.-|-../..|--/-...|.-|-../", c;
+
+//     char text[200] = "..|.../-|....|.|.-.|./.-|-.|-.--|-...|--- -..|-.--/---|..-|-/-|....|.|.-.|.", c;
+//     char text[200] = "..|--/.-|-./..|--|.--.|.-.|---|...-|.|-../..-.|..|-...|.|.-.", c;
+//     char text[200] = "...._.-_.--._.--._-.--__-._._.--__-.--_._.-_.-.__..---_-----_..---_....-", c;
+            
+    for (i=0; i<MESSAGE_INITIAL_TIME; i++) input_signal[i] = 0;
     
     j = 0;
     while (i < NSTEPS)
@@ -7342,27 +7873,36 @@ int init_input_signal()
             c = text[j];
             
             switch(c) {
-                case ('D'):
+                case ('-'):
                 {
-                    for (k=0; k<ldash; k++) 
+                    for (k=0; k<MESSAGE_LDASH; k++) 
                     {
                         input_signal[i] = 1;
                         i++;
                     }
                     break;
                 }
-                case ('d'):
+                case ('.'):
                 {
-                    for (k=0; k<ldot; k++) 
+                    for (k=0; k<MESSAGE_LDOT; k++) 
                     {
                         input_signal[i] = 1;
                         i++;
                     }
                     break;
                 }
-                case ('_'):
+                case ('|'):
                 {
-                    for (k=0; k<lspace; k++) 
+                    for (k=0; k<MESSAGE_LINTERLETTER; k++) 
+                    {
+                        input_signal[i] = 0;
+                        i++;
+                    }
+                    break;
+                }
+                case ('/'):
+                {
+                    for (k=0; k<MESSAGE_LSPACE; k++) 
                     {
                         input_signal[i] = 0;
                         i++;
@@ -7371,7 +7911,7 @@ int init_input_signal()
                 }
             }
             
-            for (k=0; k<linter; k++) 
+            for (k=0; k<MESSAGE_LINTERVAL; k++) 
             {
                 input_signal[i] = 0;
                 i++;
@@ -7382,10 +7922,14 @@ int init_input_signal()
         
         input_signal[i] = 0;
         i++;
+        tailcounter++;
     }
     
     for (i=0; i<NSTEPS; i++) printf("%i ", input_signal[i]);
     
     printf("\n\n j = %i, string length = %i\n", j, (int)strlen(text));
+    printf("Tail frames: %i\n", tailcounter); 
 }
+
+
 

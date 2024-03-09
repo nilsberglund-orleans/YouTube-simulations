@@ -1004,9 +1004,11 @@ void compute_energy_field(double phi[NX*NY], double psi[NX*NY], short int xy_in[
             
                 if (COMPUTE_LOG_MEAN_ENERGY)
                 {
-                    logenergy = log(wave[i*NY+j].mean_energy) + LOG_MEAN_ENERGY_SHIFT;
+                    logenergy = wave[i*NY+j].mean_energy;
+                    if (logenergy == 0.0) logenergy = 1.0e-10;
+                    logenergy = log(logenergy) + LOG_MEAN_ENERGY_SHIFT;
                     if (logenergy > LOG_ENERGY_FLOOR) wave[i*NY+j].log_mean_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*logenergy;
-                    else wave[i*NY+j].mean_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*LOG_ENERGY_FLOOR;
+                    else wave[i*NY+j].log_mean_energy = LOG_SHIFT + PLOT_SCALE_LOG_ENERGY*LOG_ENERGY_FLOOR;
                 }
                 
                 if (COMPUTE_ENERGY_FLUX)

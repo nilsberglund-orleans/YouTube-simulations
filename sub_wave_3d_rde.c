@@ -14,6 +14,108 @@ void init_3d()		/* initialisation of window */
     glOrtho(XMIN, XMAX, YMIN, YMAX , -1.0, 1.0);
 }
 
+
+void init_wave_sphere_rde(t_wave_sphere wsphere[NX*NY])
+/* initialize sphere data, taken from sub_sphere.c */
+{
+    int i, j;
+    double dphi, dtheta, theta0, xy[2], phishift;
+    
+    printf("Initializing wsphere\n");
+    
+    dphi = DPI/(double)NX;
+    dtheta = PI/(double)NY;
+//     dtheta = PI/(double)(NY-2*(DPOLE));
+//     theta0 = (double)(DPOLE)*dtheta;
+    theta0 = 0;
+    phishift = PHISHIFT*(XMAX-XMIN)/360.0;
+    
+    #pragma omp parallel for private(i,j)
+    for (i=0; i<NX; i++)
+    {
+//         for (j=DPOLE; j<NY-DPOLE; j++)
+//             wsphere[i*NY+j].theta = (double)j*dtheta - theta0;
+//         for (j=0; j<DPOLE; j++) wsphere[i*NY+j].theta = 0.0;
+//         for (j=NY-DPOLE; j<NY; j++) wsphere[i*NY+j].theta = PI;
+                
+        for (j=0; j<NY; j++)
+        {
+            wsphere[i*NY+j].phi = (double)i*dphi;
+            wsphere[i*NY+j].theta = (double)j*dtheta;
+            
+            wsphere[i*NY+j].cphi = cos(wsphere[i*NY+j].phi);
+            wsphere[i*NY+j].sphi = sin(wsphere[i*NY+j].phi);
+            
+            wsphere[i*NY+j].ctheta = cos(wsphere[i*NY+j].theta);
+            wsphere[i*NY+j].stheta = sin(wsphere[i*NY+j].theta);
+            
+            wsphere[i*NY+j].x = wsphere[i*NY+j].cphi*wsphere[i*NY+j].stheta;
+            wsphere[i*NY+j].y = wsphere[i*NY+j].sphi*wsphere[i*NY+j].stheta;
+            wsphere[i*NY+j].z = -wsphere[i*NY+j].ctheta;
+            
+            wsphere[i*NY+j].radius = 1.0;
+            wsphere[i*NY+j].radius_dem = 1.0;
+            
+            ij_to_xy(NX-1-i,j,xy);
+//             xy[0] = XMIN + ((double)(NX-i-1))*(XMAX-XMIN)/((double)NX);
+//             xy[1] = YMIN + ((double)(j-DPOLE))*(YMAX-YMIN)/((double)(NY-2*DPOLE));
+            
+            xy[0] += phishift;
+            if (xy[0] > XMAX) xy[0] += XMIN - XMAX;
+            
+            xy[1] *= (double)NY/(double)(NY-2*DPOLE);
+            
+            wsphere[i*NY+j].x2d = xy[0]; 
+            wsphere[i*NY+j].y2d = xy[1]; 
+            
+            wsphere[i*NY+j].cos_angle_sphere = wsphere[i*NY+j].x*light[0] + wsphere[i*NY+j].y*light[1] + wsphere[i*NY+j].z*light[2];
+        }
+        
+        /* cotangent, taking care of not dividing by zero */
+        /* TODO clean up cottheta range ? */
+        for (j=DPOLE; j<NY-DPOLE; j++) wsphere[i*NY+j].cottheta = wsphere[i*NY+j].ctheta/wsphere[i*NY+j].stheta;
+        for (j=0; j<DPOLE; j++) wsphere[i*NY+j].cottheta = wsphere[i*NY+DPOLE].cottheta;
+        for (j=NY-DPOLE; j<NY; j++) wsphere[i*NY+j].cottheta = wsphere[i*NY+DPOLE-1].cottheta;        
+    }
+}
+
+int ij_to_sphere(int i, int j, double r, t_wave_sphere wsphere[NX*NY], double xyz[3], int use_wave_radius)
+/* convert spherical to rectangular coordinates */
+{
+    double pscal, newr;
+    static double norm_observer;
+    static int first = 1;
+    
+    if (first)
+    {
+        norm_observer = sqrt(observer[0]*observer[0] + observer[1]*observer[1] + observer[2]*observer[2]);
+        first = 0;
+    }
+    
+    xyz[0] = wsphere[i*NY+j].x;
+    xyz[1] = wsphere[i*NY+j].y;
+    xyz[2] = wsphere[i*NY+j].z;
+    
+    pscal = xyz[0]*observer[0] + xyz[1]*observer[1] + xyz[2]*observer[2];
+    
+    if (use_wave_radius)
+    {
+        newr = wsphere[i*NY+j].radius;
+        xyz[0] *= newr;
+        xyz[1] *= newr;
+        xyz[2] *= newr;
+    }
+    else
+    {
+        newr = wsphere[i*NY+j].radius_dem;
+        xyz[0] *= newr;
+        xyz[1] *= newr;
+        xyz[2] *= newr;
+    }
+    
+    return(pscal/norm_observer > COS_VISIBLE);
+}
+
 void xyz_to_xy(double x, double y, double z, double xy_out[2])
 {
     int i;
@@ -62,6 +164,127 @@ void xyz_to_xy(double x, double y, double z, double xy_out[2])
         }
     }
 }
+
+int xy_in_billiard_sphere(int i, int j, t_wave_sphere wsphere[NX*NY])
+/* returns 1 if (x,y) represents a point in the billiard */
+{
+    int k;
+    double pscal, dist, r, u, v, u1, v1;
+    static double cos_rot, sin_rot;
+    static int first = 1;
+    
+    if (first)
+    {
+//         if (B_DOMAIN == D_SPHERE_EARTH) init_earth_map(wsphere);
+//         else if (OTHER_PLANET) init_planet_map(wsphere, B_DOMAIN);
+//         else 
+        if ((B_DOMAIN == D_SPHERE_JULIA)||(B_DOMAIN == D_SPHERE_JULIA_INV)||(B_DOMAIN == D_SPHERE_JULIA_CUBIC))
+        {
+            cos_rot = cos(JULIA_ROT*DPI/360.0);
+            sin_rot = sin(JULIA_ROT*DPI/360.0);
+        }
+//         else if (B_DOMAIN == D_SPHERE_MAZE) init_sphere_maze(wsphere, 0, 0, 0);
+//         else if (B_DOMAIN == D_SPHERE_MAZE_SPIRAL) init_sphere_maze(wsphere, 1, 0, 1);
+//         else if (B_DOMAIN == D_SPHERE_MAZE_WAVE) init_sphere_maze(wsphere, 0, 1, 1);
+        first = 0;
+    }
+    
+    switch (B_DOMAIN) {
+        case (D_NOTHING):
+        {
+            return(1);
+        }
+        case (D_LATITUDE):
+        {
+            return(vabs(wsphere[i*NY+j].theta - PID) < LAMBDA*PID);
+        }
+        case (D_SPHERE_CIRCLES):
+        {
+            for (k=0; k<ncircles; k++)
+            {
+                pscal = cos(wsphere[i*NY+j].phi - circ_sphere[k].phi)*wsphere[i*NY+j].stheta*sin(circ_sphere[k].theta);
+                pscal += wsphere[i*NY+j].ctheta*cos(circ_sphere[k].theta);
+            
+                dist = acos(pscal);
+                if (dist < circ_sphere[k].radius) return(0);
+            }
+            return(1);
+        }
+        case (D_SPHERE_JULIA):
+        {
+            if (wsphere[i*NY+j].z == 1.0) return(1);
+            if (wsphere[i*NY+j].z == -1.0) return(0);
+            r = (1.0 + wsphere[i*NY+j].ctheta)/wsphere[i*NY+j].stheta;
+            u1 = r*wsphere[i*NY+j].cphi*JULIA_SCALE;
+            v1 = r*wsphere[i*NY+j].sphi*JULIA_SCALE;
+            u = u1*cos_rot + v1*sin_rot;
+            v = -u1*sin_rot + v1*cos_rot;
+            i = 0;
+            while ((i<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+            {
+                u1 = u*u - v*v + JULIA_RE;
+                v = 2.0*u*v + JULIA_IM;
+                u = u1;
+                i++;
+            }
+            if (u*u + v*v < MANDELLIMIT) return(1);
+            return(0);
+        }
+        case (D_SPHERE_JULIA_INV):
+        {
+            if (wsphere[i*NY+j].z == 1.0) return(1);
+            if (wsphere[i*NY+j].z == -1.0) return(0);
+            r = (1.0 - wsphere[i*NY+j].ctheta)/wsphere[i*NY+j].stheta;
+            u1 = r*wsphere[i*NY+j].cphi*JULIA_SCALE;
+            v1 = r*wsphere[i*NY+j].sphi*JULIA_SCALE;
+            u = u1*cos_rot + v1*sin_rot;
+            v = -u1*sin_rot + v1*cos_rot;
+            i = 0;
+            while ((i<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+            {
+                u1 = u*u - v*v + JULIA_RE;
+                v = 2.0*u*v + JULIA_IM;
+                u = u1;
+                i++;
+            }
+            if (u*u + v*v < MANDELLIMIT) return(0);
+            return(1);
+        }
+        case (D_SPHERE_JULIA_CUBIC):
+        {
+            if (wsphere[i*NY+j].z == 1.0) return(1);
+            if (wsphere[i*NY+j].z == -1.0) return(0);
+            r = (1.0 + wsphere[i*NY+j].ctheta)/wsphere[i*NY+j].stheta;
+            u1 = r*wsphere[i*NY+j].cphi*JULIA_SCALE;
+            v1 = r*wsphere[i*NY+j].sphi*JULIA_SCALE;
+            u = u1*cos_rot + v1*sin_rot;
+            v = -u1*sin_rot + v1*cos_rot;
+            i = 0;
+            while ((i<MANDELLEVEL)&&(u*u+v*v < 1000.0*MANDELLIMIT))
+            {
+                u1 = u*u*u - 3.0*u*v*v + JULIA_RE;
+                v = 3.0*u*u*v - v*v*v + JULIA_IM;
+                u = u1;
+                i++;
+            }
+            if (u*u + v*v < MANDELLIMIT) return(1);
+            return(0);
+        }
+        default:
+        {
+            return(wsphere[i*NY+j].indomain);
+        }
+    }
+}
+
+void draw_vertex_sphere(double xyz[3])
+{
+    double xy_screen[2];
+    
+    xyz_to_xy(xyz[0], xyz[1], xyz[2], xy_screen);
+    glVertex2d(xy_screen[0], xy_screen[1]);
+}
+
 
 
 void draw_vertex_ij(int i, int j)
@@ -1530,11 +1753,10 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
 }
 
 
-void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, int plot, 
-                                  double min, double max, int palette, int fade, double fade_value)
+void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, int plot, double min, double max, int palette, int fade, double fade_value)
 {
     int j, k, ij_center[2], ij_right[2], ic, jc, ir;
-    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2];
+    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2], zscale = 0.9;
     
 //     printf("Drawing color bar\n");
     
@@ -1551,14 +1773,14 @@ void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, 
 //     jmax = ij_topright[1];    
 
         
-    glBegin(GL_TRIANGLE_FAN);
-    draw_vertex_ij(ic, jc);
+//     glBegin(GL_TRIANGLE_FAN);
+//     draw_vertex_ij(ic, jc);
     dy = (max - min)/360.0;
     dy_e = max/360.0;
     dy_phase = 1.0/360.0;
     dphi = DPI/360.0;
     
-    for (j = 0; j < 360; j++)
+    for (j = 0; j < 361; j++)
     {
         switch (plot) {
             case (P_3D_AMPLITUDE):
@@ -1637,6 +1859,18 @@ void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, 
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
                 break;
             }
+            case (Z_POLAR):
+            {
+                value = dy_phase*(double)(j);
+                color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (Z_ARGUMENT):
+            {
+                value = dy_phase*(double)(j);
+                color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
             case (Z_EULER_VORTICITY):
             {
                 value = min + 1.0*dy*(double)(j);
@@ -1678,13 +1912,26 @@ void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, 
         }
         if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
         glColor3f(rgb[0], rgb[1], rgb[2]);
+        
+        glBegin(GL_TRIANGLE_FAN);
+        draw_vertex_ij(ic, jc);
         x = cos(dphi*(double)j)*(double)ir;
-        y = sin(dphi*(double)j)*(double)ir;
-        ij_to_xy(ic + x, jc + y, xy);
+        y = zscale*sin(dphi*(double)j)*(double)ir;
+        xy[0] = XMIN + ((double)ic + x)*(XMAX-XMIN)/((double)NX);
+        xy[1] = YMIN + ((double)jc + y)*(YMAX-YMIN)/((double)NY);
+//         ij_to_xy(ic + x, jc + y, xy);
         glVertex2d(xy[0], xy[1]);
+        x = cos(dphi*(double)(j+1))*(double)ir;
+        y = zscale*sin(dphi*(double)(j+1))*(double)ir;
+        xy[0] = XMIN + ((double)ic + x)*(XMAX-XMIN)/((double)NX);
+        xy[1] = YMIN + ((double)jc + y)*(YMAX-YMIN)/((double)NY);
+//         ij_to_xy(ic + x, jc + y, xy);
+        glVertex2d(xy[0], xy[1]);
+        glEnd ();
     }
-    draw_vertex_ij(ic + ir, jc);
-    glEnd ();
+//     draw_vertex_ij(ic + ir, jc);
+//     draw_vertex_ij(ic, jc);
+//     glEnd ();
     
     if (fade) glColor3f(fade_value, fade_value, fade_value);
     else glColor3f(1.0, 1.0, 1.0);
@@ -1696,7 +1943,7 @@ void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, 
     for (j = 0; j < NSEG; j++)
     {        
         x = cos(dphi*(double)j)*(double)ir;
-        y = sin(dphi*(double)j)*(double)ir;
+        y = zscale*sin(dphi*(double)j)*(double)ir;
         xy[0] = XMIN + ((double)ic + x)*(XMAX-XMIN)/((double)NX);
         xy[1] = YMIN + ((double)jc + y)*(YMAX-YMIN)/((double)NY);
         glVertex2d(xy[0], xy[1]);

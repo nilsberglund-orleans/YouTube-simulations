@@ -44,7 +44,7 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
@@ -52,21 +52,21 @@
 
 #define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1150  /* window height */
-// // // #define NX 2500          /* number of grid points on x axis */
-// // // #define NY 1250          /* number of grid points on y axis */
-#define NX 1920          /* number of grid points on x axis */
-#define NY 1150          /* number of grid points on y axis */
-// #define NX 2840          /* number of grid points on x axis */
+// // #define NX 1920          /* number of grid points on x axis */
+// #define NY 1150          /* number of grid points on y axis */
+#define NX 3000          /* number of grid points on x axis */
+#define NY 1600          /* number of grid points on y axis */
+// #define NX 3840          /* number of grid points on x axis */
 // #define NY 2300          /* number of grid points on y axis */
-// #define NX 2500          /* number of grid points on x axis */
-// #define NY 1250          /* number of grid points on y axis */
-// #define NX 1700          /* number of grid points on x axis */
-// #define NY 1700          /* number of grid points on y axis */
 
-#define XMIN -1.0
-#define XMAX 3.0	/* x interval */
-#define YMIN -1.041666667
-#define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
+// #define XMIN -2.0
+// #define XMAX 2.0	/* x interval */
+// #define YMIN -1.197916667
+// #define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
+#define XMIN -1.669565217
+#define XMAX 1.669565217	/* x interval */
+#define YMIN -1.0
+#define YMAX 1.0	/* y interval for 9/16 aspect ratio */
 
 #define HIGHRES 0        /* set to 1 if resolution of grid is double that of displayed image */
 
@@ -92,7 +92,7 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 10         /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 17        /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 2   /* pattern of circles or polygons, see list in global_pdes.c */
 
@@ -109,17 +109,18 @@
 #define NPOISSON 1000        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 0.1197916667	    /* parameter controlling the dimensions of domain */
-#define MU 0.035             /* parameter controlling the dimensions of domain */
+#define LAMBDA 3.0	    /* parameter controlling the dimensions of domain */
+#define MU 0.14             /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
-#define MDEPTH 7            /* depth of computation of Menger gasket */
+#define MDEPTH 2            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 2000    /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 20.0    /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-#define NGRIDX 30            /* number of grid point for grid of disks */
-#define NGRIDY 18            /* number of grid point for grid of disks */
+#define NGRIDX 30           /* number of grid point for grid of disks */
+#define NGRIDY 18           /* number of grid point for grid of disks */
+#define WALL_WIDTH 0.1      /* width of wall separating lenses */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
@@ -139,12 +140,13 @@
 /* Physical parameters of wave equation */
 
 #define TWOSPEEDS 0          /* set to 1 to replace hardcore boundary by medium with different speed */
-#define OSCILLATE_LEFT 0     /* set to 1 to add oscilating boundary condition on the left */
+#define OSCILLATE_LEFT 1     /* set to 1 to add oscilating boundary condition on the left */
 #define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
 #define OSCILLATION_SCHEDULE 3  /* oscillation schedule, see list in global_pdes.c */
+#define OSCIL_YMAX 0.35      /* defines oscillation range */
 
-#define OMEGA 0.001       /* frequency of periodic excitation */
-#define AMPLITUDE 0.8     /* amplitude of periodic excitation */ 
+#define OMEGA 0.015        /* frequency of periodic excitation */
+#define AMPLITUDE 1.0     /* amplitude of periodic excitation */ 
 #define ACHIRP 0.2        /* acceleration coefficient in chirp */
 #define DAMPING 0.0       /* damping of periodic excitation */
 #define COURANT 0.1       /* Courant number */
@@ -162,7 +164,7 @@
 /* Increasing COURANT speeds up the simulation, but decreases accuracy */
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
-#define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
+#define ADD_OSCILLATING_SOURCE 0        /* set to 1 to add an oscillating wave source */
 #define OSCILLATING_SOURCE_PERIOD 30    /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
 
@@ -174,15 +176,15 @@
 /* Boundary conditions, see list in global_pdes.c  */
 
 // #define B_COND 1
-#define B_COND 2
+#define B_COND 3
 
 #define PRECOMPUTE_BC 0     /* set to 1 to compute neighbours for Laplacian in advance */
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 2300       /* number of frames of movie */
+#define NSTEPS 1000       /* number of frames of movie */
 // #define NSTEPS 300         /* number of frames of movie */
-#define NVID 4            /* number of iterations between images displayed on screen */
+#define NVID 20            /* number of iterations between images displayed on screen */
 // #define NVID 10            /* number of iterations between images displayed on screen */
 #define NSEG 1000          /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
@@ -200,7 +202,7 @@
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 2.0            /* amplitude of initial condition */
+#define INITIAL_AMP 0.75            /* amplitude of initial condition */
 // #define INITIAL_VARIANCE 0.000025    /* variance of initial condition */
 #define INITIAL_VARIANCE 0.00005    /* variance of initial condition */
 #define INITIAL_WAVELENGTH  0.05  /* wavelength of initial condition */
@@ -208,11 +210,11 @@
 
 /* Plot type, see list in global_pdes.c  */
 
-#define ZPLOT 103     /* wave height */
-#define CPLOT 103     /* color scheme */
+#define ZPLOT 108     /* wave height */
+#define CPLOT 108     /* color scheme */
 
-#define ZPLOT_B 107 
-#define CPLOT_B 107        /* plot type for second movie */
+#define ZPLOT_B 103 
+#define CPLOT_B 103        /* plot type for second movie */
 
 #define CHANGE_LUMINOSITY 1     /* set to 1 to let luminosity depend on energy flux intensity */
 #define FLUX_WINDOW 30           /* size of averaging window of flux intensity */
@@ -242,8 +244,8 @@
 
 /* Color schemes */
 
-#define COLOR_PALETTE 11      /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 13     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 13      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 17     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
@@ -252,17 +254,18 @@
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define VSCALE_AMPLITUDE 2.0   /* additional scaling factor for color scheme P_3D_AMPLITUDE */
-#define VSCALE_ENERGY 10.0     /* additional scaling factor for color scheme P_3D_ENERGY */
+#define VSCALE_ENERGY 1.5      /* additional scaling factor for color scheme P_3D_ENERGY */
 #define PHASE_FACTOR 20.0      /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0    /* exponential attenuation coefficient of contrast with time */
-#define E_SCALE 20.0      /* scaling factor for energy representation */
+#define E_SCALE 50.0      /* scaling factor for energy representation */
 #define LOG_SCALE 0.75     /* scaling factor for energy log representation */
 #define LOG_SHIFT 0.5      /* shift of colors on log scale */
 #define LOG_ENERGY_FLOOR -10.0    /* floor value for log of (total) energy */
 #define LOG_MEAN_ENERGY_SHIFT 1.0   /* additional shift for log of mean energy */
 #define FLUX_SCALE 4000.0    /* scaling factor for energy flux representation */
 #define FLUX_CSCALE 2.0      /* scaling factor for color in energy flux representation */
+#define AVRG_E_FACTOR 0.95   /* controls time window size in P_AVERAGE_ENERGY scheme */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
@@ -272,6 +275,13 @@
 #define HUEMEAN 240.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -200.0    /* amplitude of variation of hue for color scheme C_HUE */
 
+#define MESSAGE_LDASH 14         /* length of dash for Morse code message */
+#define MESSAGE_LDOT 8           /* length of dot for Morse code message */
+#define MESSAGE_LINTERVAL 54     /* length of interval between dashes/dots for Morse code message */
+#define MESSAGE_LINTERLETTER 60  /* length of interval between letters for Morse code message */
+#define MESSAGE_LSPACE 48        /* length of space for Morse code message */
+#define MESSAGE_INITIAL_TIME 100 /* initial time before starting message for Morse code message */    
+
 #define NXMAZE 8      /* width of maze */
 #define NYMAZE 32      /* height of maze */
 #define MAZE_MAX_NGBH 5     /* max number of neighbours of maze cell */
@@ -280,8 +290,8 @@
 #define MAZE_WIDTH 0.02     /* half width of maze walls */
 
 #define DRAW_COLOR_SCHEME 1       /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 2.5      /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 0.5    /* scale of color scheme bar for 2nd part */
+#define COLORBAR_RANGE 1.0      /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 1.5    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0     /* set to 1 to draw color scheme horizontally */
 
 #define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
@@ -292,8 +302,15 @@
 #define POT_FACT 20.0
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 #define MU_B 1.0           /* parameter controlling the dimensions of domain */
+#define HORIZONTAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
+#define WAVE_PROFILE_X 2.1      /* value of x to sample wave profile */
+#define WAVE_PROFILE_Y -1.0      /* value of y to sample wave profile */
+#define PROFILE_AT_BOTTOM 1     /* draw wave profile at bottom instead of top */
+#define AVERAGE_WAVE_PROFILE 1  /* set to 1 to draw time-average of wave profile squared*/
+#define TIMESERIES_NVALUES 400  /* number of values plotted in time series */
+#define DRAW_WAVE_SOURCE 0      /* set to 1 to draw source of wave at (wave_source_x, wave_source_y) */
 /* end of constants only used by sub_wave and sub_maze */
 
 
@@ -307,14 +324,14 @@ double u_3d[2] = {0.75, -0.45};     /* projections of basis vectors for REP_AXO_
 double v_3d[2] = {-0.75, -0.45};
 double w_3d[2] = {0.0, 0.015};
 double light[3] = {0.816496581, -0.40824829, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
-double observer[3] = {8.0, 6.0, 5.0};    /* location of observer for REP_PROJ_3D representation */ 
+double observer[3] = {8.0, 6.0, 6.0};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
-#define Z_SCALING_FACTOR 0.1    /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define Z_SCALING_FACTOR 0.15    /* overall scaling factor of z axis for REP_PROJ_3D representation */
 #define XY_SCALING_FACTOR 1.7   /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0         /* max value of z coordinate for REP_PROJ_3D representation */
-#define XSHIFT_3D 0.2          /* overall x shift for REP_PROJ_3D representation */
-#define YSHIFT_3D 0.5           /* overall y shift for REP_PROJ_3D representation */
+#define XSHIFT_3D 0.1           /* overall x shift for REP_PROJ_3D representation */
+#define YSHIFT_3D 0.1           /* overall y shift for REP_PROJ_3D representation */
 
 
 #include "global_pdes.c"        /* constants and global variables */
@@ -1071,8 +1088,8 @@ void animation()
 //     for (j=1; j<NPOLY; j++)
 //         add_circular_wave_mod(1.0, lambda1*cos(((double)j+0.5)*angle), lambda1*sin(((double)j+0.5)*angle), phi, psi, xy_in);
         
-//     init_wave_flat_mod(phi, psi, xy_in);
-    init_circular_wave_mod(-0.5, 0.0, phi, psi, xy_in);
+    init_wave_flat_mod(phi, psi, xy_in);
+//     init_circular_wave_mod(-0.5, 0.0, phi, psi, xy_in);
 //     add_circular_wave_mod(1.0, 1.0, 0.0, phi, psi, xy_in);
 
 //     printf("Wave initialized\n");

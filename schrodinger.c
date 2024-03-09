@@ -198,6 +198,15 @@
 #define GAMMAB 0.0         /* damping factor in wave equation */
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
+#define WALL_WIDTH 0.1      /* width of wall separating lenses */
+#define INITIAL_TIME 50      /* time after which to start saving frames */
+#define OSCIL_YMAX 0.35      /* defines oscillation range */
+#define MESSAGE_LDASH 14         /* length of dash for Morse code message */
+#define MESSAGE_LDOT 8           /* length of dot for Morse code message */
+#define MESSAGE_LINTERVAL 54     /* length of interval between dashes/dots for Morse code message */
+#define MESSAGE_LINTERLETTER 60  /* length of interval between letters for Morse code message */
+#define MESSAGE_LSPACE 48        /* length of space for Morse code message */
+#define MESSAGE_INITIAL_TIME 100 /* initial time before starting message for Morse code message */    
 /* end of constants only used by sub_wave and sub_maze */
 
 

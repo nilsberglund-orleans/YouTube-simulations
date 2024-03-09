@@ -48,35 +48,29 @@
 
 #define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1150  /* window height */
-// #define NY 575          /* number of grid points on y axis */
-#define NX 960          /* number of grid points on x axis */
-#define NY 575          /* number of grid points on y axis */
+#define NX 1500          /* number of grid points on x axis */
+#define NY 750           /* number of grid points on y axis */
 
-// #define WINWIDTH 	1280  /* window width */
-// #define WINHEIGHT 	720   /* window height */
-// #define NX 640          /* number of grid points on x axis */
-// #define NY 360          /* number of grid points on y axis */
-// #define NX 320          /* number of grid points on x axis */
-// #define NY 180          /* number of grid points on y axis */
-
-// #define XMIN -1.2
-// #define XMAX 1.2	/* x interval */
-// #define YMIN -1.2
-// #define YMAX 1.2	/* y interval for 9/16 aspect ratio */
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
-#define YMIN -1.197916667
-#define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
+#define YMIN -1.041666667
+#define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
 
 /* Choice of simulated equation */
 
-#define RDE_EQUATION 8  /* choice of reaction term, see list in global_3d.c */
-#define NFIELDS 3       /* number of fields in reaction-diffusion equation */
-#define NLAPLACIANS 0   /* number of fields for which to compute Laplacian */
+#define RDE_EQUATION 41  /* choice of reaction term, see list in global_3d.c */
+#define NFIELDS 5       /* number of fields in reaction-diffusion equation */
+#define NLAPLACIANS 5   /* number of fields for which to compute Laplacian */
+
+#define SPHERE 1        /* set to 1 to simulate equation on sphere */
+#define DPOLE 1         /* safety distance to poles */
+#define DSMOOTH 10      /* size of neighbourhood of poles that are smoothed */
+#define SMOOTHPOLE 0.24  /* smoothing coefficient at poles */
+#define PHISHIFT 0.0    /* shift of phi in 2D plot (in degrees) */
 
 #define ADD_POTENTIAL 0 /* set to 1 to add a potential (for Schrodinger equation) */
 #define ADD_MAGNETIC_FIELD 0    /* set to 1 to add a magnetic field (for Schrodinger equation) - then set POTENTIAL 1 */
-#define ADD_FORCE_FIELD 1   /* set to 1 to add a foce field (for compressible Euler equation) */
+#define ADD_FORCE_FIELD 0   /* set to 1 to add a foce field (for compressible Euler equation) */
 #define POTENTIAL 7         /* type of potential or vector potential, see list in global_3d.c  */
 #define FORCE_FIELD 5       /* type of force field, see list in global_3d.c  */
 #define ADD_CORIOLIS_FORCE 0    /* set to 1 to add Coriolis force (quasigeostrophic Euler equations) */
@@ -84,13 +78,15 @@
 #define SWATER_DEPTH 4      /* variable depth in shallow water equation */
 
 #define ANTISYMMETRIZE_WAVE_FCT 0   /* set tot 1 to make wave function antisymmetric */
-#define ADAPT_STATE_TO_BC 1     /* to smoothly adapt initial state to obstacles */
+#define ADAPT_STATE_TO_BC 0     /* to smoothly adapt initial state to obstacles */
 #define OBSTACLE_GEOMETRY 1     /* geometry of obstacles, as in B_DOMAIN */
-// #define BC_STIFFNESS 100.0        /* controls region of boundary condition control */
 #define BC_STIFFNESS 50.0        /* controls region of boundary condition control */
 #define CHECK_INTEGRAL 1     /* set to 1 to check integral of first field */
 
 #define JULIA_SCALE 0.5 /* scaling for Julia sets */
+#define JULIA_ROT -20.0       /* rotation of Julia set, in degrees */
+#define JULIA_RE 0.5    
+#define JULIA_IM 0.462    /* parameters for Julia sets */
 
 /* Choice of the billiard table */
 
@@ -102,7 +98,7 @@
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 1.2	    /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.9	    /* parameter controlling the dimensions of domain */
 #define MU 0.06	            /* parameter controlling the dimensions of domain */
 #define NPOLY 5             /* number of sides of polygon */
 #define APOLY 2.0          /* angle by which to turn polygon, in units of Pi/2 */
@@ -114,6 +110,7 @@
 #define NGRIDX 6            /* number of grid point for grid of disks */
 #define NGRIDY 8            /* number of grid point for grid of disks */
 #define REVERSE_TESLA_VALVE 1   /* set to 1 to orient Tesla valve in blocking configuration */
+#define WALL_WIDTH 0.05      /* width of wall separating lenses */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
@@ -131,18 +128,16 @@
 
 /* Physical parameters of wave equation */
 
-#define DT 0.00000025
+#define DT 0.0000002
 
-// #define VISCOSITY 0.0001
-#define VISCOSITY 1.5e-5
-// #define VISCOSITY 5.0e-4
-// #define VISCOSITY 1.0e-3
-#define DISSIPATION 1.0e-8
-// #define DISSIPATION 1.0e-7
+#define VISCOSITY 0.075
+#define POISSON_STIFFNESS 1.0   /* stiffness of Poisson equation solver for incompressible Euler */
+#define DISSIPATION 0.0
 
 #define RPSA 0.75         /* parameter in Rock-Paper-Scissors-type interaction */
 #define RPSLZB 0.75       /* second parameter in Rock-Paper-Scissors-Lizard-Spock type interaction */
 
+#define K_AC 0.1        /* force constant in Allen-Cahn equation */
 #define EPSILON 0.8     /* time scale separation */
 #define DELTA 0.1       /* time scale separation */
 #define FHNA 1.0        /* parameter in FHN equation */
@@ -160,15 +155,15 @@
 #define K_EULER_INC 0.5    /* constant in incompressible Euler equation */
 
 #define SMOOTHEN_VORTICITY 0    /* set to 1 to smoothen vorticity field in Euler equation */
-#define SMOOTHEN_VELOCITY 1     /* set to 1 to smoothen velocity field in Euler equation */
+#define SMOOTHEN_VELOCITY 0     /* set to 1 to smoothen velocity field in Euler equation */
 #define SMOOTHEN_PERIOD 10      /* period between smoothenings */
 #define SMOOTH_FACTOR 0.15       /* factor by which to smoothen */
 
-#define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
+#define ADD_OSCILLATING_SOURCE 0        /* set to 1 to add an oscillating wave source */
 #define OSCILLATING_SOURCE_PERIOD 1     /* period of oscillating source */
 #define OSCILLATING_SOURCE_OMEGA 0.2    /* frequency of oscillating source */
 
-#define ADD_TRACERS 1    /* set to 1 to add tracer particles (for Euler equations) */
+#define ADD_TRACERS 0    /* set to 1 to add tracer particles (for Euler equations) */
 #define N_TRACERS 1000    /* number of tracer particles */
 #define TRACERS_STEP 0.005  /* step size in tracer evolution */
 
@@ -177,8 +172,8 @@
 #define SPEED 0.0       /* speed of drift to the right */
 
 #define ADD_NOISE 0     /* set to 1 to add noise, set to 2 to add noise in right half */
-#define NOISE_INTENSITY 0.005      /* noise intensity */
-#define CHANGE_NOISE 1      /* set to 1 to increase noise intensity */
+#define NOISE_INTENSITY 0.01      /* noise intensity */
+#define CHANGE_NOISE 0      /* set to 1 to increase noise intensity */
 #define NOISE_FACTOR 40.0   /* factor by which to increase noise intensity */
 #define NOISE_INITIAL_TIME 100  /* initial time during which noise remains constant */
 
@@ -189,7 +184,7 @@
 #define VISCOSITY_MAX 2.0        /* max value of viscosity beyond which NVID is increased and integration step is decrase, 
                                     for numerical stability */
                                         
-#define CHANGE_RPSLZB 0         /* set to 1 to change second parameter in Rock-Paper-Scissors-Lizard-Spock equation */
+#define CHANGE_RPSLZB 1         /* set to 1 to change second parameter in Rock-Paper-Scissors-Lizard-Spock equation */
 #define RPSLZB_CHANGE 0.75      /* factor by which to rpslzb parameter */
 #define RPSLZB_INITIAL_TIME 0   /* initial time during which rpslzb remains constant */
 #define RPSLZB_FINAL_TIME 500   /* final time during which rpslzb remains constant */
@@ -206,13 +201,6 @@
 #define PRESSURE_GRADIENT 0.2       /* amplitude of pressure gradient for Euler equation */
 
 #define SWATER_MIN_HEIGHT 0.5      /* min height of initial condition for shallow water equation */
-// #define DEPTH_FACTOR 0.0125        /* proportion of min height in variable depth */
-// #define DEPTH_FACTOR 0.001        /* proportion of min height in variable depth */
-// #define DEPTH_FACTOR 0.0012        /* proportion of min height in variable depth */
-// #define DEPTH_FACTOR 0.0015        /* proportion of min height in variable depth */
-// #define DEPTH_FACTOR 0.002        /* proportion of min height in variable depth */
-// #define DEPTH_FACTOR 0.005        /* proportion of min height in variable depth */
-// #define DEPTH_FACTOR 0.01        /* proportion of min height in variable depth */
 #define DEPTH_FACTOR 0.015        /* proportion of min height in variable depth */
 #define TANH_FACTOR 1.0         /* steepness of variable depth */
 
@@ -220,7 +208,7 @@
 
 /* Boundary conditions, see list in global_pdes.c  */
 
-#define B_COND 0
+#define B_COND 1
 
 #define B_COND_LEFT 0
 #define B_COND_RIGHT 0
@@ -230,10 +218,8 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 1300        /* number of frames of movie */
-// #define NSTEPS 500         /* number of frames of movie */
-// #define NVID 100           /* number of iterations between images displayed on screen */
-#define NVID 45            /* number of iterations between images displayed on screen */
+#define NSTEPS 3500        /* number of frames of movie */
+#define NVID 8            /* number of iterations between images displayed on screen */
 #define ACCELERATION_FACTOR 1.0 /* factor by which to increase NVID in course of simulation */
 #define DT_ACCELERATION_FACTOR 1.0 /* factor by which to increase time step in course of simulation  */
 #define MAX_DT 0.024     /* maximal value of integration step */
@@ -245,28 +231,31 @@
 #define SLEEP1  2        /* initial sleeping time */
 #define SLEEP2  1        /* final sleeping time */
 #define INITIAL_TIME 0  /* initial still time */
-#define MID_FRAMES 50    /* number of still frames between parts of two-part movie */
-#define END_FRAMES 50    /* number of still frames at end of movie */
+#define MID_FRAMES 100    /* number of still frames between parts of two-part movie */
+#define END_FRAMES 250    /* number of still frames at end of movie */
 #define FADE 1           /* set to 1 to fade at end of movie */
 
 /* Visualisation */
 
 #define PLOT_3D 1    /* controls whether plot is 2D or 3D */
+#define PLOT_SPHERE 1   /* draws fields on a sphere */
 
 #define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
 #define ROTATE_ANGLE 360.0  /* total angle of rotation during simulation */
+#define SHADE_3D 1              /* set to 1 to change luminosity according to normal vector */
+#define SHADE_2D 0              /* set to 1 to change luminosity according to normal vector */
 
 #define DRAW_PERIODICISED 0     /* set to 1 to repeat wave periodically in x and y directions */
 
 /* Plot type - color scheme */
 
-#define CPLOT 70
-#define CPLOT_B 74
+#define CPLOT 40
+#define CPLOT_B 42
 
 /* Plot type - height of 3D plot */
 
-#define ZPLOT 70     /* z coordinate in 3D plot */
-#define ZPLOT_B 71    /* z coordinate in second 3D plot */
+#define ZPLOT 42    /* z coordinate in 3D plot */
+#define ZPLOT_B 42    /* z coordinate in second 3D plot */
 
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of P_3D_AMPLITUDE plot */
 #define SHADE_3D 1              /* set to 1 to change luminosity according to normal vector */
@@ -286,7 +275,7 @@
 
 #define PRINT_TIME 0        /* set to 1 to print running time */
 #define PRINT_VISCOSITY 0   /* set to 1 to print viscosity */
-#define PRINT_RPSLZB 0      /* set to 1 to print rpslzb parameter */
+#define PRINT_RPSLZB 1      /* set to 1 to print rpslzb parameter */
 #define PRINT_PROBABILITIES 0   /* set to 1 to print probabilities (for Ehrenfest urn configuration) */
 #define PRINT_NOISE 0       /* set to 1 to print noise intensity */
 #define PRINT_FLOW_SPEED 0      /* set to 1 to print speed of flow */
@@ -310,19 +299,21 @@
 
 /* Color schemes, see list in global_pdes.c  */
 
-#define COLOR_PALETTE 14       /* Color palette, see list in global_pdes.c  */
-// #define COLOR_PALETTE_B 17      /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 0      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 0       /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 17      /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
+#define COLOR_OUT_R 1.0    /* color outside domain */
+#define COLOR_OUT_G 1.0    
+#define COLOR_OUT_B 1.0    
 
 #define COLOR_SCHEME 3   /* choice of color scheme */
 
-#define COLOR_PHASE_SHIFT 0.5   /* phase shift of color scheme, in units of Pi */
+#define COLOR_PHASE_SHIFT 0.25   /* phase shift of color scheme, in units of Pi */
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
-#define VSCALE_AMPLITUDE 15.0      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSCALE_AMPLITUDE 0.5      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define CURL_SCALE 0.000015   /* scaling factor for curl representation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
@@ -332,6 +323,7 @@
 #define PRESSURE_SHIFT 10.0        /* shift for color scheme Z_EULER_PRESSURE */
 #define PRESSURE_LOG_SHIFT -2.5     /* shift for color scheme Z_EULER_PRESSURE */
 #define VSCALE_WATER_HEIGHT 0.4     /* vertical scaling of water height */
+#define SHADE_SCALE_2D 1.0     /* controls "depth" of 2D shading */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
@@ -360,11 +352,11 @@
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_WIDTH 0.04     /* half width of maze walls */
 
-#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
+#define DRAW_COLOR_SCHEME 0     /* set to 1 to plot the color scheme */
 #define COLORBAR_RANGE 2.5      /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 2.5    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
-#define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
+#define CIRC_COLORBAR 1         /* set to 1 to draw circular color scheme */
 #define CIRC_COLORBAR_B 1       /* set to 1 to draw circular color scheme */
 
 /* only for compatibility with wave_common.c */
@@ -374,6 +366,7 @@
 #define IOR_TOTAL_TURNS 1.5 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
 #define OMEGA 0.005        /* frequency of periodic excitation */
+#define OSCIL_YMAX 0.2      /* defines oscillation range */
 #define COURANT 0.08       /* Courant number */
 #define COURANTB 0.03      /* Courant number in medium B */
 #define INITIAL_AMP 0.5         /* amplitude of initial condition */
@@ -382,6 +375,7 @@
 #define VSCALE_ENERGY 200.0       /* additional scaling factor for color scheme P_3D_ENERGY */
 #define PHASE_FACTOR 20.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
+#define AVRG_E_FACTOR 0.99   /* controls time window size in P_AVERAGE_ENERGY scheme */
 #define OSCILLATION_SCHEDULE 0  /* oscillation schedule, see list in global_pdes.c */
 #define AMPLITUDE 0.8      /* amplitude of periodic excitation */ 
 #define ACHIRP 0.2        /* acceleration coefficient in chirp */
@@ -390,17 +384,31 @@
 #define B_DOMAIN_B 20       /* second domain shape, for comparisons */
 #define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
 #define FLUX_WINDOW 20      /* averaging window for energy flux */
-#define ADD_WAVE_PACKET_SOURCES 1       /* set to 1 to add several sources emitting wave packets */
+#define ADD_WAVE_PACKET_SOURCES 0       /* set to 1 to add several sources emitting wave packets */
 #define WAVE_PACKET_SOURCE_TYPE 1       /* type of wave packet sources */
 #define N_WAVE_PACKETS 15               /* number of wave packets */
 #define WAVE_PACKET_RADIUS 20            /* radius of wave packets */
 #define OSCIL_LEFT_YSHIFT 25.0   /* y-dependence of left oscillation (for non-horizontal waves) */
-#define DRAW_WAVE_PROFILE 1     /* set to 1 to draw a profile of the wave */
+#define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
+#define HORIZONTAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
+#define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
+#define WAVE_PROFILE_X 1.9      /* value of x to sample wave profile */
+#define WAVE_PROFILE_Y -1.0      /* value of y to sample wave profile */
+#define PROFILE_AT_BOTTOM 1     /* draw wave profile at bottom instead of top */
+#define AVERAGE_WAVE_PROFILE 1  /* set to 1 to draw time-average of wave profile squared*/
 #define MU_B 1.0           /* parameter controlling the dimensions of domain */
 #define GAMMA 0.0          /* damping factor in wave equation */
 #define GAMMAB 0.0         /* damping factor in wave equation */
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
+#define TIMESERIES_NVALUES 400  /* number of values plotted in time series */
+#define DRAW_WAVE_SOURCE 0      /* set to 1 to draw source of wave at (wave_source_x, wave_source_y) */
+#define MESSAGE_LDASH 14         /* length of dash for Morse code message */
+#define MESSAGE_LDOT 8           /* length of dot for Morse code message */
+#define MESSAGE_LINTERVAL 54     /* length of interval between dashes/dots for Morse code message */
+#define MESSAGE_LINTERLETTER 60  /* length of interval between letters for Morse code message */
+#define MESSAGE_LSPACE 48        /* length of space for Morse code message */
+#define MESSAGE_INITIAL_TIME 100 /* initial time before starting message for Morse code message */    
 /* end of constants added only for compatibility with wave_common.c */
 
 
@@ -411,12 +419,17 @@ double light[3] = {0.816496581, 0.40824829, 0.40824829};      /* vector of "ligh
 double observer[3] = {8.0, 8.0, 7.0};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
-#define Z_SCALING_FACTOR 150.0   /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define XY_SCALING_FACTOR 2.5  /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define Z_SCALING_FACTOR 0.8   /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define XY_SCALING_FACTOR 2.0  /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0        /* max value of z coordinate for REP_PROJ_3D representation */
 #define XSHIFT_3D 0.0          /* overall x shift for REP_PROJ_3D representation */
-#define YSHIFT_3D 0.1         /* overall y shift for REP_PROJ_3D representation */
+#define YSHIFT_3D 0.0         /* overall y shift for REP_PROJ_3D representation */
 #define BORDER_PADDING 0       /* distance from boundary at which to plot points, to avoid boundary effects due to gradient */
+
+#define RSCALE -0.01             /* scaling factor of radial component */
+#define RMAX 1.005                /* max value of radial component */
+#define RMIN 0.995               /* min value of radial component */
+#define COS_VISIBLE -1.1        /* limit on cosine of normal to shown facets */
 
 /* For debugging purposes only */
 #define FLOOR 1         /* set to 1 to limit wave amplitude to VMAX */
@@ -920,15 +933,14 @@ double initialize_water_depth(t_rde rde[NX*NY])
 }
 
 void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short int xy_in[NX*NY], double potential_field[NX*NY], double vector_potential_field[2*NX*NY], 
-double gfield[2*NX*NY], t_rde rde[NX*NY])
+double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* time step of field evolution */
 {
     int i, j, k, iplus, iminus, jplus, jminus, ropening, w;
-    double x, y, z, deltax, deltay, deltaz, rho, rhox, rhoy, pot, u, v, ux, uy, vx, vy, test = 0.0, dx, dy, xy[2], padding, a, eta, etax, etay;
+    double x, y, z, deltax, deltay, deltaz, rho, rhox, rhoy, pot, u, v, ux, uy, vx, vy, test = 0.0, dx, dy, xy[2], padding, a, eta, etax, etay, sum;
     double *delta_phi[NLAPLACIANS], *nabla_phi, *nabla_psi, *nabla_omega, *delta_vorticity, *delta_pressure, *delta_p, *delta_u, *delta_v, *nabla_rho, *nabla_u, *nabla_v, *nabla_eta;
 //     double u_bc[NY], v_bc[NY]; 
     static double invsqr3 = 0.577350269;    /* 1/sqrt(3) */
-    static double stiffness = 2.0;     /* stiffness of Poisson equation solver */
     static int smooth = 0, y_channels, y_channels1, imin, imax, first = 1;
     
     if (first)  /* for D_MAZE_CHANNELS boundary conditions in Euler equation */
@@ -952,9 +964,34 @@ double gfield[2*NX*NY], t_rde rde[NX*NY])
             imin = 0;
             imax = NX;
         }
+        
+        /* average values at poles on sphere */
+        if (SPHERE) for (k=0; k<NFIELDS; k++)
+        {
+            sum = 0.0;
+            for (i=0; i<NX; i++) for (j=0; j<DPOLE; j++) 
+                sum += phi_in[k][i*NY+j];
+            sum = sum/(double)(NX*DPOLE);
+            if (sum > 1.0) sum = 1.0;
+            if (sum < -1.0) sum = -1.0;
+            for (i=0; i<NX; i++) for (j=0; j<DPOLE; j++)
+                phi_in[k][i*NY+j] = sum;
+        
+            sum = 0.0;
+            for (i=0; i<NX; i++) for (j=NY-DPOLE-1; j<NY; j++)
+                sum += phi_in[k][i*NY+j];
+            sum = sum/(double)(NX*DPOLE);
+            if (sum > 1.0) sum = 1.0;
+            if (sum < -1.0) sum = -1.0;
+            for (i=0; i<NX; i++) for (j=NY-DPOLE-1; j<NY; j++)
+                phi_in[k][i*NY+j] = sum;
+        }
         first = 0;
     }
     
+    /* smooth vector fields at poles */
+    if (SPHERE) for (k=0; k<NFIELDS; k++) smooth_poles(phi_in[k]);
+        
     for (i=0; i<NLAPLACIANS; i++) delta_phi[i] = (double *)malloc(NX*NY*sizeof(double));
     
     if (COMPUTE_PRESSURE) 
@@ -964,9 +1001,9 @@ double gfield[2*NX*NY], t_rde rde[NX*NY])
     }
     
     /* compute the Laplacian of phi */
-    for (i=0; i<NLAPLACIANS; i++) compute_laplacian_rde(phi_in[i], delta_phi[i], xy_in);
+    for (i=0; i<NLAPLACIANS; i++) compute_laplacian_rde(phi_in[i], delta_phi[i], xy_in, wsphere);
     
-    if (COMPUTE_PRESSURE) compute_laplacian_rde(phi_in[2], delta_pressure, xy_in);
+    if (COMPUTE_PRESSURE) compute_laplacian_rde(phi_in[2], delta_pressure, xy_in, wsphere);
     
     /* compute the gradient of phi if there is a magnetic field */
     if (ADD_MAGNETIC_FIELD) 
@@ -983,8 +1020,8 @@ double gfield[2*NX*NY], t_rde rde[NX*NY])
         {
             nabla_psi = (double *)malloc(2*NX*NY*sizeof(double));
             nabla_omega = (double *)malloc(2*NX*NY*sizeof(double));
-            compute_gradient_euler(phi_in[0], nabla_psi, EULER_GRADIENT_YSHIFT);
-            compute_gradient_euler(phi_in[1], nabla_omega, 0.0);
+            compute_gradient_euler(phi_in[0], nabla_psi, wsphere, EULER_GRADIENT_YSHIFT);
+            compute_gradient_euler(phi_in[1], nabla_omega, wsphere, 0.0);
         
             if (COMPUTE_PRESSURE) compute_pressure_laplacian(phi_in, delta_p);
         
@@ -996,7 +1033,7 @@ double gfield[2*NX*NY], t_rde rde[NX*NY])
                 if (smooth == 0)
                 {
                     delta_vorticity = (double *)malloc(NX*NY*sizeof(double));
-                    compute_laplacian_rde(phi_in[1], delta_vorticity, xy_in); 
+                    compute_laplacian_rde(phi_in[1], delta_vorticity, xy_in, wsphere); 
 //                 #pragma omp parallel for private(i,delta_vorticity)
                     for (i=0; i<NX*NY; i++) phi_in[1][i] += intstep*SMOOTH_FACTOR*delta_vorticity[i];
                     free(delta_vorticity);
@@ -1020,8 +1057,8 @@ double gfield[2*NX*NY], t_rde rde[NX*NY])
                 {
                     delta_u = (double *)malloc(NX*NY*sizeof(double));
                     delta_v = (double *)malloc(NX*NY*sizeof(double));
-                    compute_laplacian_rde(phi_in[1], delta_u, xy_in); 
-                    compute_laplacian_rde(phi_in[2], delta_v, xy_in); 
+                    compute_laplacian_rde(phi_in[1], delta_u, xy_in, wsphere); 
+                    compute_laplacian_rde(phi_in[2], delta_v, xy_in, wsphere); 
                     #pragma omp parallel for private(i)
                     for (i=0; i<NX*NY; i++) phi_in[1][i] += intstep*SMOOTH_FACTOR*delta_u[i];
                     #pragma omp parallel for private(i)
@@ -1045,10 +1082,15 @@ double gfield[2*NX*NY], t_rde rde[NX*NY])
             {
                 delta_u = (double *)malloc(NX*NY*sizeof(double));
                 delta_v = (double *)malloc(NX*NY*sizeof(double));
-                compute_laplacian_rde(phi_in[1], delta_u, xy_in); 
-                compute_laplacian_rde(phi_in[2], delta_v, xy_in); 
+                compute_laplacian_rde(phi_in[1], delta_u, xy_in, wsphere); 
+                compute_laplacian_rde(phi_in[2], delta_v, xy_in, wsphere); 
             }
             break;
+        }
+        
+        default: 
+        {
+            /* do nothing */
         }
     }
     
@@ -1061,6 +1103,7 @@ double gfield[2*NX*NY], t_rde rde[NX*NY])
         }
         printf("nabla square = %.5lg\n", test/((double)NX*NY));
     }
+    
     
     
     #pragma omp parallel for private(i,j,k,x,y,z,deltax,deltay,deltaz,rho)
@@ -1077,7 +1120,7 @@ double gfield[2*NX*NY], t_rde rde[NX*NY])
                 {
                     x = phi_in[0][i*NY+j];
                     deltax = viscosity*delta_phi[0][i*NY+j];
-                    phi_out[0][i*NY+j] = phi_in[0][i*NY+j] + intstep*(deltax + x*(1.0-x*x));
+                    phi_out[0][i*NY+j] = phi_in[0][i*NY+j] + intstep*(deltax + K_AC*x*(1.0-x*x));
                     break;
                 }
                 case (E_CAHN_HILLIARD):
@@ -1144,14 +1187,14 @@ double gfield[2*NX*NY], t_rde rde[NX*NY])
                 }
                 case (E_EULER_INCOMP):
                 {
-                    phi_out[0][i*NY+j] = phi_in[0][i*NY+j] + intstep*stiffness*(delta_phi[0][i*NY+j] + phi_in[1][i*NY+j]*dx*dx);
+                    phi_out[0][i*NY+j] = phi_in[0][i*NY+j] + intstep*POISSON_STIFFNESS*(delta_phi[0][i*NY+j] + phi_in[1][i*NY+j]*dx*dx);
 //                     phi_out[0][i*NY+j] += intstep*EULER_GRADIENT_YSHIFT;
                     phi_out[1][i*NY+j] = phi_in[1][i*NY+j] - intstep*K_EULER*(nabla_omega[i*NY+j]*nabla_psi[NX*NY+i*NY+j]);
                     phi_out[1][i*NY+j] += intstep*K_EULER*(nabla_omega[NX*NY+i*NY+j]*nabla_psi[i*NY+j]);
                         
                     if (COMPUTE_PRESSURE)
                     {
-                        phi_out[2][i*NY+j] = phi_in[2][i*NY+j] + intstep*stiffness*(delta_pressure[i*NY+j] - delta_p[i*NY+j]);
+                        phi_out[2][i*NY+j] = phi_in[2][i*NY+j] + intstep*POISSON_STIFFNESS*(delta_pressure[i*NY+j] - delta_p[i*NY+j]);
                         phi_out[2][i*NY+j] *= exp(-2.0e-3);
                     }
                     break;
@@ -1290,11 +1333,11 @@ double gfield[2*NX*NY], t_rde rde[NX*NY])
 
 void evolve_wave(double *phi[NFIELDS], double *phi_tmp[NFIELDS], short int xy_in[NX*NY], 
                  double potential_field[NX*NY], double vector_potential_field[2*NX*NY], 
-                 double gfield[2*NX*NY], t_rde rde[NX*NY])
+                 double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* time step of field evolution */
 {
-    evolve_wave_half(phi, phi_tmp, xy_in, potential_field, vector_potential_field, gfield, rde);
-    evolve_wave_half(phi_tmp, phi, xy_in, potential_field, vector_potential_field, gfield, rde);
+    evolve_wave_half(phi, phi_tmp, xy_in, potential_field, vector_potential_field, gfield, rde, wsphere);
+    evolve_wave_half(phi_tmp, phi, xy_in, potential_field, vector_potential_field, gfield, rde, wsphere);
 }
 
 
@@ -1490,13 +1533,15 @@ void draw_color_bar_palette(int plot, double range, int palette, int circular, i
         if (ROTATE_COLOR_SCHEME) 
             draw_color_scheme_palette_3d(XMIN + 0.3, YMIN + 0.1, XMAX - 0.3, YMIN + 0.1 + width, plot, -range, range, palette, fade, fade_value);
         else if (circular)
-            draw_circular_color_scheme_palette_3d(XMAX - 2.0*width, YMAX - 2.0*width, 1.5*width, plot, -range, range, palette, fade, fade_value);
+            draw_circular_color_scheme_palette_3d(XMAX - 2.0*width, YMAX - 2.0*width, 1.0*width, plot, -range, range, palette, fade, fade_value);
         else 
             draw_color_scheme_palette_3d(XMAX - 1.5*width, YMIN + 0.1, XMAX - 0.5*width, YMAX - 0.1, plot, -range, range, palette, fade, fade_value);
     }
     else
     {
-        if (ROTATE_COLOR_SCHEME) 
+        if (circular)
+            draw_circular_color_scheme_palette_fade(XMAX - 2.0*width, YMAX - 2.0*width, 1.0*width, plot, -range, range, palette, fade, fade_value);
+        else if (ROTATE_COLOR_SCHEME) 
             draw_color_scheme_palette_fade(XMIN + 0.8, YMIN + 0.1, XMAX - 0.8, YMIN + 0.1 + width, plot, -range, range, palette, fade, fade_value);
         else 
             draw_color_scheme_palette_fade(XMAX - 1.5*width, YMIN + 0.1, XMAX - 0.5*width, YMAX - 0.1, plot, -range, range, palette, fade, fade_value);
@@ -1582,7 +1627,7 @@ void animation()
     int i, j, k, s, nvid, field;
     static int counter = 0;
     t_rde *rde;
-//     t_swater_depth *water_depth;
+    t_wave_sphere *wsphere;
 
     /* Since NX and NY are big, it seemed wiser to use some memory allocation here */
     for (i=0; i<NFIELDS; i++)
@@ -1593,6 +1638,12 @@ void animation()
 
     xy_in = (short int *)malloc(NX*NY*sizeof(short int));
     rde = (t_rde *)malloc(NX*NY*sizeof(t_rde));
+    
+    if (SPHERE) 
+    {
+        wsphere = (t_wave_sphere *)malloc(NX*NY*sizeof(t_wave_sphere));
+        init_wave_sphere_rde(wsphere);
+    }
     
     npolyline = init_polyline(MDEPTH, polyline);
     for (i=0; i<npolyline; i++) printf("vertex %i: (%.3f, %.3f)\n", i, polyline[i].x, polyline[i].y);
@@ -1656,9 +1707,16 @@ void animation()
 
     /* initialize field */
 //     init_random(0.5, 0.4, phi, xy_in);
-//     init_random(0.0, 0.4, phi, xy_in);
+    init_random(0.5, 0.25, phi, xy_in, wsphere);
+//     init_random_smoothed(0.5, 0.25, phi, xy_in, wsphere);
 //     init_gaussian(x, y, mean, amplitude, scalex, phi, xy_in)
-//     init_coherent_state(-1.2, 0.35, 5.0, -2.0, 0.1, phi, xy_in);
+//     init_coherent_state(0.0, 0.0, 10.0, 0.0, 0.1, phi, xy_in);
+    
+//     init_coherent_state_sphere(0, 0.0, PID, 10.0, 5.0, 0.1, phi, xy_in, wsphere);
+//     init_coherent_state_sphere(1, PI, PID, -10.0, 5.0, 0.1, phi, xy_in, wsphere);
+//     init_coherent_state_sphere(1, PID, PID, 10.0, -5.0, 0.1, phi, xy_in, wsphere);
+//     init_coherent_state_sphere(1, 3.0*PID, PID, -10.0, -5.0, 0.1, phi, xy_in, wsphere);
+    
 //     add_coherent_state(-0.75, -0.75, 0.0, 5.0, 0.1, phi, xy_in);
 //     init_fermion_state(-0.5, 0.5, 2.0, 0.0, 0.1, phi, xy_in);
 //     init_boson_state(-0.5, 0.5, 2.0, 0.0, 0.1, phi, xy_in);
@@ -1677,9 +1735,9 @@ void animation()
 //     add_vortex_state(0.1, -0.3, 0.7, 0.1, -0.5, phi, xy_in);
     
 //     init_pressure_gradient_flow(flow_speed_schedule(0), 1.0 + PRESSURE_GRADIENT, 1.0 - PRESSURE_GRADIENT, phi, xy_in, bc_field);
-    
-//     init_shear_flow(-1.0, 0.1, 0.2, 1, 1, 0.2, phi, xy_in);
-//     init_shear_flow(1.0, 0.02, 0.15, 1, 1, 0.0, phi, xy_in);
+
+//     init_shear_flow_sphere(0.2, 0.05, 0.15, 6, 5, 0.75, phi, xy_in, wsphere);
+//     init_shear_flow_sphere(1.0, 0.25, 0.25, 8, 7, 0.75, phi, xy_in, wsphere);
 
 //     init_gaussian_wave(-1.0, 0.0, 0.005, 0.25, SWATER_MIN_HEIGHT, phi, xy_in);
     
@@ -1687,19 +1745,19 @@ void animation()
     
 //     init_linear_blob(0.0, -0.75, 0.025, 0.0, 0.001, 0.25, 0.5, SWATER_MIN_HEIGHT, phi, xy_in);
         
-    init_elliptical_vibration(0.0, 0.0, 0.0075, LAMBDA, 1.0, 0.0003, 0.1, 1.0, SWATER_MIN_HEIGHT, phi, xy_in);
+//     init_elliptical_vibration(0.0, 0.0, 0.0075, LAMBDA, 1.0, 0.0003, 0.1, 1.0, SWATER_MIN_HEIGHT, phi, xy_in);
     
 //     add_gaussian_wave(-1.6, -0.5, 0.015, 0.25, SWATER_MIN_HEIGHT, phi, xy_in);
     
     if (ADAPT_STATE_TO_BC) adapt_state_to_bc(phi, bc_field, xy_in);
     
     init_cfield_rde(phi, xy_in, CPLOT, rde, 0);
-    if (PLOT_3D) init_zfield_rde(phi, xy_in, ZPLOT, rde, 0);
+    if ((PLOT_3D)||(SHADE_2D)) init_zfield_rde(phi, xy_in, ZPLOT, rde, 0);
 
     if (DOUBLE_MOVIE)
     {
         init_cfield_rde(phi, xy_in, CPLOT_B, rde, 1);
-        if (PLOT_3D) init_zfield_rde(phi, xy_in, ZPLOT_B, rde, 1);
+        if  ((PLOT_3D)||(SHADE_2D)) init_zfield_rde(phi, xy_in, ZPLOT_B, rde, 1);
     }
     
     if (ADD_TRACERS) for (i=0; i<N_TRACERS; i++)
@@ -1716,7 +1774,7 @@ void animation()
     
     printf("Drawing wave\n");
     
-    draw_wave_rde(0, phi, xy_in, rde, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
+    draw_wave_rde(0, phi, xy_in, rde, wsphere, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
 //     draw_billiard();
     if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, VISCOSITY, noise);
     if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, CIRC_COLORBAR, 0, 1.0);
@@ -1754,7 +1812,7 @@ void animation()
         }
         
         printf("Drawing wave %i\n", i);
-        draw_wave_rde(0, phi, xy_in, rde, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
+        draw_wave_rde(0, phi, xy_in, rde, wsphere, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
         
 //         nvid = (int)((double)NVID*(1.0 + (ACCELERATION_FACTOR - 1.0)*(double)i/(double)NSTEPS));
         /* increase integration step */
@@ -1768,7 +1826,7 @@ void animation()
 //         printf("Integration step %.5lg\n", intstep);
         
         printf("Evolving wave\n");
-        for (j=0; j<nvid; j++) evolve_wave(phi, phi_tmp, xy_in, potential_field, vector_potential_field, gfield, rde);
+        for (j=0; j<nvid; j++) evolve_wave(phi, phi_tmp, xy_in, potential_field, vector_potential_field, gfield, rde, wsphere);
 
         if (ADAPT_STATE_TO_BC) adapt_state_to_bc(phi, bc_field, xy_in);
         
@@ -1848,7 +1906,7 @@ void animation()
             
             if ((i >= INITIAL_TIME)&&(DOUBLE_MOVIE))
             {
-                draw_wave_rde(1, phi, xy_in, rde, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 0, 1.0, REFRESH_B);
+                draw_wave_rde(1, phi, xy_in, rde, wsphere, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 0, 1.0, REFRESH_B);
                 if (ADD_TRACERS) draw_tracers(phi, tracers, i, 0, 1.0);
 //                 draw_billiard();
                 if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
@@ -1880,7 +1938,7 @@ void animation()
     {
         if (DOUBLE_MOVIE) 
         {
-            draw_wave_rde(0, phi, xy_in, rde, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
+            draw_wave_rde(0, phi, xy_in, rde, wsphere, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
             if (ADD_TRACERS) draw_tracers(phi, tracers, NSTEPS, 0, 1.0);
 //             draw_billiard();
             if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
@@ -1892,7 +1950,7 @@ void animation()
             else for (i=0; i<MID_FRAMES; i++) 
             {
                 fade_value = 1.0 - (double)i/(double)MID_FRAMES;
-                draw_wave_rde(0, phi, xy_in, rde, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 1, fade_value, 0);
+                draw_wave_rde(0, phi, xy_in, rde, wsphere, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 1, fade_value, 0);
                 if (ADD_TRACERS) draw_tracers(phi, tracers, NSTEPS, 1, fade_value);
 //                 draw_billiard();
                 if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
@@ -1900,7 +1958,7 @@ void animation()
                 if (!NO_EXTRA_BUFFER_SWAP) glutSwapBuffers();
                 save_frame_counter(NSTEPS + i + 1);
             }
-            draw_wave_rde(1, phi, xy_in, rde, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 0, 1.0, REFRESH_B);
+            draw_wave_rde(1, phi, xy_in, rde, wsphere, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 0, 1.0, REFRESH_B);
             if (ADD_TRACERS) draw_tracers(phi, tracers, NSTEPS, 0, 1.0);
             if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
             if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, CIRC_COLORBAR_B, 0, 1.0); 
@@ -1910,7 +1968,7 @@ void animation()
             else for (i=0; i<END_FRAMES; i++) 
             {
                 fade_value = 1.0 - (double)i/(double)END_FRAMES;
-                draw_wave_rde(1, phi, xy_in, rde, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 1, fade_value, 0);
+                draw_wave_rde(1, phi, xy_in, rde, wsphere, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 1, fade_value, 0);
                 if (ADD_TRACERS) draw_tracers(phi, tracers, NSTEPS, 1, fade_value);
                 if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, CIRC_COLORBAR_B, 1, fade_value);   
@@ -1924,7 +1982,7 @@ void animation()
             else for (i=0; i<END_FRAMES; i++) 
             {
                 fade_value = 1.0 - (double)i/(double)END_FRAMES;
-                draw_wave_rde(0, phi, xy_in, rde, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 1, fade_value, 0);
+                draw_wave_rde(0, phi, xy_in, rde, wsphere, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 1, fade_value, 0);
                 if (ADD_TRACERS) draw_tracers(phi, tracers, NSTEPS, 1, fade_value);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, CIRC_COLORBAR, 1, fade_value); 
                 glutSwapBuffers();
@@ -1941,6 +1999,7 @@ void animation()
         free(phi_tmp[i]);
     }
     free(xy_in);
+    if (SPHERE) free(wsphere);
     if (ADD_POTENTIAL) free(potential_field);
     else if (ADD_MAGNETIC_FIELD) 
     {
