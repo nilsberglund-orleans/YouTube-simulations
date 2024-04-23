@@ -706,7 +706,8 @@ void animation()
     
     init_wave_flat(phi, psi, xy_in);
     
-    if (VARIABLE_IOR) init_ior_2d(xy_in, tcc_table, tgamma_table, ior_angle);
+//    if (VARIABLE_IOR) 
+    init_ior_2d(xy_in, tcc_table, tgamma_table, ior_angle);
 
 //     init_circular_wave(-1.5, 0.0, phi, psi, xy_in);
 //     x = XMIN + (XMAX - XMIN)*rand()/RAND_MAX;
