@@ -7535,7 +7535,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_tab
         #pragma omp parallel for private(i,j)
         for (i=0; i<NX; i++){
             for (j=0; j<NY; j++){
-                if (xy_in[i*NY+j] != 0)
+                if (xy_in[i][j] != 0)
                 {
 //                     tc[i*NY+j] = COURANT;
                     tcc_table[i][j] = courant2;
