@@ -21,7 +21,7 @@ The files
 
 5. `*.ppm.gz` 
 
-are required by `wave_sphere.c` and `rde.c' and should be unzipped before compiling. 
+are required by `wave_sphere.c` and `rde.c and should be unzipped before compiling. 
 
 ### Simulations of classical particles in billiards.
 
