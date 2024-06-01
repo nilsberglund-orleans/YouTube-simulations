@@ -1620,6 +1620,114 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
                 
                 break;
             }
+            case (IOR_LENS_WALL):
+            {
+                printf("Case IOR_LENS_WALL in init_speed_dissipation of sub_wave_3d needs to be updated\n");
+                exit(1);
+                break;
+            }
+            case (IOR_LENS_CONCAVE):
+            {
+                printf("Case IOR_LENS_CONCAVE in init_speed_dissipation of sub_wave_3d needs to be updated\n");
+                exit(1);
+                break;
+            }
+            case (IOR_LENS_CONVEX_CONCAVE):
+            {
+                printf("Case IOR_LENS_CONVEX_CONCAVE in init_speed_dissipation of sub_wave_3d needs to be updated\n");
+                exit(1);
+                break;
+            }
+            case (IOR_TREE):
+            {
+                printf("Case IOR_TREE in init_speed_dissipation of sub_wave_3d needs to be updated\n");
+                exit(1);
+                break;
+            }
+            case (IOR_WAVE_GUIDES_COUPLED):
+            {
+                printf("Case IOR_WAVE_GUIDES_COUPLED in init_speed_dissipation of sub_wave_3d needs to be updated\n");
+                exit(1);
+                break;
+            }
+            case (IOR_WAVE_GUIDES_COUPLED_B):
+            {
+                printf("Case IOR_WAVE_GUIDES_COUPLED_B in init_speed_dissipation of sub_wave_3d needs to be updated\n");
+                exit(1);
+                break;
+            }
+            case (IOR_WAVE_GUIDE_COATED):
+            {
+                printf("Case IOR_WAVE_GUIDE_COATED in init_speed_dissipation of sub_wave_3d needs to be updated\n");
+                exit(1);
+                break;
+            }
+            case (IOR_MICHELSON):
+            {
+                printf("Case IOR_MICHELSON in init_speed_dissipation of sub_wave_3d needs to be updated\n");
+                exit(1);
+                break;
+            }
+            case (IOR_GRADIENT_INDEX_LENS):
+            {
+                /* focal distance if f = 1/(4*LAMBDA*n0*MU) */
+                /* with n0 = COURANT/COURANTB */
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = vabs(xy[0]);
+                        y = vabs(xy[1]);
+                        tc[i*NY+j] = COURANT;
+                        if ((x > LAMBDA)) 
+                        {
+                            tcc[i*NY+j] = courant2;
+                            tgamma[i*NY+j] = GAMMA;
+                        }
+                        else if (y > 1.0)
+                        {
+                            tcc[i*NY+j] = 0.0;
+                            tgamma[i*NY+j] = 0.0;                            
+                        }
+                        else
+                        {
+                            tcc[i*NY+j] = courantb2/(1.0 - MU*y*y);
+                            tgamma[i*NY+j] = GAMMAB;
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_GRADIENT_INDEX_LENS_B):
+            {
+                /* focal distance if f = 1/(4*LAMBDA*n0*MU) */
+                /* with n0 = COURANT/COURANTB */
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = vabs(xy[0]);
+                        y = vabs(xy[1]);
+                        tc[i*NY+j] = COURANT;
+                        if ((x > LAMBDA)) 
+                        {
+                            tcc[i*NY+j] = courant2;
+                            tgamma[i*NY+j] = GAMMA;
+                        }
+                        else if (y > 1.0)
+                        {
+                            tcc[i*NY+j] = 0.0;
+                            tgamma[i*NY+j] = 0.0;                            
+                        }
+                        else
+                        {
+                            speed = 1.0/(1.0 - MU*y*y);
+                            speed *= speed;
+                            tcc[i*NY+j] = courantb2*speed;
+                            tgamma[i*NY+j] = GAMMAB;
+                        }
+                    }
+                }
+                break;
+            }
             default:
             {
                 for (i=0; i<NX; i++){

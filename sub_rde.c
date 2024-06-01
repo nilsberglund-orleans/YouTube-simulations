@@ -490,6 +490,7 @@ void init_vortex_state(double amp, double x, double y, double scale, double dens
     }
 }
 
+
 void add_vortex_state(double amp, double x, double y, double scale, double density_mod, double *phi[NFIELDS], short int xy_in[NX*NY])
 /* add vortex at position (x,y) with variance scale to field */
 /* for incompressible Euler, phi[0] is stream function, phi[1] is vorticity */
@@ -561,6 +562,232 @@ void add_vortex_state(double amp, double x, double y, double scale, double densi
     }
 }
 
+
+void init_vortex_state_sphere(int add, double amp, double phi0, double theta0, double scale, double density_mod, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise field with vortex at position (x,y) with amplitude and variance scale */
+/* for incompressible Euler, phi[0] is stream function, phi[1] is vorticity */
+/* for compressible Euler, phi[0] is the density, phi[1] and phi[2] are velocity components */
+{
+    int i, j, k;
+    double xy[2], dist2, module, phase, scale2, sign, pscal, pscal1, pscal2;    
+
+//     scale2 = scale*scale;
+    switch (RDE_EQUATION) {
+        case (E_EULER_INCOMP): 
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+
+                    if (xy_in[i*NY+j])
+                    {
+                        pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+                        pscal += wsphere[i*NY+j].ctheta*cos(theta0);
+                        dist2 = acos(pscal);
+                        dist2 *= dist2;
+                        module = amp*exp(-dist2/vabs(scale));
+                
+                        if (scale > 0.0) sign = 1.0;
+                        else sign = -1.0;
+                
+                        if (add)
+                        {
+                            phi[1][i*NY+j] += sign*module;
+                            phi[0][i*NY+j] -= sign*module;    /* approximate, stream function should solve Poisson equation */
+                        }
+                        else
+                        {
+                            phi[1][i*NY+j] = sign*module;
+                            phi[0][i*NY+j] = -sign*module;    /* approximate, stream function should solve Poisson equation */
+                        }
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 0.0;
+                        phi[1][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+        case (E_EULER_COMP):
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+
+                    if (xy_in[i*NY+j])
+                    {
+                        pscal1 = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+                        pscal2 = wsphere[i*NY+j].ctheta*cos(theta0);
+                        dist2 = acos(pscal1 + pscal2);
+                        dist2 *= dist2;
+                        module = amp*exp(-dist2/vabs(scale));
+                        module *= wsphere[i*NY+j].stheta;
+                
+                        if (scale > 0.0) sign = 1.0;
+                        else sign = -1.0;
+                
+//                         phi[0][i*NY+j] = 1.0;
+                        /* nonconstant density to make things more interesting */
+                        /* TODO: correct initialization of phi[1], phi[2] */
+                        if (add)
+                        {
+//                             phi[0][i*NY+j] += 0.5 + density_mod*module/amp;
+                            phi[0][i*NY+j] += density_mod*module/amp;
+                            phi[1][i*NY+j] -= sign*module*(xy[1]-theta0)/vabs(scale);
+                            phi[2][i*NY+j] += sign*module*pscal1/vabs(scale);
+                            for (k=1; k<2; k++)  phi[k][i*NY+j] *= wsphere[i*NY+j].stheta;
+                            /* approximate, stream function should solve Poisson equation */
+                        }
+                        else
+                        {
+                            phi[0][i*NY+j] = 1.0 + density_mod*module/amp;
+                            phi[1][i*NY+j] = -sign*module*(xy[1]-theta0)/vabs(scale);
+                            phi[2][i*NY+j] = sign*module*pscal1/vabs(scale);
+                            for (k=1; k<2; k++)  phi[k][i*NY+j] *= wsphere[i*NY+j].stheta;
+                        }
+
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 1.0;
+                        phi[1][i*NY+j] = 0.0;
+                        phi[2][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+    }
+}
+
+
+void init_vortex_state_sphere_mod(int add, double amp, double phi0, double theta0, double scale, double density_mod, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise field with vortex at position (x,y) with amplitude and variance scale */
+/* for incompressible Euler, phi[0] is stream function, phi[1] is vorticity */
+/* for compressible Euler, phi[0] is the density, phi[1] and phi[2] are velocity components */
+{
+    int i, j, k, ij[2];
+    double xy[2], dist, dist2, module, phase, scale2, sign, pscal, pscal1, pscal2; 
+    double x0, y0, z0, x, y, z, a, b, c, ephi, etheta;
+
+//     scale2 = scale*scale;
+    switch (RDE_EQUATION) {
+        case (E_EULER_INCOMP): 
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+
+                    if (xy_in[i*NY+j])
+                    {
+                        pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+                        pscal += wsphere[i*NY+j].ctheta*cos(theta0);
+                        dist2 = acos(pscal);
+                        dist2 *= dist2;
+                        module = amp*exp(-dist2/vabs(scale));
+                
+                        if (scale > 0.0) sign = 1.0;
+                        else sign = -1.0;
+                
+                        if (add)
+                        {
+                            phi[1][i*NY+j] += sign*module;
+                            phi[0][i*NY+j] -= sign*module;    /* approximate, stream function should solve Poisson equation */
+                        }
+                        else
+                        {
+                            phi[1][i*NY+j] = sign*module;
+                            phi[0][i*NY+j] = -sign*module;    /* approximate, stream function should solve Poisson equation */
+                        }
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 0.0;
+                        phi[1][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+        case (E_EULER_COMP):
+        {
+            xy_to_ij(XMIN + (XMAX-XMIN)*phi0/DPI, YMIN + (YMAX-YMIN)*theta0/PI, ij);
+            x0 = wsphere[ij[0]*NY+ij[1]].x;
+            y0 = wsphere[ij[0]*NY+ij[1]].y;
+            z0 = wsphere[ij[0]*NY+ij[1]].z;
+            
+//             x0 = cos(phi0)*sin(theta0);
+//             y0 = sin(phi0)*sin(theta0);
+//             z0 = cos(theta0);
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+
+                    if (xy_in[i*NY+j])
+                    {
+                        pscal1 = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+                        pscal2 = wsphere[i*NY+j].ctheta*cos(theta0);
+                        dist = vabs(acos(pscal1 + pscal2));
+                        dist2 = dist*dist;
+                        module = amp*exp(-dist2/vabs(scale));
+//                         module *= wsphere[i*NY+j].stheta;
+                        
+                        x = wsphere[i*NY+j].x;
+                        y = wsphere[i*NY+j].y;
+                        z = wsphere[i*NY+j].z;
+                        
+                        a = y0*z - z0*y;
+                        b = z0*x - x0*z;
+                        c = x0*y - y0*x;
+                        
+                        ephi = b*wsphere[i*NY+j].cphi - a*wsphere[i*NY+j].sphi;
+                        etheta = c*wsphere[i*NY+j].stheta - (a*wsphere[i*NY+j].cphi + b*wsphere[i*NY+j].sphi)*wsphere[i*NY+j].ctheta;
+                
+                        /* TEST */
+                        ephi *= 1.0/(0.5 + 1.0 - wsphere[i*NY+j].z*wsphere[i*NY+j].z);
+                        
+                        if (scale > 0.0) sign = 1.0;
+                        else sign = -1.0;
+                
+//                         phi[0][i*NY+j] = 1.0;
+                        /* nonconstant density to make things more interesting */
+                        /* TODO: correct initialization of phi[1], phi[2] */
+                        if (add)
+                        {
+//                             phi[0][i*NY+j] += 0.5 + density_mod*module/amp;
+                            phi[0][i*NY+j] += density_mod*module/amp;
+                            phi[1][i*NY+j] += sign*module*dist*ephi/vabs(scale);
+                            phi[2][i*NY+j] += sign*module*dist*etheta/vabs(scale);
+                            for (k=1; k<2; k++)  phi[k][i*NY+j] *= wsphere[i*NY+j].stheta;
+                            /* approximate, stream function should solve Poisson equation */
+                        }
+                        else
+                        {
+                            phi[0][i*NY+j] = 1.0 + density_mod*module/amp;
+                            phi[1][i*NY+j] = sign*module*dist*ephi/vabs(scale);
+                            phi[2][i*NY+j] = sign*module*dist*etheta/vabs(scale);
+                            for (k=1; k<2; k++)  phi[k][i*NY+j] *= wsphere[i*NY+j].stheta;
+                        }
+
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 1.0;
+                        phi[1][i*NY+j] = 0.0;
+                        phi[2][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+    }
+}
 
 void init_shear_flow(double amp, double delta, double rho, int nx, int ny, double yshift, double *phi[NFIELDS], short int xy_in[NX*NY])
 /* initialise field with a shear flow */
@@ -777,6 +1004,64 @@ void init_laminar_flow(double amp, double xmodulation, double ymodulation, doubl
                         phi[0][i*NY+j] = 1.0 + density_mod*cos(a*y1);
                         phi[1][i*NY+j] = amp*(1.0 + xmodulation*cos(a*y1));
                         phi[2][i*NY+j] = ymodulation*sin(b*xy[0]);
+                    }
+                    else
+                    {
+                        phi[0][i*NY+j] = 1.0;
+                        phi[1][i*NY+j] = 0.0;
+                        phi[2][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+    }
+}
+
+void init_laminar_flow_earth(double amp, double *phi[NFIELDS], short int xy_in[NX*NY])
+/* initialise field with a laminar flow in x direction */
+/* for Earth simulation with trades and westerlies */
+/* amp is global amplitude */
+{
+    int i, j;
+    double xy[2], y1;    
+    
+    switch (RDE_EQUATION) {
+        case (E_EULER_INCOMP):      /* TODO */
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+//                     ij_to_xy(i, j, xy);
+//                     xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+//                     y1 = xy[1] + yshift;
+
+//                     if (xy_in[i*NY+j])
+//                     {
+//                         phi[0][i*NY+j] = amp*(y1 + xmodulation*sin(a*y1)/a);
+//                         phi[1][i*NY+j] = amp*xmodulation*a*sin(a*y1);
+//                     }
+//                     else
+                    {
+                        phi[0][i*NY+j] = 0.0;
+                        phi[1][i*NY+j] = 0.0;
+                    }
+                }
+            break;
+        }
+        case (E_EULER_COMP):
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    ij_to_xy(i, j, xy);
+                    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+                    y1 = 2.0*DPI*(xy[1] - YMIN)/(YMAX - YMIN);
+                
+                    if (xy_in[i*NY+j])
+                    {
+                        phi[0][i*NY+j] = 1.0;
+                        phi[1][i*NY+j] = amp*cos(y1);
+                        phi[2][i*NY+j] = 0.0;
                     }
                     else
                     {
@@ -1139,7 +1424,7 @@ double tesla_distance(double x, double y, double a, double l, double theta)
     return(dmin);
 }
 
-void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_rectangle polyrect[NMAXPOLY])
+void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_rectangle polyrect[NMAXPOLY], t_wave_sphere wsphere[NX*NY])
 /* apply smooth modulation to adapt initial state to obstacles */ 
 {
     int i, j, nsides, s, i1, j1, shiftx;
@@ -1348,6 +1633,23 @@ void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_recta
                     f = 0.5*(1.0 + tanh(0.5*BC_STIFFNESS*r)); 
                     bc_field2[i*NY+j] = f;
                 }
+            break;
+        }
+        case (D_SPHERE_EARTH):
+        {
+            /* do nothing? */
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    /* set dummy values */
+                    height = wsphere[i*NY+j+1].altitude;
+                    if (height == 0.0) bc_field[i*NY+j] = 1.0;
+                    else 
+                    {   
+                        f = tanh(BC_STIFFNESS*height);
+                        bc_field[i*NY+j] = 1.0 - f;
+                    }
+                 }
             break;
         }
     }
@@ -1569,6 +1871,15 @@ void compute_theta(double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY
         else rde[i*NY+j].theta = 0.0;
 }
 
+double colors_rps(int type)
+{
+    switch (type) {
+        case (0): return(0.0);
+        case (1): return(120.0);
+        case (2): return(240.0);
+    }
+}
+
 double colors_rpslz(int type)
 {
     switch (type) {
@@ -1591,17 +1902,56 @@ void compute_theta_rpslz(double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde
     if (first)
     {
 //         shift = 0.0;
-        for (i = 0; i < 5; i++)
-        {
-            ca[i] = cos(colors_rpslz(i)*DPI/360.0);
-            sa[i] = sin(colors_rpslz(i)*DPI/360.0);
-//             ca[i] = cos(shift + 0.2*DPI*(double)i);
-//             sa[i] = sin(shift + 0.2*DPI*(double)i);
+        switch (cplot) {
+            case (Z_MAXTYPE_RPS):
+            {
+                for (i = 0; i < 3; i++)
+                {
+                    ca[i] = cos(colors_rps(i)*DPI/360.0);
+                    sa[i] = sin(colors_rps(i)*DPI/360.0);
+                }
+                break;
+            }
+            case (Z_MAXTYPE_RPSLZ):
+            {
+                for (i = 0; i < 5; i++)
+                {
+                    ca[i] = cos(colors_rpslz(i)*DPI/360.0);
+                    sa[i] = sin(colors_rpslz(i)*DPI/360.0);
+//              ca[i] = cos(shift + 0.2*DPI*(double)i);
+//              sa[i] = sin(shift + 0.2*DPI*(double)i);
+                }
+                break;
+            }
         }
         first = 0;
     }   
        
     switch (cplot) {
+        case (Z_MAXTYPE_RPS):
+        {
+            #pragma omp parallel for private(i,j,max,kmax)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++)
+            {
+                if (xy_in[i*NY+j])
+                {
+                    max = 0.0;
+                    kmax = 0;
+                    for (k=0; k<3; k++)
+                    {
+                        if (phi[k][i*NY+j] > max)
+                        {
+                            max = phi[k][i*NY+j];
+                            kmax = k;
+                        }
+                    }
+                    angle = colors_rps(kmax);
+                    rde[i*NY+j].theta = angle;
+                }
+                else rde[i*NY+j].theta = 0.0;
+            }
+            break;
+        }
         case (Z_MAXTYPE_RPSLZ):
         {
             #pragma omp parallel for private(i,j,max,kmax)
@@ -1798,24 +2148,39 @@ void compute_gradient_euler_plane(double phi[NX*NY], double gradient[2*NX*NY], d
 void compute_gradient_euler_sphere(double phi[NX*NY], double gradient[2*NX*NY], t_wave_sphere wsphere[NX*NY], double yshift)
 /* compute the gradient of the field */
 {
-    int i, j, iplus, iminus, jplus, jminus, padding = 0; 
-    double deltaphi, maxgradient = 1.0e10, sintheta, invstheta;
+    int i, j, iplus, iminus, jplus, jminus, n, b, k, p, q, i1, b0; 
+    double deltaphi, maxgradient = 1.0e10, sintheta, invstheta, sum1, sum2, factor;
 //     double dx = (XMAX-XMIN)/((double)NX);
-    static short int first = 1;
-    static double dphi, dtheta, cphiphi, ctheta, dt, vdrift;
+    static short int first = 1, jsouth, jnorth;
+    static double dphi, dtheta, cphiphi, ctheta, dt, vdrift, xyfactor;
     
     if (first)
     {
         dphi = DPI/(double)NX;
         dtheta = PI/(double)NY;
+        xyfactor = 1.0/(dtheta*(double)NX);
+        
+        if (SMOOTHBLOCKS)
+        {
+            jsouth = BLOCKDIST;
+            jnorth = NY - BLOCKDIST;
+        }
+        else
+        {
+            jsouth = 1;
+            jnorth = NY-1;
+        }
         
         first = 0;
     }
     
-//     dx = (XMAX-XMIN)/((double)NX);
-        
+//     #pragma omp parallel for private(i)
+//     for (i=0; i<2*NX*NY; i++) gradient[i] = 0.0;
+    
+//     printf("Computing gradient Euler sphere\n"); 
+    
     #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus)
-    for (j=1; j<NY-1; j++)
+    for (j=1; j<NY; j++)
     {
         sintheta = wsphere[j].stheta;
         invstheta = 1.0/sqrt(sintheta*sintheta + SMOOTHPOLE*SMOOTHPOLE);
@@ -1831,19 +2196,8 @@ void compute_gradient_euler_sphere(double phi[NX*NY], double gradient[2*NX*NY], 
         }
     }
     
-    /* boundaries TODO */
-    for (i=1; i<NX-1; i++)
-    {
-        gradient[i*NY] = 0.0;
-        gradient[NX*NY+i*NY] = 0.0;
-        
-        
-        j = NY-1;        
-        gradient[i*NY+j] = 0.0;
-        gradient[NX*NY+i*NY+j] = 0.0;
-    }
-    
-    for (j=1; j<NY-1; j++)
+    /* vertical boundaries */
+    for (j=1; j<NY; j++)
     {
         jplus = j+1;
         jminus = j-1;
@@ -1865,26 +2219,152 @@ void compute_gradient_euler_sphere(double phi[NX*NY], double gradient[2*NX*NY], 
         gradient[NX*NY+i*NY+j] = 0.5*(phi[i*NY+jplus] - phi[i*NY+jminus]);
     }
     
-    /* corners */
-    i = 0;
+    /* Around South pole */
+    for (j=0; j<BLOCKDIST; j++)
+    {
+        b = block_sizes[j];
+        n = block_numbers[j];
+        factor = 1.0/(double)b;
+        
+        for (k=0; k<n; k++)
+        {
+            sum1 = 0.0;
+            sum2 = 0.0;
+            for (p=0; p<b; p++)
+            {
+                i = k*b + p;
+                sum1 += gradient[i*NY+j];
+                sum2 += gradient[NX*NY+i*NY+j];
+            }
+            sum1 *= factor;
+            sum2 *= factor;
+            for (p=0; p<b; p++) 
+            {
+                i = k*b + p;
+                gradient[i*NY+j] = sum1;
+                gradient[NX*NY+i*NY+j] = sum2;
+            }
+        }
+        
+        /* add a last block if there is a remainder */
+        if (NX > n*b)
+        {
+            factor = 1.0/(NX - n*b);
+            sum1 = 0.0;
+            sum2 = 0.0;
+            for (i=n*b; i<NX; i++) 
+            {
+                sum1 += gradient[i*NY+j];
+                sum2 += gradient[NX*NY+i*NY+j];
+            }
+            sum1 *= factor;
+            sum2 *= factor;
+            for (i=n*b; i<NX; i++)
+            {
+                gradient[i*NY+j] = sum1;
+                gradient[NX*NY+i*NY+j] = sum2;
+            }
+        }
+    }
     
-    j = 0;
-    gradient[i*NY+j] = 0.0;
-    gradient[NX*NY+i*NY+j] = 0.0;
+    /* North pole */
+    for (j=NY-1; j>NY-BLOCKDIST-1; j--)
+    {
+        b = block_sizes[j];
+        n = block_numbers[j];
+        factor = 1.0/(double)b;
+        
+        for (k=0; k<n; k++)
+        {
+            sum1 = 0.0;
+            sum2 = 0.0;
+            for (p=0; p<b; p++)
+            {
+                i = k*b + p;
+                sum1 += gradient[i*NY+j];
+                sum2 += gradient[NX*NY+i*NY+j];
+            }
+            sum1 *= factor;
+            sum2 *= factor;
+            for (p=0; p<b; p++) 
+            {
+                i = k*b + p;
+                gradient[i*NY+j] = sum1;
+                gradient[NX*NY+i*NY+j] = sum2;
+            }
+        }
+        
+        /* add a last block if there is a remainder */
+        if (NX > n*b)
+        {
+            factor = 1.0/(NX - n*b);
+            sum1 = 0.0;
+            sum2 = 0.0;
+            for (i=n*b; i<NX; i++) 
+            {
+                sum1 += gradient[i*NY+j];
+                sum2 += gradient[NX*NY+i*NY+j];
+            }
+            sum1 *= factor;
+            sum2 *= factor;
+            for (i=n*b; i<NX; i++)
+            {
+                gradient[i*NY+j] = sum1;
+                gradient[NX*NY+i*NY+j] = sum2;
+            }
+        }
+    }
     
-    j = NY-1;
-    gradient[i*NY+j] = 0.0;
-    gradient[NX*NY+i*NY+j] = 0.0;
+
     
-    i = NX-1;
+    /* TODO poles */
+    for (i=0; i<NX; i++)
+    {
+        /* j = 0 */
+        gradient[i*NY] = 0.0;
+        gradient[NX*NY+i*NY] = 0.0;
+//         gradient[i*NY] = gradient[i*NY+1];
+//         gradient[NX*NY+i*NY] = gradient[NX*NY+i*NY+1];
+        
+        
+        j = NY-1;        
+        gradient[i*NY+j] = 0.0;
+        gradient[NX*NY+i*NY+j] = 0.0;
+//         gradient[i*NY+j] = gradient[i*NY+j-1];
+//         gradient[NX*NY+i*NY+j] = gradient[NX*NY+i*NY+j-1];
+    }
+
+    /* TEST: averaging of gradient at poles */
+    /* South pole */
+//     sum1 = 0.0;
+//     sum2 = 0.0;
+//     for (i=0; i<NX; i++)
+//     {
+//         sum1 += (phi[i*NY+1] - phi[i*NY])*wsphere[i*NY].cphi;
+//         sum2 += (phi[i*NY+1] - phi[i*NY])*wsphere[i*NY].sphi;
+//     }
+//     sum1 *= xyfactor;
+//     sum2 *= xyfactor;
+//     for (i=0; i<NX; i++)
+//     {
+//         gradient[i*NY] = -sum1*wsphere[i*NY].sphi + sum2*wsphere[i*NY].cphi;
+//         gradient[NX*NY+i*NY] = sum1*wsphere[i*NY].cphi + sum2*wsphere[i*NY].sphi;
+//     }
+//     /* North pole */
+//     for (i=0; i<NX; i++)
+//     {
+//         sum1 += (phi[i*NY+NY-2] - phi[i*NY+NY-1])*wsphere[i*NY].cphi;
+//         sum2 += (phi[i*NY+NY-2] - phi[i*NY+NY-1])*wsphere[i*NY].sphi;
+//     }
+//     sum1 *= xyfactor;
+//     sum2 *= xyfactor;
+//     for (i=0; i<NX; i++)
+//     {
+//         gradient[i*NY+NY-1] = -sum1*wsphere[i*NY].sphi + sum2*wsphere[i*NY].cphi;
+//         gradient[NX*NY+i*NY+ NY-1] = sum1*wsphere[i*NY].cphi + sum2*wsphere[i*NY].sphi;
+//     }
     
-    j = 0; 
-    gradient[i*NY+j] = 0.0;
-    gradient[NX*NY+i*NY+j] = 0.0;
-    
-    j = NY-1; 
-    gradient[i*NY+j] = 0.0;
-    gradient[NX*NY+i*NY+j] = 0.0;
+
 }
 
 
@@ -2199,10 +2679,11 @@ void compute_gradient_euler_domain(double phi[NX*NY], double gradient[2*NX*NY], 
     }
 }
 
-void compute_gradient_euler_test(double phi[NX*NY], double gradient[2*NX*NY], short int xy_in[NX*NY])
+void compute_gradient_euler_test(double phi[NX*NY], double gradient[2*NX*NY], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* compute the gradient of the field */
 {
-    switch (B_DOMAIN) {
+    if (SPHERE) compute_gradient_euler_sphere(phi, gradient, wsphere, 0.0);
+    else switch (B_DOMAIN) {
         case (D_NOTHING): 
         {
             compute_gradient_euler_periodic(phi, gradient, xy_in);
@@ -2442,7 +2923,7 @@ void compute_pressure_laplacian(double *phi[NFIELDS], double *l_pressure)
 }
 
 
-void compute_speed(double *phi[NFIELDS], t_rde rde[NX*NY])
+void compute_speed(double *phi[NFIELDS], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* compute the speed of a field */
 {
     int i, j; 
@@ -2452,8 +2933,11 @@ void compute_speed(double *phi[NFIELDS], t_rde rde[NX*NY])
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
-            value = ZSCALE_SPEED*module2(phi[1][i*NY+j], phi[2][i*NY+j]);
-            rde[i*NY+j].field_norm = value;
+            if (SPHERE) 
+                value = module2(phi[1][i*NY+j]*wsphere[i*NY+j].reg_cottheta, phi[2][i*NY+j]);
+            else value = module2(phi[1][i*NY+j], phi[2][i*NY+j]);
+            rde[i*NY+j].field_norm = ZSHIFT_SPEED + ZSCALE_SPEED*value;
+//             printf("Speed norm = %.3lg\n", value);
         }
 }
 
@@ -2492,15 +2976,103 @@ void compute_direction(double *phi[NFIELDS], t_rde rde[NX*NY])
 void compute_vorticity(t_rde rde[NX*NY])
 /* compute the vorticity of a field */
 {
-    int i, j; 
-    double value;
+    int i, j, b, b1, n, k, p, q, i1; 
+    double value, sum, factor;
     
-    #pragma omp parallel for private(i,j,value)
-    for (i=0; i<NX; i++)
-        for (j=0; j<NY; j++)
+    if (SPHERE)
+    {
+        #pragma omp parallel for private(i,j,value)
+        for (i=0; i<NX; i++)
+            for (j=DSMOOTH; j<NY-DSMOOTH; j++)
+            {
+                rde[i*NY+j].curl = VSCALE_VORTICITY*(rde[i*NY+j].dxv - rde[i*NY+j].dyu) + VORTICITY_SHIFT;
+            }
+        
+        /* average value at South pole */
+        value = 0.0;
+        for (i=0; i<NX; i++)
+            for (j=1; j<DSMOOTH+1; j++)
+            {
+                value += VSCALE_VORTICITY*(rde[i*NY+j].dxv - rde[i*NY+j].dyu) + VORTICITY_SHIFT;
+            }
+        value *= 1.0/((double)(NX*DSMOOTH));
+        for (i=0; i<NX; i++)
+            for (j=0; j<DSMOOTH+1; j++)
+                rde[i*NY+j].curl = value;
+        
+        /* average value at North pole */
+        value = 0.0;
+        for (i=0; i<NX; i++)
+            for (j=NY-DSMOOTH-1; j<NY-1; j++)
+            {
+                value += VSCALE_VORTICITY*(rde[i*NY+j].dxv - rde[i*NY+j].dyu) + VORTICITY_SHIFT;
+            }
+        value *= 1.0/((double)(NX*DSMOOTH));
+        for (i=0; i<NX; i++)
+            for (j=NY-DSMOOTH-1; j<NY; j++)
+                rde[i*NY+j].curl = value;
+        
+        
+        b = 6;
+        b1 = 3;
+        factor = 1.0/(double)(b*b);
+        /* around South pole */
+        for (j=0; j<BLOCKDIST+b; j++)
         {
-            rde[i*NY+j].curl = VSCALE_VORTICITY*(rde[i*NY+j].dxv - rde[i*NY+j].dyu) + VORTICITY_SHIFT;
+            for (i=0; i<NX-b; i++)
+            {
+                sum = 0.0;
+                for (p=0; p<b; p++) 
+                    for (q=0; q<b; q++)
+                        sum += rde[(i+p)*NY+j+q].curl;
+                rde[(i+b1)*NY+j+b1].curl = factor*sum;
+            }
+            for (i=NX-b; i<NX; i++)
+            {
+                sum = 0.0;
+                for (p=0; p<b; p++) 
+                {
+                    i1 = (i+p)%NX;
+                    for (q=0; q<b; q++) sum += rde[i1*NY+j+q].curl;
+                }
+                i1 = (i+b1)%NX;
+                rde[i1*NY+j+b1].curl = factor*sum;
+            }
         }
+        
+        /* around North pole */
+        for (j=NY-1; j>NY-BLOCKDIST-1-b; j--)
+        {
+            for (i=0; i<NX-b; i++)
+            {
+                sum = 0.0;
+                for (p=0; p<b; p++) 
+                    for (q=0; q<b; q++)
+                        sum += rde[(i+p)*NY+j-q].curl;
+                rde[(i+b1)*NY+j-b1].curl = factor*sum;
+            }
+            for (i=NX-b; i<NX; i++)
+            {
+                sum = 0.0;
+                for (p=0; p<b; p++) 
+                {
+                    i1 = (i+p)%NX;
+                    for (q=0; q<b; q++) sum += rde[i1*NY+j-q].curl;
+                }
+                i1 = (i+b1)%NX;
+                rde[i1*NY+j-b1].curl = factor*sum;
+            }
+        }
+    }
+    else
+    {
+        #pragma omp parallel for private(i,j,value)
+        for (i=0; i<NX; i++)
+            for (j=0; j<NY; j++)
+            {
+                rde[i*NY+j].curl = VSCALE_VORTICITY*(rde[i*NY+j].dxv - rde[i*NY+j].dyu) + VORTICITY_SHIFT;
+            }
+    }    
 }
 
 void compute_velocity_gradients_periodic(double *phi[NFIELDS], t_rde rde[NX*NY])
@@ -2874,10 +3446,439 @@ void compute_velocity_gradients_domain(double *phi[NFIELDS], t_rde rde[NX*NY], s
         }
     }  
 }
-void compute_velocity_gradients(double *phi[NFIELDS], t_rde rde[NX*NY], short int xy_in[NX*NY])
+
+void compute_velocity_gradients_sphere_old(double *phi[NFIELDS], t_rde rde[NX*NY], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* OLD VERSION */
+/* compute the gradients of the velocity field on the sphere */
+{
+    int i, j, k, iplus, iminus, jplus, jminus, jsouth, jnorth; 
+    double deltaphi, maxgradient = 1.0e10, sintheta, invstheta;
+    static double dphi, dtheta, cphiphi, ctheta, dt, vdrift;
+    static int first = 1;
+    
+    if (first)
+    {
+        dphi = DPI/(double)NX;
+        dtheta = PI/(double)NY;
+        
+        if (SMOOTHBLOCKS)
+        {
+            jsouth = BLOCKDIST;
+            jnorth = NY - BLOCKDIST;
+        }
+        else
+        {
+            jsouth = 1;
+            jnorth = NY-1;
+        }
+        
+        first = 0;
+    }
+    
+    
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus)
+    for (i=1; i<NX-1; i++)
+    {
+        iplus = i+1;
+        iminus = i-1;
+        for (j=1; j<NY-1; j++)
+        {
+            sintheta = wsphere[j].stheta;
+            invstheta = 1.0/sqrt(sintheta*sintheta + SMOOTHPOLE*SMOOTHPOLE);
+            if (xy_in[i*NY+j])
+            {
+            
+                jplus = j+1;
+                jminus = j-1;
+            
+                if (xy_in[iplus*NY+j] && xy_in[iminus*NY+j])
+                {
+                    rde[i*NY+j].dxu = 0.5*invstheta*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                    rde[i*NY+j].dxv = 0.5*invstheta*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+                }
+                else 
+                {
+                    rde[i*NY+j].dxu = 0.0;
+                    rde[i*NY+j].dxv = 0.0;
+                }
+                
+                if (xy_in[i*NY+jplus] && xy_in[i*NY+jplus])
+                {
+                    rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+                    rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+                }
+                else 
+                {
+                    rde[i*NY+j].dyu = 0.0;
+                    rde[i*NY+j].dyv = 0.0;
+                }
+            }
+            else 
+            {
+                rde[i*NY+j].dxu = 0.0;
+                rde[i*NY+j].dxv = 0.0;
+                rde[i*NY+j].dyu = 0.0;
+                rde[i*NY+j].dyv = 0.0;
+            }
+        }
+        
+        /* North pole */
+        rde[i*NY+NY-1].dxu = rde[i*NY+NY-2].dxu;
+        rde[i*NY+NY-1].dxv = rde[i*NY+NY-2].dxv;
+        rde[i*NY+NY-1].dyu = rde[i*NY+NY-2].dyu;
+        rde[i*NY+NY-1].dyv = rde[i*NY+NY-2].dyv;
+
+        /* South pole */
+        rde[i*NY].dxu = rde[i*NY+1].dxu;
+        rde[i*NY].dxv = rde[i*NY+1].dxv;
+        rde[i*NY].dyu = rde[i*NY+1].dyu;
+        rde[i*NY].dyv = rde[i*NY+1].dyv;
+    }  
+    
+    /* i = 0 */
+    i = 0;
+    iplus = 1;
+    iminus = NX-1;
+    for (j=1; j<NY-1; j++) 
+    {
+        sintheta = wsphere[j].stheta;
+        invstheta = 1.0/sqrt(sintheta*sintheta + SMOOTHPOLE*SMOOTHPOLE);
+        if (xy_in[i*NY+j])
+        {
+            jplus = j+1;
+            jminus = j-1;
+            
+            if (xy_in[iplus*NY+j] && xy_in[iminus*NY+j])
+            {
+                rde[i*NY+j].dxu = 0.5*invstheta*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                rde[i*NY+j].dxv = 0.5*invstheta*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            }
+            else 
+            {
+                rde[i*NY+j].dxu = 0.0;
+                rde[i*NY+j].dxv = 0.0;
+            }
+                
+            if (xy_in[i*NY+jplus] && xy_in[i*NY+jplus])
+            {
+                rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+                rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+            }
+            else 
+            {
+                rde[i*NY+j].dyu = 0.0;
+                rde[i*NY+j].dyv = 0.0;
+            }
+        }
+        else 
+        {
+            rde[i*NY+j].dxu = 0.0;
+            rde[i*NY+j].dxv = 0.0;
+            rde[i*NY+j].dyu = 0.0;
+            rde[i*NY+j].dyv = 0.0;
+        }
+    }
+    /* North pole */
+    rde[i*NY+NY-1].dxu = rde[i*NY+NY-2].dxu;
+    rde[i*NY+NY-1].dxv = rde[i*NY+NY-2].dxv;
+    rde[i*NY+NY-1].dyu = rde[i*NY+NY-2].dyu;
+    rde[i*NY+NY-1].dyv = rde[i*NY+NY-2].dyv;
+
+    /* South pole */
+    rde[i*NY].dxu = rde[i*NY+1].dxu;
+    rde[i*NY].dxv = rde[i*NY+1].dxv;
+    rde[i*NY].dyu = rde[i*NY+1].dyu;
+    rde[i*NY].dyv = rde[i*NY+1].dyv;
+        
+    /* i = NX-1 */
+    i = NX-1;
+    iplus = 0;
+    iminus = NX-2;
+    for (j=1; j<NY-1; j++) 
+    {
+        sintheta = wsphere[j].stheta;
+        invstheta = 1.0/sqrt(sintheta*sintheta + SMOOTHPOLE*SMOOTHPOLE);
+        if (xy_in[i*NY+j])
+        {
+            jplus = j+1;
+            jminus = j-1;
+            
+            if (xy_in[iplus*NY+j] && xy_in[iminus*NY+j])
+            {
+                rde[i*NY+j].dxu = 0.5*invstheta*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+                rde[i*NY+j].dxv = 0.5*invstheta*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            }
+            else 
+            {
+                rde[i*NY+j].dxu = 0.0;
+                rde[i*NY+j].dxv = 0.0;
+            }
+                
+            if (xy_in[i*NY+jplus] && xy_in[i*NY+jplus])
+            {
+                rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+                rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+            }
+            else 
+            {
+                rde[i*NY+j].dyu = 0.0;
+                rde[i*NY+j].dyv = 0.0;
+            }
+        }
+        else 
+        {
+            rde[i*NY+j].dxu = 0.0;
+            rde[i*NY+j].dxv = 0.0;
+            rde[i*NY+j].dyu = 0.0;
+            rde[i*NY+j].dyv = 0.0;
+        }
+    }
+    /* North pole */
+    rde[i*NY+NY-1].dxu = rde[i*NY+NY-2].dxu;
+    rde[i*NY+NY-1].dxv = rde[i*NY+NY-2].dxv;
+    rde[i*NY+NY-1].dyu = rde[i*NY+NY-2].dyu;
+    rde[i*NY+NY-1].dyv = rde[i*NY+NY-2].dyv;
+
+    /* South pole */
+    rde[i*NY].dxu = rde[i*NY+1].dxu;
+    rde[i*NY].dxv = rde[i*NY+1].dxv;
+    rde[i*NY].dyu = rde[i*NY+1].dyu;
+    rde[i*NY].dyv = rde[i*NY+1].dyv;
+    
+}
+
+void compute_velocity_gradients_sphere(double *phi[NFIELDS], t_rde rde[NX*NY], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* compute the gradients of the velocity field on the sphere */
+/* NEW VERSION */
+{
+    int i, j, k, iplus, iminus, jplus, jminus, jsouth, jnorth, b, n, p, q, i1; 
+    double deltaphi, maxgradient = 1.0e10, sintheta, invstheta, sum1, sum2, sum3, sum4, factor;
+    static double dphi, dtheta, cphiphi, ctheta, dt, vdrift;
+    static int first = 1;
+    
+    if (first)
+    {
+        dphi = DPI/(double)NX;
+        dtheta = PI/(double)NY;
+        
+        if (SMOOTHBLOCKS)
+        {
+            jsouth = BLOCKDIST;
+            jnorth = NY - BLOCKDIST;
+        }
+        else
+        {
+            jsouth = 1;
+            jnorth = NY-1;
+        }
+        
+        first = 0;
+    }
+    
+    
+    #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus)
+    for (i=1; i<NX-1; i++)
+    {
+        iplus = i+1;
+        iminus = i-1;
+        for (j=1; j<NY; j++)
+        {
+            sintheta = wsphere[j].stheta;
+            invstheta = 1.0/sqrt(sintheta*sintheta + SMOOTHPOLE*SMOOTHPOLE);
+            jplus = j+1;
+            jminus = j-1;
+            
+            rde[i*NY+j].dxu = 0.5*invstheta*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+            rde[i*NY+j].dxv = 0.5*invstheta*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+            rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+            rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+        }
+    }  
+    
+    /* i = 0 */
+    i = 0;
+    iplus = 1;
+    iminus = NX-1;
+    for (j=1; j<NY; j++)
+    {
+        sintheta = wsphere[j].stheta;
+        invstheta = 1.0/sqrt(sintheta*sintheta + SMOOTHPOLE*SMOOTHPOLE);
+        jplus = j+1;
+        jminus = j-1;
+        rde[i*NY+j].dxu = 0.5*invstheta*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+        rde[i*NY+j].dxv = 0.5*invstheta*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+        rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+    }
+        
+    /* i = NX-1 */
+    i = NX-1;
+    iplus = 0;
+    iminus = NX-2;
+    for (j=1; j<NY; j++)
+    {
+        sintheta = wsphere[j].stheta;
+        invstheta = 1.0/sqrt(sintheta*sintheta + SMOOTHPOLE*SMOOTHPOLE);
+        jplus = j+1;
+        jminus = j-1;
+        rde[i*NY+j].dxu = 0.5*invstheta*(phi[1][iplus*NY+j] - phi[1][iminus*NY+j]);
+        rde[i*NY+j].dxv = 0.5*invstheta*(phi[2][iplus*NY+j] - phi[2][iminus*NY+j]);
+        rde[i*NY+j].dyu = 0.5*(phi[1][i*NY+jplus] - phi[1][i*NY+jminus]);
+        rde[i*NY+j].dyv = 0.5*(phi[2][i*NY+jplus] - phi[2][i*NY+jminus]);
+    }
+    
+    /* around South pole */
+//     #pragma omp parallel for private(i,j,q,iplus,iminus,jplus,jminus,n,b)
+    for (j=1; j<jsouth; j++)
+    {
+        b = block_sizes[j];
+        n = block_numbers[j];
+        factor = 1.0/(double)b;
+        
+        for (k=0; k<n; k++)
+        {
+            sum1 = 0.0;
+            sum2 = 0.0;
+            sum3 = 0.0;
+            sum4 = 0.0;
+            for (p=0; p<b; p++)
+            {
+                i = k*b + p;
+                sum1 += rde[i*NY+j].dxu;
+                sum2 += rde[i*NY+j].dxv;
+                sum3 += rde[i*NY+j].dyu;
+                sum4 += rde[i*NY+j].dyv;
+            }
+            sum1 *= factor;
+            sum2 *= factor;
+            sum3 *= factor;
+            sum4 *= factor;
+            for (p=0; p<b; p++) 
+            {
+                i = k*b + p;
+                rde[i*NY+j].dxu = sum1;
+                rde[i*NY+j].dxv = sum2;
+                rde[i*NY+j].dyu = sum3;
+                rde[i*NY+j].dyv = sum4;
+            }
+        }
+        
+        /* add a last block if there is a remainder */
+        if (NX > n*b)
+        {
+            factor = 1.0/(NX - n*b);
+            sum1 = 0.0;
+            sum2 = 0.0;
+            sum3 = 0.0;
+            sum4 = 0.0;
+            for (i=n*b; i<NX; i++) 
+            {
+                sum1 += rde[i*NY+j].dxu;
+                sum2 += rde[i*NY+j].dxv;
+                sum3 += rde[i*NY+j].dyu;
+                sum4 += rde[i*NY+j].dyv;
+            }
+            sum1 *= factor;
+            sum2 *= factor;
+            sum3 *= factor;
+            sum4 *= factor;
+            for (i=n*b; i<NX; i++)
+            {
+                rde[i*NY+j].dxu = sum1;
+                rde[i*NY+j].dxv = sum2;
+                rde[i*NY+j].dyu = sum3;
+                rde[i*NY+j].dyv = sum4;
+            }
+        }
+    }
+    
+    /* around North pole */
+//     #pragma omp parallel for private(i,j,q,iplus,iminus,jplus,jminus,n,b)
+    for (j=NY-2; j>=jnorth; j--)
+    {
+        b = block_sizes[j];
+        n = block_numbers[j];
+        factor = 1.0/(double)b;
+        
+        for (k=0; k<n; k++)
+        {
+            sum1 = 0.0;
+            sum2 = 0.0;
+            sum3 = 0.0;
+            sum4 = 0.0;
+            for (p=0; p<b; p++)
+            {
+                i = k*b + p;
+                sum1 += rde[i*NY+j].dxu;
+                sum2 += rde[i*NY+j].dxv;
+                sum3 += rde[i*NY+j].dyu;
+                sum4 += rde[i*NY+j].dyv;
+            }
+            sum1 *= factor;
+            sum2 *= factor;
+            sum3 *= factor;
+            sum4 *= factor;
+            for (p=0; p<b; p++) 
+            {
+                i = k*b + p;
+                rde[i*NY+j].dxu = sum1;
+                rde[i*NY+j].dxv = sum2;
+                rde[i*NY+j].dyu = sum3;
+                rde[i*NY+j].dyv = sum4;
+            }
+        }
+        
+        /* add a last block if there is a remainder */
+        if (NX > n*b)
+        {
+            factor = 1.0/(NX - n*b);
+            sum1 = 0.0;
+            sum2 = 0.0;
+            sum3 = 0.0;
+            sum4 = 0.0;
+            for (i=n*b; i<NX; i++) 
+            {
+                sum1 += rde[i*NY+j].dxu;
+                sum2 += rde[i*NY+j].dxv;
+                sum3 += rde[i*NY+j].dyu;
+                sum4 += rde[i*NY+j].dyv;
+            }
+            sum1 *= factor;
+            sum2 *= factor;
+            sum3 *= factor;
+            sum4 *= factor;
+            for (i=n*b; i<NX; i++)
+            {
+                rde[i*NY+j].dxu = sum1;
+                rde[i*NY+j].dxv = sum2;
+                rde[i*NY+j].dyu = sum3;
+                rde[i*NY+j].dyv = sum4;
+            }
+        }
+    }
+    
+    /* TODO poles */
+    for (i=0; i<NX; i++)
+    {
+        /* North pole */
+        rde[i*NY+NY-1].dxu = rde[i*NY+NY-2].dxu;
+        rde[i*NY+NY-1].dxv = rde[i*NY+NY-2].dxv;
+        rde[i*NY+NY-1].dyu = rde[i*NY+NY-2].dyu;
+        rde[i*NY+NY-1].dyv = rde[i*NY+NY-2].dyv;
+
+        /* South pole */
+        rde[i*NY].dxu = rde[i*NY+1].dxu;
+        rde[i*NY].dxv = rde[i*NY+1].dxv;
+        rde[i*NY].dyu = rde[i*NY+1].dyu;
+        rde[i*NY].dyv = rde[i*NY+1].dyv;
+    }
+}
+
+void compute_velocity_gradients(double *phi[NFIELDS], t_rde rde[NX*NY], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* compute the gradients of the velocity field (for Euler equation) */
 {
-    switch (B_DOMAIN) {
+    if (SPHERE) compute_velocity_gradients_sphere(phi, rde, xy_in, wsphere);
+    else switch (B_DOMAIN) {
         case (D_NOTHING):
         {
             compute_velocity_gradients_periodic(phi, rde);
@@ -2945,9 +3946,10 @@ void compute_probabilities(t_rde rde[NX*NY], short int xy_in[NX*NY], double prob
 void compute_laplacian_rde_sphere(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* computes the Laplacian in spherical coordinates of phi_in and stores it in phi_out */
 {
-    int i, j, nnb;
-    double x, delta, sintheta, cottheta, invstheta, sum, avrg;
+    int i, j, nnb, n, b, p, k;
+    double x, delta, sintheta, cottheta, invstheta, sum, avrg, factor;
     static short int first = 1;
+    static int jsouth, jnorth;
     static double dphi, dtheta, cphiphi, ctheta, dt, vdrift;
     
     if (first)
@@ -2957,10 +3959,22 @@ void compute_laplacian_rde_sphere(double phi_in[NX*NY], double phi_out[NX*NY], s
         cphiphi = dphi*dphi/(dtheta*dtheta);
         ctheta = dphi*dphi/(2.0*dtheta);
         
+        if (SMOOTHBLOCKS)
+        {
+            jsouth = BLOCKDIST;
+            jnorth = NY - BLOCKDIST;
+        }
+        else
+        {
+            jsouth = 1;
+            jnorth = NY-1;
+        }
+        
         printf("dphi = %.5lg, dtheta = %.5lg, cphiphi = %.5lg, ctheta = %.5lg\n", dphi, dtheta, cphiphi, ctheta); 
         
         first = 0;
     }
+    
     
 //     for (i=0; i<NX; i++) for (j=0; j<NY; j++) phi_out[i*NY + j] = phi_in[i*NY + j];
     
@@ -3041,21 +4055,116 @@ void compute_laplacian_rde_sphere(double phi_in[NX*NY], double phi_out[NX*NY], s
         }
         else phi_out[(NX-1)*NY+j] = 0.0;
     }
-        
+ 
+    /* compute average at north pole */
+//     sum = 0.0;
+//     for (i=0; i<NX; i++) sum += phi_in[i*NY + DPOLE - 1] - phi_in[i*NY];
+//     avrg = 4.0*sum/(double)NX;
+//     for (i=0; i<NX; i++) for (j=0; j<DPOLE; j++)
+//         phi_out[i*NY + j] = avrg;
+//     
+//     /* compute average at south pole */
+//     sum = 0.0;
+//     for (i=0; i<NX; i++) sum += phi_in[i*NY + NY-DPOLE] - phi_in[i*NY + NY-1];
+//     avrg = 4.0*sum/(double)NX;
+//     for (i=0; i<NX; i++) for (j=NY-DPOLE; j<NY; j++) 
+//         phi_out[i*NY + j] = avrg;
+
+    /* TEST: compute Laplacian at poles differently? */
     /* compute average at north pole */
     sum = 0.0;
-    for (i=0; i<NX; i++) sum += phi_in[i*NY + DPOLE - 1] - phi_in[i*NY];
-    avrg = 4.0*sum/(double)NX;
+    for (i=0; i<NX; i+=NX/4) sum += (phi_in[i*NY + DPOLE+1] - phi_in[i*NY]);
     for (i=0; i<NX; i++) for (j=0; j<DPOLE; j++)
-        phi_out[i*NY + j] = avrg;
-    
+        phi_out[i*NY + j] = sum;
     /* compute average at south pole */
     sum = 0.0;
-    for (i=0; i<NX; i++) sum += phi_in[i*NY + NY-DPOLE] - phi_in[i*NY + NY-1];
-    avrg = 4.0*sum/(double)NX;
+    for (i=0; i<NX; i+=NX/4) sum += (phi_in[i*NY + NY-DPOLE-2] - phi_in[i*NY + NY-1]);
     for (i=0; i<NX; i++) for (j=NY-DPOLE; j<NY; j++) 
-        phi_out[i*NY + j] = avrg;
+        phi_out[i*NY + j] = sum;
     
+//     printf("Laplacian at NP: %.3lg\n", phi_out[NY-1]);
+    
+    /* Around South pole */
+    for (j=0; j<BLOCKDIST; j++)
+    {
+        b = block_sizes[j];
+        n = block_numbers[j];
+        factor = 1.0/(double)b;
+        
+        for (k=0; k<n; k++)
+        {
+            sum = 0.0;
+            for (p=0; p<b; p++)
+            {
+                i = k*b + p;
+                sum += phi_out[i*NY+j];
+            }
+            sum *= factor;
+            for (p=0; p<b; p++) 
+            {
+                i = k*b + p;
+                phi_out[i*NY+j] = sum;
+            }
+        }
+        
+        /* add a last block if there is a remainder */
+        if (NX > n*b)
+        {
+            factor = 1.0/(NX - n*b);
+            sum = 0.0;
+            for (i=n*b; i<NX; i++) 
+            {
+                sum += phi_out[i*NY+j];
+            }
+            sum *= factor;
+            for (i=n*b; i<NX; i++)
+            {
+                phi_out[i*NY+j] = sum;
+            }
+        }
+    }
+    
+    /* North pole */
+    for (j=NY-1; j>NY-BLOCKDIST-1; j--)
+    {
+        b = block_sizes[j];
+        n = block_numbers[j];
+        factor = 1.0/(double)b;
+        
+        for (k=0; k<n; k++)
+        {
+            sum = 0.0;
+            for (p=0; p<b; p++)
+            {
+                i = k*b + p;
+                sum += phi_out[i*NY+j];
+            }
+            sum *= factor;
+            for (p=0; p<b; p++) 
+            {
+                i = k*b + p;
+                phi_out[i*NY+j] = sum;
+            }
+        }
+        
+        /* add a last block if there is a remainder */
+        if (NX > n*b)
+        {
+            factor = 1.0/(NX - n*b);
+            sum = 0.0;
+            for (i=n*b; i<NX; i++) 
+            {
+                sum += phi_out[i*NY+j];
+            }
+            sum *= factor;
+            for (i=n*b; i<NX; i++)
+            {
+                phi_out[i*NY+j] = sum;
+            }
+        }
+    }
+        
+
 }
 
 
@@ -3272,7 +4381,7 @@ void compute_laplacian_rde(double phi_in[NX*NY], double phi_out[NX*NY], short in
 void compute_light_angle_sphere_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], double potential[NX*NY], int movie, int transparent)
 /* computes cosine of angle between normal vector and vector light */
 {
-    int i, j;
+    int i, j, iplus, b;
     double x, y, z, norm, pscal, deltai[3], deltaj[3], deltar, n[3], r;
     static double dphi, dtheta, vshift;
     static int first = 1;
@@ -3291,7 +4400,8 @@ void compute_light_angle_sphere_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_
     {
         for (j=DPOLE; j<NY - DPOLE; j++) if (xy_in[i*NY+j])
         {
-            r = 1.0 + RSCALE*(*rde[i*NY+j].p_zfield[movie]);
+//             r = 1.0 + RSCALE*(*rde[i*NY+j].p_zfield[movie]);
+            r = 1.0 + RSHIFT + RSCALE*(*rde[i*NY+j].p_zfield[movie]);
             if (r > RMAX) r = RMAX;
             if (r < RMIN) r = RMIN;
             wsphere[i*NY+j].radius = r;
@@ -3305,7 +4415,8 @@ void compute_light_angle_sphere_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_
         /* TODO ? Avoid artifacts due to singularity at north pole */
         for (j=NY - DPOLE; j<NY; j++) if (xy_in[i*NY+j])
         {
-            r = 1.0 + RSCALE*(*rde[i*NY+j].p_zfield[movie]);
+//             r = 1.0 + RSCALE*(*rde[i*NY+j].p_zfield[movie]);
+            r = 1.0 + RSHIFT + RSCALE*(*rde[i*NY+j].p_zfield[movie]);
             if (r > RMAX) r = RMAX;
 //             if (r < RMIN) r = RMIN;
             if (r < 1.0) r = 1.0;
@@ -3313,7 +4424,8 @@ void compute_light_angle_sphere_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_
         }
         for (j=0; j<DPOLE; j++) if (xy_in[i*NY+j])
         {
-            r = 1.0 + RSCALE*(*rde[i*NY+j].p_zfield[movie]);
+//             r = 1.0 + RSCALE*(*rde[i*NY+j].p_zfield[movie]);
+            r = 1.0 + RSHIFT + RSCALE*(*rde[i*NY+j].p_zfield[movie]);
             if (r > RMAX) r = RMAX;
 //             if (r < RMIN) r = RMIN;
             if (r < 1.0) r = 1.0;
@@ -3355,7 +4467,19 @@ void compute_light_angle_sphere_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_
                     }
                     else
                     {
-                        deltar = (wsphere[(i+1)*NY+j].radius - wsphere[i*NY+j].radius)/dphi;
+                        if (SMOOTHBLOCKS)
+                        {
+                            if ((j > BLOCKDIST)&&(j < NY-1-BLOCKDIST))
+                                deltar = (wsphere[(i+1)*NY+j].radius - wsphere[i*NY+j].radius)/dphi;
+                            else
+                            {
+                                b = block_sizes[j];
+                                iplus = i + b;
+                                if (iplus > NX) iplus -= NX;
+                                deltar = (wsphere[iplus*NY+j].radius - wsphere[i*NY+j].radius)/((double)b*dphi);
+                            }
+                        }
+                        else deltar = (wsphere[(i+1)*NY+j].radius - wsphere[i*NY+j].radius)/dphi;
                     
                         deltai[0] = -wsphere[i*NY+j].radius*wsphere[i*NY+j].sphi;
                         deltai[0] += deltar*wsphere[i*NY+j].cphi;
@@ -3493,7 +4617,7 @@ void compute_light_angle_sphere_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_
 void compute_light_angle_sphere_rde_2d(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], double potential[NX*NY], int movie, int transparent)
 /* computes cosine of angle between normal vector and vector light */
 {
-    int i, j;
+    int i, j, b, iplus, iminus;
     short int draw;
     double gradx, grady, norm, pscal;
     static double dx, dy, vscale2, vshift;
@@ -3517,10 +4641,25 @@ void compute_light_angle_sphere_rde_2d(short int xy_in[NX*NY], t_rde rde[NX*NY],
         {
             if (xy_in[i*NY+j])
             {
+                if (SMOOTHBLOCKS)
                 {
-                    gradx = (*rde[(i+1)*NY+j].p_zfield[movie] - *rde[(i-1)*NY+j].p_zfield[movie])/dx;
-                    grady = (*rde[i*NY+j+1].p_zfield[movie] - *rde[i*NY+j-1].p_zfield[movie])/dy;
+                    if ((j > BLOCKDIST)&&(j < NY-1-BLOCKDIST))
+                    {
+                        gradx = (*rde[(i+1)*NY+j].p_zfield[movie] - *rde[(i-1)*NY+j].p_zfield[movie])/dx;
+                    }
+                    else
+                    {
+                        b = block_sizes[j];
+                        iplus = i + b;
+                        if (iplus >= NX) iplus -= NX;
+                        iminus = i - b;
+                        if (iminus < 0) iminus += NX;
+                        gradx = (*rde[iplus*NY+j].p_zfield[movie] - *rde[iminus*NY+j].p_zfield[movie])/dx;
+                    }
                 }
+                else gradx = (*rde[(i+1)*NY+j].p_zfield[movie] - *rde[(i-1)*NY+j].p_zfield[movie])/dx;
+                    
+                grady = (*rde[i*NY+j+1].p_zfield[movie] - *rde[i*NY+j-1].p_zfield[movie])/dy;
                 
                 norm = sqrt(vscale2 + gradx*gradx + grady*grady);
                 pscal = -gradx*light[0] - grady*light[1] + SHADE_SCALE_2D;
@@ -3535,7 +4674,22 @@ void compute_light_angle_sphere_rde_2d(short int xy_in[NX*NY], t_rde rde[NX*NY],
     {
         if (xy_in[j])
         {
-            gradx = (*rde[NY+j].p_zfield[movie] - *rde[(NY-1)*NY+j].p_zfield[movie])/dx;
+            if (SMOOTHBLOCKS)
+            {
+                if ((j > BLOCKDIST)&&(j < NY-1-BLOCKDIST))
+                {
+                    gradx = (*rde[NY+j].p_zfield[movie] - *rde[(NX-1)*NY+j].p_zfield[movie])/dx;
+                }
+                else
+                {
+                    b = block_sizes[j];
+                    iplus = b;
+                    iminus = NX - b;
+                    gradx = (*rde[iplus*NY+j].p_zfield[movie] - *rde[iminus*NY+j].p_zfield[movie])/dx;
+                }
+            }
+            else gradx = (*rde[NY+j].p_zfield[movie] - *rde[(NY-1)*NY+j].p_zfield[movie])/dx;
+            
             grady = (*rde[j+1].p_zfield[movie] - *rde[j-1].p_zfield[movie])/dy;
             
             norm = sqrt(vscale2 + gradx*gradx + grady*grady);
@@ -3549,10 +4703,24 @@ void compute_light_angle_sphere_rde_2d(short int xy_in[NX*NY], t_rde rde[NX*NY],
     /* i=NX-1 */
     for (j=1; j<NY-1; j++)
     {
-        
         if (xy_in[(NX-1)*NY+j])
         {
-            gradx = (*rde[NY+j].p_zfield[movie] - *rde[(NY-1)*NY+j].p_zfield[movie])/dx;
+            if (SMOOTHBLOCKS)
+            {
+                if ((j > BLOCKDIST)&&(j < NY-1-BLOCKDIST))
+                {
+                    gradx = (*rde[NY+j].p_zfield[movie] - *rde[(NY-1)*NY+j].p_zfield[movie])/dx;
+                }
+                else
+                {
+                    b = block_sizes[j];
+                    iplus = b - 1;
+                    iminus = NX - 1 - b;
+                    gradx = (*rde[iplus*NY+j].p_zfield[movie] - *rde[iminus*NY+j].p_zfield[movie])/dx;
+                }
+            }
+            else gradx = (*rde[NY+j].p_zfield[movie] - *rde[(NY-1)*NY+j].p_zfield[movie])/dx;
+            
             grady = (*rde[j+1].p_zfield[movie] - *rde[j-1].p_zfield[movie])/dy;
             
             norm = sqrt(vscale2 + gradx*gradx + grady*grady);
@@ -3725,6 +4893,11 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
             hsl_to_rgb_palette(360.0*(1.0 - vabs(color_amplitude(value, 1.0, 0))), 0.9, 0.5, rgb, palette);
             break;
         }
+        case (Z_MAXTYPE_RPS): 
+        {
+            hsl_to_rgb_palette(value, 0.9, 0.5, rgb, palette);
+            break;
+        }
         case (Z_MAXTYPE_RPSLZ): 
         {
             hsl_to_rgb_palette(value, 0.9, 0.5, rgb, palette);
@@ -3738,6 +4911,11 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
         case (Z_NORM_GRADIENT_RPSLZ): 
         {
             color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            break;
+        }
+        case (Z_NORM_GRADIENT_RPSLZ_ASYM): 
+        {
+            color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
             break;
         }
         case (Z_MODULE): 
@@ -3807,12 +4985,14 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
         }
         case (Z_EULER_DIRECTION): 
         {
-            hsl_to_rgb_palette(360.0*value/DPI, 0.9, 0.5, rgb, palette);
+            if (SPHERE) hsl_to_rgb_palette(360.0*(1.0 - value/DPI), 0.9, 0.5, rgb, palette);
+            else hsl_to_rgb_palette(360.0*value/DPI, 0.9, 0.5, rgb, palette);
             break;
         }
         case (Z_EULER_DIRECTION_SPEED): 
         {
-            hsl_to_rgb_palette(360.0*value/DPI, 0.9, 0.5, rgb, palette);
+            if (SPHERE) hsl_to_rgb_palette(360.0*(1.0 - value/DPI), 0.9, 0.5, rgb, palette);
+            else hsl_to_rgb_palette(360.0*value/DPI, 0.9, 0.5, rgb, palette);
             break;
         }
         case (Z_SWATER_HEIGHT): 
@@ -3978,7 +5158,7 @@ double compute_depth_colors_rde(int i, int j, t_rde rde[NX*NY], double potential
 }
 
 
-void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, int cplot, t_rde rde[NX*NY])
+void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, int cplot, t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* compute the necessary auxiliary fields */
 {
     int i, j;
@@ -3988,18 +5168,19 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
         {
             if ((COMPUTE_THETA)||(COMPUTE_THETAZ))
                 compute_theta(phi, xy_in, rde);
-    
+            
             if ((zplot == Z_NORM_GRADIENT)||(cplot == Z_NORM_GRADIENT))
             {
                 compute_gradient_theta(rde);
 //              compute_gradient_polar(rde, 1.0);
-                compute_gradient_polar(rde, 0.003);
+//                 compute_gradient_polar(rde, 0.001);
+                compute_gradient_polar(rde, ZSCALE_NORMGRADIENT);
             }
     
             if ((zplot == Z_NORM_GRADIENTX)||(cplot == Z_NORM_GRADIENTX)||(zplot == Z_ANGLE_GRADIENTX)||(cplot == Z_ANGLE_GRADIENTX))
             {
                 compute_gradient_rde(phi[0], rde);
-                compute_gradient_polar(rde, 0.03);
+                compute_gradient_polar(rde, ZSCALE_NORMGRADIENT);
             }
     
             if ((zplot == Z_VORTICITY)||(cplot == Z_VORTICITY)||(zplot == Z_VORTICITY_ABS)||(cplot == Z_VORTICITY_ABS))
@@ -4007,12 +5188,16 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
                 compute_gradient_theta(rde);
                 compute_curl(rde);
             }
+            
+            if ((zplot == Z_MAXTYPE_RPS)||(cplot == Z_MAXTYPE_RPS))
+                compute_theta_rpslz(phi, xy_in, rde, cplot);
+    
             break;
         }
         case (E_RPSLZ):
         {
             compute_theta_rpslz(phi, xy_in, rde, cplot);
-            if ((zplot == Z_NORM_GRADIENT_RPSLZ)||(cplot == Z_NORM_GRADIENT_RPSLZ))
+            if ((zplot == Z_NORM_GRADIENT_RPSLZ)||(cplot == Z_NORM_GRADIENT_RPSLZ)||(zplot == Z_NORM_GRADIENT_RPSLZ_ASYM)||(cplot == Z_NORM_GRADIENT_RPSLZ_ASYM))
             {
                 compute_gradient_theta(rde);
                 compute_gradient_polar(rde, 0.005);
@@ -4039,7 +5224,7 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
         case (E_EULER_COMP):
         {
             if ((zplot == Z_EULER_SPEED)||(cplot == Z_EULER_SPEED)||(zplot == Z_EULER_DIRECTION_SPEED)||(cplot == Z_EULER_DIRECTION_SPEED))
-                compute_speed(phi, rde);
+                compute_speed(phi, rde, wsphere);
             if ((zplot == Z_EULER_DIRECTION)||(cplot == Z_EULER_DIRECTION)||(zplot == Z_EULER_DIRECTION_SPEED)||(cplot == Z_EULER_DIRECTION_SPEED))
                 compute_direction(phi, rde);
             if ((zplot == Z_EULERC_VORTICITY)||(cplot == Z_EULERC_VORTICITY))
@@ -4050,7 +5235,7 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
         {
             if (zplot == Z_SWATER_HEIGHT) adjust_height(phi, rde);
             if ((zplot == Z_SWATER_SPEED)||(cplot == Z_SWATER_SPEED)||(zplot == Z_SWATER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED))
-                compute_speed(phi, rde);
+                compute_speed(phi, rde, wsphere);
             if ((zplot == Z_SWATER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED))
                 compute_direction(phi, rde);
         }
@@ -4118,6 +5303,12 @@ void init_zfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].curl;
             break;
         }
+        case (Z_MAXTYPE_RPS):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].theta;
+            break;
+        }
         case (Z_MAXTYPE_RPSLZ):
         {
             #pragma omp parallel for private(i,j)
@@ -4131,6 +5322,12 @@ void init_zfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, t_
             break;
         }
         case (Z_NORM_GRADIENT_RPSLZ):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].field_norm;
+            break;
+        }
+        case (Z_NORM_GRADIENT_RPSLZ_ASYM):
         {
             #pragma omp parallel for private(i,j)
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].field_norm;
@@ -4296,6 +5493,12 @@ void init_cfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int cplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].curl;
             break;
         }
+        case (Z_MAXTYPE_RPS):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].theta;
+            break;
+        }
         case (Z_MAXTYPE_RPSLZ):
         {
             #pragma omp parallel for private(i,j)
@@ -4309,6 +5512,12 @@ void init_cfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int cplot, t_
             break;
         }
         case (Z_NORM_GRADIENT_RPSLZ):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].field_norm;
+            break;
+        }
+        case (Z_NORM_GRADIENT_RPSLZ_ASYM):
         {
             #pragma omp parallel for private(i,j)
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].field_norm;
@@ -4445,95 +5654,225 @@ void compute_cfield_rde(short int xy_in[NX*NY], int cplot, int palette, t_rde rd
 
 
 
-void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY])
+void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], int fade, double fade_value)
 {
-    int i, j, k;
-    double ca;
+    int i, j, k, ii;
+    short int draw;
+    double ca, rgb[3];
+    static int ishift, first = 1;
+//     static double dx, dy;
     
+    if (first)
+    {
+//         dx = (XMAX - XMIN)/(double)NX;
+//         dy = (YMAX - YMIN)/(double)(NY-2*DPOLE);
+        ishift = (int)((double)NX*PHISHIFT/360.0);
+        first = 0;
+    }
+    
+    /* draw the field */
     glBegin(GL_QUADS);
-    
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
-            if (xy_in[i*NY+j])
-            {
-                if (SHADE_2D)
-                {
-                    ca = rde[i*NY+j].cos_angle;
-                    ca = (ca + 1.0)*0.4 + 0.2;
-                    glColor3f(rde[i*NY+j].rgb[0]*ca, rde[i*NY+j].rgb[1]*ca, rde[i*NY+j].rgb[2]*ca);
-                }
-                else glColor3f(rde[i*NY+j].rgb[0], rde[i*NY+j].rgb[1], rde[i*NY+j].rgb[2]);
-                
-                glVertex2i(i, j);
-                glVertex2i(i+1, j);
-                glVertex2i(i+1, j+1);
-                glVertex2i(i, j+1);
-            }
+            for (k=0; k<3; k++) rgb[k] = rde[i*NY+j].rgb[k];
+            glColor3f(rgb[0], rgb[1], rgb[2]);
+                                            
+            ii = NX-i-1+ishift;
+            if (ii > NX) ii -= NX;
+            
+            glVertex2i(HRES*ii, HRES*j);
+            glVertex2i(HRES*(ii+1), HRES*j);
+            glVertex2i(HRES*(ii+1), HRES*(j+1));
+            glVertex2i(HRES*ii, HRES*(j+1));
         }
     glEnd ();
+    
+    /* draw the continents */
+    if (RDE_PLANET)
+    {
+        glBegin(GL_QUADS);
+        for (i=0; i<HRES*NX; i++)
+            for (j=0; j<HRES*NY; j++)
+            {
+                if (!wsphere_hr[i*HRES*NY+j].indomain)
+                {
+                    ca = wsphere_hr[i*HRES*NY+j].cos_angle;
+                    ca = (ca + 1.0)*0.4 + 0.2;
+                    if (fade) ca *= fade_value;
+                    glColor3f(wsphere_hr[i*HRES*NY+j].r*ca, wsphere_hr[i*HRES*NY+j].g*ca, wsphere_hr[i*HRES*NY+j].b*ca);
+                    
+                    ii = HRES*NX-i-1+ishift;
+                    if (ii > HRES*NX) ii -= HRES*NX;
+            
+                    glVertex2i(ii, j);
+                    glVertex2i(ii+1, j);
+                    glVertex2i(ii+1, j+1);
+                    glVertex2i(ii, j+1);
+                }
+            }
+        glEnd ();
+    }
+    
     if (DRAW_BILLIARD) draw_billiard(0, 1.0);
 }
 
-void draw_wave_sphere_rde_ij(int i, int iplus, int j, int jplus, int jcolor, int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
+void draw_wave_sphere_rde_ij(int i, int iplus, int j, int jplus, int jcolor, int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
 /* draw wave at simulation grid point (i,j) */
 {
-    int k, l;
-    short int draw, notdraw, draw_bc=1;
-    double xyz[3], ca;
+    int k, l, n, m, s, p, q, i1, j1, prev_cell, cell, iplus1, jplus1;
+    short int draw, drawij, notdraw, draw_bc=1, draw_hr[HRES*HRES];
+    double xyz[3], ca, rgb[3], r_hr[HRES*HRES], g_hr[HRES*HRES], b_hr[HRES*HRES], lfactor, ratio, xt[NMAX_TRACER_PTS+1], yt[NMAX_TRACER_PTS+1], zt[NMAX_TRACER_PTS+1];
     
     if (NON_DIRICHLET_BC) 
         draw_bc = (xy_in[i*NY+j])&&(xy_in[iplus*NY+j])&&(xy_in[i*NY+jplus])&&(xy_in[iplus*NY+jplus]);
     
-//     if (FLOODING) draw = wsphere[i*NY+j].draw_wave;
-//     else draw = ((TWOSPEEDS)||(xy_in[i*NY+j]));
-//     else 
-    draw = (xy_in[i*NY+j]);
-    if (draw) glColor3f(rde[i*NY+jcolor].rgb[0], rde[i*NY+jcolor].rgb[1], rde[i*NY+jcolor].rgb[2]);
-    else
-    {
-        ca = wsphere[i*NY+j].cos_angle;
-        ca = (ca + 1.0)*0.4 + 0.2;
-        if (fade) ca *= fade_value;
-//         if (PLANET)
-//             glColor3f(wsphere[i*NY+j].r*ca, wsphere[i*NY+j].g*ca, wsphere[i*NY+j].b*ca);
-//         else 
-        glColor3f(COLOR_OUT_R*ca, COLOR_OUT_G*ca, COLOR_OUT_B*ca);
-    }
-//     if (FLOODING)
-//     {
-//         glBegin(GL_TRIANGLE_FAN);
-//         if (ij_to_sphere(i, j, *wave[i*NY+j].p_zfield[movie], wsphere, xyz, wsphere[i*NY+j].draw_wave))
-//             draw_vertex_sphere(xyz);
-//         if (ij_to_sphere(iplus, j, *wave[iplus*NY+j].p_zfield[movie], wsphere, xyz, wsphere[iplus*NY+j].draw_wave))
-//             draw_vertex_sphere(xyz);
-//         if (ij_to_sphere(iplus, jplus, *wave[iplus*NY+j+1].p_zfield[movie], wsphere, xyz, wsphere[iplus*NY+j+1].draw_wave))
-//             draw_vertex_sphere(xyz);
-//         if (ij_to_sphere(i, jplus, *wave[i*NY+j+1].p_zfield[movie], wsphere, xyz, wsphere[i*NY+j+1].draw_wave))
-//             draw_vertex_sphere(xyz);
-//         glEnd ();        
-//     }
-//     else 
+    draw = wsphere[i*NY+j].indomain;
+    for (p=0; p<HRES; p++)
+        for (q=0; q<HRES; q++)
+            draw_hr[p*HRES+q] = wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain;
+    for (k=0; k<3; k++) rgb[k] = rde[i*NY+jcolor].rgb[k];
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+    
+    for (p=0; p<HRES; p++)
+        for (q=0; q<HRES; q++)
+        {
+            i1 = HRES*i + p;
+            j1 = HRES*j + q;
+            ca = wsphere_hr[i1*HRES*NY+j1].cos_angle;
+            ca = (ca + 1.0)*0.4 + 0.2;
+            if (fade) ca *= fade_value;
+            if (RDE_PLANET)
+            {
+                r_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].r*ca;
+                g_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].g*ca;
+                b_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].b*ca;
+            }
+            else
+            {
+                r_hr[p*HRES + q] = COLOR_OUT_R*ca;
+                g_hr[p*HRES + q] = COLOR_OUT_G*ca;
+                b_hr[p*HRES + q] = COLOR_OUT_B*ca;
+            }
+        }
+
     if (draw_bc)
     {
-        glBegin(GL_TRIANGLE_FAN);
-        if (ij_to_sphere(i, j, *rde[i*NY+j].p_zfield[movie], wsphere, xyz, 1))
-            draw_vertex_sphere(xyz);
-        if (ij_to_sphere(iplus, j, *rde[iplus*NY+j].p_zfield[movie], wsphere, xyz, 1))
-            draw_vertex_sphere(xyz);
-        if (ij_to_sphere(iplus, jplus, *rde[iplus*NY+j+1].p_zfield[movie], wsphere, xyz, 1))
-            draw_vertex_sphere(xyz);
-        if (ij_to_sphere(i, jplus, *rde[i*NY+j+1].p_zfield[movie], wsphere, xyz, 1))
-            draw_vertex_sphere(xyz);
+//         if (draw)
+        {
+            glBegin(GL_TRIANGLE_FAN);
+            glColor3f(rgb[0], rgb[1], rgb[2]);
+            drawij = ij_to_sphere(i, j, *rde[i*NY+j].p_zfield[movie], wsphere, xyz, draw);
+            if (drawij)
+                draw_vertex_sphere(xyz);
+            if (ij_to_sphere(iplus, j, *rde[iplus*NY+j].p_zfield[movie], wsphere, xyz, draw))
+                draw_vertex_sphere(xyz);
+            if (ij_to_sphere(iplus, jplus, *rde[iplus*NY+j+1].p_zfield[movie], wsphere, xyz, draw))
+                draw_vertex_sphere(xyz);
+            if (ij_to_sphere(i, jplus, *rde[i*NY+j+1].p_zfield[movie], wsphere, xyz, draw))
+                draw_vertex_sphere(xyz);
+            glEnd ();
+        }
+        
+        /* draw continents in higher resolution */
+        if (RDE_PLANET) for (p=0; p<HRES; p++)
+        {
+            for (q=0; q<HRES; q++) if (!draw_hr[p*HRES+q])
+            {
+                i1 = HRES*i + p;
+                j1 = HRES*j + q;
+                iplus1 = HRES*iplus + p;
+                jplus1 = HRES*jplus + q;
+                glBegin(GL_TRIANGLE_FAN);
+                glColor3f(r_hr[p*HRES + q], g_hr[p*HRES + q], b_hr[p*HRES + q]);
+                if (ij_to_sphere_hres(i1, j1, *rde[i*NY+j].p_zfield[movie], wsphere_hr, xyz, 0))
+                    draw_vertex_sphere(xyz);
+                if (ij_to_sphere_hres(iplus1, j1, *rde[iplus*NY+j].p_zfield[movie], wsphere_hr, xyz, 0))
+                    draw_vertex_sphere(xyz);
+                if (ij_to_sphere_hres(iplus1, jplus1, *rde[iplus*NY+j+1].p_zfield[movie], wsphere_hr, xyz, 0))
+                    draw_vertex_sphere(xyz);
+                if (ij_to_sphere_hres(i1, jplus1, *rde[i*NY+j+1].p_zfield[movie], wsphere_hr, xyz, 0))
+                    draw_vertex_sphere(xyz);
+//                 if (ij_to_sphere_hres(i1, j1, *rde[i*NY+j].p_zfield[movie], wsphere_hr, xyz, draw))
+//                     draw_vertex_sphere(xyz);
+//                 if (ij_to_sphere_hres(iplus1, j1, *rde[iplus*NY+j].p_zfield[movie], wsphere_hr, xyz, draw))
+//                     draw_vertex_sphere(xyz);
+//                 if (ij_to_sphere_hres(iplus1, jplus1, *rde[iplus*NY+j+1].p_zfield[movie], wsphere_hr, xyz, draw))
+//                     draw_vertex_sphere(xyz);
+//                 if (ij_to_sphere_hres(i1, jplus1, *rde[i*NY+j+1].p_zfield[movie], wsphere_hr, xyz, draw))
+//                     draw_vertex_sphere(xyz);
+                glEnd ();
+            }
+        }
+    }
+    
+    cell = i*NY+j;
+    
+    if ((ADD_TRACERS)&&(drawij)&&(rde[cell].tracer > 0))
+    {
+        prev_cell = rde[cell].prev_cell;
+        lfactor = (double)rde[cell].tracer/50.0;
+        for (k=0; k<3; k++) rgb[k] *= 1.0 + lfactor;
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+        n = rde[cell].n_tracer_pts;
+        
+        #pragma omp parallel for private(k)
+        for (k=0; k<n; k++)
+        {
+            xt[k] = rde[cell].tracerx[k];
+            yt[k] = rde[cell].tracery[k];
+            zt[k] = wsphere[cell].radius;
+        }
+        m = rde[prev_cell].n_tracer_pts - 1;
+        if ((m >= 0)&&(prev_cell != cell))
+        {
+            xt[n] = rde[prev_cell].tracerx[m];
+            yt[n] = rde[prev_cell].tracery[m];
+            zt[n] = wsphere[prev_cell].radius;
+            n++;
+        }
+        
+        /* do some smoothing of the curve */
+        #pragma omp parallel for private(k)
+        for (k=0; k<n-1; k++)
+        {
+            ratio = (double)k/(double)n;
+            zt[k] = (1.0-ratio)*zt[0] + ratio*zt[n-1];
+        }
+        
+        glBegin(GL_LINE_STRIP);
+        for (k=0; k<n; k++) draw_vertex_in_spherical_coords(xt[k], yt[k], zt[k], 1);
         glEnd ();
+
     }
 }
 
+void draw_arrow(double z, int fade, double fade_value)
+{
+    double xyz[3];
+    
+    if (fade) glColor3f(fade_value, fade_value, fade_value);
+    else glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINE_STRIP);
+//     xyz[0] = 0.0;
+//     xyz[1] = 0.0;
+//     xyz[2] = z;
+//     draw_vertex_sphere(xyz);
+    xyz[0] = 0.0;
+    xyz[1] = 0.0;
+    xyz[2] = 1.2;
+    draw_vertex_sphere(xyz);
+    xyz[0] = 1.0;
+    xyz[1] = 0.0;
+    xyz[2] = 1.2;
+    draw_vertex_sphere(xyz);
+    glEnd();
+}
 
-void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
+void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
 {
     int i, j, imax, imin, jmax, imid, jmid;
-    double observer_angle, angle2, observer_latitude;
+    double observer_angle, angle2, observer_latitude, xyz[3];
     
     blank();
             
@@ -4572,31 +5911,39 @@ void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX
             for (i=imax; i>imid; i--)
             {
                 for (j=0; j<=jmax; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             for (i=imid; i>imin; i--)
             {
                 for (j=0; j<=jmid; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=jmax; j>=jmid; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
             for (i=imax+1; i<NX-1; i++)
             {
                 for (j=0; j<=jmax; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
         
             for (j=0; j<=jmax; j++)
-                draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
         
             for (i=0; i<=imin; i++)
             {
                 for (j=0; j<=jmid; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=jmax; j>=jmid; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+            }
+            
+            if (imin >= 1)
+            {
+//                 for (j=0; j<=jmid; j++)
+//                     draw_wave_sphere_rde_ij(imin-1, imin, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+                for (j=jmax; j>=jmid; j--)
+                    draw_wave_sphere_rde_ij(imin-1, imin, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
         }
         else
@@ -4604,74 +5951,88 @@ void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX
             for (i=imax; i<imid; i++)
             {
                 for (j=0; j<=jmax; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
         
             for (i=imid; i<imin; i++)
             {
                 for (j=0; j<=jmid; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=jmax; j>=jmid; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
         
             for (i=imax-1; i>=0; i--)
             {
                 for (j=0; j<=jmax; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
             for (j=0; j<=jmax; j++)
-                draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
         
             for (i=NX-2; i>=imin; i--)
             {
                 for (j=0; j<=jmid; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=jmax; j>=jmid; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
+
+            if (imin >= 1)
+            {
+                /* experimental */
+                for (j=jmid/3; j<=jmid; j++)
+                    draw_wave_sphere_rde_ij(imin-1, imin, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+                for (j=jmax; j>=jmid; j--)
+                    draw_wave_sphere_rde_ij(imin-1, imin, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+            }
+
         }
     
         /* North pole */
         for (i=0; i<NX-1; i++) 
-            draw_wave_sphere_rde_ij(i, i+1, NY-3, NY-2, NY-2, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+            draw_wave_sphere_rde_ij(i, i+1, NY-3, NY-1, NY-1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
         
-        draw_wave_sphere_rde_ij(NX-1, 0, NY-3, NY-2, NY-DPOLE, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+        draw_wave_sphere_rde_ij(NX-1, 0, NY-3, NY-1, NY-1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+        
+        if (DRAW_ARROW) draw_arrow(1.2, fade, fade_value);
     }
     else
     {
+        if (DRAW_ARROW) draw_arrow(1.2, fade, fade_value);
+        
         if (imin < imax)
         {
             for (i=imax; i>imid; i--)
             {
                 for (j=jmax; j>=0; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
             for (i=imid; i>imin; i--)
             {
                 for (j=jmax; j>=jmid; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=0; j<=jmid; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
             for (i=imax+1; i<NX-1; i++)
             {
                 for (j=jmax; j>=0; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
             for (j=jmax; j>=0; j--)
-                draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
         
             for (i=0; i<=imin; i++)
             {
                 for (j=jmax; j>=jmid; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=0; j<=jmid; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
         }
         else
@@ -4679,42 +6040,44 @@ void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX
             for (i=imax; i<imid; i++)
             {
                 for (j=jmax; j>=0; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
             for (i=imid; i<imin; i++)
             {
                 for (j=jmax; j>=jmid; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=0; j<=jmid; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
             for (i=imax-1; i>=0; i--)
             {
                 for (j=jmax; j>=0; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
             for (j=jmax; j>=0; j--)
-                draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
         
             for (i=NX-2; i>=imin-1; i--)
             {
                 for (j=jmax; j>=jmid; j--)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=0; j<=jmid; j++)
-                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+                    draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
         }
     
         /* South pole */
         for (i=0; i<NX-1; i++) for (j=2; j>0; j--)
-            draw_wave_sphere_rde_ij(i, i+1, j-1, j, j, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+            draw_wave_sphere_rde_ij(i, i+1, j-1, j, j, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
         
         for (j=2; j>0; j--)
-            draw_wave_sphere_rde_ij(NX-1, 0, j-1, j, DPOLE, movie, phi, xy_in, rde, wsphere, zplot, cplot, palette, fade, fade_value);
+            draw_wave_sphere_rde_ij(NX-1, 0, j-1, j, DPOLE, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
     }
+    
+    
 }
 
 void draw_wave_3d_ij_rde(int i, int j, int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
@@ -4954,8 +6317,9 @@ void draw_periodicised_wave_3d(int movie, double *phi[NFIELDS], short int xy_in[
 
 
 void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], 
-                   t_wave_sphere wsphere[NX*NY], double potential[NX*NY], int zplot, 
-                   int cplot, int palette, int fade, double fade_value, int refresh)
+                   t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], 
+                   double potential[NX*NY], int zplot, int cplot, int palette, int fade, 
+                   double fade_value, int refresh)
 {
     int i, j, k, l, draw = 1;
     double xy[2], xy_screen[2], rgb[3], pos[2], ca, rgb_e[3], rgb_w[3], rgb_n[3], rgb_s[3]; 
@@ -4966,7 +6330,7 @@ void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rd
     if (refresh)
     {
 //         printf("Computing fields\n");
-        compute_rde_fields(phi, xy_in, zplot, cplot, rde);      
+        compute_rde_fields(phi, xy_in, zplot, cplot, rde, wsphere);      
 //         printf("Computed fields\n");
         if ((PLOT_3D)&&(SHADE_3D)) 
         {
@@ -4982,22 +6346,24 @@ void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rd
     if (PLOT_3D) 
     {
         if (PLOT_SPHERE)
-            draw_wave_sphere_3d_rde(movie, phi, xy_in, rde, wsphere, potential, zplot, cplot, palette, fade, fade_value, 0);
+            draw_wave_sphere_3d_rde(movie, phi, xy_in, rde, wsphere, wsphere_hr, potential, zplot, cplot, palette, fade, fade_value, 0);
         else if (DRAW_PERIODICISED) 
             draw_periodicised_wave_3d(movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
         else draw_wave_3d_rde(movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
     }
-    else draw_wave_2d_rde(xy_in, rde);
+    else draw_wave_2d_rde(xy_in, rde, wsphere, wsphere_hr, fade, fade_value);
 }
 
 void draw_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], int time, int fade, double fade_value)
 /* draw trajectories of tracers */
 {
-    int tracer, t, t1, length = 50;
+    int tracer, t, t1, length = 50, ij[2];
     double x1, y1, x2, y2, lum;
     
     glColor3f(1.0, 1.0, 1.0);
     glLineWidth(1);
+    
+    printf("Drawing tracers\n"); 
     
     t1 = time - length;
     if (t1 < 1) t1 = 1;
@@ -5005,22 +6371,24 @@ void draw_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], int 
     for (t = t1 + 1; t < time; t++) 
         for (tracer = 0; tracer < N_TRACERS; tracer++)
         {
-            x1 = tracers[2*(t-1)*N_TRACERS + 2*tracer];
+            x1 = -tracers[2*(t-1)*N_TRACERS + 2*tracer];
             y1 = tracers[2*(t-1)*N_TRACERS + 2*tracer + 1];
         
-            x2 = tracers[2*t*N_TRACERS + 2*tracer];
+            x2 = -tracers[2*t*N_TRACERS + 2*tracer];
             y2 = tracers[2*t*N_TRACERS + 2*tracer + 1];
             
             lum = 1.0 - 0.75*(double)(time - t)/(double)length;
             if (fade) lum *= fade_value;
             
             glColor3f(lum, lum, lum);
-            if (module2(x2 - x1, y2 - y1) < 0.2) draw_line(x1, y1, x2, y2);
+            
+            if (module2(x2 - x1, y2 - y1) < 0.2) draw_line_hres(x1, y1, x2, y2);
             
 //             printf("time = %i, tracer = %i, coord = %i, x1 = %.2lg, y1 = %.2lg, x2 = %.2lg, y2 = %.2lg\n", t, tracer,2*t*N_TRACERS + 2*tracer, x1, y1, x2, y2);
         }
     
 }
+
 
 void compute_average_speeds(double *phi[NFIELDS], t_rde rde[NX*NY], double *speed1, double *speed2)
 {
@@ -5220,12 +6588,6 @@ void smooth_poles_half(double phi_in[NX*NY], double phi_out[NX*NY])
         }
         smooth_row(j, phi_in, phi_out);
     }
-    
-//     #pragma omp parallel for private(i)
-//     for (i=0; i<NX; i++)
-//     {
-//         smooth_column(i, phi_in, phi_out);
-//     }
 }
 
 void smooth_poles(double phi[NX*NY])
@@ -5243,4 +6605,137 @@ void smooth_poles(double phi[NX*NY])
     }
     
     free(phi_tmp);
+}
+
+
+void init_block_sizes()
+/* initialize block sizes and numbers (option SMOOTHBLOCKS) */
+{
+    int j, n, b0, b;
+    
+//     for (j=0; j<BLOCKDIST; j++)
+//     {
+//         b0 = 1 + (NX/32-1)*(BLOCKDIST-j-1)/(BLOCKDIST-1);
+//         n = NX/b0;
+//         if (b0 < NX/16) block_sizes[j] = b0;
+//         else block_sizes[j] = NX/n;
+//         block_numbers[j] = n;
+        
+//         block_sizes[j] = 1;
+//         block_numbers[j] = NX;
+//     }
+    
+    j = BLOCKDIST - 1;
+    b = 2;
+    while (j >= 0)
+    {
+        block_sizes[j] = b;
+        block_numbers[j] = NX/b;
+        if (j*b < BLOCKDIST) b*=2;
+        j--;
+    }
+    
+    /* poles */
+    block_sizes[0] = NX;
+    block_numbers[0] = 1;
+    
+    for (j=0; j<BLOCKDIST; j++)
+    {
+        block_sizes[NY-1-j] = block_sizes[j];
+        block_numbers[NY-1-j] = block_numbers[j];
+    }
+    
+    for (j=BLOCKDIST; j<NY-BLOCKDIST; j++)
+    {
+        block_sizes[j] = 1;
+        block_numbers[j] = NX;
+    }
+    
+//     for (j=0; j<NY; j++)
+//         printf("j = %i, b = %i, n = %i, b*n = %i\n", j, block_sizes[j], block_numbers[j], block_sizes[j]*block_numbers[j]);
+}
+
+
+void block_poles(double phi[NX*NY])
+/* equalize values blockwise near poles */
+/* amounts to using fewer points around poles */
+{
+    int i, j, k, p, n, b0, b;
+    double value, factor;
+    static int first = 1;
+    
+    if (first)
+    {
+        init_block_sizes();
+        first = 0;
+    }
+    
+    /* South pole */
+    for (j=0; j<BLOCKDIST; j++)
+    {
+        b = block_sizes[j];
+        n = block_numbers[j];
+        factor = 1.0/(double)b;
+        
+        for (k=0; k<n; k++)
+        {
+            value = 0.0;
+            for (p=0; p<b; p++)
+            {
+                i = k*b + p;
+                value += phi[i*NY+j];
+            }
+            value *= factor;
+            for (p=0; p<b; p++) 
+            {
+                i = k*b + p;
+                phi[i*NY+j] = value;
+            }
+        }
+        
+        /* add a last block if there is a remainder */
+        if (NX > n*b)
+        {
+            factor = 1.0/(NX - n*b);
+            value = 0.0;
+            for (i=n*b; i<NX; i++) value += phi[i*NY+j];
+            value *= factor;
+            for (i=n*b; i<NX; i++) phi[i*NY+j] = value;
+        }
+    }
+    
+    /* North pole */
+    for (j=NY-1; j>NY-BLOCKDIST-1; j--)
+    {
+        b = block_sizes[j];
+        n = block_numbers[j];
+        factor = 1.0/(double)b;
+        
+        for (k=0; k<n; k++)
+        {
+            value = 0.0;
+            for (p=0; p<b; p++)
+            {
+                i = k*b + p;
+                value += phi[i*NY+j];
+            }
+            value *= factor;
+            for (p=0; p<b; p++) 
+            {
+                i = k*b + p;
+                phi[i*NY+j] = value;
+            }
+        }
+        
+        /* add a last block if there is a remainder */
+        if (NX > n*b)
+        {
+            factor = 1.0/(NX - n*b);
+            value = 0.0;
+            for (i=n*b; i<NX; i++) value += phi[i*NY+j];
+            value *= factor;
+            for (i=n*b; i<NX; i++) phi[i*NY+j] = value;
+        }
+    }
+    
 }

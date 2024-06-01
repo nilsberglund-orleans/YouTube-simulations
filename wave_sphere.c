@@ -320,6 +320,11 @@
 #define ADD_POTENTIAL 0         /* set to 1 to add potential to z coordinate */
 #define POTENTIAL 10
 #define POT_FACT 20.0
+#define HRES 1          /* dummy, only used by rde.c */
+#define INITIAL_SHIFT 20.0          /* time shift of initial wave packet (in oscillation periods) */
+#define WAVE_PACKET_SHIFT 200.0     /* time shift between wave packets (in oscillation periods) */
+#define FADE_IN_OBSTACLE 0      /* set to 1 to fade color inside obstacles */
+#define N_SOURCES 1                     /* number of sources, for option draw_sources */
 /* end of constants only used by sub_wave and sub_maze */
 
 /* For debugging purposes only */

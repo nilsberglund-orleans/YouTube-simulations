@@ -37,6 +37,7 @@
 #define GF_AIRFOIL 3        /* curved repelling ellipse */
 #define GF_WING 4           /* wing shape */
 #define GF_COMPUTE_FROM_BC 5    /* compute force field as gradient of bc_field2 */
+#define GF_EARTH 6          /* field depends on altitude on continents */
 
 /* Choice of water depth for shallow water equation */
 
@@ -82,7 +83,10 @@
 #define PLANET ((B_DOMAIN == D_SPHERE_EARTH)||(B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON)||(B_DOMAIN == D_SPHERE_VENUS)||(B_DOMAIN == D_SPHERE_MERCURY))
 #define OTHER_PLANET ((B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON)||(B_DOMAIN == D_SPHERE_VENUS)||(B_DOMAIN == D_SPHERE_MERCURY))
 
+#define RDE_PLANET ((ADAPT_STATE_TO_BC)&&(OBSTACLE_GEOMETRY == D_SPHERE_EARTH))
+
 #define NMAXCIRC_SPHERE 100     /* max number of circles on sphere */
+#define NMAX_TRACER_PTS 20       /* max number of tracer points recorded per cell */
 
 int global_time = 0;
 double max_depth = 1.0;
@@ -132,6 +136,10 @@ typedef struct
     double depth;               /* water depth */
     double cos_depth_angle;     /* cos of angle of depth profile */
     double gradx, grady;        /* gradient of water depth */
+    short int tracer;           /* has value 1 if cell contains a tracer */
+    short int n_tracer_pts;     /* number of recorded tracer points per cell */
+    double tracerx[NMAX_TRACER_PTS], tracery[NMAX_TRACER_PTS];    /* coordinates of tracer */
+    int prev_cell;              /* cell where tracer was previously */
 } t_rde;
 
 
@@ -147,6 +155,7 @@ typedef struct
     double phi, theta;          /* phi, theta angles */
     double cphi, sphi;          /* cos and sin of phi */
     double ctheta, stheta, cottheta;   /* cos, sin and cotangent of theta */
+    double reg_cottheta;        /* regularized cotangent of theta */
     double x, y, z;             /* x, y, z coordinates of point on sphere */
     double radius;              /* radius with wave height */
     double radius_dem;          /* radius with digital elevation model */

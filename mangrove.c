@@ -276,6 +276,14 @@
 #define AVERAGE_WAVE_PROFILE 1  /* set to 1 to draw time-average of wave profile squared*/
 #define TIMESERIES_NVALUES 400  /* number of values plotted in time series */
 #define DRAW_WAVE_SOURCE 0      /* set to 1 to draw source of wave at (wave_source_x, wave_source_y) */
+#define HRES 1          /* dummy, only used by rde.c */
+#define INITIAL_SHIFT 20.0          /* time shift of initial wave packet (in oscillation periods) */
+#define WAVE_PACKET_SHIFT 200.0     /* time shift between wave packets (in oscillation periods) */
+#define FADE_IN_OBSTACLE 0      /* set to 1 to fade color inside obstacles */
+#define SHADE_2D 0       /* set to 1 to add pseudo-3d shading effect */ 
+#define SHADE_SCALE_2D 0.05  /* lower value increases sensitivity of shading */
+#define N_SOURCES 1                     /* number of sources, for option draw_sources */
+double light[2] = {0.40824829, 0.816496581};   /* location of light source for SHADE_2D option*/
 /* end of constants only used by sub_wave and sub_maze */
 
 #include "global_pdes.c"

@@ -134,6 +134,16 @@ void init()		/* initialisation of window */
     glOrtho(0.0, NX, 0.0, NY, -1.0, 1.0);
 }
 
+void init_hres(int res)		/* initialisation of window in higher resolution */
+{
+    glLineWidth(3);
+
+    glClearColor(0.0, 0.0, 0.0, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+//     glOrtho(XMIN, XMAX, YMIN, YMAX , -1.0, 1.0);
+    glOrtho(0.0, res*NX, 0.0, res*NY, -1.0, 1.0);
+}
 void blank()
 {
     if (BLACK) glClearColor(0.0, 0.0, 0.0, 1.0);
@@ -427,6 +437,19 @@ void xy_to_pos(double x, double y, double pos[2])
 }
 
 
+void xy_to_pos_hres(double x, double y, double pos[2])
+/* convert (x,y) position to double-valued position in table representing wave */
+{
+    double x1, y1;
+
+    x1 = (x - XMIN)/(XMAX - XMIN);
+    y1 = (y - YMIN)/(YMAX - YMIN);
+
+    pos[0] = x1*(double)(HRES*NX);
+    pos[1] = y1*(double)(HRES*NY);
+}
+
+
 void ij_to_xy(int i, int j, double xy[2])
 /* convert (i,j) position in table representing wave to (x,y) */
 {
@@ -492,6 +515,14 @@ void erase_area_hsl(double x, double y, double dx, double dy, double h, double s
     erase_area_rgb(x, y, dx, dy, rgb);
 }
 
+void draw_vertex(double x, double y)
+{
+    double pos[2];
+    
+    xy_to_pos(x, y, pos);
+    glVertex2d(pos[0], pos[1]);
+}
+
 void draw_line(double x1, double y1, double x2, double y2)
 {
     double pos[2];
@@ -500,6 +531,18 @@ void draw_line(double x1, double y1, double x2, double y2)
     xy_to_pos(x1, y1, pos);
     glVertex2d(pos[0], pos[1]);
     xy_to_pos(x2, y2, pos);
+    glVertex2d(pos[0], pos[1]);
+    glEnd();    
+}
+
+void draw_line_hres(double x1, double y1, double x2, double y2)
+{
+    double pos[2];
+    
+    glBegin(GL_LINE_STRIP);
+    xy_to_pos_hres(x1, y1, pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos_hres(x2, y2, pos);
     glVertex2d(pos[0], pos[1]);
     glEnd();    
 }
@@ -2450,6 +2493,58 @@ int xy_in_arc(double x, double y, t_arc arc)
     return(alpha <= arc.dangle);
 }
 
+
+int rc_hyp(double x, double y)
+/* xy_in for D_RITCHEY_CHRETIEN_HYPERBOLIC domain */
+{
+    static int first = 1;
+    static double m, d, dprime, b, r1, r2, e1, e2, a1, b1, a2, b2, x01, x02;
+    double y1, f, f1, f2;
+    
+    if (first)
+    {
+        m = LAMBDA;     /* secondary magnification */
+        d = 2.5;        /* distance between mirrors */
+        b = 3.0;        /* distance between secondary mirror and effective focal point */
+        
+        f = m*d + b;
+        f1 = f/m;       /* focal distance of primary mirror */
+        dprime = f1 - d;    /* distance between secondary mirror and primary focal point */
+        f2 = m*dprime/(m+1); /* focal distance of secondary mirror */
+        
+        r1 = 2.0*f/m;      /* radius of curvature of primary mirror */
+        r2 = 2.0*b/(m - 1.0);    /* radius of curvature of secondary mirror */
+        e1 = sqrt(1.0 + 2.0*b/(m*m*m*d));    /* eccentricity of primary mirror */ 
+        e2 = sqrt(1.0 + 2.0*(m*(2.0*m - 1.0) + b/d)/((m-1)*(m-1)*(m-1)));    
+                                            /* eccentricity of secondary mirror */
+        a1 = f1/e1;
+        b1 = sqrt(a1*r1);       /* semi-axes of primary mirror */
+        x01 = 0.5*d + a1;       /* center of primary hyperbola */
+        
+        a2 = f2/e2;
+        b2 = sqrt(a2*r2);       /* semi-axes of secondary mirror */
+        x02 = -0.5*d + a2;       /* center of secondary hyperbola */
+                
+        first = 0;
+    }
+    
+    
+    y1 = vabs(y);  
+            
+    if (x > 0.0)    /* primary mirror */   
+    {
+        if (y1 < MU) return(1);
+        if (x > 0.5*d + WALL_WIDTH) return(1);
+        return((x-x01)*(x-x01) > a1*a1*(1.0 + y*y/(b1*b1)));
+    }
+    else    /* secondary mirror */
+    {
+        if (y1 > 0.3) return(1);
+//         if (x < -0.5*d - WALL_WIDTH) return(1);
+        return((x > x02)||((x-x02)*(x-x02) < a2*a2*(1.0 + y*y/(b2*b2))));
+    }
+}
+
 int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_circle *circles)
 /* returns 1 if (x,y) represents a point in the billiard */
 {
@@ -3420,7 +3515,7 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             if ((vabs(x) < LAMBDA)&&(vabs(y - h) < 0.5*WALL_WIDTH)) return(2);
             return(0);
         }
-        case (D_RITCHEY_CHRETIEN):
+        case (D_RITCHEY_CHRETIEN_SPHERICAL):
         {
             /* LAMBDA is magnification M */
             d = 2.5;
@@ -3442,6 +3537,15 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
                 if (x > 0.5*d + WALL_WIDTH) return(1);
                 return(module2(x-x1, y1) < r1);
             }
+        }
+        case (D_RITCHEY_CHRETIEN_HYPERBOLIC):
+        {
+            return(rc_hyp(x, y));
+        }
+        case (D_GRADIENT_INDEX_LENS):
+        {
+            /* use IOR_GRADIENT_INDEX_LENS for index of refraction control */
+            return(1);
         }
         case (D_MENGER):       
         {
@@ -3648,6 +3752,80 @@ void hex_transfo(double u, double v, double *x, double *y)
     
     *x = u + ra*v;
     *y = rb*v;
+}
+
+void draw_rc_hyp()
+/* draw D_RITCHEY_CHRETIEN_HYPERBOLIC domain */
+{
+    static int first = 1;
+    static double m, d, dprime, b, r1, r2, e1, e2, a1, b1, a2, b2, x01, x02, dy;
+    double x, y, f, f1, f2;
+    
+    if (first)
+    {
+        m = LAMBDA;     /* secondary magnification */
+        d = 2.5;        /* distance between mirrors */
+        b = 3.0;        /* distance between secondary mirror and effective focal point */
+        
+        f = m*d + b;
+        f1 = f/m;       /* focal distance of primary mirror */
+        dprime = f1 - d;    /* distance between secondary mirror and primary focal point */
+        f2 = m*dprime/(m+1); /* focal distance of secondary mirror */
+        
+        r1 = 2.0*f/m;      /* radius of curvature of primary mirror */
+        r2 = 2.0*b/(m - 1.0);    /* radius of curvature of secondary mirror */
+        e1 = sqrt(1.0 + 2.0*b/(m*m*m*d));    /* eccentricity of primary mirror */ 
+        e2 = sqrt(1.0 + 2.0*(m*(2.0*m - 1.0) + b/d)/((m-1)*(m-1)*(m-1)));    
+
+        a1 = f1/e1;
+        b1 = sqrt(a1*r1);       /* semi-axes of primary mirror */
+        x01 = 0.5*d + a1;       /* center of primary hyperbola */
+        
+        a2 = f2/e2;
+        b2 = sqrt(a2*r2);       /* semi-axes of secondary mirror */
+        x02 = -0.5*d + a2;       /* center of secondary hyperbola */
+                
+        dy = (YMAX - YMIN)/(double)NSEG;
+        first = 0;
+    }
+    
+    /* primary mirror */
+    glBegin(GL_LINE_STRIP);
+    draw_vertex(0.5*d + WALL_WIDTH, YMAX);
+    draw_vertex(0.5*d + WALL_WIDTH, MU);
+    for (y = MU; y < YMAX; y += dy)
+    {
+        x = x01 - a1*sqrt(1.0 + y*y/(b1*b1));
+        draw_vertex(x, y);
+    }
+    glEnd();
+           
+    glBegin(GL_LINE_STRIP);
+    draw_vertex(0.5*d + WALL_WIDTH, YMIN);
+    draw_vertex(0.5*d + WALL_WIDTH, -MU);
+    for (y = -MU; y > YMIN; y -= dy)
+    {
+        x = x01 - a1*sqrt(1.0 + y*y/(b1*b1));
+        draw_vertex(x, y);
+    }
+    glEnd();
+    
+    /* secondary mirror */
+    glBegin(GL_LINE_STRIP);
+    draw_vertex(XMIN, -0.3);
+    for (y = -0.3; y < 0.3; y += dy)
+    {
+        x = x02 - a2*sqrt(1.0 + y*y/(b2*b2));
+        draw_vertex(x, y);
+    }
+    draw_vertex(XMIN, 0.3);
+    glEnd();
+    
+    /* focal plane */
+    glBegin(GL_LINE_STRIP);
+    draw_vertex(b - 0.5*d, YMIN);
+    draw_vertex(b - 0.5*d, YMAX);
+    glEnd();
 }
 
 
@@ -5411,7 +5589,7 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             write_text(pos[0], pos[1], message);
             break;
         }
-        case (D_RITCHEY_CHRETIEN):
+        case (D_RITCHEY_CHRETIEN_SPHERICAL):
         {
             d = 2.5;
             b = 3.5;
@@ -5435,6 +5613,21 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             draw_line(0.5*d + WALL_WIDTH, MU, 0.5*d + WALL_WIDTH, YMAX);
             draw_line(x1 + r1*ca, -MU, 0.5*d + WALL_WIDTH, -MU);
             draw_line(0.5*d + WALL_WIDTH, -MU, 0.5*d + WALL_WIDTH, YMIN);
+            break;
+        }
+        case (D_RITCHEY_CHRETIEN_HYPERBOLIC):
+        {
+            draw_rc_hyp();
+            break;
+        }
+        case (D_GRADIENT_INDEX_LENS):
+        {
+            draw_line(-LAMBDA, YMIN, -LAMBDA, YMAX);
+            draw_line(LAMBDA, YMIN, LAMBDA, YMAX);
+            draw_line(-LAMBDA, -1.0, LAMBDA, -1.0);
+            draw_line(-LAMBDA, 1.0, LAMBDA, 1.0);
+            /* focal plane */
+            draw_line(WAVE_PROFILE_X, YMIN, WAVE_PROFILE_X, YMAX);
             break;
         }
         case (D_MENGER):
@@ -6769,7 +6962,7 @@ void compute_laplacian(double phi[NX*NY], t_laplacian laplace[NX*NY], double del
 double oscillating_bc(int time, int j)
 {
     int ij[2], jmin, jmax;
-    double t, phase, a, envelope, omega, amp, dist2;
+    double t, t1, phase, a, envelope, omega, amp, dist2;
     
     switch (OSCILLATION_SCHEDULE)
     {
@@ -6793,11 +6986,18 @@ double oscillating_bc(int time, int j)
         case (OSC_WAVE_PACKET):
         {
             t = (double)time*OMEGA;
-//             a = 10.0;
-//             a = 0.02/OMEGA;
             a = sqrt(INITIAL_VARIANCE)/OMEGA;
             phase = AMPLITUDE*cos(t);
-            envelope = exp(-(t-0.2)*(t-0.2)/(a*a))*sqrt(DPI/a);
+            envelope = exp(-(t-INITIAL_SHIFT)*(t-INITIAL_SHIFT)/(a*a))*sqrt(DPI/a);
+            return(phase*envelope);
+        }
+        case (OSC_WAVE_PACKETS):
+        {
+            t = (double)time*OMEGA;
+            t1 = t - (double)((int)(t/WAVE_PACKET_SHIFT + 0.5))*WAVE_PACKET_SHIFT;
+            a = sqrt(INITIAL_VARIANCE)/OMEGA;
+            phase = AMPLITUDE*cos(t);
+            envelope = exp(-(t1-INITIAL_SHIFT)*(t1-INITIAL_SHIFT)/(a*a))*sqrt(DPI/a);
             return(phase*envelope);
         }
         case (OSC_CHIRP):
@@ -6856,6 +7056,23 @@ double oscillating_bc(int time, int j)
             amp = AMPLITUDE*(0.5*cos(t) + 0.5*cos(sqrt(7.0)*t))*exp(-(double)t*DAMPING);
             amp *= exp(-dist2/INITIAL_VARIANCE);
             return(amp);
+        }
+        case (OSC_TWO_WAVES):
+        {
+            t = (double)time*OMEGA + (double)(NY-j)*OSCIL_LEFT_YSHIFT/(double)NY;
+            t1 = (double)time*OMEGA + (double)(j)*OSCIL_LEFT_YSHIFT/(double)NY;    
+            if (j < NY/2) amp = cos(t);
+            else amp = cos(t1);
+            return(AMPLITUDE*amp);
+        }
+        case (OSC_TWO_WAVES_ADDED):
+        {
+            t = (double)time*OMEGA + (double)(NY-j)*OSCIL_LEFT_YSHIFT/(double)NY;
+            t1 = (double)time*OMEGA + (double)(j)*OSCIL_LEFT_YSHIFT/(double)NY;    
+            amp = 0.0;
+            if (t > 0.0) amp += cos(t);
+            if (t1 > 0.0) amp += cos(t1);
+            return(AMPLITUDE*amp);
         }
     }
 }
@@ -7256,6 +7473,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_tab
             {
                 printf("Initializing IOR_LENS_WALL\n");
                 for (i=0; i<NX; i++){
+                    printf("i = %i\n", i);
                     for (j=0; j<NY; j++){
                         ij_to_xy(i, j, xy);
                         x = xy[0];
@@ -7267,7 +7485,7 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_tab
                         }
                         else 
                         {
-                            if (xy_in[i][j] == 1) 
+                            if (xy_in[i][j] != 0) 
                             {
                                 tcc_table[i][j] = courant2;
                                 tgamma_table[i][j] = GAMMA;
@@ -7514,6 +7732,94 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_tab
                             tcc_table[i][j] = courantb2;
                             tgamma_table[i][j] = GAMMAB;
                         }
+                    }
+                }
+                break;
+            }
+            case (IOR_GRADIENT_INDEX_LENS):
+            {
+                /* focal distance is f = 1/(4*LAMBDA*n0*MU) */
+                /* with n0 = COURANT/COURANTB */
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = vabs(xy[0]);
+                        y = vabs(xy[1]);
+                        if ((x > LAMBDA)) 
+                        {
+                            tcc_table[i][j] = courant2;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else if (y > 1.0)
+                        {
+                            tcc_table[i][j] = 0.0;
+                            tgamma_table[i][j] = 0.0;                            
+                        }
+                        else
+                        {
+                            tcc_table[i][j] = courantb2/(1.0 - MU*y*y);
+                            tgamma_table[i][j] = GAMMAB;
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_GRADIENT_INDEX_LENS_B):
+            {
+                /* focal distance is f = 1/(4*LAMBDA*n0*MU) */
+                /* with n0 = COURANT/COURANTB */
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = vabs(xy[0]);
+                        y = vabs(xy[1]);
+                        if ((x > LAMBDA)) 
+                        {
+                            tcc_table[i][j] = courant2;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else if (y > 1.0)
+                        {
+                            tcc_table[i][j] = 0.0;
+                            tgamma_table[i][j] = 0.0;                            
+                        }
+                        else
+                        {
+                            speed = 1.0/(1.0 - MU*y*y);
+                            speed *= speed;
+                            tcc_table[i][j] = courantb2*speed;
+                            tgamma_table[i][j] = GAMMAB;
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_LINEAR_X_A):
+            {
+                /* Warning: Depending on COURANT and COURANTB */
+                /* this may generate a wave speed of the form |a - bx| */
+                /* Use IOR_LINEAR_X_B instead to avoid this */
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        speed = COURANT*(1.0-x) + COURANTB*x;
+                        tcc_table[i][j] = speed*speed;
+                        tgamma_table[i][j] = GAMMA;
+                    }
+                }
+                break;
+            }
+            case (IOR_LINEAR_X_B):
+            {
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        x = xy[0];
+                        a = (x-XMIN)/(XMAX-XMIN);
+                        speed = COURANT*(1.0-a) + COURANTB*a;
+                        tcc_table[i][j] = speed*speed;
+                        tgamma_table[i][j] = GAMMA;
                     }
                 }
                 break;

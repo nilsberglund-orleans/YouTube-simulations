@@ -18,6 +18,7 @@
 #define NMAXGROUPS 50       /* max number of groups of segments */
 #define NMAXCOLLISIONS 200000   /* max number of collisions */
 #define NMAXPARTNERS 30     /* max number of partners in molecule */
+#define NMAXPARTNERMOLECULES 10 /* max number of partners of a molecule */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -48,6 +49,8 @@
 #define O_CIRCLE 4          /* one circle at the origin */
 #define O_FOUR_CIRCLES 5    /* four circles  */
 #define O_HEX 6             /* hexagonal lattice */
+#define O_SIDES 7           /* grid along the sides of the simulation rectangle */
+#define O_SIDES_B 71        /* finer grid along the sides of the simulation rectangle */
 
 /* pattern of additional repelling segments */
 #define S_RECTANGLE 0       /* segments forming a rectangle */
@@ -101,6 +104,10 @@
 #define I_VICSEK_SPEED 10   /* Vicsek-type interaction with speed adjustment */
 #define I_VICSEK_SHARK 11   /* Vicsek-type interaction with speed adjustment, and one shark */
 #define I_COULOMB_LJ 12     /* Coulomb force regularised by Lennard-Jones repulsion */
+#define I_COULOMB_PENTA 13  /* Lennard-Jones force with or without pentagonal symmetry depending on charge */
+#define I_COULOMB_IMAGINARY 14  /* Coulomb interaction with "imaginary charge" */
+#define I_DNA_CHARGED 15    /* Coulomb-type interaction between end points of DNA nucleotides */
+#define I_DNA_CHARGED_B 151    /* stronger Coulomb-type interaction between end points of DNA nucleotides */
 
 /* Boundary conditions */
 
@@ -144,6 +151,8 @@
 #define TS_COSINE 4          /* periodic time dependence, cosine */
 #define TS_EXPCOS 5          /* periodic time dependence, exponential of cosine */
 #define TS_ASYM_EXPCOS 6     /* periodic time dependence, asymmetric exponential of cosine */
+#define TS_ATAN 7            /* atan approaching asymptotic value */
+#define TS_TANH 8            /* tanh approaching asymptotic value */
 
 /* Gravity schedules */
 
@@ -191,6 +200,14 @@
 #define CHEM_2H2O_H3O_OH 21 /* 2 H2O <-> H3O+ + OH- */
 #define CHEM_AGGREGATION 22 /* agregation of molecules coming close */
 #define CHEM_AGGREGATION_CHARGE 23 /* agregation of charged molecules coming close */
+#define CHEM_AGGREGATION_NNEIGH 24 /* agregation of molecules with limitation on neighbours */
+#define CHEM_DNA 25         /* aggregation of DNA molecules */
+#define CHEM_DNA_ALT 251    /* aggregation of DNA molecules with constraints on connections */
+#define CHEM_DNA_DOUBLE 252 /* aggregation of DNA molecules with different ends */
+#define CHEM_DNA_DSPLIT 253 /* aggregation/splitting of DNA molecules with different ends */
+#define CHEM_DNA_BASE_SPLIT 254 /* aggregation/splitting of DNA molecules when base pairs don't match */
+#define CHEM_DNA_ENZYME 255 /* aggregation/splitting of DNA molecules in presence of enzymes */
+#define CHEM_DNA_ENZYME_REPAIR 256 /* aggregation/splitting of DNA molecules in presence of enzymes and additional repairing of bad connections */
 
 /* Initial conditions for chemical reactions */
 
@@ -206,6 +223,8 @@
 #define IC_SIGNX 7         /* type 1 or 2 depending on sign of x */
 #define IC_TWOROCKETS 8    /* type 1 or 2 depending on rocket position */
 #define IC_TWOROCKETS_TWOFUELS 9    /* type 1 and 2 or 1 and 3 depending on rocket */
+#define IC_DNA_POLYMERASE 10    /* initial condition for DNA polymerase */
+#define IC_DNA_POLYMERASE_REC 11    /* initial condition for DNA polymerase with recombination */
 
 /* Initial conditions for option TWO_TYPES */
 
@@ -259,10 +278,15 @@
 #define POLY_WATER 2    /* star-shaped with a 120° separation between anions */
 #define POLY_SOAP 3     /* polymers with all-to-all coupling and polar end */
 #define POLY_SOAP_B 4   /* polymers with pairwise coupling and polar end */
+#define POLY_SOAP_N 41  /* polymers with pairwise coupling and neutral polar end */
+#define POLY_SOAP_NMIX 42   /* polymers mixing neutral polar and neutral end */
 #define POLY_PLUSMINUS 5    /* polymers with ends of opposite charge */
 #define POLY_HYDRA 6        /* star-shaped with longer arms */
 #define POLY_HYDRA_RIGID 61 /* star-shaped with longer arms and rigid first ring */
-// #define POLY_GLUE 99    /* dummy value for option CHEM_AGGREGATION */
+#define POLY_DNA 7          /* simplified model for DNA */
+#define POLY_DNA_ALT 71     /* simplified model for DNA with different short ends */
+#define POLY_DNA_DOUBLE 72  /* simplified model for DNA with double ends for rigidity */
+#define POLY_DNA_FLEX 73    /* simplified model for DNA with less backbone rigidity (beta) */
 
 /* Background color schemes */
 
@@ -342,8 +366,15 @@ typedef struct
     short int npartners;        /* number of partner particles */
     double partner_eqd[NMAXPARTNERS];   /* equilibrium distances between partners */
     int p0, p1;                 /* numbers of two first partners (for P_MOL_ANGLE color scheme) */
+//     short int mol_angle;        /* for color scheme P_MOL_ANGLE */
     int cluster;                /* number of cluster */
-    short int tested, cactive;     /* for cluster search */
+    int molecule;               /* number of molecule */
+    short int tested, cactive;  /* for cluster search */
+    short int coulomb;          /* has value 1 if DNA-Coulomb interaction is attractive */
+    short int added;            /* has value 1 if particle has been added */
+    short int reactive;         /* has value 1 if particle can react */
+    short int paired;           /* has value 1 if belongs to base-paired molecule */
+    int partner_molecule;       /* number of partner molecule */
 } t_particle;
 
 typedef struct
@@ -434,6 +465,15 @@ typedef struct
     int color;                  /* color hue in case of different collisions */
 } t_collision;
 
+typedef struct
+{
+    int nparticles;             /* number of particles */
+    int particle[NPARTNERS+1];  /* list of particles */
+    int npartners;              /* number of partner molecules */
+    int partner[NMAXPARTNERMOLECULES];  /* list of partner molecules */
+    int connection_type[NMAXPARTNERMOLECULES];  /* types of particles in connection */
+    short int added;            /* has value 1 if molecule has been added */
+} t_molecule;
 
 typedef struct
 {
@@ -456,5 +496,6 @@ typedef struct
 
 
 
-int ncircles, nobstacles, nsegments, ngroups = 1, counter = 0;
+int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0;
+FILE *lj_log;
 

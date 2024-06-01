@@ -100,7 +100,9 @@
 #define D_TREE 73               /* Christmas tree, to use with IOR_TREE */
 #define D_MICHELSON 74          /* Michelson interferometer, to use with IOR_MICHELSON */
 #define D_MICHELSON_MOVING 741  /* moving Michelson interferometer, to use with IOR_MICHELSON */
-#define D_RITCHEY_CHRETIEN 75   /* Ritchey-Chrétien telescope */
+#define D_RITCHEY_CHRETIEN_SPHERICAL 75   /* Ritchey-Chrétien telescope with spherical mirrors */
+#define D_RITCHEY_CHRETIEN_HYPERBOLIC 751 /* Ritchey-Chrétien telescope with hyperbolic mirrors */
+#define D_GRADIENT_INDEX_LENS 76    /* gradient index lens (only affects draw_billiard) */ 
 
 /* for wave_sphere.c */
 
@@ -120,6 +122,7 @@
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
+#define NMAXSOURCES 10      /* maximal number of sources */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -185,6 +188,10 @@
 #define IOR_WAVE_GUIDES_COUPLED_B 151  /* coupled wave guides, variant where only corners are reflecting */
 #define IOR_WAVE_GUIDE_COATED 16   /* short coated S-shaped optical fiber, to use with D_WAVEGUIDE_S_SHORT */
 #define IOR_MICHELSON 17        /* Michelson interferometer, to use with D_MICHELSON */
+#define IOR_GRADIENT_INDEX_LENS 18  /* gradient index lens (parabolic c(r)^2) */
+#define IOR_GRADIENT_INDEX_LENS_B 181  /* gradient index lens (parabolic c(r)) */
+#define IOR_LINEAR_X_A 19         /* IoR depending linearly on x */
+#define IOR_LINEAR_X_B 191      /* IoR depending linearly on x, with correct boundary values */
 
 #define IOR_EARTH_DEM 20        /* digital elevation model (for waves on sphere) */
 
@@ -204,11 +211,14 @@
 #define OSC_PERIODIC 0  /* periodic oscillation */
 #define OSC_SLOWING 1   /* oscillation of slowing frequency (anti-chirp) */
 #define OSC_WAVE_PACKET 2   /* Gaussian wave packet */
+#define OSC_WAVE_PACKETS 21   /* Gaussian wave packets */
 #define OSC_CHIRP 3     /* chirp (linearly accelerating frequency) */
 #define OSC_BEAM 4      /* periodic oscillation modulated by y cut-off */
 #define OSC_BEAM_GAUSSIAN 41  /* periodic oscillation modulated by Gaussian in y */
 #define OSC_BEAM_SINE 42  /* periodic oscillation modulated by sine in y */
 #define OSC_BEAM_TWOPERIODS 5 /* sum of two periodic oscillations modulated by y cut-off */
+#define OSC_TWO_WAVES 6          /* two linear waves at an angle, separate */
+#define OSC_TWO_WAVES_ADDED 61   /* two linear waves at an angle, superimposed */
 
 /* Wave packet types */
 
@@ -305,6 +315,8 @@
 #define Z_NORM_GRADIENT_INTENSITY 24  /* gradient and intensity of polar angle */
 #define Z_VORTICITY 25  /* curl of polar angle */
 #define Z_VORTICITY_ABS 251  /* absolute value of curl of polar angle */
+#define Z_MAXTYPE_RPS 26    /* color or type with maximal density */
+// #define Z_ZERO 99       /* return zero */
 
 /* for Schrodinger equation */
 #define Z_MODULE 30       /* module squared of first two fields */
@@ -315,6 +327,7 @@
 #define Z_MAXTYPE_RPSLZ 40      /* color of type with maximal density */
 #define Z_THETA_RPSLZ 41        /* polar angle */
 #define Z_NORM_GRADIENT_RPSLZ 42    /* gradient of polar angle */
+#define Z_NORM_GRADIENT_RPSLZ_ASYM 43    /* gradient of polar angle */
 
 /* for Euler incompressible Euler equation */
 #define Z_EULER_VORTICITY 50    /* vorticity of velocity */
@@ -415,7 +428,6 @@ typedef struct
 } t_wave_source;
 
 
-
 int ncircles = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */
 int npolyline = NMAXPOLY;           /* actual length of polyline */
 int npolyrect = NMAXPOLY;           /* actual number of polyrect */
@@ -438,8 +450,11 @@ t_circle circles_b[NMAXCIRCLES];      /* circular scatterers */
 t_polygon polygons_b[NMAXCIRCLES];    /* polygonal scatterers */
 t_vertex polyline_b[NMAXPOLY];        /* vertices of polygonal line */
 
+double courant2, courantb2;  /* Courant parameters squared */
+
 // double julia_x = -0.5, julia_y = 0.5;    /* parameters for Julia sets */
 // double julia_x = 0.33267, julia_y = 0.06395;    /* parameters for Julia sets */
 double julia_x = 0.37468, julia_y = 0.21115;    /* parameters for Julia sets */
-double wave_source_x, wave_source_y;    /* position of wave source */
+double wave_source_x[NMAXSOURCES], wave_source_y[NMAXSOURCES];    /* position of wave source */
+double focus_x = XMAX;                         /* position of focus */
 double michelson_position = 0.0;        /* position of mirror in Michelson interferometer */

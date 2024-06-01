@@ -227,6 +227,15 @@
 #define MESSAGE_LINTERLETTER 60  /* length of interval between letters for Morse code message */
 #define MESSAGE_LSPACE 48        /* length of space for Morse code message */
 #define MESSAGE_INITIAL_TIME 100 /* initial time before starting message for Morse code message */    
+#define WAVE_PROFILE_X 2.1      /* value of x to sample wave profile */
+#define HRES 1          /* dummy, only used by rde.c */
+#define INITIAL_SHIFT 20.0          /* time shift of initial wave packet (in oscillation periods) */
+#define WAVE_PACKET_SHIFT 200.0     /* time shift between wave packets (in oscillation periods) */
+#define FADE_IN_OBSTACLE 0      /* set to 1 to fade color inside obstacles */
+#define SHADE_2D 0       /* set to 1 to add pseudo-3d shading effect */ 
+#define SHADE_SCALE_2D 0.05  /* lower value increases sensitivity of shading */
+#define N_SOURCES 1                     /* number of sources, for option draw_sources */
+double light[2] = {0.40824829, 0.816496581};   /* location of light source for SHADE_2D option*/
 /* end of constants only used by sub_wave and sub_maze */
 
 #include "global_pdes.c"
