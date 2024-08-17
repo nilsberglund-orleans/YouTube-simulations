@@ -503,6 +503,49 @@ void draw_colored_rhombus(double x, double y, double r, double angle, double rgb
     glEnd();
 }
 
+void draw_rotated_rect(double x, double y, double l, double w, double angle)
+{
+    int i;
+    double ca, sa, lca, lsa, wca, wsa;
+    
+    ca = cos(angle);
+    sa = sin(angle);
+    lca = l*ca;
+    lsa = l*sa;
+    wca = w*ca;
+    wsa = w*sa;
+        
+    glBegin(GL_LINE_LOOP);
+    glVertex2d(x + lca - wsa, y + lsa + wca);
+    glVertex2d(x - lca - wsa, y - lsa + wca);
+    glVertex2d(x - lca + wsa, y - lsa - wca);
+    glVertex2d(x + lca + wsa, y + lsa - wca);
+    glEnd();
+}
+
+void draw_colored_rotated_rect(double x, double y, double l, double w, double angle, double rgb[3])
+{
+    int i;
+    double ca, sa, lca, lsa, wca, wsa;
+    
+    ca = cos(angle);
+    sa = sin(angle);
+    lca = l*ca;
+    lsa = l*sa;
+    wca = w*ca;
+    wsa = w*sa;
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(x, y);
+    glVertex2d(x + lca - wsa, y + lsa + wca);
+    glVertex2d(x - lca - wsa, y - lsa + wca);
+    glVertex2d(x - lca + wsa, y - lsa - wca);
+    glVertex2d(x + lca + wsa, y + lsa - wca);
+    glVertex2d(x + lca - wsa, y + lsa + wca);
+    glEnd();
+}
+
 void draw_colored_sector(double xc, double yc, double r1, double r2, double angle1, double angle2, double rgb[3], int nsides)
 {    
     int i;
@@ -548,12 +591,18 @@ double neighbour_color(int nnbg)
 double partner_color(int np)
 {
     switch(np){
-        case (0): return(70.0);
-        case (1): return(200.0);
-        case (2): return(280.0);
+        case (0): return(340.0);
+        case (1): return(260.0);
+        case (2): return(210.0);
         case (3): return(140.0);
-        case (4): return(320.0);
+        case (4): return(70.0);
         default:  return(20.0);
+//         case (0): return(70.0);
+//         case (1): return(200.0);
+//         case (2): return(280.0);
+//         case (3): return(140.0);
+//         case (4): return(320.0);
+//         default:  return(20.0);
     }   
 }
 
@@ -1905,13 +1954,105 @@ int init_maze_segments(t_segment segment[NMAXSEGMENTS], int diag)
     free(maze);
 }
 
+int add_conveyor_belt(double x1, double y1, double x2, double y2, double width, double speed, t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[NMAXBELTS])
+/* add segments forming a conveyor belt */
+{
+    double length, tx, ty, angle, angle1, angle2;
+    int i, n, iplus, iminus;
+    
+    length = module2(x2 - x1, y2 - y1);
+    angle = argument(x2 - x1, y2 - y1);
+    if (angle < 0.0) angle += DPI;
+    tx = (x2 - x1)/length;
+    ty = (y2 - y1)/length;
+    
+    n = nsegments;
+    
+    if (nsegments + 14 > NMAXSEGMENTS) 
+    {
+        printf("NMAXSEGMENTS too small");
+        return(0);
+    }
+    if (nbelts + 1 > NMAXBELTS) 
+    {
+        printf("NMAXBELTS too small");
+        return(0);
+    }
 
-void init_segment_config(t_segment segment[NMAXSEGMENTS])
+    segment[n].x1 = x1 - ty*width;
+    segment[n].y1 = y1 + tx*width;
+                        
+    for (i=0; i<7; i++)
+    {
+        segment[n+1+i].x1 = x2 + width*sin(-angle + (double)i*PI/6.0);
+        segment[n+1+i].y1 = y2 + width*cos(-angle + (double)i*PI/6.0);
+    }
+    for (i=7; i<14; i++)
+    {
+        segment[n+1+i].x1 = x1 + width*sin(-angle + (double)(i-1)*PI/6.0);
+        segment[n+1+i].y1 = y1 + width*cos(-angle + (double)(i-1)*PI/6.0);
+    }
+            
+    for (i=0; i<13; i++)
+    {
+        segment[n+i].x2 = segment[n+i+1].x1;
+        segment[n+i].y2 = segment[n+i+1].y1;
+    }
+    segment[n+13].x2 = segment[n].x1;
+    segment[n+13].y2 = segment[n].y1;
+            
+    for (i=n; i<n+14; i++) segment[i].concave = 1;
+            
+    for (i=n; i<n+14; i++) 
+    {
+        segment[i].inactivate = 0;
+        segment[i].conveyor = 1;
+        segment[i].conveyor_speed = speed;
+    }
+    
+    /* deal with concave corners */
+    for (i=n; i<n+14; i++)
+        {
+            iminus = i-1;  
+            iplus = i+1;  
+            if (iminus < n) iminus = n + 13;
+            if (iplus > n + 13) iplus = n;
+            angle1 = argument(segment[iplus].x1 - segment[i].x1, segment[iplus].y1 - segment[i].y1) + PID;
+            angle2 = argument(segment[i].x1 - segment[iminus].x1, segment[i].y1 - segment[iminus].y1) + PID;
+            if (angle2 < angle1) angle2 += DPI;
+            segment[i].angle1 = angle1;
+            segment[i].angle2 = angle2;
+            
+//             printf("i = %i, iplus = %i, iminus = %i, angle1 = %.0f, angle2 = %.0f\n", i, iplus, iminus, angle*360.0/DPI, angle2*360.0/DPI);
+        }
+    
+    nsegments += 14;
+
+    conveyor_belt[nbelts].x1 = x1;
+    conveyor_belt[nbelts].x2 = x2;
+    conveyor_belt[nbelts].y1 = y1;
+    conveyor_belt[nbelts].y2 = y2;
+    conveyor_belt[nbelts].speed = speed;
+    conveyor_belt[nbelts].width = width;
+    conveyor_belt[nbelts].position = 0.0;
+    conveyor_belt[nbelts].length = length;
+    conveyor_belt[nbelts].angle = angle;
+    conveyor_belt[nbelts].tx = tx;
+    conveyor_belt[nbelts].ty = ty;
+    nbelts++; 
+    
+    return(1);
+}
+
+void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[NMAXBELTS])
 /* initialise linear obstacle configuration */
 {
     int i, j, cycle = 0, iminus, iplus, nsides, n, concave = 1; 
     double angle, angle2, dangle, dx, width, height, a, b, length, xmid = 0.5*(BCXMIN + BCXMAX), lpocket, r, x, x1, y1, x2, y2, nozx, nozy, y, yy, dy, ca, sa, padding;
     double lfoot[NTREES][2], rfoot[NTREES][2];
+    
+    /* set default to no conveyor */
+    for (i=0; i<NMAXSEGMENTS; i++) segment[i].conveyor = 0;
     
     switch (SEGMENT_PATTERN) {
         case (S_RECTANGLE):
@@ -2557,6 +2698,76 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
             
             break;
         }
+        case (S_HLINE_HOLE_SLOPED):
+        {
+            x = 0.15;
+            x1 = XMAX + 1.0;
+            width = 0.05;
+            angle = APOLY*DPI;
+            y1 = (x1 - x)*tan(angle);
+                        
+            segment[0].x1 = x1;
+            segment[0].y1 = y1;
+            
+            segment[1].x1 = x1 + width*sin(angle);
+            segment[1].y1 = y1 - width*cos(angle);
+            
+            segment[2].x1 = x + width*sin(angle);
+            segment[2].y1 = -width*cos(angle);
+            
+            segment[3].x1 = x;
+            segment[3].y1 = 0.0;
+            
+            for (i=0; i<3; i++)
+            {
+                segment[i].x2 = segment[i+1].x1;
+                segment[i].y2 = segment[i+1].y1;
+            }
+            segment[3].x2 = segment[0].x1;
+            segment[3].y2 = segment[0].y1;
+            
+            segment[4].x1 = -x1;
+            segment[4].y1 = y1;
+            
+            segment[5].x1 = -x;
+            segment[5].y1 = 0.0;
+
+            segment[6].x1 = -x - width*sin(angle);
+            segment[6].y1 = -width*cos(angle);
+            
+            segment[7].x1 = -x1 - width*sin(angle);
+            segment[7].y1 = y1 - width*cos(angle);
+            
+            for (i=4; i<7; i++)
+            {
+                segment[i].x2 = segment[i+1].x1;
+                segment[i].y2 = segment[i+1].y1;
+            }
+            segment[7].x2 = segment[4].x1;
+            segment[7].y2 = segment[4].y1;
+            
+            nsegments = 8;
+            
+            for (i=0; i<nsegments; i++) segment[i].concave = 1;
+            
+            /* closing segment */
+            segment[nsegments].x1 = -x;
+            segment[nsegments].y1 = 0.0;
+            segment[nsegments].x2 = x;
+            segment[nsegments].y2 = 0.0;
+            nsegments++;
+        
+            cycle = 0;
+            concave = 1;
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].inactivate = 0;
+            }
+            segment[nsegments-1].inactivate = 1;
+            
+            break;
+        }
         case (S_EXT_CIRCLE_RECT):
         {
             width = 0.1*LAMBDA;
@@ -2844,6 +3055,41 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS])
                 segment[i].group = 0;
                 segment[i].inactivate = 0;
             }
+            break;
+        }
+        case (S_CONVEYOR_BELT):
+        {
+            add_conveyor_belt(XMIN + 0.05, 0.0, 0.5, 0.0, 0.05, BELT_SPEED1, segment, conveyor_belt);
+                                
+            cycle = 0;
+            concave = 0;
+            break;
+        }
+        case (S_TWO_CONVEYOR_BELTS):
+        {
+            add_conveyor_belt(XMIN + 0.05, 0.2, 0.8, 0.5, 0.05, BELT_SPEED1, segment, conveyor_belt);
+            add_conveyor_belt(-0.5, -0.3, XMAX - 0.05, -0.8, 0.05, BELT_SPEED2, segment, conveyor_belt);
+                                
+            cycle = 0;
+            concave = 0;
+            break;
+        }
+        case (S_PERIODIC_CONVEYORS):
+        {
+            add_conveyor_belt(0.05, -0.3, XMAX - XMIN - 0.125, 0.4, 0.05, BELT_SPEED1, segment, conveyor_belt);
+            add_conveyor_belt(XMIN - XMAX + 0.05, -0.3, -0.125, 0.4, 0.05, BELT_SPEED1, segment, conveyor_belt);
+            add_conveyor_belt(-1.0, -0.6, 0.2, -0.6, 0.05, BELT_SPEED2, segment, conveyor_belt);
+                                
+            cycle = 0;
+            concave = 0;
+            break;            
+        }
+        case (S_TEST_CONVEYORS):
+        {
+            add_conveyor_belt(-1.0, -0.7, 1.0, 0.7, 0.05, BELT_SPEED1, segment, conveyor_belt);
+                                
+            cycle = 0;
+            concave = 0;
             break;
         }
         default: 
@@ -3848,6 +4094,204 @@ double water_force(double r, double ca, double sa, double ca_rel, double sa_rel,
     return(torque);
 }
 
+void segment_interaction(t_particle part_i, t_particle part_k, double ca, double sa, double distance, double ffm[3], int charge)
+/* compute interaction for I_SEGMENT interaction */
+/* computes force and torque of particle k on particle i */
+{
+    int s;
+    double x0, y0, x, y, fx, fy, cb, sb, cc, sc, cab, sab, ccb, scb, r;
+    double width, torque, mu_i, mu_k, r3, endfact, cfact;
+    
+    fx = 0.0;
+    fy = 0.0;
+    torque = 0.0;
+    mu_i = part_i.radius; 
+    mu_k = part_k.radius;
+    width = 0.2*mu_i;
+    
+    cb = cos(part_i.angle);
+    sb = sin(part_i.angle);
+    cc = cos(part_k.angle);
+    sc = sin(part_k.angle);
+    
+    cab = ca*cb + sa*sb;
+    sab = sa*cb - ca*sb;
+    ccb = cc*cb + sc*sb;
+    scb = sc*cb - cc*sb;
+    
+    /* relative coordinates of particle k in basis where particle i is horizontal */
+    x0 = distance*cab;
+    y0 = distance*sab;
+    
+    for (s=-1; s<=1; s+=2)
+    {
+        x = x0 + (double)s*mu_k*ccb;
+        y = y0 + (double)s*mu_k*scb;
+        
+        if (vabs(y) < width)
+        {
+            if (vabs(x) < mu_i)
+            {
+//                 if (((double)s*scb < 0.0)&&(y > 0.0)) fy += y - width;
+                if (y > 0.0) fy += y - width;
+                else fy += y + width;
+            }
+            else if ((x >= mu_i)&&(x < mu_i+width))
+            {
+                r = module2(x-mu_i, y) + 1.0e-10;
+                if (r < width)
+                {
+                    fx -= (width - r)*(x-mu_i)/r;
+                    fy -= (width - r)*y/r;
+                }
+            }
+            else if ((x <= -mu_i)&&(x > -mu_i-width))
+            {
+                r = module2(x+mu_i, y) + 1.0e-10;
+                if (r < width)
+                {
+                    fx -= (width - r)*(x+mu_i)/r;
+                    fy -= (width - r)*y/r;
+                }
+            }
+            
+            torque += x*fy - y*fx;
+        }
+        
+        if (charge)     /* add Coulomb force between ends */
+        {
+            cfact = CHARGE*KREPEL/KSPRING_OBSTACLE;
+            
+            r = module2(x-mu_i,y) + 1.0e-2;
+            r3 = r*r*r;
+            fx += cfact*(double)s*(x+mu_i)/r3;
+            fy += cfact*(double)s*y/r3;
+            
+            torque += mu_i*fx;
+            
+            r = module2(x+mu_i,y) + 1.0e-2;
+            r3 = r*r*r;
+            fx -= cfact*(double)s*(x+mu_i)/r3;
+            fy -= cfact*(double)s*y/r3;
+            
+            torque -= mu_i*fy;
+        }
+    }
+    
+    ffm[0] = cb*fx - sb*fy;
+    ffm[1] = sb*fx + cb*fy;
+    ffm[2] = torque;
+}
+
+void polygon_interaction(t_particle part_i, t_particle part_k, double ca, double sa, double distance, double ffm[3], int charge)
+/* compute interaction for I_POLYGON interaction */
+/* computes force and torque of particle k on particle i */
+{
+    int s, k, s0, s1;
+    double x0, y0, x, y, f, fx, fy, cb, sb, cab, sab, r, r0, z2, phi, ckt, skt, d;
+    double torque, mu_i, mu_k, r3, width, gamma_beta, rot, cr, sr, xx[NPOLY], yy[NPOLY], dd[NPOLY], z, z0, z02, d1, dmin;
+    static double theta, twotheta, ctheta, stheta, cornerx[NPOLY+1], cornery[NPOLY+1], nx[NPOLY], ny[NPOLY];
+    static int first = 1;
+    
+    if (first)
+    {
+        theta = PI/(double)NPOLY;
+        twotheta = 2.0*theta;
+        ctheta = cos(theta);
+        stheta = sin(theta);
+        
+        for (s=0; s<NPOLY+1; s++)
+        {
+            cornerx[s] = cos((double)s*twotheta);
+            cornery[s] = sin((double)s*twotheta);
+        }
+        
+        for (s=0; s<NPOLY; s++)
+        {
+            nx[s] = cos((double)(2*s+1)*theta);
+            ny[s] = sin((double)(2*s+1)*theta);
+        }
+        
+        first = 0;
+    }
+    
+    fx = 0.0;
+    fy = 0.0;
+    torque = 0.0;
+    mu_i = part_i.radius; 
+    mu_k = part_k.radius;
+    width = 0.1*mu_i;
+    mu_i -= width;
+    gamma_beta = part_k.angle - part_i.angle;
+    r0 = mu_i*ctheta;
+    z0 = mu_i*stheta;
+    z02 = z0*z0;
+    
+    cb = cos(part_i.angle);
+    sb = sin(part_i.angle);
+    cab = ca*cb + sa*sb;
+    sab = sa*cb - ca*sb;
+    
+    /* relative coordinates of particle k in basis where particle i is horizontal */
+    x0 = distance*cab;
+    y0 = distance*sab;
+    
+    /* find vertex distances */
+    for (s = 0; s<NPOLY; s++)
+    {
+        rot = gamma_beta + (double)s*twotheta;
+        cr = cos(rot);
+        sr = sin(rot); 
+        
+        xx[s] = x0 + cr*mu_k;
+        yy[s] = y0 + sr*mu_k;
+        
+        dd[s] = xx[s]*xx[s] + yy[s]*yy[s];
+    }
+        
+    /* compute force from vertices */
+    for (s = 0; s<NPOLY; s++) if (dd[s] < 2.0*mu_i)
+    {
+        x = xx[s];
+        y = yy[s];
+            
+        phi = argument(x, y);
+        if (phi < 0.0) phi += DPI;
+        
+        k = (int)(phi/twotheta);
+        
+        d = x*nx[k] + y*ny[k];
+        
+        if (d < r0 + width)
+        {                
+            z = -x*ny[k] + y*nx[k];
+            if (z*z < z02) 
+            {
+                f = r0 + width - d;
+                if (f > width) f = width;
+                fx -= f*nx[k];
+                fy -= f*ny[k];
+                torque += x*fy - y*fx;
+            }
+            else for (s1=0; s1<NPOLY; s1++)    /* corners */
+            {
+                d1 = module2(x - mu_i*cornerx[s1], y - mu_i*cornery[s1]) + 1.0e-8;
+                if (d1 < width)
+                {
+                    f = width - d1;
+                    if (f > width) f = width;
+                    fx -= f*(x - mu_i*cornerx[s1])/d1;
+                    fy -= f*(y - mu_i*cornery[s1])/d1;
+                }
+                torque += x*fy - y*fx;
+            }
+        }
+    }
+    
+    ffm[0] = cb*fx - sb*fy;
+    ffm[1] = sb*fx + cb*fy;
+    ffm[2] = torque;
+}
 
 int dna_charge(int type1, int type2, int coulomb)
 /* returns -1 for matching nucleotide ends, 1 for non-matching, and 0 else */
@@ -3887,7 +4331,7 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
 /* compute repelling force and torque of particle #k on particle #i */
 /* returns 1 if distance between particles is smaller than NBH_DIST_FACTOR*MU */
 {
-    double x1, y1, x2, y2, r, f, angle, aniso, fx, fy, ff[2], dist_scaled, spin_f, ck, sk, ck_rel, sk_rel, alpha, amp, charge, f1;
+    double x1, y1, x2, y2, r, f, angle, aniso, fx, fy, ff[2], dist_scaled, spin_f, ck, sk, ck_rel, sk_rel, alpha, amp, charge, f1, ffm[3];
     static double dxhalf = 0.5*(BCXMAX - BCXMIN), dyhalf = 0.5*(BCYMAX - BCYMIN);
     int wwrapx, wwrapy, twrapx, twrapy;
     
@@ -4022,7 +4466,7 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
             charge = particle[i].charge*particle[k].charge;
             f = -100.0*krepel*charge/(1.0e-12 + distance*distance);
             if (charge <= 0.0) 
-                f += 0.01*krepel*lennard_jones_force(distance, particle[k]);
+                f += COULOMB_LJ_FACTOR*krepel*lennard_jones_force(distance, particle[k]);
             force[0] = f*ca;
             force[1] = f*sa;   
             break;
@@ -4096,6 +4540,60 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
             force[1] = f*sa;
             break;
         }
+        case (I_SEGMENT):
+        {
+            segment_interaction(particle[i], particle[k], ca, sa, distance, ffm, 0);
+            force[0] = KSPRING_OBSTACLE*ffm[0];
+            force[1] = KSPRING_OBSTACLE*ffm[1];
+            *torque = KTORQUE*ffm[2];
+
+            f = 0.1*krepel*lennard_jones_force(distance, particle[k]);
+            force[0] += f*ca;
+            force[1] += f*sa; 
+            
+            break;
+        }
+        case (I_SEGMENT_CHARGED):
+        {
+            segment_interaction(particle[i], particle[k], ca, sa, distance, ffm, 1);
+            force[0] = KSPRING_OBSTACLE*ffm[0];
+            force[1] = KSPRING_OBSTACLE*ffm[1];
+            *torque = KTORQUE*ffm[2];
+            
+//             printf("Force between particles %i and %i: (%.3lg, %.3lg)\n", i, k, force[0], force[1]); 
+            
+//             f = 0.1*krepel*lennard_jones_force(distance, particle[k]);
+//             force[0] += f*ca;
+//             force[1] += f*sa; 
+            
+            break;
+        }
+        case (I_POLYGON):
+        {
+            polygon_interaction(particle[i], particle[k], ca, sa, distance, ffm, 0);
+            force[0] = KSPRING_OBSTACLE*ffm[0];
+            force[1] = KSPRING_OBSTACLE*ffm[1];
+            *torque = KTORQUE*ffm[2];
+
+            f = 0.1*krepel*lennard_jones_force(distance, particle[k]);
+            force[0] += f*ca;
+            force[1] += f*sa; 
+            
+            break;
+        }
+        case (I_POLYGON_ALIGN):
+        {
+            polygon_interaction(particle[i], particle[k], ca, sa, distance, ffm, 0);
+            force[0] = KSPRING_OBSTACLE*ffm[0];
+            force[1] = KSPRING_OBSTACLE*ffm[1];
+            *torque = KTORQUE*ffm[2];
+            
+            f = 0.1*krepel*lennard_jones_force(distance, particle[k]);
+            force[0] += f*ca;
+            force[1] += f*sa; 
+            
+            break;
+        }
     }
 
     if (ROTATION) 
@@ -4158,6 +4656,36 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
                     *torque = cos(particle[k].angle)*sa - sin(particle[k].angle)*ca;
                 }
                     
+                break;
+            }
+            case (I_SEGMENT):
+            {
+                /* Do nothing, torque already computed */
+                break;
+            }
+            case (I_SEGMENT_CHARGED):
+            {
+                /* Do nothing, torque already computed */
+                break;
+            }
+            case (I_POLYGON):
+            {
+                /* Do nothing, torque already computed */
+                break;
+            }
+            case (I_POLYGON_ALIGN):
+            {
+                spin_f = particle[i].spin_freq;
+                if (twrapx||twrapy) 
+                    *torque += sin(spin_f*(-particle[k].angle - particle[i].angle))/(1.0e-8 + dist_scaled*dist_scaled);
+                else 
+                {
+                    if (NPOLY%2 == 0) 
+                        *torque += sin(spin_f*(particle[k].angle - particle[i].angle))/(1.0e-8 + dist_scaled*dist_scaled);
+                    else 
+                        *torque -= sin(spin_f*(particle[k].angle - particle[i].angle))/(1.0e-8 + dist_scaled*dist_scaled);
+
+                }
                 break;
             }
             default: 
@@ -4333,11 +4861,16 @@ void print_partners(int i, t_particle particle[NMAXCIRCLES])
 //         printf("(x, y) = (%.3lg, %.3lg), radius = %.3lg\n", particle[i].xc, particle[i].yc, particle[i].radius);
     
         printf("%i partners: ", particle[i].npartners);
+        fprintf(lj_log, "%i partners: ", particle[i].npartners);
     
         for (p=0; p<particle[i].npartners; p++)
+        {
             printf("%i  ", particle[i].partner[p]);
-    
+            fprintf(lj_log, "%i  ", particle[i].partner[p]);
+        }
+        
         printf("\n\n");
+        fprintf(lj_log, "\n\n");
     }
 }
 
@@ -4346,9 +4879,9 @@ void print_partners(int i, t_particle particle[NMAXCIRCLES])
 void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pairing_type, int npartners, int newtype, int rtype, double newr, double newmass, double newcharge, int narms, t_particle particle[NMAXCIRCLES])
 /* add new particles in list nlist to old particle i, for paired particles */
 {
-    int n, k, l, p, q, counter, oldtype, closeby = 0, different = 1, armlen, arm;
+    int n, k, l, p, p1, q, counter, oldtype, closeby = 0, different = 1, armlen, arm, kplus, kminus, kpplus, kmminus;
     short int no_change = 0;
-    double angle, dist, oldr, oldmass_inv, oldcharge, x, y, beta, beta2;
+    double angle, dist, oldr, oldmass_inv, oldcharge, x, y, alpha, beta, beta2, r;
         
     oldtype = particle[i].type;
     oldr = particle[i].radius;
@@ -4374,6 +4907,15 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
         particle[i].xc -= dist*cos(angle);
         particle[i].yc -= dist*cos(angle);
     }
+    /* set some common values for POLY_SEG_POLYGON pairing */
+    else if (pairing_type == POLY_SEG_POLYGON)
+    {
+//         alpha = PI/(double)(npartners+1);
+        alpha = PI/(double)npartners;
+        r = MU/tan(alpha);
+        particle[i].angle = 0.0;
+//         particle[i].radius *= 0.75;
+    }
     
     if (pairing_type == POLY_PLUSMINUS)
     {
@@ -4382,6 +4924,10 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
     }
     
     if (pairing_type == POLY_DNA_ALT) particle[i].angle = angle0;
+    
+    /* randomize sign of charge */
+    if ((pairing_type == POLY_STAR_CHARGED)||(pairing_type == POLY_POLYGON))
+        if (rand()%2 == 1) newcharge *= -1.0;
     
     for (k=0; k<npartners; k++)
     {
@@ -4419,6 +4965,143 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
             
         /* compute positions of new particles */
         switch (pairing_type) {
+            case (POLY_STAR_CHARGED): 
+            {
+                particle[i].radius = 2.0*MU;
+                angle = angle0 + DPI*(double)k/(double)npartners;
+                dist = (oldr + newr)*PAIR_DRATIO;
+                particle[n].radius = newr;
+                particle[n].mass_inv = 1.0/newmass;
+                if (k%2 == 1) particle[n].charge *= -1.0;
+                break;
+            }
+            case (POLY_POLYGON): 
+            {
+                particle[i].radius = 2.0*MU;
+                particle[n].mass_inv = 1.0/newmass;
+                
+                if (k < npartners/2)
+                {
+                    angle = angle0 + DPI*(double)(2*k+1)/(double)npartners;
+                    dist = (oldr + newr)*PAIR_DRATIO*cos(DPI/(double)npartners)*1.2;
+                    particle[n].radius = newr*0.75;
+                    particle[n].charge = 0.0;
+                }
+                else
+                {
+                    angle = angle0 + DPI*(double)(2*k)/(double)npartners;
+                    dist = (oldr + newr)*PAIR_DRATIO;
+                    particle[n].radius = newr;
+                    if (k%2 == 1) particle[n].charge *= -1.0;
+                }
+                break;
+            }
+            case (POLY_KITE): 
+            {
+                particle[i].radius = 1.25*MU*sin(PI/5.0);
+                particle[i].charge = 0.0;
+                particle[n].mass_inv = 1.0/newmass;
+                
+                switch (k){
+                    case (0):
+                    {
+                        angle = PI;
+                        dist = 0.5*MU;
+                        particle[n].radius = 0.4*MU;
+                        particle[n].charge = 0.0;
+                        break;
+                    }
+                    case (1):
+                    {
+                        angle = 0.0;
+                        dist = 2.0*MU*cos(DPI/5.0);
+                        particle[n].radius = 0.3*MU;
+                        break;
+                    }
+                    case (2):
+                    {
+                        angle = DPI/5.0;
+                        dist = MU;
+                        particle[n].radius = 0.3*MU;
+                        particle[n].charge *= -1.0;
+                        break;
+                    }
+                    case (3):
+                    {
+                        angle = PI;
+                        dist = MU;
+                        particle[n].radius = 0.3*MU;
+                        break;
+                    }
+                    case (4):
+                    {
+                        angle = -DPI/5.0;
+                        dist = MU;
+                        particle[n].radius = 0.3*MU;
+                        particle[n].charge *= -1.0;
+                        break;
+                    }
+                }
+                break;
+            }
+            case (POLY_DART): 
+            {
+                particle[i].radius = 0.3*MU;
+                particle[i].charge = -newcharge;
+                particle[n].mass_inv = 1.0/newmass;
+                
+                switch (k){
+                    case (0):
+                    {
+                        angle = 3.0*PI/10.0;
+                        dist = MU*sin(PI/5.0);
+                        particle[n].radius = 0.3*MU;
+                        particle[n].charge = 0.0;
+                        break;
+                    }
+                    case (1):
+                    {
+                        angle = -3.0*PI/10.0;
+                        dist = MU*sin(PI/5.0);
+                        particle[n].radius = 0.3*MU;
+                        particle[n].charge = 0.0;
+                        break;
+                    }                    
+                    case (2):
+                    {
+                        angle = 0.0;
+                        dist = MU;
+                        particle[n].radius = 0.3*MU;
+                        particle[n].charge *= -1.0;
+                        break;
+                    }
+                    case (3):
+                    {
+                        angle = 3.0*PI/5.0;
+                        dist = MU;
+                        particle[n].radius = 0.3*MU;
+                        break;
+                    }
+                    case (4):
+                    {
+                        angle = -3.0*PI/5.0;
+                        dist = MU;
+                        particle[n].radius = 0.3*MU;
+                        break;
+                    }
+                }
+                break;
+            }
+            case (POLY_SEG_POLYGON):
+            {
+                dist = r;
+                angle = (double)(2*k)*alpha;
+                particle[n].angle = angle + PID;
+                particle[n].radius = MU;
+                particle[n].charge = 0.0;
+                fprintf(lj_log, "k = %i, angle = %.3lg, orientation = %.3lg\n", k, angle, particle[n].angle);
+                break;
+            }
             case (POLY_WATER): 
             {
                 angle = angle0 + (double)(k+1)*PARTNER_ANGLE*PI/180.0;
@@ -4679,7 +5362,7 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
                 particle[n].type = 0;
                 particle[n].angle = angle0;
                 beta = atan(newr/(dist + 2.0*PAIR_DRATIO*newr));
-                beta2 = atan(1.5/((double)(NPARTNERS-8)*2.0*PAIR_DRATIO));
+                beta2 = atan(1.5/((double)(NPARTNERS_DNA-8)*2.0*PAIR_DRATIO));
                 
                 switch (k) {
                     case (0):
@@ -4722,16 +5405,16 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
                         particle[n].type = 2;
                         break;
                     }
-                    case (NPARTNERS-2):
+                    case (NPARTNERS_DNA-2):
                     {
-                        dist += (double)(NPARTNERS-8)*2.0*PAIR_DRATIO*newr;
+                        dist += (double)(NPARTNERS_DNA-8)*2.0*PAIR_DRATIO*newr;
                         angle += 0.5*beta2;
                         particle[n].type = rtype;
                         break;
                     }
-                    case (NPARTNERS-1):
+                    case (NPARTNERS_DNA-1):
                     {
-                        dist += (double)(NPARTNERS-8)*2.0*PAIR_DRATIO*newr;
+                        dist += (double)(NPARTNERS_DNA-8)*2.0*PAIR_DRATIO*newr;
                         angle -= 0.5*beta2;
                         particle[n].type = rtype;
                         break;
@@ -4752,7 +5435,7 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
                 particle[n].type = 0;
                 particle[n].angle = angle0;
                 beta = atan(newr/(dist + 2.0*PAIR_DRATIO*newr));
-                beta2 = atan(1.5/((double)(NPARTNERS-6)*2.0*PAIR_DRATIO));
+                beta2 = atan(1.5/((double)(NPARTNERS_DNA-6)*2.0*PAIR_DRATIO));
                 
                 switch (k) {
                     case (0):
@@ -4779,16 +5462,16 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
                         particle[n].type = 2;
                         break;
                     }
-                    case (NPARTNERS-2):
+                    case (NPARTNERS_DNA-2):
                     {
-                        dist += (double)(NPARTNERS-6)*2.0*PAIR_DRATIO*newr;
+                        dist += (double)(NPARTNERS_DNA-6)*2.0*PAIR_DRATIO*newr;
                         angle += 0.5*beta2;
                         particle[n].type = rtype;
                         break;
                     }
-                    case (NPARTNERS-1):
+                    case (NPARTNERS_DNA-1):
                     {
-                        dist += (double)(NPARTNERS-6)*2.0*PAIR_DRATIO*newr;
+                        dist += (double)(NPARTNERS_DNA-6)*2.0*PAIR_DRATIO*newr;
                         angle -= 0.5*beta2;
                         particle[n].type = rtype;
                         break;
@@ -4823,6 +5506,64 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
             {
                 particle[n].npartners = 1;
                 particle[n].partner[0] = i;
+                break;
+            }
+            case (POLY_STAR_CHARGED):
+            {
+                particle[n].npartners = 3;
+                particle[n].partner[0] = i;
+                if (k == 0) particle[n].partner[1] = nlist[npartners-1];
+                else particle[n].partner[1] = nlist[k-1];
+                if (k == npartners-1) particle[n].partner[2] = nlist[0];
+                else particle[n].partner[2] = nlist[k+1];
+                break;
+            }
+            case (POLY_POLYGON):
+            {
+                particle[n].npartners = npartners;
+                particle[n].partner[0] = i;
+                p = 0;
+                p1 = 1;
+                while (p < npartners)
+                {
+                    q = nlist[p];
+                    if (q != n)
+                    {
+                        particle[n].partner[p1] = q;
+                        p1++;
+                    }
+                    p++;
+                }
+                particle[n].npartners = p1;
+                break;
+            }
+            case (POLY_KITE):
+            {
+                particle[n].npartners = npartners;
+                particle[n].partner[0] = i;
+                p = 0;
+                p1 = 1;
+                while (p < npartners)
+                {
+                    q = nlist[p];
+                    if (q != n)
+                    {
+                        particle[n].partner[p1] = q;
+                        p1++;
+                    }
+                    p++;
+                }
+                particle[n].npartners = p1;
+                break;
+            }
+            case (POLY_SEG_POLYGON):
+            {
+                particle[n].npartners = 3;
+                particle[n].partner[0] = i;
+                if (k == 0) particle[n].partner[1] = nlist[npartners-1];
+                else particle[n].partner[1] = nlist[k-1];
+                if (k == npartners-1) particle[n].partner[2] = nlist[0];
+                else particle[n].partner[2] = nlist[k+1];
                 break;
             }
             case (POLY_SOAP_B):
@@ -4995,6 +5736,7 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
             p = particle[i].partner[l];
             dist = module2(particle[i].xc - particle[p].xc, particle[i].yc - particle[p].yc);
             particle[i].partner_eqd[l] = dist;
+            particle[i].partner_eqa[l] = particle[p].angle - particle[i].angle;
         }
         for (k=0; k<npartners; k++)
         {
@@ -5004,6 +5746,7 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
                 p = particle[n].partner[l];
                 dist = module2(particle[n].xc - particle[p].xc, particle[n].yc - particle[p].yc);
                 particle[n].partner_eqd[l] = dist;
+                particle[n].partner_eqa[l] = particle[p].angle - particle[n].angle;
             }
         }
     }
@@ -5033,8 +5776,8 @@ void add_particle_inpair(int i, int nlist[NMAXPARTNERS], double angle0, int pair
                 n = nlist[l];
                 for (p=-1; p<2; p++) for (q=-1; q<2; q++)
                 {
-                    x = particle[k].xc + p*(XMAX - XMIN);
-                    y = particle[k].yc + q*(YMAX - YMIN);
+                    x = particle[k].xc + p*(BCXMAX - BCXMIN);
+                    y = particle[k].yc + q*(BCYMAX - BCYMIN);
                     dist = module2(x - particle[n].xc, y - particle[n].yc);
                     closeby += (dist < PAIR_SAFETY_FACTOR*(particle[l].radius + particle[k].radius));
                 }
@@ -5125,11 +5868,15 @@ void init_molecule_data(t_particle particle[NMAXCIRCLES], t_molecule molecule[NM
         molecule[m].added = 0;
     }
     
+//     printf("1\n");
+    
     for (i=0; i<ncircles; i++)
     {
+//         printf("i = %i\n", i);
         m = particle[i].molecule;
         if (m + 1 > nmolecules) nmolecules = m + 1;
         np = molecule[m].nparticles;
+//         printf("np = %i\n", np);
         if (np < NPARTNERS+1)
         {
             molecule[m].particle[np] = i;
@@ -5138,14 +5885,20 @@ void init_molecule_data(t_particle particle[NMAXCIRCLES], t_molecule molecule[NM
         molecule[m].added = particle[i].added;
     }  
     printf("Found %i molecules\n", nmolecules);
+    fprintf(lj_log, "Found %i molecules\n", nmolecules);
     
     /* for debugging */
     for (m=0; m<nmolecules; m++)
     {
         printf("Molecule %i has %i particles: \n", m, molecule[m].nparticles);
+        fprintf(lj_log, "Molecule %i has %i particles: \n", m, molecule[m].nparticles);
         for (i=0; i<molecule[m].nparticles; i++)
+        {
             printf(" %i-%i |" , molecule[m].particle[i], particle[molecule[m].particle[i]].molecule);
+            fprintf(lj_log, " %i-%i |" , molecule[m].particle[i], particle[molecule[m].particle[i]].molecule);
+        }
         printf("\n");
+        fprintf(lj_log, "\n");
         printf("Molecule %i.added = %i\n", m, molecule[m].added);
     }
 }
@@ -5231,6 +5984,7 @@ void init_particle_pairs(t_particle particle[NMAXCIRCLES], t_molecule molecule[N
     }
     
     init_molecule_data(particle, molecule);
+    printf("Done\n");
     
     /* find first two partner numbers, for P_MOL_ANGLE color scheme */
 //     for (i=0; i<ncircles; i++) 
@@ -5390,10 +6144,10 @@ void compute_entropy(t_particle particle[NMAXCIRCLES], double entropy[2])
 }
 
 
-void compute_particle_colors(t_particle particle, int plot, double rgb[3], double rgbx[3], double rgby[3], double *radius, int *width, t_particle other_particle[NMAXCIRCLES])
+void compute_particle_colors(t_particle particle, t_cluster cluster[NMAXCIRCLES], int plot, double rgb[3], double rgbx[3], double rgby[3], double *radius, int *width, t_particle other_particle[NMAXCIRCLES])
 {
-    double ej, angle, hue, huex, huey, lum, x, y, cluster;
-    int i, k, p, q;
+    double ej, angle, hue, huex, huey, lum, x, y, ccluster;
+    int i, k, p, q, cl;
     
     switch (plot) {
         case (P_KINETIC): 
@@ -5523,6 +6277,21 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
             *width = BOUNDARY_WIDTH;
             break;
         }
+        case (P_EMEAN_DENSITY): 
+        {
+            ej = particle.emean;
+            cl = particle.cluster;
+            ej *= PARTICLE_MASS/cluster[cl].mass;
+            if (ej > 0.0) 
+            {
+                hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*ej/PARTICLE_EMAX;
+                if (hue > ENERGY_HUE_MIN) hue = ENERGY_HUE_MIN;
+                if (hue < ENERGY_HUE_MAX) hue = ENERGY_HUE_MAX;
+            }
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
         case (P_LOG_EMEAN): 
         {
             ej = particle.emean;
@@ -5542,7 +6311,9 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
         case (P_DIRECT_EMEAN): 
         {
             hue = particle.dirmean + COLOR_HUESHIFT*PI;
+//             printf("dirmean = %.3lg\n", particle.dirmean);
             if (hue > DPI) hue -= DPI;
+            if (hue < 0.0) hue += DPI;
             hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*(hue)/DPI;
             ej = particle.emean;
             if (ej < 0.5*PARTICLE_EMAX) lum = 2.0*ej/PARTICLE_EMAX;
@@ -5597,8 +6368,41 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
         }
         case (P_CLUSTER):
         {
-            cluster = (double)particle.cluster/(double)ncircles;
-            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*cluster;
+//             cluster = (double)(particle.cluster)/(double)(ncircles);
+            ccluster = (double)(particle.cluster_color)/(double)(ncircles);
+            ccluster -= (double)((int)ccluster);
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*ccluster;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_CLUSTER_SIZE):
+        {
+//             cluster = (double)(particle.cluster)/(double)(ncircles);
+            ccluster = 1.0 - 5.0/((double)particle.cluster_size + 4.0);
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*ccluster;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_CLUSTER_SELECTED):
+        {
+            cl = particle.cluster;
+            if (cluster[cl].selected) hue = COLOR_HUE_CLUSTER_SELECTED;
+            else hue = COLOR_HUE_CLUSTER_NOT_SELECTED;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_COLLISION):
+        {
+            hue = (double)particle.collision;
+            if (hue > 0.0) hue = atan(0.25*(0.03*hue + 1.0))/PID;
+//             {
+//                 hue += 10.0;
+//                 hue *= 1.0/(40.0 + hue);
+//             }
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*hue;
             *radius = particle.radius;
             *width = BOUNDARY_WIDTH;
             break;
@@ -5715,6 +6519,20 @@ void compute_particle_colors(t_particle particle, int plot, double rgb[3], doubl
             hsl_to_rgb_palette(hue, 0.9, 0.5, rgby, COLOR_PALETTE_CLUSTER);
             break;
         }
+        case (P_CLUSTER_SIZE):  
+        {
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_CLUSTER_SIZE);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgbx, COLOR_PALETTE_CLUSTER_SIZE);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgby, COLOR_PALETTE_CLUSTER_SIZE);
+            break;
+        }
+        case (P_CLUSTER_SELECTED):  
+        {
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_CLUSTER_SELECTED);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgbx, COLOR_PALETTE_CLUSTER_SELECTED);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgby, COLOR_PALETTE_CLUSTER_SELECTED);
+            break;
+        }
         default: 
         {
             hsl_to_rgb(hue, 0.9, 0.5, rgb);
@@ -5821,7 +6639,7 @@ void draw_one_triangle(t_particle particle, int same_table[9*HASHMAX], int p, in
 }
 
 
-void draw_triangles(t_particle particle[NMAXCIRCLES], int plot)
+void draw_triangles(t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRCLES], int plot)
 /* fill triangles between neighboring particles */
 {
     int i, j, k, p, q, t0, tj, tmax, nsame = 0, same_table[9*HASHMAX], width;
@@ -5854,7 +6672,7 @@ void draw_triangles(t_particle particle[NMAXCIRCLES], int plot)
             }
             else
             {
-                compute_particle_colors(particle[i], plot, rgb, rgbx, rgby, &radius, &width, particle);
+                compute_particle_colors(particle[i], cluster, plot, rgb, rgbx, rgby, &radius, &width, particle);
             }
                 
             glColor3f(rgb[0], rgb[1], rgb[2]);
@@ -6301,6 +7119,13 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
    
     if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)||(particle.interaction == I_VICSEK)||(particle.interaction == I_VICSEK_REPULSIVE)||(particle.interaction == I_VICSEK_SPEED)||(particle.interaction == I_VICSEK_SHARK)) 
         draw_colored_rhombus(xc1, yc1, radius, angle + APOLY*PID, rgb);
+    else if (particle.interaction == I_SEGMENT)
+        draw_colored_rotated_rect(xc1, yc1, particle.radius, 0.1*particle.radius, angle + APOLY*PID, rgb);
+    else if (particle.interaction == I_SEGMENT_CHARGED)
+    {
+        draw_colored_rotated_rect(xc1, yc1, particle.radius, 0.1*particle.radius, angle + APOLY*PID, rgb);
+        /* TODO: draw ends */
+    }
     else if (cont) 
     {
         if (nsides == NSEG) draw_colored_circle_precomp(xc1, yc1, radius, rgb);
@@ -6357,6 +7182,13 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
 
     if ((particle.interaction == I_LJ_QUADRUPOLE)||(particle.interaction == I_LJ_DIPOLE)||(particle.interaction == I_VICSEK)||(particle.interaction == I_VICSEK_REPULSIVE)||(particle.interaction == I_VICSEK_SPEED)||(particle.interaction == I_VICSEK_SHARK)) 
         draw_rhombus(xc1, yc1, radius, angle + APOLY*PID);
+    else if (particle.interaction == I_SEGMENT)
+        draw_rotated_rect(xc1, yc1, particle.radius, 0.1*particle.radius, angle + APOLY*PID);
+    else if (particle.interaction == I_SEGMENT_CHARGED)
+    {
+        draw_rotated_rect(xc1, yc1, particle.radius, 0.1*particle.radius, angle + APOLY*PID);
+        /* TODO: draw ends */
+    }
     else if (cont) 
     {
         if (nsides == NSEG) draw_circle_precomp(xc1, yc1, radius);
@@ -6402,7 +7234,7 @@ void draw_collisions(t_collision *collisions, int ncollisions)
         }
         else y1 = y;
     
-        draw_colored_polygon(x1, y1, 5.0*MU, NSEG, 0.0, rgb);
+        draw_colored_polygon(x1, y1, COLLISION_RADIUS*MU, NSEG, 0.0, rgb);
         collisions[i].time--;
     }
     
@@ -6624,9 +7456,9 @@ void color_background(t_particle particle[NMAXCIRCLES], int bg_color, t_hashgrid
 }
     
 
-void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_collision *collisions, int ncollisions, int bg_color, t_hashgrid hashgrid[HASHX*HASHY], t_lj_parameters params)
+void draw_particles(t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRCLES], int plot, double beta, t_collision *collisions, int ncollisions, int bg_color, t_hashgrid hashgrid[HASHX*HASHY], t_lj_parameters params)
 {
-    int i, j, k, m, width, nnbg, nsides;
+    int i, j, k, m, width, nnbg, nsides, cl, p, q;
     double ej, hue, huex, huey, rgb[3], rgbx[3], rgby[3], radius, x1, y1, x2, y2, angle, ca, sa, length, linkcolor, sign = 1.0, angle1, signy = 1.0, periodx, periody, x, y, lum, logratio;
     char message[100];
     
@@ -6726,7 +7558,7 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_c
     }
                 
     /* fill triangles between particles */
-    if (FILL_TRIANGLES) draw_triangles(particle, plot);
+    if (FILL_TRIANGLES) draw_triangles(particle, cluster, plot);
     
     /* draw collision discs */
     if ((REACTION_DIFFUSION)&&(ncollisions > 0)) draw_collisions(collisions, ncollisions);
@@ -6734,7 +7566,7 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_c
     /* determine particle color and size */
     for (j=0; j<ncircles; j++) if (particle[j].active)
     {
-        compute_particle_colors(particle[j], plot, rgb, rgbx, rgby, &radius, &width, particle);
+        compute_particle_colors(particle[j], cluster, plot, rgb, rgbx, rgby, &radius, &width, particle);
        
         switch (particle[j].interaction) {
             case (I_LJ_DIRECTIONAL): 
@@ -6767,6 +7599,26 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_c
             {
                 if (particle[j].type == 7) nsides = 3;
                 else nsides = NSEG;
+                break;
+            }
+            case (I_SEGMENT): 
+            {
+                nsides = 2;
+                break;
+            }
+            case (I_SEGMENT_CHARGED): 
+            {
+                nsides = 2;
+                break;
+            }
+            case (I_POLYGON): 
+            {
+                nsides = NPOLY;
+                break;
+            }
+            case (I_POLYGON_ALIGN): 
+            {
+                nsides = NPOLY;
                 break;
             }
             default: nsides = NSEG;
@@ -6882,14 +7734,33 @@ void draw_particles(t_particle particle[NMAXCIRCLES], int plot, double beta, t_c
             draw_line(x1, y1, x2, y2);
         }
     }
+    
+    /* draw links between particles in cluster */
+    if (DRAW_CLUSTER_LINKS)
+    {
+        glLineWidth(LINK_WIDTH);
+        for (j=0; j<ncircles; j++) if (particle[j].active) 
+        {
+            cl = particle[j].cluster;
+            x1 = particle[j].xc;
+            y1 = particle[j].yc;
+            for (p=0; p<cluster[cl].nparticles; p++)
+            {
+                q = cluster[cl].particle[p];
+                x2 = particle[q].xc;
+                y2 = particle[q].yc;
+                draw_line(x1, y1, x2, y2);
+            }
+        }
+    }
 }
 
 
-void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], int wall)
+void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], t_belt *conveyor_belt, int wall)
 /* draw the container, for certain boundary conditions */
 {
     int i, j;
-    double rgb[3], x, y, r, phi, angle, dx, dy, ybin, x1, x2, h;
+    double rgb[3], x, y, r, phi, angle, dx, dy, ybin, x1, x2, y1, y2, h, bangle, blength, pos0, pos, bsegment, tx, ty, bwidth, ca, sa;
     char message[100];
     
     /* draw fixed obstacles */
@@ -6923,6 +7794,81 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
             if (COLOR_SEG_GROUPS) set_segment_group_color(segment[i].group, 1.0, rgb);
             else if (SHOW_SEGMENTS_PRESSURE) set_segment_pressure_color(segment[i].avrg_pressure, 1.0, rgb);
             draw_line(segment[i].x1 - xtrack, segment[i].y1 - ytrack, segment[i].x2 - xtrack, segment[i].y2 - ytrack);
+        }
+        
+        /* draw conveyor belt */
+        if (ADD_CONVEYOR_FORCE) for (i=0; i<nbelts;i++)
+        {
+            bwidth = conveyor_belt[i].width;
+            r = 0.7*bwidth;
+            tx = conveyor_belt[i].tx;
+            ty = conveyor_belt[i].ty;
+            bangle = -conveyor_belt[i].position/(bwidth);
+            blength = 2.0*conveyor_belt[i].length + DPI*conveyor_belt[i].width;
+            dx = r*cos(bangle);
+            dy = r*sin(bangle);
+            
+            x1 = conveyor_belt[i].x1;
+            y1 = conveyor_belt[i].y1;
+            draw_line(x1-dx, y1-dy, x1+dx, y1+dy);
+            draw_line(x1+dy, y1-dx, x1-dy, y1+dx);
+            draw_circle_precomp(x1, y1, r);
+
+            x2 = conveyor_belt[i].x2;
+            y2 = conveyor_belt[i].y2;
+            draw_line(x2-dx, y2-dy, x2+dx, y2+dy);
+            draw_line(x2+dy, y2-dx, x2-dy, y2+dx);
+            draw_circle_precomp(x2, y2, r);
+            
+            draw_line(x1-r*ty, y1+r*tx, x2-r*ty, y2+r*tx);
+            draw_line(x1+r*ty, y1-r*tx, x2+r*ty, y2-r*tx);
+            
+            bsegment = 10.0*blength;
+            bsegment = blength/(double)((int)bsegment);
+            
+            if (conveyor_belt[i].position > 0.0)
+                pos0 = conveyor_belt[i].position - bsegment*(double)((int)(conveyor_belt[i].position/bsegment));
+            else 
+            {
+                pos = -conveyor_belt[i].position;
+                pos0 = pos - bsegment*(double)((int)(pos/bsegment));
+                pos0 = bsegment - pos0;
+            }
+            
+            while (pos0 < conveyor_belt[i].length)
+            {
+                x = x1 + tx*pos0;
+                y = y1 + ty*pos0;
+                draw_line(x - r*ty, y + r*tx, x - bwidth*ty, y + bwidth*tx);
+                pos0 += bsegment;
+            }
+            while (pos0 < conveyor_belt[i].length + PI*bwidth)
+            {
+                pos = (pos0 - conveyor_belt[i].length)/bwidth;
+                angle = PID + conveyor_belt[i].angle - pos;
+                ca = cos(angle);
+                sa = sin(angle);
+                draw_line(x2 + r*ca, y2 + r*sa, x2 + bwidth*ca, y2 + bwidth*sa);
+                pos0 += bsegment;
+            }
+            while (pos0 < 2.0*conveyor_belt[i].length + PI*bwidth)
+            {
+                pos = pos0 - conveyor_belt[i].length - PI*bwidth;
+                x = x2 - tx*pos;
+                y = y2 - ty*pos;
+                draw_line(x + r*ty, y - r*tx, x + bwidth*ty, y - bwidth*tx);
+                pos0 += bsegment;
+            }
+            while (pos0 < 2.0*conveyor_belt[i].length + DPI*bwidth)
+            {
+                pos = (pos0 - 2.0*conveyor_belt[i].length - PI*bwidth)/bwidth;
+                angle = -PID + conveyor_belt[i].angle - pos;
+                ca = cos(angle);
+                sa = sin(angle);
+                draw_line(x1 + r*ca, y1 + r*sa, x1 + bwidth*ca, y1 + bwidth*sa);
+                pos0 += bsegment;
+            }
+            
         }
     }
 
@@ -7840,7 +8786,7 @@ void print_particles_speeds(t_particle particle[NMAXCIRCLES])
 double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], double xleft, double xright, double *pleft, double *pright, double pressure[N_PRESSURES], int wall, double krepel)
 {
     int i, k;
-    double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, f, fperp = 0.0, x, y, xtube, distance, dx, dy, width, ybin, angle, x1, x2, h, ytop, norm, dleft, dplus, dminus, tmp_pleft = 0.0, tmp_pright = 0.0, proj, pscal, pvect, pvmin, charge, d2;
+    double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, f, fperp = 0.0, x, y, xtube, distance, dx, dy, width, ybin, angle, x1, x2, h, ytop, norm, dleft, dplus, dminus, tmp_pleft = 0.0, tmp_pright = 0.0, proj, pscal, pvect, pvmin, charge, d2, speed;
     
     /* compute force from fixed circular obstacles */
     if (ADD_FIXED_OBSTACLES) for (i=0; i<nobstacles; i++)
@@ -7904,6 +8850,17 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                     segment[i].avrg_pressure += P_AVRG_FACTOR*segment[i].pressure;
 //                      printf("Segment %i: pressure = %.3lg\n", i, segment[i].avrg_pressure);
                 }
+                
+                if (ADD_CONVEYOR_FORCE)
+                {
+                    speed = particle[j].vx*segment[i].ny - particle[j].vy*segment[i].nx;
+                    f = KSPRING_BELT*(segment[i].conveyor_speed/particle[j].mass_inv - speed);
+                    particle[j].fx += f*segment[i].ny;
+                    particle[j].fy -= f*segment[i].nx;
+//                     printf("Belt force (%.5lg, %.5lg)\n", f*segment[i].ny, -f*segment[i].nx); 
+                }
+                
+                
             }
             if ((VICSEK_INT)&&(vabs(distance) < 1.5*r))
             {
@@ -8469,10 +9426,12 @@ void dissociate_molecule(int i, int j, t_particle particle[NMAXCIRCLES])
 }
 
 
-void compute_partner_force(int j, int n, double eq_distance, double f[2], double *torque, t_particle particle[NMAXCIRCLES])
+void compute_partner_force(int j, int n, double eq_distance, double eq_angle, double f[2], double *torque, t_particle particle[NMAXCIRCLES])
 /* compute force of partner particle n on particle j */
 {
     double dx, dy, r, ca, sa, force, sangle, torque2;
+    double x1, x2, y1, y2, rmax, alpha, cosa, rj, rn, phi;
+    int p, q;
     
     dx = particle[n].xc - particle[j].xc;
     dy = particle[n].yc - particle[j].yc;
@@ -8482,37 +9441,119 @@ void compute_partner_force(int j, int n, double eq_distance, double f[2], double
     if (dy > 0.5*(BCYMAX - BCYMIN)) dy -= (BCYMAX-BCYMIN);
     else if (dy < -0.5*(BCYMAX - BCYMIN)) dy += (BCYMAX-BCYMIN);
     
-    r = module2(dx, dy);
-    if (r < 1.0e-10) r = 1.0e-10;
-    if (r > 2.0*eq_distance) r = 2.0*eq_distance;
-//     if (r > 1.5*eq_distance) r = 1.5*eq_distance;
-    ca = dx/r;
-    sa = dy/r;
     
-    /* TODO: adjust max distance */
-    if (r < 1.5*eq_distance) force = KSPRING_PAIRS*(r - eq_distance);
-    else 
+    
+    if ((PAIR_PARTICLES)&&(PAIRING_TYPE == POLY_SEG_POLYGON))
     {
+        rmax = 1.0*particle[j].radius;
+        for (p=-1; p<=1; p+=2)
+            for (q=-1; q<=1; q+=2)
+            {
+                x1 = particle[n].xc + (double)p*particle[n].radius*cos(particle[n].angle);
+                y1 = particle[n].yc + (double)p*particle[n].radius*sin(particle[n].angle);
+                
+                x2 = particle[j].xc + (double)q*particle[n].radius*cos(particle[j].angle);
+                y2 = particle[j].yc + (double)q*particle[n].radius*sin(particle[j].angle);
+                
+                r = module2(x2-x1, y2-y1);
+                if ((r>0.0)&&(r < rmax))
+                {
+//                     f[0] += KSPRING_PAIRS*(x1-x2)/r;
+//                     f[1] += KSPRING_PAIRS*(y1-y2)/r;
+                    f[0] = 1.0e8*(x1-x2)/r;
+                    f[1] = 1.0e8*(y1-y2)/r;
+                }
+            }
+    }
+//     else
+    {
+        r = module2(dx, dy);
+        if (r < 1.0e-10) r = 1.0e-10;
+        if (r > 2.0*eq_distance) r = 2.0*eq_distance;
+//     if (r > 1.5*eq_distance) r = 1.5*eq_distance;
+        ca = dx/r;
+        sa = dy/r;
+    
+        /* TODO: adjust max distance */
+        if (r < 1.5*eq_distance) force = KSPRING_PAIRS*(r - eq_distance);
+        else 
+        {
 //         printf("Dissociating partners %i and %i because max distance exceeded\n", j, n);
-        force = 0.0;
+            force = 0.0;
 //         dissociate_particles_findp(j, n, particle);
 //         dissociate_molecule(j, n, particle);
-    }
+        }
     
-    f[0] = force*ca;
-    f[1] = force*sa;
+        f[0] = force*ca;
+        f[1] = force*sa;
+        
+        /* TEST */
+        f[0] -= particle[j].vx*DAMPING;
+        f[1] -= particle[j].vy*DAMPING;
+    }
     
     if (ROTATION)
     {
-        sangle = sin(SPIN_INTER_FREQUENCY*(particle[n].angle - particle[j].angle));
-        if (sangle > 0.0) *torque = KTORQUE_PAIRS*(1.0 + sangle);
-        else *torque = KTORQUE_PAIRS*(-1.0 + sangle);
-        
-        if (COMPUTE_PAIR_TORQUE)
+        *torque = 0.0;
+        if ((REACTION_DIFFUSION)&&(RD_REACTION == CHEM_POLYGON_AGGREGATION))
         {
-            torque2 = KTORQUE_PAIR_ANGLE*sangle;
-            f[0] -= torque2*sa;
-            f[1] += torque2*ca;
+//             r = module2(dx, dy);
+//             if (r < 2.0*MU)
+//             {
+//             if (NPOLY%2 == 0) 
+//                 sangle = sin((double)NPOLY*(particle[n].angle - particle[j].angle));
+//             else sangle = sin((double)NPOLY*(particle[n].angle - particle[j].angle) - PI);
+//                 sangle = sin((double)NPOLY*(particle[n].angle - particle[j].angle - eq_angle));
+//                 *torque += KTORQUE_PAIRS*sangle;
+            
+                /* stabilize relative angle */
+                q = particle[j].partner[0];
+                if ((particle[j].npartners == 1)&&(particle[q].npartners == 1))
+                {
+                    sangle = sin((double)NPOLY*(particle[n].angle - particle[j].angle - eq_angle));
+                    *torque += KTORQUE_PAIRS*sangle;
+                    phi = argument(dx, dy);
+                    sangle = sin((double)NPOLY*(phi - particle[j].angle) - PI);
+                    *torque += KTORQUE_PAIRS*sangle;
+                }
+                
+                /* TEST: add some damping to rotation */
+                *torque -= particle[j].omega*DAMPING_ROT;
+            
+//             sangle = sin((double)NPOLY*(phi - particle[j].angle) - PI);
+//             *torque += KTORQUE_PAIRS*sangle;
+//             }
+        }
+        else if ((PAIR_PARTICLES)&&(PAIRING_TYPE == POLY_SEG_POLYGON))
+        {
+            /* TODO */
+            sangle = sin(particle[n].angle - particle[j].angle - eq_angle);
+//             if (sangle > 0.0) *torque = KTORQUE_PAIRS*(1.0 + sangle);
+//             else *torque = KTORQUE_PAIRS*(-1.0 + sangle);
+            *torque = KTORQUE_PAIRS*sangle;
+            
+            
+//             *torque = 0.0;
+            
+//             if (COMPUTE_PAIR_TORQUE)
+//             {
+//                 torque2 = KTORQUE_PAIR_ANGLE*sangle;
+//                 f[0] -= torque2*sa;
+//                 f[1] += torque2*ca;
+//             }
+        }
+        else
+        {
+            sangle = sin(SPIN_INTER_FREQUENCY*(particle[n].angle - particle[j].angle));
+            if (sangle > 0.0) *torque = KTORQUE_PAIRS*(1.0 + sangle);
+            else *torque = KTORQUE_PAIRS*(-1.0 + sangle);
+        
+            if (COMPUTE_PAIR_TORQUE)
+            {
+                torque2 = KTORQUE_PAIR_ANGLE*sangle;
+                f[0] -= torque2*sa;
+                f[1] += torque2*ca;
+            }
         }
     }
 }
@@ -8521,7 +9562,7 @@ void compute_partner_force(int j, int n, double eq_distance, double f[2], double
 void compute_particle_force(int j, double krepel, t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY])
 /* compute force from other particles on particle j */
 {
-    int i0, j0, m0, k, l, m, q, close, n, test;
+    int i0, j0, m0, k, l, m, q, close, n, test, different_cluster = 1;
     double fx = 0.0, fy = 0.0, force[2], torque = 0.0, torque_ij, x, y;
     
     particle[j].neighb = 0;
@@ -8530,11 +9571,15 @@ void compute_particle_force(int j, double krepel, t_particle particle[NMAXCIRCLE
     for (k=0; k<particle[j].hash_nneighb; k++) 
     {
         n = particle[j].hashneighbour[k];
-        if (particle[n].active)
+        if (CLUSTER_PARTICLES)  /* test whether n is not in the same cluster */
+                different_cluster = (particle[n].cluster != particle[j].cluster);
+        else different_cluster = 1;
+        
+        if ((particle[n].active)&&(different_cluster))
         {
             if (PAIR_FORCE)
             {
-                /* test whether j is not a partner particle */
+                /* test whether n is not a partner particle */
                 test = 1;
                 for (l=0; l<particle[n].npartners; l++)
                     if (particle[n].partner[l] == j) test = 0;
@@ -8572,10 +9617,13 @@ void compute_particle_force(int j, double krepel, t_particle particle[NMAXCIRCLE
     if (PAIR_FORCE) for (l=0; l<particle[j].npartners; l++)
     {
         n = particle[j].partner[l];
-        compute_partner_force(j, n, particle[j].partner_eqd[l], force, &torque_ij, particle);
-        fx += force[0];
-        fy += force[1];
-        torque += torque_ij;
+        if ((!CLUSTER_PARTICLES)||(particle[n].cluster != particle[j].cluster))
+        {
+            compute_partner_force(j, n, particle[j].partner_eqd[l], particle[j].partner_eqa[l], force, &torque_ij, particle);
+            fx += force[0];
+            fy += force[1];
+            torque += torque_ij;
+        }
     }
                 
     particle[j].fx += fx;
@@ -8694,6 +9742,7 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
         particle[i].emean = 0.0;
         particle[i].dirmean = 0.0;
         particle[i].paired = 0;
+        particle[i].collision = 0;
 //         particle[i].added = 0;
 //         particle[i].coulomb = 1;
 
@@ -8822,6 +9871,7 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
         particle[i].added = 1;
         particle[i].reactive = 1;
         particle[i].paired = 0;
+        particle[i].collision = 0;
    }
     
     /* add particles at the bottom as seed */
@@ -10554,12 +11604,13 @@ int chem_multi_glue_molecule(int i, int type2, int maxpartners, int no_triangles
                 else
                 {
                     /* check if i and k belong to different molecules */
-                    different = 1;
-                    for (p1=0; p1<np; p1++) 
-                        if (k == jp[p1]) different = 0;
-                    for (q1=0; q1<nq; q1++) 
-                        if (i == jq[q1]) different = 0;
+//                     different = 1;
+//                     for (p1=0; p1<np; p1++) 
+//                         if (k == jp[p1]) different = 0;
+//                     for (q1=0; q1<nq; q1++) 
+//                         if (i == jq[q1]) different = 0;
                         /* TODO: replace by moli != molk ? */
+                    different = (moli != molk);
                     
                     if (different)
                     {
@@ -10718,6 +11769,847 @@ int chem_multi_glue_molecule(int i, int type2, int maxpartners, int no_triangles
                 }
             }
         }
+        p++;
+    }
+    return(ncollisions);
+}
+
+
+void translate_cluster(int j, t_cluster cluster[NMAXCIRCLES], t_particle particle[NMAXCIRCLES], double dx, double dy)
+/* translate a cluster and all partcles it contains */
+{
+    int k, p, np;
+        
+    np = cluster[j].nparticles;
+    
+    if (np == 1)
+    {
+        p = cluster[j].particle[0];
+        particle[p].xc += dx;
+        particle[p].yc += dy;
+        cluster[j].xg = particle[p].xc;
+        cluster[j].yg = particle[p].yc;
+    }
+    else 
+    {
+        for (k=0; k<np; k++)
+        {
+            p = cluster[j].particle[k];
+            particle[p].xc += dx;
+            particle[p].yc += dy;
+        }
+        cluster[j].xg += dx;
+        cluster[j].yg += dy;
+    }
+}
+
+void rotate_cluster(int j, t_cluster cluster[NMAXCIRCLES], t_particle particle[NMAXCIRCLES], double angle)
+/* translate a cluster and all partcles it contains */
+{
+    int k, p, np;
+    double ca, sa, x, y;
+        
+    np = cluster[j].nparticles;
+    
+    if (np == 1)
+    {
+        p = cluster[j].particle[0];
+        particle[p].angle += angle;
+        cluster[j].angle = particle[p].angle;
+    }
+    else 
+    {
+        ca = cos(angle);
+        sa = sin(angle);
+        for (k=0; k<np; k++)
+        {
+            p = cluster[j].particle[k];
+            particle[p].angle += angle;
+            x = particle[p].xc - cluster[j].xg;
+            y = particle[p].yc - cluster[j].yg;
+            particle[p].xc = cluster[j].xg + ca*x - sa*y;
+            particle[p].yc = cluster[j].yg + sa*x + ca*y;
+        }
+        cluster[j].angle += angle;
+    }
+}
+
+void rotate_cluster_around_particle(int j, int i, t_cluster cluster[NMAXCIRCLES], t_particle particle[NMAXCIRCLES], double angle)
+/* translate a cluster and all partcles it contains around center of particle i */
+{
+    int k, p, np;
+    double ca, sa, x, y;
+        
+    np = cluster[j].nparticles;
+    
+    if (np == 1)
+    {
+        p = cluster[j].particle[0];
+        particle[p].angle += angle;
+        cluster[j].angle = particle[p].angle;
+    }
+    else 
+    {
+        ca = cos(angle);
+        sa = sin(angle);
+        for (k=0; k<np; k++)
+        {
+            p = cluster[j].particle[k];
+            particle[p].angle += angle;
+            x = particle[p].xc - particle[i].xc;
+            y = particle[p].yc - particle[i].yc;
+            particle[p].xc = particle[i].xc + ca*x - sa*y;
+            particle[p].yc = particle[i].yc + sa*x + ca*y;
+        }
+        cluster[j].angle += angle;
+    }
+}
+
+void translate_and_rotate_cluster(int j, t_cluster cluster[NMAXCIRCLES], t_particle particle[NMAXCIRCLES], double dx, double dy, double angle)
+/* translate and rotate a cluster and all partcles it contains */
+{
+    int k, p, np;
+    double ca, sa, x, y;
+    
+    np = cluster[j].nparticles;
+    
+    if (np == 1)
+    {
+        p = cluster[j].particle[0];
+        particle[p].xc += dx;
+        particle[p].yc += dy;
+        particle[p].angle += angle;
+        cluster[j].xg = particle[p].xc;
+        cluster[j].yg = particle[p].yc;
+        cluster[j].angle = particle[p].angle;
+    }
+    else
+    {
+        ca = cos(angle);
+        sa = sin(angle);
+        for (k=0; k<np; k++)
+        {
+            p = cluster[j].particle[k];
+            x = particle[p].xc - cluster[j].xg;
+            y = particle[p].yc - cluster[j].yg;
+            particle[p].xc = cluster[j].xg + ca*x - sa*y + dx;
+            particle[p].yc = cluster[j].yg + sa*x + ca*y + dy;
+        }
+        cluster[j].xg += dx;
+        cluster[j].yg += dy;
+        cluster[j].angle += angle;
+    }
+}
+
+
+int merge_clusters(int i, int j, int pi, int pj, t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRCLES], int adjust_angles, short int flip)
+/* merge clusters i and j to form new cluster il */
+/* il is number of largest cluster aming i and j */
+/* pi and pj are the numbers of the contact particles */
+/* returns number of new (largest) cluster il */
+{
+    int p, q, q0, c0, is, il, ns, nl, ps, pl;
+    double mtot, dangle, d2, newangle;
+    static double alpha, alpha2;
+    static int first = 1, nmergers = 0;
+    
+    if (first)
+    {
+        alpha = PI/(double)NPOLY;
+        alpha2 = 2.0*alpha;
+        first = 0;
+    }
+    
+    if (i == j) return(i);
+    
+    nmergers++;
+    
+    /* find largest cluster */
+    if (cluster[i].nparticles >= cluster[j].nparticles)
+    {
+        il = i;
+        is = j;
+        pl = pi;
+        ps = pj;
+    }
+    else 
+    {
+        il = j;
+        is = i;
+        pl = pj;
+        ps = pi;
+    }
+    ns = cluster[is].nparticles;
+    nl = cluster[il].nparticles;
+    
+    if (ns + nl >= NMAXPARTINCLUSTER) 
+    {
+        printf("Warning: NMAXPARTINCLUSTER is too small\n");
+        printf("Try increasing to %i\n", cluster[i].nparticles + cluster[j].nparticles);
+        return(0);
+    }
+    
+    printf("Merging clusters %i and %i, having %i and %i particles\n", il, is, nl, ns);
+    fprintf(lj_log, "Merging clusters %i and %i, having %i and %i particles\n", il, is, nl, ns);
+    
+    fprintf(lj_log, "Large cluster %i:\n", il);
+    for (p=0; p<nl; p++) 
+    {
+        q = cluster[il].particle[p];
+        fprintf(lj_log, "Particle %i (%i), angle %.3lg, flip %i\n", p, q, particle[q].angle*180.0/PI, particle[q].flip); 
+    }
+    fprintf(lj_log, "Reacting particle %i\n\n", pl);
+    
+//     fprintf(lj_log, "Cluster %i:\n", is);
+//     for (p=0; p<ns; p++) 
+//     {
+//         q = cluster[is].particle[p];
+//         fprintf(lj_log, "Particle %i (%i), angle %.3lg, flip %i\n", p, q, particle[q].angle*180.0/PI, particle[q].flip); 
+//     }
+//     fprintf(lj_log, "Reacting particle %i\n", ps);
+    
+    cluster[is].active = 0;
+    
+    /* update list of particles */
+    cluster[il].nparticles = ns + nl;
+    c0 = particle[cluster[il].particle[0]].cluster_color;
+    for (p=0; p<ns; p++) 
+    {
+        q = cluster[is].particle[p];
+        cluster[il].particle[nl+p] = q;
+        particle[q].cluster = il;
+        particle[q].cluster_color = c0;
+        particle[q].collision = nmergers + 1;
+    }
+    
+    /* update cluster size for P_CLUSTER_SIZE color scheme */
+    for (p=0; p<ns+nl; p++) 
+    {
+        q = cluster[il].particle[p];
+        particle[q].cluster_size = ns + nl;    
+    }
+    
+    if ((NPOLY%2 == 1)&&(flip)) for (p=0; p<ns; p++)
+    {
+        q = cluster[il].particle[nl + p];
+        particle[q].flip = 1 - particle[q].flip;
+    }
+        
+    fprintf(lj_log, "Small cluster %i:\n", is);
+    for (p=0; p<ns; p++) 
+    {
+        q = cluster[is].particle[p];
+        fprintf(lj_log, "Particle %i (%i), angle %.3lg, flip %i\n", p, q, particle[q].angle*180.0/PI, particle[q].flip); 
+    }
+    fprintf(lj_log, "Reacting particle %i\n\n", ps);
+    
+    
+    /* adjust angles */
+    /* use rotate_cluster ? */
+    if (adjust_angles)
+    {
+        for (p=0; p<nl; p++)
+        {
+            q = cluster[il].particle[p];
+//             printf("p = %i, angle = %.5lg\n", p, particle[q].angle*180.0/PI); 
+            while (particle[q].angle >= alpha2) particle[q].angle -= alpha2; 
+            while (particle[q].angle < 0.0) particle[q].angle += alpha2; 
+        }
+        q = cluster[il].particle[0];
+        newangle =  particle[q].angle;
+        cluster[il].angle = newangle;
+//         if (NPOLY%2==1) newangle += alpha;
+        for (p=nl; p<ns+nl; p++) 
+        {
+            q = cluster[il].particle[p];
+            particle[q].angle = newangle;
+//             if ((NPOLY%2==1)&&(particle[q].flip != particle[ps].flip)) particle[q].angle += PI;
+        }
+//         if (NPOLY%2==1) for (p=nl; p<ns+nl; p++)
+//         {
+//             q = cluster[il].particle[p];
+//             if (particle[q].flip != particle[ps].flip) particle[q].angle += alpha;
+//         }
+        
+        if (NPOLY%2==1) for (p=0; p<ns+nl; p++)
+        {
+            q = cluster[il].particle[p];
+            if (particle[q].flip == particle[0].flip) particle[q].angle = newangle;
+            else particle[q].angle = newangle + alpha;
+        }
+    }
+    
+    /* total mass */
+    mtot = cluster[is].mass + cluster[il].mass;
+    
+    /* distance between centers of gravity squared */
+    d2 = (cluster[i].xg - cluster[j].xg)*(cluster[i].xg - cluster[j].xg);
+    d2 += (cluster[i].yg - cluster[j].yg)*(cluster[i].yg - cluster[j].yg);
+    
+    /* update center of gravity */
+    cluster[il].xg = (cluster[is].xg + cluster[il].xg)/mtot;
+    cluster[il].yg = (cluster[is].yg + cluster[il].yg)/mtot;
+    
+    /* update moment of intertia (using parallel axis thm) */
+    cluster[il].inertia_moment += cluster[is].inertia_moment;
+    cluster[il].inertia_moment += d2*cluster[il].mass*cluster[is].mass/mtot;
+    cluster[il].inertia_moment_inv = 1.0/cluster[il].inertia_moment;
+    
+    /* update total mass */
+    cluster[il].mass = mtot;
+    cluster[il].mass_inv = 1.0/mtot;
+    
+    
+    fprintf(lj_log, "Merged cluster %i:\n", is);
+    for (p=0; p<ns+nl; p++) 
+    {
+        q = cluster[il].particle[p];
+        fprintf(lj_log, "Particle %i (%i), angle %.3lg, flip %i\n", p, q, particle[q].angle*180.0/PI, particle[q].flip); 
+    }
+    fprintf(lj_log, "Reacting particle %i\n\n", ps);
+    
+//     short int active;           /* has value 1 if cluster is active */
+//     short int thermostat;       /* has value 1 if cluster is coupled to thermostat */
+//     double xg, yg;              /* center of gravity */
+//     double vx, vy;              /* velocity of center of gravity */
+//     double angle;               /* orientation of cluster */
+//     double omega;               /* angular velocity of cluster */
+//     double mass, mass_inv;      /* mass of cluster and its inverse */
+//     double inertia_moment, inertia_moment_inv;   /* moment of inertia */
+//     double fx, fy, torque;      /* force and torque */
+//     double energy, emean;       /* energy and averaged energy */
+//     double dirmean;             /* time-averaged direction */
+//     int nparticles;             /* number of particles in cluster */
+//     int particle[NMAXPARTINCLUSTER];    /* list of particles in cluster */    
+    return(il);
+}
+
+
+int chem_multi_glue_polygon(int i, int type2, int maxpartners, t_particle particle[NMAXCIRCLES], t_molecule molecule[NMAXCIRCLES], t_cluster cluster[NMAXCIRCLES], t_collision *collisions, int ncollisions, double reaction_prob, int mergeclusters)
+/* simplified version of chem_multi_glue_molecule without triangle and similar */
+/* conditions, but taking polygon geometry into account */
+{
+    int k, p, q, p1, q1, p2, np, nq, n, m, closeby = 0, reaction = 0, jp[NMAXPARTNERS], jq[NMAXPARTNERS], jtot[NMAXPARTNERS], r, kk, different, np2, moli, molk, mp, newpartner, pp, type1, poly_condition, nangle, norient;
+    double distance, angle, move_factor, xnew, ynew, vxnew, vynew, m1, m2, mr1, mr2, deltav, x, y, ri, rk, alpha, alpha2, ca, rel_angle, rorient, delta, rorient_new, anglei_new, deltax, deltay, x1, y1; 
+    
+    type1 = particle[i].type;
+    np = particle[i].npartners;
+    moli = particle[i].molecule;
+    if (np > maxpartners) return(ncollisions);
+    
+    m1 = 1.0/particle[i].mass_inv;
+    for (p=0; p<np; p++) 
+    {
+        jp[p] = particle[i].partner[p];
+        m1 += 1.0/particle[jp[p]].mass_inv;
+    }
+    alpha = PI/(double)NPOLY;
+    alpha2 = 2.0*alpha;
+    ca = cos(alpha);
+    ri = particle[i].radius*ca;
+    rk = particle[k].radius*ca;
+    
+    p = 0;
+    while ((p<particle[i].hash_nneighb)&&(!reaction))
+    {
+        k = particle[i].hashneighbour[p];
+        nq = particle[k].npartners;
+        molk = particle[k].molecule;
+        
+        if (np + nq > maxpartners) return(0); 
+        
+        if ((particle[k].active)&&(particle[k].type == type2)&&(nq <= maxpartners))
+        {
+            distance  = module2(particle[i].deltax[p], particle[i].deltay[p]);
+            rel_angle  = argument(particle[i].deltax[p], particle[i].deltay[p]);
+            poly_condition = (distance < REACTION_DIST*(ri+rk));
+            
+            rorient = particle[k].angle - particle[i].angle;
+            if (NPOLY%2 == 1) rorient -= alpha;
+            norient = (int)(rorient/alpha2 + 0.5);
+            delta = rorient - norient*alpha2;
+            poly_condition *= (vabs(delta) < DELTAMAX);
+            
+            if ((poly_condition)&&((double)rand()/RAND_MAX < reaction_prob))
+            {
+                /* find nearest orientation facing particle k */
+                rorient_new = norient*alpha2;
+                nangle = (int)((particle[i].angle - rel_angle)/alpha2);
+                anglei_new = rel_angle + (double)(2*nangle+1)*alpha;
+            
+                m2 = 1.0/particle[k].mass_inv;
+                for (q=0; q<nq; q++) 
+                {
+                    jq[q] = particle[k].partner[q];
+                    m2 += 1.0/particle[jq[q]].mass_inv;
+                }
+                
+                mr1 = m1/(m1 + m2);
+                mr2 = 1.0 - mr1;   
+                
+                if ((np == 0)&&(nq == 0))
+                {
+                    reaction = 1;
+                    printf("Merging molecule %i with particle %i\n", i, k);
+                
+                    distance = (ri+rk)*PAIR_DRATIO;
+//                     particle[i].angle = rel_angle - PI/(double)NPOLY;
+                    particle[i].angle = anglei_new;
+                    particle[k].angle = particle[i].angle + rorient_new;
+                    if (NPOLY%2 == 1) particle[k].angle += alpha;
+                    
+                    particle[k].xc = particle[i].xc + distance*cos(rel_angle);
+                    particle[k].yc = particle[i].yc + distance*sin(rel_angle);
+
+                    particle[i].npartners++;
+                    particle[i].partner[0] = k;
+                    particle[i].partner_eqd[0] = distance;  
+                    particle[i].partner_eqa[0] = rorient_new;
+                    if (NPOLY%2 == 1) particle[i].partner_eqa[0] += alpha;
+                    
+                    particle[k].npartners++;
+                    particle[k].partner[0] = i;
+                    particle[k].partner_eqd[0] = distance;
+                    particle[k].partner_eqa[0] = -rorient_new;
+                    if (NPOLY%2 == 1)  particle[k].partner_eqa[0] -= alpha;
+                    
+                    /* equalize speeds */
+                    vxnew = mr1*particle[i].vx + mr2*particle[k].vx;
+                    vynew = mr1*particle[i].vy + mr2*particle[k].vy;
+                    
+                    particle[i].vx = vxnew;
+                    particle[i].vy = vynew;
+                    particle[k].vx = vxnew;
+                    particle[k].vy = vynew;
+                    
+                    if (mergeclusters)
+                        merge_clusters(particle[i].cluster, particle[k].cluster, i, k, particle, cluster, 0, 0);
+                }
+                else if (np+nq+2 < NMAXPARTNERS)
+                {
+                    /* check if i and k belong to different molecules */
+                    different = 1;
+                    for (p1=0; p1<np; p1++) 
+                        if (k == jp[p1]) different = 0;
+                    for (q1=0; q1<nq; q1++) 
+                        if (i == jq[q1]) different = 0;
+                    
+                    if (different)
+                    {
+                        deltav = module2(particle[i].vx - particle[k].vx, particle[i].vy - particle[k].vy);
+//                         printf("Delta v is %.3lg\n", deltav);
+                    
+                        if (deltav < DELTAVMAX) 
+                        {
+                            reaction = 1;
+                            printf("Pairing clusters containing particles %i and %i\n", i, k);
+                            printf("np = %i, nq = %i\n", np, nq);
+                            fprintf(lj_log, "Pairing clusters containing particles %i and %i\n", i, k);
+                            fprintf(lj_log, "np = %i, nq = %i\n", np, nq);
+                        
+                            /* TODO: fix angles */
+                            
+                            distance = (ri+rk)*PAIR_DRATIO;
+                            particle[i].angle = anglei_new;
+                            for (p1=0; p1<np; p1++) particle[jp[p1]].angle = anglei_new;
+                            particle[k].angle = particle[i].angle + rorient_new;
+                            if (NPOLY%2 == 1) particle[k].angle += alpha;
+                            
+                            /* translate/rotate molecule containing particle k */
+                            deltax = -particle[k].xc + particle[i].xc + distance*cos(rel_angle);
+                            deltay = -particle[k].yc + particle[i].yc + distance*sin(rel_angle);
+                            particle[k].xc += deltax;
+                            particle[k].yc += deltay;
+                            for (q1=0; q1<nq; q1++)
+                            {
+                                particle[jq[q1]].xc += deltax;
+                                particle[jq[q1]].yc += deltay;
+                                particle[jq[q1]].angle = particle[i].angle + rorient_new;
+                                if (NPOLY%2 == 1) particle[jq[q1]].angle += alpha;
+                            }
+                            
+                            particle[i].npartners++;
+                            particle[i].partner[np] = k;
+                            particle[i].partner_eqd[np] = distance;  
+                            particle[i].partner_eqa[np] = rorient_new;
+                            if (NPOLY%2 == 1) particle[i].partner_eqa[np] += alpha;
+                            for (p1=0; p1<np; p1++) 
+                            {
+                                particle[jp[p1]].partner_eqa[p1] = rorient_new;
+                                if (NPOLY%2 == 1) particle[i].partner_eqa[np] += alpha;
+                            }
+                    
+                            particle[k].npartners++;
+                            particle[k].partner[nq] = i;
+                            particle[k].partner_eqd[nq] = distance;
+                            particle[k].partner_eqa[nq] = -rorient_new;
+                            if (NPOLY%2 == 1)  particle[k].partner_eqa[nq] -= alpha;
+
+                            
+                            /* equalize speeds */
+                            vxnew = mr1*particle[i].vx + mr2*particle[k].vx;
+                            vynew = mr1*particle[i].vy + mr2*particle[k].vy;
+                    
+                            particle[i].vx = vxnew;
+                            particle[i].vy = vynew;
+                            particle[k].vx = vxnew;
+                            particle[k].vy = vynew;
+                            
+                            /* TODO: fix angles */
+                            for (p1=0; p1<np; p1++) for (q1=0; q1<nq; q1++)
+                            {
+                                particle[jp[p1]].vx = vxnew;
+                                particle[jp[p1]].vy = vynew;
+                                particle[jq[q1]].vx = vxnew;
+                                particle[jq[q1]].vy = vynew;
+                            }
+                            
+                            if (mergeclusters)
+                                merge_clusters(particle[i].cluster, particle[k].cluster, i, k, particle, cluster, 0, 0);
+                        }
+                    }
+                }
+                    
+                if (reaction)
+                {
+                    collisions[ncollisions].x = particle[i].xc;
+                    collisions[ncollisions].y = particle[i].yc;
+                    collisions[ncollisions].time = COLLISION_TIME;
+                    collisions[ncollisions].color = 0.0;
+                    
+                    if (ncollisions < 2*NMAXCOLLISIONS - 1) ncollisions++;
+                    else printf("Too many collisions\n");
+                }
+            }
+        }
+        p++;
+    }
+    return(ncollisions);
+}
+
+
+void repair_cluster(int cl, t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRCLES], int nsteps, int kill_overlays)
+/* repair cluster by letting positions converge to equilibrium position */
+{
+    int t, j, k, p, q, np, nq, m;
+    double dist, eqdist, fx, fy, dx, dy, r, phi, newphi, newx, newy, eqdist2;
+    static double alpha, alpha2, ca, sa, kspring;
+    static int first = 1;
+    
+    if (first)
+    {
+        alpha = PI/(double)NPOLY;
+        alpha2 = 2.0*alpha; 
+        ca = cos(alpha);
+        sa = sin(alpha);
+        kspring = 5000.0;
+        first = 0;
+    }
+    
+    for (t=0; t<nsteps; t++)
+    {
+        for (p=0; p<cluster[cl].nparticles; p++)
+        {
+            q = cluster[cl].particle[p];
+            fx = 0.0;
+            fy = 0.0;
+            for (j=0; j<particle[q].hash_nneighb; j++)
+            {
+                k = particle[q].hashneighbour[j];
+                if (particle[k].cluster == cl)
+                {
+                    dx = particle[q].deltax[j];
+                    dy = particle[q].deltay[j];
+                    dist = module2(dx, dy);
+                    eqdist = (particle[k].radius + particle[q].radius)*ca;
+                    
+                    if (dist < 1.2*eqdist)
+                    {
+                        if ((NPOLY%2==0)||(particle[q].flip != particle[k].flip))
+                        {
+                            phi = argument(dx, dy); 
+//                         printf("phi = %.3lg, angle = %.3lg\t", phi*180.0/PI, particle[q].angle*180.0/PI);
+                        
+                            m = (int)(0.5 + (double)NPOLY + (phi - particle[q].angle + alpha)/alpha2) - NPOLY;
+                            newphi = particle[q].angle - alpha + (double)m*alpha2;
+//                         printf("m = %i, newphi = %.3lg\n", m, newphi*180.0/PI);
+                        
+                            newx = particle[k].xc - eqdist*cos(newphi);
+                            newy = particle[k].yc - eqdist*sin(newphi);
+                        
+//                         printf("(x,y) = (%.3lg, %.3lg) -> (%.3lg, %.3lg)\n", particle[q].xc, particle[q].yc, newx, newy); 
+                            dx = newx - particle[q].xc;
+                            dy = newy - particle[q].yc;
+                            r = module2(dx, dy);
+                        
+//                         printf("Particle %i distance to target = %.3lg\n", k, r); 
+//                         if ((t == nsteps-1)&&(q == 470)&&(k == 472)) fprintf(lj_log, "Particle %i relative distance to target %i = %.5lg\n", q, k, r/eqdist); 
+                        
+                            fx += r*dx;
+                            fy += r*dy;
+                        }
+                        else
+                        {
+                            eqdist2 = 1.0*(particle[k].radius + particle[q].radius)*sa;
+                            if (dist < eqdist2)
+                            {
+                                fx -= 0.1*(eqdist2 - dist)*dx/dist;
+                                fy -= 0.1*(eqdist2 - dist)*dy/dist;
+                            }
+                        }
+                    }
+                    
+                    if ((kill_overlays)&&(dist < REPAIR_MIN_DIST*eqdist))
+                    {
+                        nq = particle[q].npartners;
+                        np = particle[k].npartners;
+                        if (nq == 1) particle[q].active = 0;
+                        if (np == 1) particle[k].active = 0;
+//                         if (np > nq) particle[q].active = 0;
+//                         else particle[k].active = 0;
+                        
+                    }
+                }
+            }
+            particle[q].xc += kspring*fx*DT_PARTICLE;
+            particle[q].yc += kspring*fy*DT_PARTICLE;
+        }
+    }
+}
+
+
+int chem_multi_glue_polygon2(int i, int maxpartners, t_particle particle[NMAXCIRCLES], t_molecule molecule[NMAXCIRCLES], t_cluster cluster[NMAXCIRCLES], t_collision *collisions, int ncollisions, double reaction_prob, int mergeclusters, int singlecluster)
+/* simplified version of chem_multi_glue_molecule without triangle and similar */
+/* conditions, but taking polygon geometry into account */
+/* version 2, for CHEM_POLYGON_CLUSTER interaction */
+{
+    int k, p, q, p1, q1, p2, np, nq, n, m, closeby = 0, reaction = 0, jp[NMAXPARTNERS], jq[NMAXPARTNERS], jtot[NMAXPARTNERS], r, kk, different, np2, moli, molk, mp, newpartner, pp, type1, poly_condition, nangle, norient, cl1, cl2, cp, cq, newcluster, nmin, clmin, clmax, newreaction;
+    double distance, angle, move_factor, xnew, ynew, vxnew, vynew, m1, m2, mr1, mr2, deltav, x, y, ri, rk, alpha, alpha2, ca, rel_angle, rorient, delta, rorient_new, anglei_new, deltax, deltay, x1, y1, aratio, delta2, eqdistance, dx, dy, dalpha1, dalpha2, ssize1, ssize2; 
+    static short int first = 1;
+    static int scluster;
+    
+    if ((singlecluster)&&(first))
+    {
+        scluster = 0;
+        while (cluster[scluster].active == 0) scluster = rand()%ncircles;
+        cluster[scluster].selected = 1;
+        particle[scluster].collision = 1;
+        printf("Selected cluster %i as single cluster\n", scluster);
+        first = 0;
+    }
+    
+    type1 = particle[i].type;
+    np = particle[i].npartners;
+    if (np > maxpartners) return(ncollisions);
+    
+    cl1 = particle[i].cluster;
+    cp = cluster[cl1].nparticles;
+    m1 = cluster[cl1].mass;
+
+    alpha = PI/(double)NPOLY;
+    alpha2 = 2.0*alpha;
+    ca = cos(alpha);
+    ri = particle[i].radius*ca;
+    rk = particle[k].radius*ca;
+    
+    p = 0;
+    while ((p<particle[i].hash_nneighb)&&(!reaction))
+    {
+        k = particle[i].hashneighbour[p];
+        nq = particle[k].npartners;
+        cl2 = particle[k].cluster;
+        
+        if (cluster[cl1].nparticles < cluster[cl2].nparticles) 
+        {
+            nmin = np;
+            clmin = cluster[cl1].nparticles;
+            clmax = cluster[cl2].nparticles;
+        }
+        else 
+        {
+            nmin = nq;
+            clmin = cluster[cl2].nparticles;
+            clmax = cluster[cl1].nparticles;
+        }
+            
+//         if (np + nq + 2 > maxpartners) return(ncollisions); 
+        
+        if ((!reaction)&&(particle[k].active)&&(np+nq+1 < maxpartners)&&(cl2!=cl1)&&(nmin <= SMALL_NP_MAXSIZE)&&(clmin <= SMALL_CLUSTER_MAXSIZE))
+        {
+            cq = cluster[cl2].nparticles;
+//             poly_condition = (cl1!=cl2);
+            
+            /* test distance */
+            distance  = module2(particle[i].deltax[p], particle[i].deltay[p]);
+            rel_angle  = argument(particle[i].deltax[p], particle[i].deltay[p]);
+            poly_condition = (distance < REACTION_DIST*(ri+rk));
+            
+            /* test relative angle */
+            rorient = particle[k].angle - particle[i].angle;
+            if (NPOLY%2 == 1) rorient -= alpha;
+            
+            while (rorient > alpha) rorient -= alpha2;
+            while (rorient < -alpha) rorient += alpha2;
+            poly_condition *= (vabs(rorient) < DELTAMAX);
+            
+//             norient = (int)(rorient/alpha2 + 0.5 + 2.0*(double)NPOLY);
+//             delta = rorient - (double)(norient-2*NPOLY)*alpha2;
+//             poly_condition *= (vabs(delta) < DELTAMAX);
+            
+            /* test orientation */
+            aratio = 0.5*vabs(rel_angle)/alpha;
+            delta2 = aratio - (double)((int)aratio);
+            poly_condition *= (vabs(delta2 - 0.5) < 0.5*DELTAMAX*alpha);
+            
+            /* option singlecluster: only allow merger if one of the clusters is selected cluster */
+            if (singlecluster) poly_condition *= ((cluster[cl1].selected)||(cluster[cl2].selected)||(clmax <= NOTSELECTED_CLUSTER_MAXSIZE));
+            
+            newreaction = 0;
+            
+            if ((poly_condition)&&((double)rand()/RAND_MAX < reaction_prob))
+            {
+                /* find nearest orientation facing particle k */
+                rorient_new = norient*alpha2;
+                nangle = (int)((particle[i].angle - rel_angle)/alpha2);
+                anglei_new = rel_angle + (double)(2*nangle+1)*alpha;
+            
+                m2 = cluster[cl2].mass;
+                    
+                mr1 = m1/(m1 + m2);
+                mr2 = 1.0 - mr1;   
+                
+                if ((np == 0)&&(nq == 0))
+                {
+                    reaction = 1;
+                    newreaction = 1;
+                    printf("Merging molecule %i with particle %i\n", i, k);
+                
+                    eqdistance = ri + rk;
+                    particle[i].angle = anglei_new;
+                    particle[k].angle = particle[i].angle + rorient_new;
+                    if (NPOLY%2 == 1) particle[k].angle += alpha;
+                                        
+                    dx = 0.5*(distance - eqdistance)*cos(rel_angle);
+                    dy = 0.5*(distance - eqdistance)*sin(rel_angle);
+                    
+                    translate_cluster(cl1, cluster, particle, dx, dy);
+                    translate_cluster(cl2, cluster, particle, -dx, -dy);
+
+                    particle[i].npartners++;
+                    particle[i].partner[0] = k;
+                    
+                    particle[k].npartners++;
+                    particle[k].partner[0] = i;
+                    
+                    /* equalize speeds */
+                    vxnew = mr1*particle[i].vx + mr2*particle[k].vx;
+                    vynew = mr1*particle[i].vy + mr2*particle[k].vy;
+                    
+                    particle[i].vx = vxnew;
+                    particle[i].vy = vynew;
+                    particle[k].vx = vxnew;
+                    particle[k].vy = vynew;
+                    
+                    if (mergeclusters)
+                        newcluster = merge_clusters(particle[i].cluster, particle[k].cluster, i, k, particle, cluster, 0, (particle[i].flip == particle[k].flip));
+                }
+//                 else if ((np+nq+2 < NMAXPARTNERS)&&(vabs(delta) < 0.5*DELTAMAX))
+                else if ((np+nq+2 < NMAXPARTNERS)&&(cp+cq <= CLUSTER_MAXSIZE))
+                {
+                    deltav = module2(particle[i].vx - particle[k].vx, particle[i].vy - particle[k].vy);
+//                         printf("Delta v is %.3lg\n", deltav);
+                    
+                    if (deltav < DELTAVMAX) 
+                    {
+                        reaction = 1;
+                        newreaction = 1;
+                        printf("Pairing clusters containing particles %i and %i\n", i, k);
+                        printf("np = %i, nq = %i\n", np, nq);
+                        fprintf(lj_log, "Pairing clusters containing particles %i and %i\n", i, k);
+                        fprintf(lj_log, "np = %i, nq = %i\n", np, nq);
+                        
+                        eqdistance = ri + rk;
+                        
+                        dx = 0.5*(distance - eqdistance)*cos(rel_angle);
+                        dy = 0.5*(distance - eqdistance)*sin(rel_angle);
+                        dalpha1 = anglei_new - particle[i].angle;
+                        dalpha2 = anglei_new + rorient_new - particle[k].angle;
+                        if (NPOLY%2 == 1) dalpha2 += alpha;
+                        /* round to closest multiple of alpha2 */
+                        while (dalpha1 > 0.5*DELTAMAX) dalpha1 -= alpha2;
+                        while (dalpha1 < -0.5*DELTAMAX) dalpha1 += alpha2;
+                        while (dalpha2 > 0.5*DELTAMAX) dalpha2 -= alpha2;
+                        while (dalpha2 < -0.5*DELTAMAX) dalpha2 += alpha2;
+                        
+                        translate_cluster(cl1, cluster, particle, dx, dy);
+                        translate_cluster(cl2, cluster, particle, -dx, -dy);
+
+                        ssize1 = 0.02*sqrt((double)cluster[cl1].nparticles);
+                        ssize2 = 0.02*sqrt((double)cluster[cl2].nparticles);
+                        
+                        if (vabs(dalpha1) + ssize1 < 0.5*DELTAMAX)
+                            rotate_cluster_around_particle(cl1, i, cluster, particle, dalpha1);
+                        else printf("Did not rotate cluster of size %.3lg\n", ssize1);
+                        if (vabs(dalpha2) + ssize2 < 0.5*DELTAMAX)
+                            rotate_cluster_around_particle(cl2, k, cluster, particle, dalpha2);
+                        else printf("Did not rotate cluster of size %.3lg\n", ssize2);
+                            
+                        particle[i].npartners++;
+                        particle[i].partner[np] = k;
+                            
+                        particle[k].npartners++;
+                        particle[k].partner[nq] = i;
+                            
+                        /* equalize speeds */
+                        vxnew = mr1*particle[i].vx + mr2*particle[k].vx;
+                        vynew = mr1*particle[i].vy + mr2*particle[k].vy;
+                    
+                        for (p1=0; p1<cluster[cl1].nparticles; p1++)
+                        {
+                            q = cluster[cl1].particle[p1];
+                            particle[q].vx = vxnew;
+                            particle[q].vy = vynew;
+                        }
+                        for (p1=0; p1<cluster[cl2].nparticles; p1++)
+                        {
+                            q = cluster[cl2].particle[p1];
+                            particle[q].vx = vxnew;
+                            particle[q].vy = vynew;
+                        }
+                            
+                        if (mergeclusters)
+                        {
+                            newcluster = merge_clusters(particle[i].cluster, particle[k].cluster, i, k, particle, cluster, 1, (particle[i].flip == particle[k].flip));
+                        }
+                    }
+                }
+                
+                if ((newreaction)&&(singlecluster)&&((cluster[cl1].selected)||(cluster[cl2].selected)))
+                {
+                    scluster = newcluster;
+                    printf("[chem_multi_glue_polygon2] cluster 1 = %i, cluster 2 = %i, newcluster = %i\n", cl1, cl2, newcluster);
+                    cluster[cl1].selected = 1;
+                    cluster[cl2].selected = 1;
+//                     cluster[newcluster].selected = 1;
+                    printf("[chem_multi_glue_polygon2] Selected cluster: %i\n", scluster);
+                }
+                
+                if (reaction)
+                {
+                    collisions[ncollisions].x = particle[i].xc;
+                    collisions[ncollisions].y = particle[i].yc;
+                    collisions[ncollisions].time = COLLISION_TIME;
+                    collisions[ncollisions].color = 0.0;
+                    
+                    if (ncollisions < 2*NMAXCOLLISIONS - 1) ncollisions++;
+                    else printf("Too many collisions\n");
+                }
+            }
+        }
+//         else if ((nmin > SMALL_NP_MAXSIZE)||(clmin > SMALL_CLUSTER_MAXSIZE))
+//         {
+//             printf("No merger - Parameters: nmin = %i, clmin = %i\n", nmin, clmin);
+//         }
         p++;
     }
     return(ncollisions);
@@ -11466,10 +13358,11 @@ int check_dna_pairing(t_particle particle[NMAXCIRCLES], t_molecule molecule[NMAX
 }
 
 
-int update_types(t_particle particle[NMAXCIRCLES], t_molecule molecule[NMAXCIRCLES], t_collision *collisions, int ncollisions, int *particle_numbers, int time, double *delta_e)
+int update_types(t_particle particle[NMAXCIRCLES], t_molecule molecule[NMAXCIRCLES], t_cluster cluster[NMAXCIRCLES], t_collision *collisions, int ncollisions, int *particle_numbers, int time, double *delta_e)
 /* update the types in case of reaction-diffusion equation */
 {
     int i, j, k, n, n3, n4, p, type, atype, btype, oldncollisions, delta_n;
+    short int reacted;
     double distance, rnd, p1, p2, reac_dist;
     static double inv_masses[RD_TYPES+1], radii[RD_TYPES+1];
     static int first = 1, repair_counter = 0;
@@ -12231,6 +14124,81 @@ int update_types(t_particle particle[NMAXCIRCLES], t_molecule molecule[NMAXCIRCL
             printf("delta_n = %i\n", delta_n);
             return(ncollisions);
         }
+        case (CHEM_POLYGON_AGGREGATION):
+        {
+            for (i=0; i<ncircles; i++) if (particle[i].active)
+            {
+                if (particle[i].npartners < AGREGMAX) for (k=0; k<3; k++)
+                {
+                    ncollisions = chem_multi_glue_polygon(i, k, AGREGMAX, particle, molecule, cluster, collisions, ncollisions, REACTION_PROB, 0);
+                }
+                
+                /* decouple particles with several partners from thermostat */
+                if (particle[i].npartners >= AGREG_DECOUPLE) particle[i].thermostat = 0;
+            }
+            
+            /* update cluster color scheme */
+            if ((PLOT == P_CLUSTER)||(PLOT_B == P_CLUSTER))
+                update_cluster_color(particle);
+            
+            printf("%i collisions\n", ncollisions);
+            delta_n = ncollisions - oldncollisions; 
+            printf("delta_n = %i\n", delta_n);
+            return(ncollisions);
+        }
+        case (CHEM_POLYGON_CLUSTER):
+        {
+            for (i=0; i<ncircles; i++) if (particle[i].active)
+            {
+                if (particle[i].npartners < NPOLY) 
+                {
+                    ncollisions = chem_multi_glue_polygon2(i, NPOLY, particle, molecule, cluster, collisions, ncollisions, REACTION_PROB, 1, 0);
+                }
+                
+                /* decouple particles with several partners from thermostat */
+                if (particle[i].npartners >= AGREG_DECOUPLE) particle[i].thermostat = 0;
+            }
+            
+            /* repair clusters */
+            if (!REPAIR_CLUSTERS) for (i=0; i<ncircles; i++) 
+                if ((cluster[i].active)&&(cluster[i].nparticles >= 2))
+                    repair_cluster(i, particle, cluster, 1000, 0);
+                        
+            printf("%i collisions\n", ncollisions);
+            delta_n = ncollisions - oldncollisions; 
+            printf("delta_n = %i\n", delta_n);
+            return(ncollisions);
+        }case (CHEM_POLYGON_ONECLUSTER):
+        {
+            i = 0;
+            reacted = 0;
+            while ((i<ncircles)&&(!reacted)) 
+            {
+                if (particle[i].active)
+                {
+                    if (particle[i].npartners < NPOLY) 
+                    {
+                        oldncollisions = ncollisions;
+                        ncollisions = chem_multi_glue_polygon2(i, NPOLY, particle, molecule, cluster, collisions, ncollisions, REACTION_PROB, 1, 1);
+                        if (ncollisions > oldncollisions) reacted = 1;
+                    }
+                
+                    /* decouple particles with several partners from thermostat */
+                    if (particle[i].npartners >= AGREG_DECOUPLE) particle[i].thermostat = 0;
+                }
+                i++;
+            }
+            
+            /* repair clusters */
+            if (!REPAIR_CLUSTERS) for (i=0; i<ncircles; i++) 
+                if ((cluster[i].active)&&(cluster[i].nparticles >= 2))
+                    repair_cluster(i, particle, cluster, 1000, 1);
+                        
+            printf("%i collisions\n", ncollisions);
+            delta_n = ncollisions - oldncollisions; 
+            printf("delta_n = %i\n", delta_n);
+            return(ncollisions);
+        }
     }
 }
     
@@ -12615,19 +14583,110 @@ void reset_energy(t_particle particle[NMAXCIRCLES], double px[NMAXCIRCLES], doub
     
 }
 
-void draw_frame(int i, int plot, int bg_color, int ncollisions, int traj_position, int traj_length, 
+int init_cluster_config(t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRCLES])
+/* initialize the clusters for option CLUSTER_PARTICLES */
+/* returns number of active clusters */
+{
+    int i, j, tmp, nclusters = 0;
+    
+    for (i=0; i<ncircles; i++) /*if (particle[i].active)*/
+    {
+        nclusters++;
+        cluster[i].active = particle[i].active;
+        cluster[i].thermostat = 1;
+        cluster[i].selected = 0;
+        cluster[i].xg = particle[i].xc;
+        cluster[i].yg = particle[i].yc;
+        cluster[i].angle = particle[i].angle;
+        cluster[i].vx = particle[i].vx;
+        cluster[i].vy = particle[i].vy;
+        cluster[i].omega = particle[i].omega;
+        cluster[i].mass_inv = particle[i].mass_inv;
+        cluster[i].mass = 1.0/particle[i].mass_inv;
+        cluster[i].inertia_moment_inv = particle[i].inertia_moment_inv;
+        cluster[i].inertia_moment = 1.0/particle[i].inertia_moment_inv;
+        cluster[i].fx = particle[i].fx;
+        cluster[i].fy = particle[i].fy;
+        cluster[i].torque = particle[i].torque;
+        cluster[i].energy = particle[i].energy;
+        cluster[i].emean = particle[i].emean;
+        
+        cluster[i].nparticles = 1;
+        cluster[i].particle[0] = i;
+//         cluster[i].angle_ref = 0;
+        
+        particle[i].cluster = i;
+        particle[i].cluster_color = i;
+        particle[i].cluster_size = 1;
+        particle[i].flip = 0;
+    }
+    
+    /* randomize cluster number using Fisher-Yates algorithm */
+    for (i=0; i<ncircles-1; i++)
+    {
+        j = i + rand()%(ncircles-i);
+        tmp = particle[i].cluster_color;
+        particle[i].cluster_color = particle[j].cluster_color;
+        particle[j].cluster_color = tmp;
+    }
+//     for (i=0; i<ncircles; i++)
+//     {
+//         j = cluster[i].particle[0];
+//         particle[j].cluster = i;
+//     }
+//     
+//     for (i=0; i<ncircles; i++)
+//     {
+//         fprintf(lj_log, "Particle %i -> cluster %i -> particle %i\n", i, particle[i].cluster, cluster[particle[i].cluster].particle[0]);
+//     }
+    
+    return(nclusters);
+}
+
+
+
+void compute_cluster_force(t_cluster cluster[NMAXCIRCLES], t_particle particle[NMAXCIRCLES])
+/* compute force and torque on clusters from force and torque on their particles */
+{
+    int i, p, j;
+    double fx, fy, torque, energy;
+    
+    for (i=0; i<ncircles; i++) if (cluster[i].active)
+    {
+        fx = 0.0; 
+        fy = 0.0; 
+        torque = 0.0;
+        for (p=0; p<cluster[i].nparticles; p++)
+        {
+            j = cluster[i].particle[p];
+            fx += particle[j].fx;
+            fy += particle[j].fy;
+            torque += particle[j].torque;
+            torque += (particle[j].xc - cluster[i].xg)*particle[j].fy;
+            torque -= (particle[j].yc - cluster[i].yg)*particle[j].fx;
+        }
+        cluster[i].fx = fx;
+        cluster[i].fy = fy;
+        cluster[i].torque = torque;
+    }
+}
+
+void draw_frame(int i, int plot, int bg_color, int ncollisions, int traj_position, 
+                int traj_length, 
                 int wall, double pressure[N_PRESSURES], double pleft, double pright, 
                 int *particle_numbers, short int refresh, 
                 t_lj_parameters params, t_particle particle[NMAXCIRCLES], 
+                t_cluster cluster[NMAXCIRCLES], 
                 t_collision *collisions, t_hashgrid hashgrid[HASHX*HASHY], 
                 t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
                 t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], 
-                t_group_data *group_speeds, t_group_segments *segment_group)
+                t_group_data *group_speeds, t_group_segments *segment_group, 
+                t_belt *conveyor_belt)
 /* draw a movie frame */
 {
     if (TRACER_PARTICLE) draw_trajectory(trajectory, traj_position, traj_length);
-    draw_particles(particle, plot, params.beta, collisions, ncollisions, bg_color, hashgrid, params);
-    draw_container(params.xmincontainer, params.xmaxcontainer, obstacle, segment, wall);
+    draw_particles(particle, cluster, plot, params.beta, collisions, ncollisions, bg_color, hashgrid, params);
+    draw_container(params.xmincontainer, params.xmaxcontainer, obstacle, segment, conveyor_belt, wall);
     if (PRINT_PARAMETERS) print_parameters(params, PRINT_LEFT, pressure, refresh);
     if (PLOT_SPEEDS) draw_speed_plot(group_speeds, i);
     if (PLOT_TRAJECTORIES) draw_trajectory_plot(group_speeds, i);

@@ -71,6 +71,7 @@
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 340        /* number of points for Poisson C_RAND_POISSON arrangement */
+#define PDISC_FACTOR 3.25   /* controls density of Poisson disc process (default: 3.25) */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 0.85	    /* parameter controlling the dimensions of domain */
@@ -177,6 +178,8 @@
 #define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+#define VSHIFT_AMPLITUDE 0.0   /* additional shift for wave amplitude */
+#define VSCALE_AMPLITUDE 0.5   /* additional scaling factor for wave amplitude */
 #define E_SCALE 2500.0     /* scaling factor for energy representation */
 #define LOG_SCALE 1.0    /* scaling factor for energy log representation */
 #define LOG_SHIFT 0.0     /* shift of colors on log scale */
@@ -247,6 +250,7 @@
 #define POT_MAZE 7
 #define POTENTIAL 0
 #define MAZE_WIDTH 0.02     /* half width of maze walls */
+#define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
 #define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
 #define IOR 7               /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.5 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
@@ -283,6 +287,7 @@
 #define SHADE_2D 0       /* set to 1 to add pseudo-3d shading effect */ 
 #define SHADE_SCALE_2D 0.05  /* lower value increases sensitivity of shading */
 #define N_SOURCES 1                     /* number of sources, for option draw_sources */
+#define XYIN_INITIALISED (B_DOMAIN == D_IMAGE)
 double light[2] = {0.40824829, 0.816496581};   /* location of light source for SHADE_2D option*/
 /* end of constants only used by sub_wave and sub_maze */
 

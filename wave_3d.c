@@ -43,7 +43,7 @@
 #include <omp.h>
 #include <time.h>
 
-#define MOVIE 0         /* set to 1 to generate movie */
+#define MOVIE 1         /* set to 1 to generate movie */
 #define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
@@ -83,6 +83,7 @@
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 1000        /* number of points for Poisson C_RAND_POISSON arrangement */
+#define PDISC_FACTOR 3.25   /* controls density of Poisson disc process (default: 3.25) */
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 1.0	    /* parameter controlling the dimensions of domain */
@@ -97,6 +98,7 @@
 #define NGRIDX 30           /* number of grid point for grid of disks */
 #define NGRIDY 18           /* number of grid point for grid of disks */
 #define WALL_WIDTH 0.1      /* width of wall separating lenses */
+#define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
@@ -227,6 +229,7 @@
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define VSCALE_AMPLITUDE 2.0   /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSHIFT_AMPLITUDE 0.0   /* additional shift for wave amplitude */
 #define VSCALE_ENERGY 3.0      /* additional scaling factor for color scheme P_3D_ENERGY */
 #define PHASE_FACTOR 20.0      /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
@@ -287,6 +290,7 @@
 #define SHADE_2D 0       /* set to 1 to add pseudo-3d shading effect */ 
 #define SHADE_SCALE_2D 0.05  /* lower value increases sensitivity of shading */
 #define N_SOURCES 1                     /* number of sources, for option draw_sources */
+#define XYIN_INITIALISED (B_DOMAIN == D_IMAGE)
 /* end of constants only used by sub_wave and sub_maze */
 
 

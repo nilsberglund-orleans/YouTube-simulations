@@ -11,14 +11,16 @@
 #define D_CIRCLES 20    /* several circles */
 #define D_CIRCLES_IN_RECT 201   /* several circles in a rectangle */
 
-#define NMAXCIRCLES 100000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
+#define NMAXCIRCLES 200000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define MAXNEIGH 20         /* max number of neighbours kept in memory */
 #define NMAXOBSTACLES 1000  /* max number of obstacles */
 #define NMAXSEGMENTS 1000   /* max number of repelling segments */
 #define NMAXGROUPS 50       /* max number of groups of segments */
 #define NMAXCOLLISIONS 200000   /* max number of collisions */
 #define NMAXPARTNERS 30     /* max number of partners in molecule */
-#define NMAXPARTNERMOLECULES 10 /* max number of partners of a molecule */
+#define NMAXPARTNERMOLECULES 30 /* max number of partners of a molecule */
+#define NMAXPARTINCLUSTER 500   /* max number of particles in cluster */
+#define NMAXBELTS 10        /* max number of conveyor belts */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -76,6 +78,7 @@
 #define S_DAM_BRICKS 17     /* dam made of several bricks */
 #define S_HLINE_HOLE 18    /* horizontal line with a hole in the bottom */
 #define S_HLINE_HOLE_SPOKES 181    /* horizontal line with a hole in the bottom and extra spokes */
+#define S_HLINE_HOLE_SLOPED 182 /* slanted lines with a hole */
 #define S_EXT_CIRCLE_RECT 19    /* particles outside a circle and a rectangle */
 #define S_BIN_OPENING 20        /* bin containing particles opening at deactivation time */
 #define S_BIN_LARGE 201         /* larger bin */
@@ -88,6 +91,10 @@
 #define S_CYLINDER 27           /* walls at top and bottom, for cylindrical b.c. */
 #define S_TREE 28               /* Christmas tree(s) */
 #define S_CONE 29               /* cone */
+#define S_CONVEYOR_BELT 30      /* conveyor belt */
+#define S_TWO_CONVEYOR_BELTS 31 /* two angled conveyor belts */
+#define S_PERIODIC_CONVEYORS 32 /* one wrapping belt, and one short horizontal belt */
+#define S_TEST_CONVEYORS 321    /* test */
 
 /* particle interaction */
 
@@ -108,6 +115,10 @@
 #define I_COULOMB_IMAGINARY 14  /* Coulomb interaction with "imaginary charge" */
 #define I_DNA_CHARGED 15    /* Coulomb-type interaction between end points of DNA nucleotides */
 #define I_DNA_CHARGED_B 151    /* stronger Coulomb-type interaction between end points of DNA nucleotides */
+#define I_SEGMENT 16           /* harmonic interaction between segments */
+#define I_SEGMENT_CHARGED 161  /* harmonic interaction between segments and Coulomb interaction between ends*/
+#define I_POLYGON 17           /* harmonic interaction between regular polygons */
+#define I_POLYGON_ALIGN 171    /* harmonic interaction between polygons with an aligning torque */
 
 /* Boundary conditions */
 
@@ -208,6 +219,9 @@
 #define CHEM_DNA_BASE_SPLIT 254 /* aggregation/splitting of DNA molecules when base pairs don't match */
 #define CHEM_DNA_ENZYME 255 /* aggregation/splitting of DNA molecules in presence of enzymes */
 #define CHEM_DNA_ENZYME_REPAIR 256 /* aggregation/splitting of DNA molecules in presence of enzymes and additional repairing of bad connections */
+#define CHEM_POLYGON_AGGREGATION 26 /* aggregation of polygons */
+#define CHEM_POLYGON_CLUSTER 261    /* clustering of polygons into new clusters */
+#define CHEM_POLYGON_ONECLUSTER 262 /* clustering of polygons, with only one cluster allowed */
 
 /* Initial conditions for chemical reactions */
 
@@ -254,12 +268,16 @@
 #define P_NUMBER 12       /* colors depend on particle number */
 #define P_EMEAN 13        /* averaged kinetic energy (with exponential damping) */
 #define P_LOG_EMEAN 131   /* log of averaged kinetic energy (with exponential damping) */
+#define P_EMEAN_DENSITY 132 /* averaged kinetic energy divided by the cluster size */
 #define P_DIRECT_EMEAN 14 /* averaged version of P_DIRECT_ENERGY */
 #define P_NOPARTICLE 15   /* particles are not drawn (only the links between them) */
 #define P_NPARTNERS 16    /* number of partners */
 #define P_CHARGE 17       /* colors represent charge */
 #define P_MOL_ANGLE 18    /* orientation of molecule defined by partners */
 #define P_CLUSTER 19      /* colors depend on connected component */
+#define P_CLUSTER_SIZE 20 /* colors depend on size of connected component */
+#define P_CLUSTER_SELECTED 21   /* colors show which clusters are slected for growth */
+#define P_COLLISION 22    /* colors depend on number of collision/reaction */
 
 /* Rotation schedules */
 
@@ -275,6 +293,8 @@
 
 #define POLY_STAR 0     /* star-shaped graph (central molecule attracts outer ones) */
 #define POLY_ALL 1      /* all-to-all coupling */
+#define POLY_STAR_CHARGED 11     /* star-shaped graph with charged molecules */
+#define POLY_POLYGON 12 /* polygonal shape */
 #define POLY_WATER 2    /* star-shaped with a 120° separation between anions */
 #define POLY_SOAP 3     /* polymers with all-to-all coupling and polar end */
 #define POLY_SOAP_B 4   /* polymers with pairwise coupling and polar end */
@@ -287,6 +307,9 @@
 #define POLY_DNA_ALT 71     /* simplified model for DNA with different short ends */
 #define POLY_DNA_DOUBLE 72  /* simplified model for DNA with double ends for rigidity */
 #define POLY_DNA_FLEX 73    /* simplified model for DNA with less backbone rigidity (beta) */
+#define POLY_KITE 8         /* kite for kites and darts quasicrystal */
+#define POLY_DART 81        /* dart for kites and darts quasicrystal */
+#define POLY_SEG_POLYGON 9  /* polygon of segments */
 
 /* Background color schemes */
 
@@ -365,17 +388,41 @@ typedef struct
     int partner[NMAXPARTNERS];  /* partner particles for option PAIR_PARTICLES */
     short int npartners;        /* number of partner particles */
     double partner_eqd[NMAXPARTNERS];   /* equilibrium distances between partners */
+    double partner_eqa[NMAXPARTNERS];   /* equilibrium angle between partners */
     int p0, p1;                 /* numbers of two first partners (for P_MOL_ANGLE color scheme) */
 //     short int mol_angle;        /* for color scheme P_MOL_ANGLE */
     int cluster;                /* number of cluster */
+    int cluster_color;          /* color of cluster */
+    int cluster_size;           /* size of cluster */
     int molecule;               /* number of molecule */
     short int tested, cactive;  /* for cluster search */
     short int coulomb;          /* has value 1 if DNA-Coulomb interaction is attractive */
     short int added;            /* has value 1 if particle has been added */
     short int reactive;         /* has value 1 if particle can react */
     short int paired;           /* has value 1 if belongs to base-paired molecule */
+    short int flip;             /* keeps track of which particles in a cluster are flipped by PI */
     int partner_molecule;       /* number of partner molecule */
+    int collision;              /* number of collision */
 } t_particle;
+
+typedef struct
+{
+    short int active;           /* has value 1 if cluster is active */
+    short int thermostat;       /* has value 1 if cluster is coupled to thermostat */
+    short int selected;         /* has value 1 if cluster is selected to be able to grow */
+    double xg, yg;              /* center of gravity */
+    double vx, vy;              /* velocity of center of gravity */
+    double angle;               /* orientation of cluster */
+    double omega;               /* angular velocity of cluster */
+    double mass, mass_inv;      /* mass of cluster and its inverse */
+    double inertia_moment, inertia_moment_inv;   /* moment of inertia */
+    double fx, fy, torque;      /* force and torque */
+    double energy, emean;       /* energy and averaged energy */
+    double dirmean;             /* time-averaged direction */
+    int nparticles;             /* number of particles in cluster */
+    int particle[NMAXPARTINCLUSTER];    /* list of particles in cluster */
+//     int angle_ref;              /* reference particle for orientation */
+} t_cluster;
 
 typedef struct
 {
@@ -433,6 +480,8 @@ typedef struct
     double pressure;            /* pressure acting on segement */
     double avrg_pressure;       /* time-averaged pressure */
     short int inactivate;       /* set to 1 for segment to become inactive at time SEGMENT_DEACTIVATION_TIME */
+    short int conveyor;         /* set to 1 for segment to exert lateral force */
+    double conveyor_speed;      /* speed of conveyor belt */
 } t_segment;
 
 typedef struct
@@ -468,12 +517,23 @@ typedef struct
 typedef struct
 {
     int nparticles;             /* number of particles */
-    int particle[NPARTNERS+1];  /* list of particles */
+    int particle[2*NPARTNERS+1];  /* list of particles */
     int npartners;              /* number of partner molecules */
     int partner[NMAXPARTNERMOLECULES];  /* list of partner molecules */
     int connection_type[NMAXPARTNERMOLECULES];  /* types of particles in connection */
     short int added;            /* has value 1 if molecule has been added */
 } t_molecule;
+
+typedef struct 
+{
+    double x1, y1, x2, y2;      /* positions of extremities */
+    double width;               /* width of belt */
+    double speed;               /* speed of conveyor belt */
+    double position;            /* position of belt (needed for display of rotating parts) */
+    double length;              /* distance between (x1,x2) and (y1,y2) */
+    double angle;               /* angle of (x1,x2) - (y1,y2) */
+    double tx, ty;              /* coordinates of tangent vector */
+} t_belt;
 
 typedef struct
 {
@@ -496,6 +556,6 @@ typedef struct
 
 
 
-int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0;
+int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0, nbelts = 0;
 FILE *lj_log;
 

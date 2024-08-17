@@ -297,14 +297,22 @@ void init_wave_flat( double *phi[NX], double *psi[NX], short int * xy_in[NX])
     int i, j;
     double xy[2], dist2;
 
+    if (!XYIN_INITIALISED) 
+        for (i=0; i<NX; i++) 
+        {
+            if (i%100 == 0) printf("Table xy_in - Initialising column %i of %i\n", i, NX);
+            for (j=0; j<NY; j++)
+            {
+                ij_to_xy(i, j, xy);
+                xy_in[i][j] = xy_in_billiard(xy[0],xy[1]);
+            }
+        }
+
     for (i=0; i<NX; i++) {
-        if (i%100 == 0) printf("Wave and table xy_in - Initialising column %i of %i\n", i, NX);
+        if (i%100 == 0) printf("Wave - Initialising column %i of %i\n", i, NX);
         for (j=0; j<NY; j++)
         {
-            ij_to_xy(i, j, xy);
-	    xy_in[i][j] = xy_in_billiard(xy[0],xy[1]);
-//             if ((i%10 == 0)&&(j == NY/2)) printf ("xy_in[%i][%i] = %i\n", i, j, xy_in[i][j]);
-	    phi[i][j] = 0.0;
+            phi[i][j] = 0.0;
             psi[i][j] = 0.0;
         }
     }
@@ -1042,7 +1050,7 @@ void draw_wave_epalette(double *phi[NX], double *psi[NX], double *total_energy[N
 }
 
 
-double wave_value(int i, int j, double *phi[NX], double *psi[NX], double *total_energy[NX], double *average_energy[NX], double *total_flux, short int *xy_in[NX], double scale, int time, int plot, int palette, double rgb[3])
+double wave_value(int i, int j, double *phi[NX], double *psi[NX], double *total_energy[NX], double *average_energy[NX], double *total_flux, double *color_scale[NX], short int *xy_in[NX], double scale, int time, int plot, int palette, double rgb[3])
 /* compute value of wave and color */
 {
     int k;
@@ -1052,7 +1060,7 @@ double wave_value(int i, int j, double *phi[NX], double *psi[NX], double *total_
         case (P_AMPLITUDE):
         {
             value = phi[i][j];
-            color_scheme_palette(COLOR_SCHEME, palette, value, scale, time, rgb);
+            color_scheme_palette(COLOR_SCHEME, palette, VSHIFT_AMPLITUDE + VSCALE_AMPLITUDE*value, scale, time, rgb);
             break;
         }
         case (P_ENERGY):
@@ -1125,7 +1133,8 @@ double wave_value(int i, int j, double *phi[NX], double *psi[NX], double *total_
             if (arg < 0.0) arg += DPI;
             value = arg/DPI;
             color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
-            flux_factor = tanh(mod*E_SCALE);
+//             flux_factor = tanh(mod*E_SCALE);
+            flux_factor = tanh(mod*FLUX_SCALE);
             for (k=0; k<3; k++) rgb[k] *= flux_factor;
             break;
         }
@@ -1150,6 +1159,13 @@ double wave_value(int i, int j, double *phi[NX], double *psi[NX], double *total_
         }
     }
     
+    if (RESCALE_COLOR_IN_CENTER)
+    {
+        value *= color_scale[i][j];
+        for (k=0; k<3; k++) rgb[k] = 1.0 + color_scale[i][j]*(rgb[k]-1.0);
+//         for (k=0; k<3; k++) rgb[k] = 0.5 + color_scale[i][j]*(rgb[k]-0.5);
+    }
+    
     return(value);
 }
 
@@ -1160,7 +1176,7 @@ void draw_wave_profile_horizontal(double *values, int size, int average, int pnb
     int i, k, ij[2];
     double deltav, a, b, y;
     static int imin, imax, jmin, jmax, jmid, jval, d, first = 1;
-    static double vmin[2], vmax[2], deltaj, ymin, average_vals[NX];
+    static double vmin[2], vmax[2], deltaj, ymin, average_vals[2*NX];
     
     if (first)
     {
@@ -1184,7 +1200,7 @@ void draw_wave_profile_horizontal(double *values, int size, int average, int pnb
         d = (jmax - jmin)/10 + 1;
         deltaj = (double)(jmax - jmin - 2*d); 
         ymin = (double)(jmin + d);
-        for (i=0; i<NX; i++) average_vals[i] = 0.0;
+        for (i=0; i<2*NX; i++) average_vals[i] = 0.0;
         for (k=0; k<2; k++)
         {
             vmin[k] = 1.0e10;
@@ -1197,12 +1213,12 @@ void draw_wave_profile_horizontal(double *values, int size, int average, int pnb
     if ((average)&&(!fade))
     {
         for (i=imin; i<imax; i+=size)
-            average_vals[i] = 0.99*average_vals[i] + 0.01*values[i*NY+jval]*values[i*NY+jval];
+            average_vals[pnb*NX+i] = 0.99*average_vals[pnb*NX+i] + 0.01*values[i*NY+jval]*values[i*NY+jval];
         for (i=imin; i<imax; i+=size)
-            if (average_vals[i] > vmax[pnb]) vmax[pnb] = average_vals[i];
+            if (average_vals[pnb*NX+i] > vmax[pnb]) vmax[pnb] = average_vals[pnb*NX+i];
         
     }
-    else /*if (!fade)*/ 
+    else if (!fade) 
     {
         for (i=imin; i<imax; i+=size)
         {
@@ -1213,17 +1229,17 @@ void draw_wave_profile_horizontal(double *values, int size, int average, int pnb
         }
     }
 //     if (vmax <= vmin) vmax = vmin + 0.01;
-    if ((vmin[pnb] < 0.0)&&(vmax[pnb] > 0.0))
-    {
-        if (vmax[pnb] > -vmin[pnb]) vmin[pnb] = -vmax[pnb];
-        else if (vmax[pnb] < -vmin[pnb]) vmax[pnb] = -vmin[pnb];
-    }
+//     if ((vmin[pnb] < 0.0)&&(vmax[pnb] > 0.0))
+//     {
+//         if (vmax[pnb] > -vmin[pnb]) vmin[pnb] = -vmax[pnb];
+//         else if (vmax[pnb] < -vmin[pnb]) vmax[pnb] = -vmin[pnb];
+//     }
 //     printf("vmin = %.3lg, vmax = %.3lg\n", vmin, vmax);
     deltav = vmax[pnb]-vmin[pnb];
     if (deltav <= 0.0) deltav = 0.01;
     a = deltaj/deltav;
     b = ymin - a*vmin[pnb];
-
+    
     erase_area_ij(imin, jmin, imax, jmax);
     
     if (fade) glColor3f(fade_value, fade_value, fade_value);
@@ -1232,7 +1248,7 @@ void draw_wave_profile_horizontal(double *values, int size, int average, int pnb
     for (i=imin; i<imax; i+=size)
     {
 //         y = a*values[i*NY+jmin] + b;
-        if (average) y = a*average_vals[i] + b;
+        if (average) y = a*average_vals[pnb*NX+i] + b;
         else y = a*values[i*NY+jval] + b;
         if (y > ymin) glVertex2d((double)i, y);
     }
@@ -1250,6 +1266,8 @@ void draw_wave_profile_horizontal(double *values, int size, int average, int pnb
     {
         vmax[pnb] *= 0.99;
         vmin[pnb] *= 0.99;
+//         vmax[pnb] *= 0.95;
+//         vmin[pnb] *= 0.95;
     }
 }
 
@@ -1260,7 +1278,7 @@ void draw_wave_profile_vertical(double *values, int size, int average, int pnb, 
     int j, k, ij[2];
     double deltav, a, b, x;
     static int imin, imax, ival, jmin, jmax, imid, d, first = 1;
-    static double vmin[2], vmax[2], deltai, xmin, average_vals[NY];
+    static double vmin[2], vmax[2], deltai, xmin, average_vals[2*NY];
     
     if (first)
     {        
@@ -1276,7 +1294,7 @@ void draw_wave_profile_vertical(double *values, int size, int average, int pnb, 
         d = (imax - imin)/10 + 1;
         deltai = (double)(imax - imin - 2*d); 
         xmin = (double)(imin + d);
-        for (j=0; j<NY; j++) average_vals[j] = 0.0;
+        for (j=0; j<2*NY; j++) average_vals[j] = 0.0;
         for (k=0; k<2; k++)
         {
             vmin[k] = 1.0e10;
@@ -1298,9 +1316,9 @@ void draw_wave_profile_vertical(double *values, int size, int average, int pnb, 
     if ((average)&&(!fade))
     {
         for (j=jmin; j<jmax; j+=size)
-            average_vals[j] = 0.99*average_vals[j] + 0.01*values[ival*NY+j]*values[ival*NY+j];
+            average_vals[pnb*NY+j] = 0.99*average_vals[pnb*NY+j] + 0.01*values[ival*NY+j]*values[ival*NY+j];
         for (j=jmin; j<jmax; j+=size)
-            if (average_vals[j] > vmax[pnb]) vmax[pnb] = average_vals[j];
+            if (average_vals[pnb*NY+j] > vmax[pnb]) vmax[pnb] = average_vals[pnb*NY+j];
         
     }
     
@@ -1345,7 +1363,7 @@ void draw_wave_profile_vertical(double *values, int size, int average, int pnb, 
     glBegin(GL_LINE_STRIP);
     for (j=jmin; j<jmax; j+=size)
     {
-        if (average) x = a*average_vals[j] + b;
+        if (average) x = a*average_vals[pnb*NY+j] + b;
         else x = a*values[ival*NY+j] + b;
 //         else x = a*values[imin*NY+j] + b;
         if (x >= xmin) glVertex2d(x, (double)j);
@@ -1722,25 +1740,33 @@ void init_fade_table(double *tcc_table[NX], double *fade_table)
     
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
-            fade_table[i*NY + j] = tcc_table[i][j]/courant2;
+            fade_table[i*NY + j] = pow(tcc_table[i][j]/courant2, 0.25);
+//             fade_table[i*NY + j] = tcc_table[i][j]/courant2;
 }
 
-void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], double *average_energy[NX], double *fade_table, double *total_flux, short int *xy_in[NX], double scale, int time, int plot, int palette, int pnumber, int fade, double fade_value)
+void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], double *average_energy[NX], double *fade_table, double *total_flux, double *color_scale[NX], short int *xy_in[NX], double scale, int time, int plot, int palette, int pnumber, int fade, double fade_value)
 /* same as draw_wave_highres, but with color scheme option */
 {
     int i, j, k, iplus, iminus, jplus, jminus;
     double value, rgb[3], xy[2], x1, y1, x2, y2, velocity, energy, gradientx, gradienty, arg, mod, flux_factor, gx, gy, mgx, mgy, factor, norm, pscal, ca, vscale2;
 //     double vmin, vmax, deltav;
-    static double dtinverse = ((double)NX)/(COURANT*(XMAX-XMIN)), dx = (XMAX-XMIN)/((double)NX);
+    static double dtinverse = ((double)NX)/(COURANT*(XMAX-XMIN)), dx = (XMAX-XMIN)/((double)NX), col_ratio;
+    static int first = 1;
     double *values, *shade, *rgbvals;
         
+    if (first)
+    {
+        col_ratio = 1.0/1.01;
+        first = 0;
+    }
+    
     values = (double *)malloc(NX*NY*sizeof(double));
     rgbvals = (double *)malloc(3*NX*NY*sizeof(double));
     #pragma omp parallel for private(i,j,rgb)
     for (i=0; i<NX; i+=size)
         for (j=0; j<NY; j+=size)
         {
-            values[i*NY+j] = wave_value(i, j, phi, psi, total_energy, average_energy, total_flux, xy_in, scale, time, plot, palette, rgb);
+            values[i*NY+j] = wave_value(i, j, phi, psi, total_energy, average_energy, total_flux, color_scale, xy_in, scale, time, plot, palette, rgb);
             rgbvals[i*NY+j] = rgb[0];
             rgbvals[NX*NY+i*NY+j] = rgb[1];
             rgbvals[2*NX*NY+i*NY+j] = rgb[2];
@@ -1761,7 +1787,10 @@ void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], doubl
                 pscal = -gradientx*light[0] - gradienty*light[1] + SHADE_SCALE_2D;
                 ca = pscal/norm;
                 ca = (ca + 1.0)*0.4 + 0.2;
-                for (k=0; k<3; k++) rgbvals[k*NX*NY+i*NY+j] *= ca;
+                if (RESCALE_COLOR_IN_CENTER) for (k=0; k<3; k++) 
+                    rgbvals[k*NX*NY+i*NY+j] = 1.0 + (ca*rgbvals[k*NX*NY+i*NY+j] - 1.0)*(color_scale[i][j]+0.01)*col_ratio;
+//                     rgbvals[k*NX*NY+i*NY+j] = 0.5 + (ca*rgbvals[k*NX*NY+i*NY+j] - 0.5)*(color_scale[i][j]+0.01)*col_ratio;
+                else for (k=0; k<3; k++) rgbvals[k*NX*NY+i*NY+j] *= ca;
             }
         }
     }
@@ -1784,7 +1813,7 @@ void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], doubl
                 
                 if (FADE_IN_OBSTACLE)
                     for (k=0; k<3; k++) rgbvals[k*NX*NY+i*NY+j] *= fade_table[i*NY+j];
-                    
+                        
                 if (fade) for (k=0; k<3; k++) rgbvals[k*NX*NY+i*NY+j] *= fade_value;
                 glColor3f(rgbvals[i*NY+j], rgbvals[NX*NY+i*NY+j], rgbvals[2*NX*NY+i*NY+j]);
                 

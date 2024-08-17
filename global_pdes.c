@@ -103,6 +103,9 @@
 #define D_RITCHEY_CHRETIEN_SPHERICAL 75   /* Ritchey-Chrétien telescope with spherical mirrors */
 #define D_RITCHEY_CHRETIEN_HYPERBOLIC 751 /* Ritchey-Chrétien telescope with hyperbolic mirrors */
 #define D_GRADIENT_INDEX_LENS 76    /* gradient index lens (only affects draw_billiard) */ 
+#define D_IMAGE 77              /* Taken from image file */
+#define D_MAGNETRON 78          /* simplified magnetron */
+#define D_MAGNETRON_CATHODE 781 /* simplified magnetron with central cathode */
 
 /* for wave_sphere.c */
 
@@ -141,7 +144,9 @@
 
 #define C_RINGS 20          /* obstacles arranged in concentric rings */
 #define C_RINGS_T 201       /* obstacles arranged in concentric rings, triangular lattice */
-#define C_RINGS_SPIRAL 202  /* obstacles arranged on a "subflower" spiral, similar to C_GOLDEN_SPIRAL */
+#define C_RINGS_SPIRAL 202  /* obstacles arranged on a "sunflower" spiral, similar to C_GOLDEN_SPIRAL */
+#define C_RINGS_POISSONDISC 203 /* obstacles arranged in a Poisson disc pattern */
+#define C_RINGS_LOGSPIRAL 204   /* logarithmic spirals */
 
 #define C_HEX_BOTTOM 101    /* hex/triangular lattice in lower half */
 #define C_HEX_BOTTOM2 102   /* smaller hex/triangular lattice in lower half */

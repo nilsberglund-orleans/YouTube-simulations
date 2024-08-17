@@ -73,6 +73,7 @@
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
+#define PDISC_FACTOR 3.25   /* controls density of Poisson disc process (default: 3.25) */
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 #define RANDOM_POLY_ANGLE_B 0 /* set to 1 to randomize angle of polygons */
 
@@ -176,6 +177,8 @@
 #define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+#define VSHIFT_AMPLITUDE 0.0   /* additional shift for wave amplitude */
+#define VSCALE_AMPLITUDE 0.5   /* additional scaling factor for wave amplitude */
 #define E_SCALE 500.0     /* scaling factor for energy representation */
 #define LOG_SCALE 1.5     /* scaling factor for energy log representation */
 #define LOG_SHIFT 1.0     /* shift of colors on log scale */
@@ -229,6 +232,7 @@
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
 #define WALL_WIDTH 0.1      /* width of wall separating lenses */
+#define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
 #define OSCIL_YMAX 0.35      /* defines oscillation range */
 #define MESSAGE_LDASH 14         /* length of dash for Morse code message */
 #define MESSAGE_LDOT 8           /* length of dot for Morse code message */
@@ -251,6 +255,7 @@
 #define SHADE_2D 0       /* set to 1 to add pseudo-3d shading effect */ 
 #define SHADE_SCALE_2D 0.05  /* lower value increases sensitivity of shading */
 #define N_SOURCES 1                     /* number of sources, for option draw_sources */
+#define XYIN_INITIALISED (B_DOMAIN == D_IMAGE)
 double light[2] = {0.40824829, 0.816496581};   /* location of light source for SHADE_2D option*/
 /* end of constants only used by sub_wave and sub_maze */
 

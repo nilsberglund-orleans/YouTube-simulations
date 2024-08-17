@@ -685,12 +685,74 @@ double michelson_schedule(int i)
 }   
 
 
+int generate_poisson_discs(t_circle circles[NMAXCIRCLES], double xmin, double xmax, double ymin, double ymax, double dpoisson)
+/* generate a Poisson disc sample in a given rectangle */
+{
+    int i, j, k, n_p_active, ncandidates=5000, naccepted; 
+    double r, phi, x, y;
+    short int active_poisson[NMAXCIRCLES], far;
+    
+    printf("Generating Poisson disc sample\n");
+    /* generate first circle */
+    circles[0].xc = (xmax - xmin)*(double)rand()/RAND_MAX + xmin;
+    circles[0].yc = (ymax - ymin)*(double)rand()/RAND_MAX + ymin;
+    active_poisson[0] = 1;
+    n_p_active = 1;
+    ncircles = 1;
+            
+    while ((n_p_active > 0)&&(ncircles < NMAXCIRCLES))
+    {
+        /* randomly select an active circle */
+        i = rand()%(ncircles);
+        while (!active_poisson[i]) i = rand()%(ncircles);                 
+        /* generate new candidates */
+        naccepted = 0;
+        for (j=0; j<ncandidates; j++)
+        {
+            r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
+            phi = DPI*(double)rand()/RAND_MAX;
+            x = circles[i].xc + r*cos(phi);
+            y = circles[i].yc + r*sin(phi);
+            far = 1;
+            for (k=0; k<ncircles; k++) if ((k!=i))
+            {
+                /* new circle is far away from circle k */
+                far = far*((x - circles[k].xc)*(x - circles[k].xc) + (y - circles[k].yc)*(y - circles[k].yc) >= dpoisson*dpoisson);
+                /* new circle is in domain */
+                far = far*(x < xmax)*(x > xmin)*(y < ymax)*(y > ymin);
+            }
+            if (far)    /* accept new circle */
+            {
+                printf("New circle at (%.3f,%.3f) accepted\n", x, y);
+                circles[ncircles].xc = x;
+                circles[ncircles].yc = y;
+                circles[ncircles].radius = MU;
+                circles[ncircles].active = 1;
+                active_poisson[ncircles] = 1;
+                ncircles++;
+                n_p_active++;
+                naccepted++;
+            }
+        }
+        if (naccepted == 0)    /* inactivate circle i */ 
+        {
+            active_poisson[i] = 0;
+            n_p_active--;
+        }
+        printf("%i active circles\n", n_p_active);
+    }
+            
+    printf("Generated %i circles\n", ncircles);
+    return(ncircles);
+}
+
+
 int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern)
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
     int i, j, k, n, ncirc0, n_p_active, ncandidates=5000, naccepted; 
-    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, dpoisson = 3.25*MU, xx[4], yy[4], dr, dphi;
+    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, dpoisson = PDISC_FACTOR*MU, xx[4], yy[4], dr, dphi;
     short int active_poisson[NMAXCIRCLES], far;
     
     switch (circle_pattern) {
@@ -737,7 +799,8 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
                 {
                     n = NGRIDY*i + j;
                     circles[n].xc = ((double)(i-NGRIDX/2) + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
-                    circles[n].yc = YMIN + 0.5 + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+                    circles[n].yc = YMIN + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
+//                     circles[n].yc = YMIN + 0.5 + ((double)j + 0.5 + 0.5*((double)rand()/RAND_MAX - 0.5))*dy;
                     circles[n].radius = MU*sqrt(1.0 + 0.8*((double)rand()/RAND_MAX - 0.5));
                     circles[n].active = 1;
                 }
@@ -955,7 +1018,7 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
             r0 = 2.0*MU;
             r = r0 + MU;
             
-            for (i=0; i<1000; i++) 
+            for (i=0; i<2000; i++) 
             {
                 x = r*cos(phi);
                 y = r*sin(phi);
@@ -1003,13 +1066,13 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
         {
             ncircles = NGRIDX*NGRIDY;
             dphi = DPI/((double)NGRIDX);
-            dr = 0.5*LAMBDA/(double)NGRIDY;
+            dr = (1.0 - RADIUS_FACTOR)*LAMBDA/(double)NGRIDY;
             for (i = 0; i < NGRIDX; i++)
                 for (j = 0; j < NGRIDY; j++)
                 {
                     n = NGRIDY*i + j;
                     phi = (double)i*dphi;
-                    r = 0.5*LAMBDA + (double)j*dr;
+                    r = RADIUS_FACTOR*LAMBDA + (double)j*dr;
                     circles[n].xc = r*cos(phi);
                     circles[n].yc = r*sin(phi);
                     circles[n].radius = MU;
@@ -1023,14 +1086,14 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
         {
             ncircles = NGRIDX*NGRIDY;
             dphi = DPI/((double)NGRIDX);
-            dr = 0.5*LAMBDA/(double)NGRIDY;
+            dr = (1.0 - RADIUS_FACTOR)*LAMBDA/(double)NGRIDY;
             for (i = 0; i < NGRIDX; i++)
                 for (j = 0; j < NGRIDY; j++)
                 {
                     n = NGRIDY*i + j;
                     phi = (double)i*dphi;
                     phi += 0.5*(double)j*dphi;
-                    r = 0.5*LAMBDA + (double)j*dr;
+                    r = RADIUS_FACTOR*LAMBDA + (double)j*dr;
                     circles[n].xc = r*cos(phi);
                     circles[n].yc = r*sin(phi);
                     circles[n].radius = MU;
@@ -1048,10 +1111,11 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
             
             gamma = (sqrt(5.0) - 1.0)*PI;    /* golden mean times 2Pi */
             phi = 0.0;
-            r0 = 0.5*LAMBDA;
+//             r0 = 0.5*LAMBDA;
+            r0 = RADIUS_FACTOR*LAMBDA;
             r = r0 + MU;
             
-            for (i=0; i<1000; i++) 
+            for (i=0; i<(int)(1000.0/RADIUS_FACTOR); i++) 
             {
                 x = r*cos(phi);
                 y = r*sin(phi);
@@ -1073,6 +1137,40 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
                 /* inactivate circles outside the domain */
                 if ((circles[i].yc < YMAX + MU)&&(circles[i].yc > YMIN - MU)) circles[i].active = 1;
             }
+            break;
+        }
+        case (C_RINGS_POISSONDISC):
+        {
+            ncircles = generate_poisson_discs(circles, YMIN, YMAX, YMIN, YMAX, PDISC_FACTOR*MU);
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].radius = MU;
+                /* inactivate circles outside the domain */
+                r = module2(circles[i].xc, circles[i].yc);
+                if ((r < LAMBDA)&&(r > RADIUS_FACTOR*LAMBDA)) circles[i].active = 1;
+                else circles[i].active = 0;
+            }
+            break;
+        }
+        case (C_RINGS_LOGSPIRAL):
+        {
+            ncircles = NGRIDX*NGRIDY;
+            dr = (1.0 - RADIUS_FACTOR)*LAMBDA/(double)NGRIDY;
+            dphi = DPI/((double)NGRIDX);
+            for (i = 0; i < NGRIDX; i++)
+                for (j = 0; j < NGRIDY; j++)
+                {
+                    n = NGRIDY*i + j;
+                    r = RADIUS_FACTOR*LAMBDA + (double)j*dr;
+                    phi = (double)i*dphi;
+                    phi += log(r/(RADIUS_FACTOR*LAMBDA));
+                    circles[n].xc = r*cos(phi);
+                    circles[n].yc = r*sin(phi);
+                    circles[n].radius = MU;
+                    /* activate only circles that intersect the domain */
+                    if ((circles[n].yc < YMAX + MU)&&(circles[n].yc > YMIN - MU)) circles[n].active = 1;
+                    else circles[n].active = 0;
+                }
             break;
         }
         case (C_HEX_BOTTOM):
@@ -2545,6 +2643,60 @@ int rc_hyp(double x, double y)
     }
 }
 
+
+int init_xyin_from_image(short int * xy_in[NX])
+/* initialize table xy_in from an image file */
+{
+    FILE *image_file;
+    int nx, ny, maxrgb, i, j, k, ii, jj, nmaxpixels = 2000000, rgbtot, scan, rgbval;
+    int *rgb_values;
+    double scalex, scaley;
+
+    image_file = fopen("PHOTONSband.ppm", "r");
+    scan = fscanf(image_file,"%i %i\n", &nx, &ny);
+    scan = fscanf(image_file,"%i\n", &maxrgb);
+    
+    rgb_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+    
+    scalex = (double)nx/(double)NX;
+    scaley = (double)ny/(double)NY;
+    
+    if (nx*ny > nmaxpixels)
+    {
+        printf("Image too large, increase nmaxpixels in init_xyin_from_image()\n");
+        exit(0);
+    }
+    
+    /* read rgb values */
+    for (j=0; j<ny; j++)
+        for (i=0; i<nx; i++)
+            for (k=0; k<3; k++)
+                {
+                    scan = fscanf(image_file,"%i\n", &rgbval);
+                    rgb_values[3*(j*nx+i)+k] = rgbval;
+                }
+                
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ii = nx/2 + (int)((double)(i-NX/2)*scalex);
+            jj = ny/2 - (int)((double)(j-NY/2)*scalex);
+            if (ii > nx-1) ii = nx-1;
+            if (ii < 0) ii = 0;
+            if (jj > ny-1) jj = ny-1;
+            if (jj < 0) jj = 0;
+            k = 3*(jj*nx+ii);
+            rgbtot = rgb_values[k] + rgb_values[k+1] + rgb_values[k+2];
+            if (rgbtot > 3*maxrgb/2) xy_in[i][j] = 1;
+            else xy_in[i][j] = 0;
+        }   
+    
+    fclose(image_file);
+    free(rgb_values);
+    return(1);
+}
+
+
 int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_circle *circles)
 /* returns 1 if (x,y) represents a point in the billiard */
 {
@@ -3546,6 +3698,52 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
         {
             /* use IOR_GRADIENT_INDEX_LENS for index of refraction control */
             return(1);
+        }
+        case (D_IMAGE):
+        {
+            /* Not needed, uses option XYIN_INITIALISED */
+            return(1);
+        }
+        case (D_MAGNETRON):
+        {
+            r = module2(x,y);
+            if (r > LAMBDA) return(1);
+            if (r < 0.33*LAMBDA) return(1);
+            if ((vabs(y) < WALL_WIDTH)&&(x > -0.66*LAMBDA)) return(1);
+            if ((vabs(x) < WALL_WIDTH)&&(vabs(y) < 0.66*LAMBDA)) return(1);
+            if ((vabs(x-y) < WALL_WIDTH*sqrt(2.0))&&(r < 0.66*LAMBDA)) return(1);
+            if ((vabs(x+y) < WALL_WIDTH*sqrt(2.0))&&(r < 0.66*LAMBDA)) return(1);
+            for (k=0; k<8; k++)
+            {
+                x1 = 0.66*cos((double)k*0.5*PID);
+                y1 = 0.66*sin((double)k*0.5*PID);
+                r = module2(x - x1, y - y1);
+                if (r < MU) return(1);
+            }
+            
+            
+            return(0);
+        }
+        case (D_MAGNETRON_CATHODE):
+        {
+            r = module2(x,y);
+            if (r < WALL_WIDTH) return(0);
+            if (r > LAMBDA) return(1);
+            if (r < 0.33*LAMBDA) return(1);
+            if ((vabs(y) < WALL_WIDTH)&&(x > -0.66*LAMBDA)) return(1);
+            if ((vabs(x) < WALL_WIDTH)&&(vabs(y) < 0.66*LAMBDA)) return(1);
+            if ((vabs(x-y) < WALL_WIDTH*sqrt(2.0))&&(r < 0.66*LAMBDA)) return(1);
+            if ((vabs(x+y) < WALL_WIDTH*sqrt(2.0))&&(r < 0.66*LAMBDA)) return(1);
+            for (k=0; k<8; k++)
+            {
+                x1 = 0.66*cos((double)k*0.5*PID);
+                y1 = 0.66*sin((double)k*0.5*PID);
+                r = module2(x - x1, y - y1);
+                if (r < MU) return(1);
+            }
+            
+            
+            return(0);
         }
         case (D_MENGER):       
         {
@@ -5630,6 +5828,21 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             draw_line(WAVE_PROFILE_X, YMIN, WAVE_PROFILE_X, YMAX);
             break;
         }
+        case (D_IMAGE):
+        {
+            /* do nothing */
+            break;
+        }
+        case (D_MAGNETRON):
+        {
+            /* TODO */
+            break;
+        }
+        case (D_MAGNETRON_CATHODE):
+        {
+            /* TODO */
+            break;
+        }
         case (D_MENGER):
         {
             glLineWidth(3);
@@ -6337,7 +6550,7 @@ void draw_color_scheme_palette_fade(double x1, double y1, double x2, double y2, 
 void draw_circular_color_scheme_palette_fade(double x1, double y1, double radius, int plot, double min, double max, int palette, int fade, double fade_value)
 {
     int j, k;
-    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2], zscale = 0.9;
+    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2], zscale = 0.85;
     
 //     glBegin(GL_TRIANGLE_FAN);
     xy_to_pos(x1, y1, xy);
@@ -6463,6 +6676,13 @@ void draw_circular_color_scheme_palette_fade(double x1, double y1, double radius
             {
                 value = min + 1.0*dy*(double)(j);
                 color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_SWATER_DIRECTION_SPEED):
+            {
+                value = dy_phase*(double)(j) - 0.5*PHASE_SHIFT + 0.5;
+                if (value > 1.0) value -= 1.0;
+                color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
                 break;
             }
             default:

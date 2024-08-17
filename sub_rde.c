@@ -125,6 +125,64 @@ void init_random_smoothed(double mean, double amplitude, double *phi[NFIELDS], s
     printf("Fields initialised\n");
 }
 
+void add_random_onefield_smoothed(int field, double mean, double amplitude, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise field with gaussian at position (x,y) */
+{
+    int i, j, k, in;
+    double xy[2], dist2, module, phase, scale2, random, amp;    
+
+    printf("Initialising xy_in\n");
+    #pragma omp parallel for private(i,j)
+    for (i=0; i<NX; i++)
+    {
+        if (i%100 == 0) printf("Column %i of %i\n", i, NX);
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            if (SPHERE) xy_in[i*NY+j] = xy_in_billiard_sphere(i, j, wsphere);
+            else xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+//             xy_in[i*NY+j] = 1;
+        }
+    }
+    
+    printf("Initialising fields\n");
+//     for (k=0; k<NFIELDS; k++)
+    k = field;
+    {
+        for (i=0; i<NX; i++)
+        {
+            if (i%100 == 0) printf("Field %i of %i, column %i of %i\n", k, NFIELDS, i, NX);
+            for (j=DSMOOTH; j<NY-DSMOOTH; j++)
+            {
+                if (xy_in[i*NY+j]) 
+                    phi[k][i*NY+j] += mean + wsphere[i*NY+j].stheta*amplitude*(2.0*(double)rand()/RAND_MAX - 1.0);
+                else phi[k][i*NY+j] = 0.0;
+            }
+        }
+        random = amplitude*(2.0*(double)rand()/RAND_MAX - 1.0);
+        for (j=0; j<DSMOOTH; j++)
+        {
+            for (i=0; i<NX; i++) 
+            {
+                if (xy_in[i*NY+j]) 
+                    phi[k][i*NY+j] += mean + random*wsphere[i*NY+j].stheta;
+                else phi[k][i*NY+j] = 0.0;
+            }
+        }
+        for (j=NY-DSMOOTH; j<NY; j++)
+        {            
+            for (i=0; i<NX; i++) 
+            {
+                if (xy_in[i*NY+j]) 
+                    phi[k][i*NY+j] += mean + random*wsphere[i*NY+j].stheta;
+                else phi[k][i*NY+j] = 0.0;
+            }
+        }
+    }
+    
+    printf("Fields initialised\n");
+}
+
 void init_gaussian(double x, double y, double mean, double amplitude, double scalex, 
                    double *phi[NX], short int xy_in[NX*NY])
 /* initialise field with gaussian at position (x,y) */
@@ -1173,6 +1231,68 @@ double init_gaussian_wave(double x, double y, double amp, double radius, double 
         }
 }
 
+double init_gaussian_wave_sphere(double phi0, double theta0, double amp, double radius, double min, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], var, a, pscal, dist2, module;
+    
+    var = radius*radius; 
+    a = amp/(sqrt(DPI)*radius);
+    
+    printf("[init_gaussian_wave_sphere]: a = %.3lg, var = %.3lg\n", a, var); 
+    
+    for (i=0; i<NX; i++)
+    {
+        for (j=DPOLE; j<NY-DPOLE; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+            pscal += wsphere[i*NY+j].ctheta*cos(theta0);
+            dist2 = acos(pscal);
+            dist2 *= dist2;
+            module = amp*exp(-dist2/var);
+            
+//             printf("[init_gaussian_wave_sphere]: dist2 = %.3lg, module = %.3lg\n", dist2, module);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] = min + a*module*wsphere[i*NY+j].stheta;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+            else
+            {
+                phi[0][i*NY+j] = min;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+            
+//             printf("[init_gaussian_wave_sphere]:");
+//             for (j=0; j<NFIELDS; j++) printf("field[%i] = %.3lg\t", j, phi[j][0]);
+//             printf("\n");
+        }
+        for (j=0; j<DPOLE; j++)
+        {
+            phi[0][i*NY+j] = min;
+            phi[1][i*NY+j] = 0.0;
+            phi[2][i*NY+j] = 0.0;
+        }
+        for (j=NY-DPOLE; j<NY; j++)
+        {
+            phi[0][i*NY+j] = min;
+            phi[1][i*NY+j] = 0.0;
+            phi[2][i*NY+j] = 0.0;
+        }
+    }
+        
+    printf("[init_gaussian_wave_sphere]:");
+    for (j=0; j<NFIELDS; j++) printf("field[%i] = %.3lg\t", j, phi[j][0]);
+    printf("\n"); 
+}
+
 
 double init_linear_wave(double x, double vx, double amp, double radius, double min, double *phi[NFIELDS], short int xy_in[NX*NY])
 /* initialise gaussian wave height for shallow water equation */
@@ -1237,6 +1357,83 @@ double init_linear_blob(double x, double y, double vx, double vy, double amp, do
         }
 }
 
+double init_linear_blob_sphere(int add, double phi0, double theta0, double vx, double vy, double amp, double radiusx, double radiusy, double min, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], varx, vary, a, pscal, dist2, module;
+    
+    varx = radiusx*radiusx; 
+    vary = radiusy*radiusy; 
+    a = amp/(sqrt(DPI*radiusx*radiusy));
+    
+    printf("[init_gaussian_wave_sphere]: a = %.3lg, var = %.3lg\n", a, varx); 
+    
+    if (add) for (i=0; i<NX; i++)
+    {
+        for (j=DPOLE; j<NY-DPOLE; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+            pscal += wsphere[i*NY+j].ctheta*cos(theta0);
+            dist2 = acos(pscal);
+            dist2 *= dist2;
+            module = amp*exp(-dist2/varx);
+            
+//             printf("[init_gaussian_wave_sphere]: dist2 = %.3lg, module = %.3lg\n", dist2, module);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] += a*module*wsphere[i*NY+j].stheta;
+                phi[1][i*NY+j] += vx*module*wsphere[i*NY+j].stheta;
+                phi[2][i*NY+j] += vy*module*wsphere[i*NY+j].stheta;
+            }
+        }
+    }
+    else for (i=0; i<NX; i++)
+    {
+        for (j=DPOLE; j<NY-DPOLE; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+            pscal += wsphere[i*NY+j].ctheta*cos(theta0);
+            dist2 = acos(pscal);
+            dist2 *= dist2;
+            module = amp*exp(-dist2/varx);
+            
+//             printf("[init_gaussian_wave_sphere]: dist2 = %.3lg, module = %.3lg\n", dist2, module);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] = min + a*module*wsphere[i*NY+j].stheta;
+                phi[1][i*NY+j] = vx*module*wsphere[i*NY+j].stheta;
+                phi[2][i*NY+j] = vy*module*wsphere[i*NY+j].stheta;
+            }
+            else
+            {
+                phi[0][i*NY+j] = min;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+        for (j=0; j<DPOLE; j++)
+        {
+            phi[0][i*NY+j] = min;
+            phi[1][i*NY+j] = 0.0;
+            phi[2][i*NY+j] = 0.0;
+        }
+        for (j=NY-DPOLE; j<NY; j++)
+        {
+            phi[0][i*NY+j] = min;
+            phi[1][i*NY+j] = 0.0;
+            phi[2][i*NY+j] = 0.0;
+        }
+    }
+}
 
 double init_circular_vibration(double x, double y, double v, double radius, double amp, double var, double omega, double min, double *phi[NFIELDS], short int xy_in[NX*NY])
 /* initialise gaussian wave height for shallow water equation */
@@ -1348,6 +1545,76 @@ double add_gaussian_wave(double x, double y, double amp, double radius, double m
             }
             
         }
+}
+
+double init_swater_laminar_flow_sphere(int add, double vx, double amp, int nx, int ny, double deltavy, double min, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], ct, snt, module;
+    
+//     printf("[init_gaussian_wave_sphere]: a = %.3lg, var = %.3lg\n", a, varx); 
+    
+    if (add) for (i=0; i<NX; i++)
+    {
+        for (j=DPOLE; j<NY-DPOLE; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            snt = 0.5*sin((double)ny*wsphere[i*NY+j].theta);
+            ct = wsphere[i*NY+j].ctheta;
+            module = snt*exp(-ct*ct);
+//             st = wsphere[i*NY+j].stheta;    
+//             module = st*ct*exp(-ct*ct);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] += 0.0;
+                phi[1][i*NY+j] += vx*amp*module;
+                phi[2][i*NY+j] += deltavy*module*cos((double)nx*wsphere[i*NY+j].phi);
+            }
+        }
+    }
+    else for (i=0; i<NX; i++)
+    {
+        for (j=DPOLE; j<NY-DPOLE; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            snt = 0.5*sin((double)ny*wsphere[i*NY+j].theta);
+            ct = wsphere[i*NY+j].ctheta;
+            module = snt*exp(-ct*ct);
+//             st = wsphere[i*NY+j].stheta;
+//             module = st*ct*exp(-ct*ct);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] = min;
+                phi[1][i*NY+j] = vx*amp*module;
+                phi[2][i*NY+j] = deltavy*module*cos((double)nx*wsphere[i*NY+j].phi);
+            }
+            else
+            {
+                phi[0][i*NY+j] = min;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+        for (j=0; j<DPOLE; j++)
+        {
+            phi[0][i*NY+j] = min;
+            phi[1][i*NY+j] = 0.0;
+            phi[2][i*NY+j] = 0.0;
+        }
+        for (j=NY-DPOLE; j<NY; j++)
+        {
+            phi[0][i*NY+j] = min;
+            phi[1][i*NY+j] = 0.0;
+            phi[2][i*NY+j] = 0.0;
+        }
+    }
 }
 
 double distance_to_segment(double x, double y, double x1, double y1, double x2, double y2)
@@ -1637,7 +1904,38 @@ void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_recta
         }
         case (D_SPHERE_EARTH):
         {
-            /* do nothing? */
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    /* set dummy values */
+                    height = wsphere[i*NY+j+1].altitude;
+                    if (height == 0.0) bc_field[i*NY+j] = 1.0;
+                    else 
+                    {   
+                        f = tanh(BC_STIFFNESS*height);
+                        bc_field[i*NY+j] = 1.0 - f;
+                    }
+                 }
+            break;
+        }
+        case (D_SPHERE_MARS):
+        {
+            for (i=0; i<NX; i++)
+                for (j=0; j<NY; j++)
+                {
+                    /* set dummy values */
+                    height = wsphere[i*NY+j+1].altitude;
+                    if (height == 0.0) bc_field[i*NY+j] = 1.0;
+                    else 
+                    {   
+                        f = tanh(BC_STIFFNESS*height);
+                        bc_field[i*NY+j] = 1.0 - f;
+                    }
+                 }
+            break;
+        }
+        case (D_SPHERE_VENUS):
+        {
             for (i=0; i<NX; i++)
                 for (j=0; j<NY; j++)
                 {
@@ -2802,7 +3100,7 @@ void compute_gradient_polar(t_rde rde[NX*NY], double factor)
         for (j=0; j<NY; j++)
         {
             rde[i*NY+j].field_norm = factor*module2(rde[i*NY+j].nablax, rde[i*NY+j].nablay);
-            angle = argument(rde[i*NY+j].nablax, rde[i*NY+j].nablay) + PI*COLOR_PHASE_SHIFT;
+            angle = argument(rde[i*NY+j].nablax, rde[i*NY+j].nablay) + PI*PHASE_SHIFT;
             if (angle < 0.0) angle += DPI;
             if (angle >= DPI) angle -= DPI;
             rde[i*NY+j].field_arg = angle;
@@ -2832,7 +3130,7 @@ void compute_field_argument(double *phi[NFIELDS], t_rde rde[NX*NY])
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
-            arg = argument(phi[0][i*NY+j], phi[1][i*NY+j]) + COLOR_PHASE_SHIFT*PI;
+            arg = argument(phi[0][i*NY+j], phi[1][i*NY+j]) + PHASE_SHIFT*PI;
             while (arg < 0.0) arg += DPI;
             while (arg >= DPI) arg -= DPI;
             rde[i*NY+j].field_arg = arg;
@@ -2953,6 +3251,7 @@ void adjust_height(double *phi[NFIELDS], t_rde rde[NX*NY])
         {
             value = VSCALE_WATER_HEIGHT*(phi[0][i*NY+j] + ADD_HEIGHT_CONSTANT);
             rde[i*NY+j].height = value;
+//             printf("[adjust_height] value = %.3lg\n", value);
         }
 }
 
@@ -2961,6 +3260,14 @@ void compute_direction(double *phi[NFIELDS], t_rde rde[NX*NY])
 {
     int i, j; 
     double value;
+//     static double phaseshift;
+//     static int first = 1;
+//     
+//     if (first)
+//     {
+//         phaseshift = PHASE_SHIFT*PID/90.0;
+//         first = 0;
+//     }
     
     #pragma omp parallel for private(i,j,value)
     for (i=0; i<NX; i++)
@@ -3934,7 +4241,7 @@ void compute_probabilities(t_rde rde[NX*NY], short int xy_in[NX*NY], double prob
 //     for (i=0; i<NX; i++)
 //         for (j=0; j<NY; j++)
 //         {
-//             angle = argument(phi_x[i*NY+j],phi_y[i*NY+j]) + PI*COLOR_PHASE_SHIFT;
+//             angle = argument(phi_x[i*NY+j],phi_y[i*NY+j]) + PI*PHASE_SHIFT;
 //             if (angle < 0.0) angle += DPI;
 //             if (angle >= DPI) angle -= DPI;
 //             phi_arg[i*NY+j] = 360.0*angle/DPI;
@@ -4852,7 +5159,7 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
         case (Z_POLAR): 
         {
 //             hsl_to_rgb_palette(360.0*value/DPI, 0.9, 0.5, rgb, palette);
-            value += COLOR_PHASE_SHIFT*PI;
+            value += PHASE_SHIFT*PI;
             if (value > DPI) value -= DPI;
             color_scheme_palette(C_ONEDIM_LINEAR, palette, value/DPI, 1.0, 1, rgb);
             break;
@@ -5011,7 +5318,7 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
         case (Z_SWATER_DIRECTION_SPEED): 
         {
             value *= 360.0/DPI;
-            value += 180.0*COLOR_PHASE_SHIFT;
+            value += 180.0*PHASE_SHIFT;
             if (value > 360.0) value -= 360.0; 
             hsl_to_rgb_palette(value, 0.9, 0.5, rgb, palette);
             break;
@@ -5163,6 +5470,7 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
 {
     int i, j;
     
+//     printf("[compute_rde_fields] zplot = %i\n", zplot); 
     switch (RDE_EQUATION) {
         case (E_RPS):
         {
@@ -5233,11 +5541,13 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
         }
         case (E_SHALLOW_WATER):
         {
+//             printf("[compute_rde_fields]\n"); 
             if (zplot == Z_SWATER_HEIGHT) adjust_height(phi, rde);
             if ((zplot == Z_SWATER_SPEED)||(cplot == Z_SWATER_SPEED)||(zplot == Z_SWATER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED))
                 compute_speed(phi, rde, wsphere);
             if ((zplot == Z_SWATER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED))
                 compute_direction(phi, rde);
+            break;
         }
         default : break;
     }
@@ -5605,6 +5915,7 @@ void init_cfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int cplot, t_
         {
             #pragma omp parallel for private(i,j)
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &phi[0][i*NY+j];
+//             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].height;
             break;
         }
         case (Z_SWATER_SPEED):
@@ -5727,7 +6038,8 @@ void draw_wave_sphere_rde_ij(int i, int iplus, int j, int jplus, int jcolor, int
     if (NON_DIRICHLET_BC) 
         draw_bc = (xy_in[i*NY+j])&&(xy_in[iplus*NY+j])&&(xy_in[i*NY+jplus])&&(xy_in[iplus*NY+jplus]);
     
-    draw = wsphere[i*NY+j].indomain;
+//     draw = wsphere[i*NY+j].indomain;
+    draw = 1;
     for (p=0; p<HRES; p++)
         for (q=0; q<HRES; q++)
             draw_hr[p*HRES+q] = wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain;
@@ -5762,7 +6074,9 @@ void draw_wave_sphere_rde_ij(int i, int iplus, int j, int jplus, int jcolor, int
         {
             glBegin(GL_TRIANGLE_FAN);
             glColor3f(rgb[0], rgb[1], rgb[2]);
+//             printf("[draw_wave_sphere_rde_ij] draw = %i, zfield = %.3lg\n", draw, *rde[i*NY+j].p_zfield[movie]);
             drawij = ij_to_sphere(i, j, *rde[i*NY+j].p_zfield[movie], wsphere, xyz, draw);
+            
             if (drawij)
                 draw_vertex_sphere(xyz);
             if (ij_to_sphere(iplus, j, *rde[iplus*NY+j].p_zfield[movie], wsphere, xyz, draw))
@@ -5871,7 +6185,7 @@ void draw_arrow(double z, int fade, double fade_value)
 
 void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], double potential[NX*NY], int zplot, int cplot, int palette, int fade, double fade_value, int refresh)
 {
-    int i, j, imax, imin, jmax, imid, jmid;
+    int i, j, imax, imin, jmin, jmax, imid, jmid;
     double observer_angle, angle2, observer_latitude, xyz[3];
     
     blank();
@@ -5897,7 +6211,8 @@ void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX
     if (imin >= NX-1) imin = NX-2;
     if (imax >= NX-1) imax = NX-2;
     
-    jmax = NY-3;
+    jmax = NY-POLE_NODRAW;
+    jmin = POLE_NODRAW;
 //     jmax = NY - 50;
     jmid = (int)((double)NY*(observer_latitude + PID)/PI);
     imid = (imin + imax)/2;
@@ -5910,12 +6225,12 @@ void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX
         {
             for (i=imax; i>imid; i--)
             {
-                for (j=0; j<=jmax; j++)
+                for (j=jmin; j<=jmax; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             for (i=imid; i>imin; i--)
             {
-                for (j=0; j<=jmid; j++)
+                for (j=jmin; j<=jmid; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=jmax; j>=jmid; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
@@ -5923,16 +6238,16 @@ void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX
             
             for (i=imax+1; i<NX-1; i++)
             {
-                for (j=0; j<=jmax; j++)
+                for (j=jmin; j<=jmax; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
         
-            for (j=0; j<=jmax; j++)
+            for (j=jmin; j<=jmax; j++)
                 draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
         
             for (i=0; i<=imin; i++)
             {
-                for (j=0; j<=jmid; j++)
+                for (j=jmin; j<=jmid; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=jmax; j>=jmid; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
@@ -5950,13 +6265,13 @@ void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX
         {
             for (i=imax; i<imid; i++)
             {
-                for (j=0; j<=jmax; j++)
+                for (j=jmin; j<=jmax; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
         
             for (i=imid; i<imin; i++)
             {
-                for (j=0; j<=jmid; j++)
+                for (j=jmin; j<=jmid; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=jmax; j>=jmid; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
@@ -5964,16 +6279,16 @@ void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX
         
             for (i=imax-1; i>=0; i--)
             {
-                for (j=0; j<=jmax; j++)
+                for (j=jmin; j<=jmax; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
-            for (j=0; j<=jmax; j++)
+            for (j=jmin; j<=jmax; j++)
                 draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
         
             for (i=NX-2; i>=imin; i--)
             {
-                for (j=0; j<=jmid; j++)
+                for (j=jmin; j<=jmid; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
                 for (j=jmax; j>=jmid; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
@@ -6006,7 +6321,7 @@ void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX
         {
             for (i=imax; i>imid; i--)
             {
-                for (j=jmax; j>=0; j--)
+                for (j=jmax; j>=jmin; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
@@ -6014,59 +6329,102 @@ void draw_wave_sphere_3d_rde(int movie, double *phi[NFIELDS], short int xy_in[NX
             {
                 for (j=jmax; j>=jmid; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
-                for (j=0; j<=jmid; j++)
+                for (j=jmin; j<=jmid; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
             for (i=imax+1; i<NX-1; i++)
             {
-                for (j=jmax; j>=0; j--)
+                for (j=jmax; j>=jmin; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
-            for (j=jmax; j>=0; j--)
+            for (j=jmax; j>=jmin; j--)
                 draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
         
             for (i=0; i<=imin; i++)
             {
                 for (j=jmax; j>=jmid; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
-                for (j=0; j<=jmid; j++)
+                for (j=jmin; j<=jmid; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
+            
+            /* TEST */
+            for (j=jmin; j<=jmid; j++)
+                for (i=-1; i<2; i++) if ((imin+i >= 0)&&(imin+i+1 < NX))
+                    draw_wave_sphere_rde_ij(imin+i, imin+i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+            for (j=jmax; j>=jmid; j--)
+                for (i=-1; i<2; i++) if ((imin+i >= 0)&&(imin+i+1 < NX))
+                    draw_wave_sphere_rde_ij(imin+i, imin+i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+            
+//             for (i=0; i<2; i++) if (imin >= i)
+//             {
+//                 for (j=2*jmax/3; j>=jmid; j--)
+//                     draw_wave_sphere_rde_ij(imin-i, imin-i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+//                 for (j=jmin; j<=jmid; j++)
+//                     draw_wave_sphere_rde_ij(imin-i, imin-i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+//             }
+
         }
         else
         {
             for (i=imax; i<imid; i++)
             {
-                for (j=jmax; j>=0; j--)
+                for (j=jmax; j>=jmin; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
-            for (i=imid; i<imin; i++)
+            for (i=imid; i<imin-1; i++)
             {
                 for (j=jmax; j>=jmid; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
-                for (j=0; j<=jmid; j++)
+                for (j=jmin; j<=jmid; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
             for (i=imax-1; i>=0; i--)
             {
-                for (j=jmax; j>=0; j--)
+                for (j=jmax; j>=jmin; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
             
-            for (j=jmax; j>=0; j--)
+            for (j=jmax; j>=jmin; j--)
                 draw_wave_sphere_rde_ij(NX-1, 0, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
         
-            for (i=NX-2; i>=imin-1; i--)
+            for (i=NX-2; i>=imin; i--)
             {
                 for (j=jmax; j>=jmid; j--)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
-                for (j=0; j<=jmid; j++)
+                for (j=jmin; j<=jmid; j++)
                     draw_wave_sphere_rde_ij(i, i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
             }
+            
+            for (i=0; i<2; i++) if (imin >= i)
+            {
+                for (j=2*jmax/3; j>=jmid; j--)
+                    draw_wave_sphere_rde_ij(imin-i, imin-i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+                for (j=jmin; j<=jmid; j++)
+                    draw_wave_sphere_rde_ij(imin-i, imin-i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+            }
+            
+            /* TEST */
+            for (j=jmin; j<=jmid; j++)
+                for (i=-1; i<2; i++) if ((imin+i >= 0)&&(imin+i+1 < NX))
+                    draw_wave_sphere_rde_ij(imin+i, imin+i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+            for (j=jmax; j>=jmid; j--)
+                for (i=-1; i<2; i++) if ((imin+i >= 0)&&(imin+i+1 < NX))
+                    draw_wave_sphere_rde_ij(imin+i, imin+i+1, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+            
+//             if (imin >= 1)
+//             {
+//                 /* experimental */
+//                 for (j=2*jmax/3; j>=jmid; j--)
+//                     draw_wave_sphere_rde_ij(imin-1, imin, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+//                 for (j=0; j<=jmid; j++)
+//                     draw_wave_sphere_rde_ij(imin-1, imin, j, j+1, j+1, movie, phi, xy_in, rde, wsphere, wsphere_hr, zplot, cplot, palette, fade, fade_value);
+//             }
+
         }
     
         /* South pole */
@@ -6329,9 +6687,9 @@ void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rd
 
     if (refresh)
     {
-//         printf("Computing fields\n");
+        printf("Computing fields\n");
         compute_rde_fields(phi, xy_in, zplot, cplot, rde, wsphere);      
-//         printf("Computed fields\n");
+        printf("Computed fields\n");
         if ((PLOT_3D)&&(SHADE_3D)) 
         {
             if (SPHERE) 

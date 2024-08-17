@@ -604,6 +604,145 @@ void init_earth_map_rde(t_wave_sphere *wsphere, int res)
         }
 }
 
+
+void init_planet_map_rde(t_wave_sphere wsphere[NX*NY], int planet, int res)
+/* init file from planetary map */
+{
+    int i, j, ii, jj, k, nx, ny, maxrgb, nmaxpixels, scan, rgbval, diff, sshift, nshift, ishift, dem_number;
+    int *rgb_values;
+    double cratio, rx, ry, cy, vshift;
+    FILE *image_file;
+    
+    switch (planet){
+        case (D_SPHERE_MARS): 
+        {
+            printf("Reading Mars map\n");
+            nmaxpixels = 8388608;
+            image_file = fopen("Mars_Viking_ClrMosaic_global_925m_scaled.ppm", "r");
+            dem_number = DEM_MARS;
+            break;
+        }
+        case (D_SPHERE_MOON):
+        {
+            printf("Reading Moon map\n");
+            nmaxpixels = 2048*1024;
+            image_file = fopen("Moon_photo_map.ppm", "r");
+            dem_number = DEM_MOON;
+            break;
+        }
+        case (D_SPHERE_VENUS):
+        {
+            printf("Reading Venus map\n");
+            nmaxpixels = 1440*720;
+            image_file = fopen("Venus_map_NASA_JPL_Magellan-Venera-Pioneer.ppm", "r");
+            dem_number = DEM_VENUS;
+            break;
+        }
+        case (D_SPHERE_MERCURY):
+        {
+            printf("Reading Mercury map\n");
+            nmaxpixels = 2304*1152;
+            image_file = fopen("Mercury_color_photo.ppm", "r");
+            dem_number = DEM_MERCURY;
+            break;
+        }
+    }
+    
+    scan = fscanf(image_file,"%i %i\n", &nx, &ny);
+    scan = fscanf(image_file,"%i\n", &maxrgb);
+    printf("nx*ny = %i\n", nx*ny);
+    rgb_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+    
+    if (nx*ny > nmaxpixels)
+    {
+        printf("Image too large, increase nmaxpixels in init_planet_map()\n");
+        exit(0);
+    }
+    
+    /* shift due to min/max latitudes of image */
+    sshift = 0 + DPOLE;
+    nshift = 0 + DPOLE; 
+    
+    /* choice of zero meridian */
+    ishift = (int)(nx*ZERO_MERIDIAN/360.0);
+    
+    /* read rgb values */
+    for (j=0; j<ny; j++)
+        for (i=0; i<nx; i++)
+            for (k=0; k<3; k++)
+                {
+                    scan = fscanf(image_file,"%i\n", &rgbval);
+                    rgb_values[3*(j*nx+i)+k] = rgbval;
+                }
+                    
+    cratio = 1.0/(double)maxrgb;
+    rx = (double)nx/(double)(res*NX);
+    ry = (double)ny/(double)(res*NY - sshift - nshift);
+    
+    printf("cratio = %.3lg, rx = %.3lg, ry = %.3lg\n", cratio, rx, ry);
+    
+//     cy = rx*(double)(NY - nshift);
+    
+    /* build wave table */
+    for (i=0; i<res*NX; i++)
+        for (j=0; j<res*NY; j++)
+        {
+            ii = (int)(rx*(double)(res*NX-1 - i)) + nx/2 + ishift;
+            if (ii > nx-1) ii -= nx;
+//             jj = (int)(-ry*(double)j + cy);
+//             jj = (int)(ry*(double)(NY-nshift - j)) + sshift;
+            jj = (int)(ry*(double)(res*NY-nshift - j));
+            if (jj > ny-1) jj = ny-1;
+            if (jj < 0) jj = 0;
+            wsphere[i*res*NY+j].r = (double)rgb_values[3*(jj*nx+ii)]*cratio;
+            wsphere[i*res*NY+j].g = (double)rgb_values[3*(jj*nx+ii)+1]*cratio;
+            wsphere[i*res*NY+j].b = (double)rgb_values[3*(jj*nx+ii)+2]*cratio;
+            
+//             printf("RGB at (%i, %i) = (%.3lg, %3.lg, %.3lg)\n", i, j, wsphere[i*NY+j].r, wsphere[i*NY+j].g, wsphere[i*NY+j].b);
+            
+            /* decide which points are in the Sea */
+            wsphere[i*NY+j].indomain = 1;
+            wsphere[i*NY+j].draw_wave = 1;
+        }
+
+    
+    /* smooth colors in case of high resolution */
+    if ((res*NX > nx)||(res*NY > ny))
+        for (i=1; i<res*NX-1; i++)
+            for (j=1; j<res*NY-1; j++)
+            {
+                wsphere[i*res*NY+j].r *= 0.2; 
+                wsphere[i*res*NY+j].r += 0.2*wsphere[(i+1)*res*NY+j].r;
+                wsphere[i*res*NY+j].r += 0.2*wsphere[(i-1)*res*NY+j].r;
+                wsphere[i*res*NY+j].r += 0.2*wsphere[i*res*NY+j-1].r;
+                wsphere[i*res*NY+j].r += 0.2*wsphere[i*res*NY+j+1].r;
+
+                wsphere[i*res*NY+j].g *= 0.2; 
+                wsphere[i*res*NY+j].g += 0.2*wsphere[(i+1)*res*NY+j].g;
+                wsphere[i*res*NY+j].g += 0.2*wsphere[(i-1)*res*NY+j].g;
+                wsphere[i*res*NY+j].g += 0.2*wsphere[i*res*NY+j-1].g;
+                wsphere[i*res*NY+j].g += 0.2*wsphere[i*res*NY+j+1].g;
+
+                wsphere[i*res*NY+j].b *= 0.2; 
+                wsphere[i*res*NY+j].b += 0.2*wsphere[(i+1)*res*NY+j].b;
+                wsphere[i*res*NY+j].b += 0.2*wsphere[(i-1)*res*NY+j].b;
+                wsphere[i*res*NY+j].b += 0.2*wsphere[i*res*NY+j-1].b;
+                wsphere[i*res*NY+j].b += 0.2*wsphere[i*res*NY+j+1].b;
+            }
+
+    
+    free(rgb_values);
+    fclose(image_file);
+    
+    if (ADD_DEM) init_dem_rde(wsphere, dem_number, res);
+    
+    vshift = PLANET_SEALEVEL/(DEM_MAXHEIGHT - DEM_MAXDEPTH);
+    for (i=0; i<res*NX; i++)
+        for (j=0; j<res*NY; j++)
+            wsphere[i*res*NY+j].indomain = (wsphere[i*res*NY+j].altitude < vshift);
+}
+
+
 int ij_to_sphere(int i, int j, double r, t_wave_sphere wsphere[NX*NY], double xyz[3], int use_wave_radius)
 /* convert spherical to rectangular coordinates */
 {
@@ -2348,7 +2487,7 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
 void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, int plot, double min, double max, int palette, int fade, double fade_value)
 {
     int j, k, ij_center[2], ij_right[2], ic, jc, ir;
-    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2], zscale = 0.9;
+    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2], zscale = 0.95;
     
 //     printf("Drawing color bar\n");
     
@@ -2508,7 +2647,9 @@ void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, 
             }
             case (Z_SWATER_DIRECTION_SPEED):
             {
-                value = dy_phase*(double)(j);
+                value = dy_phase*(double)(j) + 0.5 - 0.5*PHASE_SHIFT;
+                if (value > 1.0) value -= 1.0;
+                if (value < 0.0) value += 1.0;
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
                 break;
             }

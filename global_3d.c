@@ -38,6 +38,8 @@
 #define GF_WING 4           /* wing shape */
 #define GF_COMPUTE_FROM_BC 5    /* compute force field as gradient of bc_field2 */
 #define GF_EARTH 6          /* field depends on altitude on continents */
+#define GF_MARS 7           /* field depends on altitude on Mars */
+#define GF_VENUS 8          /* field depends on altitude on Venus */
 
 /* Choice of water depth for shallow water equation */
 
@@ -45,10 +47,14 @@
 #define SH_CIRCLES 2    /* shallow obstacle specified by CIRCLE_PATTERN */
 #define SH_COAST 3      /* depth varying with x-coordinate */
 #define SH_COAST_MONOTONE 4      /* depth decreasing with x-coordinate */
+#define SH_SPHERE_CUBE 5    /* cube embedded in sphere */
+#define SH_SPHERE_OCTAHEDRON 6   /* octahedron embedded in sphere */
+#define SH_SPHERE_DODECAHEDRON 7 /* dodecahedron embedded in sphere */
+#define SH_SPHERE_ICOSAHEDRON 8  /* icosahedron embedded in sphere */
 
 /* Type of rotating viewpoint */
 
-#define VP_HORIZONTAL 0     /* rotate in a horizontal plane */
+#define VP_HORIZONTAL 0     /* rotate in a horizontal plane (constant latitude) */
 #define VP_ORBIT 1          /* rotate in a plane containing the origin */
 #define VP_ORBIT2 11        /* rotate in a plane specified by max latitude */
 #define VP_POLAR 2          /* polar orbit */
@@ -83,7 +89,7 @@
 #define PLANET ((B_DOMAIN == D_SPHERE_EARTH)||(B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON)||(B_DOMAIN == D_SPHERE_VENUS)||(B_DOMAIN == D_SPHERE_MERCURY))
 #define OTHER_PLANET ((B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON)||(B_DOMAIN == D_SPHERE_VENUS)||(B_DOMAIN == D_SPHERE_MERCURY))
 
-#define RDE_PLANET ((ADAPT_STATE_TO_BC)&&(OBSTACLE_GEOMETRY == D_SPHERE_EARTH))
+#define RDE_PLANET ((ADAPT_STATE_TO_BC)&&((OBSTACLE_GEOMETRY == D_SPHERE_EARTH)||(OBSTACLE_GEOMETRY == D_SPHERE_MARS)||(OBSTACLE_GEOMETRY == D_SPHERE_VENUS)))
 
 #define NMAXCIRC_SPHERE 100     /* max number of circles on sphere */
 #define NMAX_TRACER_PTS 20       /* max number of tracer points recorded per cell */

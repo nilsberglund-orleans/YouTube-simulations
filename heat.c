@@ -70,6 +70,7 @@
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
+#define PDISC_FACTOR 3.25   /* controls density of Poisson disc process (default: 3.25) */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 1.1	    /* parameter controlling the dimensions of domain */
@@ -158,6 +159,7 @@
 // #define SLOPE 0.1        /* sensitivity of color on wave amplitude */
 #define SLOPE 0.2        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+#define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
@@ -219,6 +221,7 @@
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define WALL_WIDTH 0.1      /* width of wall separating lenses */
+#define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
 #define INITIAL_TIME 50      /* time after which to start saving frames */
 #define OSCIL_YMAX 0.35      /* defines oscillation range */
 #define MESSAGE_LDASH 14         /* length of dash for Morse code message */
