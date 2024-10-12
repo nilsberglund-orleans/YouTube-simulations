@@ -50,14 +50,10 @@
 #define WINHEIGHT 	1150  /* window height */
 #define NX 2560          /* number of grid points on x axis */
 #define NY 1280           /* number of grid points on y axis */
-// #define NX 2048          /* number of grid points on x axis */
-// #define NY 1024          /* number of grid points on y axis */
-// #define NX 1024          /* number of grid points on x axis */
-// #define NY 512           /* number of grid points on y axis */
 
-#define DPOLE 30         /* safety distance to poles */
+#define DPOLE 15         /* safety distance to poles */
 #define SMOOTHPOLE 0.1     /* smoothing coefficient at poles */
-#define ZERO_MERIDIAN 190.0     /* choice of zero meridian (will be at left/right boundary of 2d plot) */
+#define ZERO_MERIDIAN 0.0     /* choice of zero meridian (will be at left/right boundary of 2d plot) */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
@@ -70,20 +66,18 @@
 #define JULIA_ROT -20.0       /* rotation of Julia set, in degrees */
 #define JULIA_RE 0.5    
 #define JULIA_IM 0.462    /* parameters for Julia sets */
-// #define JULIA_IM 0.45    /* parameters for Julia sets */
 
 /* Choice of the billiard table */
 
-// #define B_DOMAIN 999         /* choice of domain shape, see list in global_pdes.c */
-#define B_DOMAIN 84         /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 81         /* choice of domain shape, see list in global_pdes.c */
 
-#define CIRCLE_PATTERN 33   /* pattern of circles or polygons, see list in global_pdes.c */
+#define CIRCLE_PATTERN 31   /* pattern of circles or polygons, see list in global_pdes.c */
 
 #define COMPARISON 0        /* set to 1 to compare two different patterns */
 #define B_DOMAIN_B 20       /* second domain shape, for comparisons */
 #define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
 
-#define VARIABLE_IOR 1      /* set to 1 for a variable index of refraction */
+#define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
 #define IOR 20              /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.0 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
@@ -94,7 +88,7 @@
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 0.75	    /* parameter controlling the dimensions of domain */
-#define MU 0.1              /* parameter controlling the dimensions of domain */
+#define MU 0.2              /* parameter controlling the dimensions of domain */
 #define MU_B 1.0            /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
@@ -125,7 +119,7 @@
 
 /* Physical parameters of wave equation */
 
-#define TWOSPEEDS 1          /* set to 1 to replace hardcore boundary by medium with different speed */
+#define TWOSPEEDS 0          /* set to 1 to replace hardcore boundary by medium with different speed */
 #define OSCILLATE_LEFT 0     /* set to 1 to add oscilating boundary condition on the left */
 #define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
 #define OSCILLATION_SCHEDULE 3  /* oscillation schedule, see list in global_pdes.c */
@@ -134,9 +128,8 @@
 #define AMPLITUDE 0.8     /* amplitude of periodic excitation */ 
 #define ACHIRP 0.2        /* acceleration coefficient in chirp */
 #define DAMPING 0.0       /* damping of periodic excitation */
-#define COURANT 0.08       /* Courant number */
-#define COURANTB 0.005     /* Courant number in medium B */
-// #define GAMMA 2.0e-6         /* damping factor in wave equation */
+#define COURANT 0.1       /* Courant number */
+#define COURANTB 0.005    /* Courant number in medium B */
 #define GAMMA 0.0         /* damping factor in wave equation */
 #define GAMMAB 0.0        /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
@@ -150,9 +143,9 @@
 /* Increasing COURANT speeds up the simulation, but decreases accuracy */
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
-#define ADD_OSCILLATING_SOURCE 0        /* set to 1 to add an oscillating wave source */
+#define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
 #define OSCILLATING_SOURCE_PERIOD 25    /* period of oscillating source */
-#define ALTERNATE_OSCILLATING_SOURCE 0  /* set to 1 to alternate sign of oscillating source */
+#define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
 
 #define ADD_WAVE_PACKET_SOURCES 0       /* set to 1 to add several sources emitting wave packets */
 #define WAVE_PACKET_SOURCE_TYPE 1       /* type of wave packet sources */
@@ -161,7 +154,7 @@
 
 #define ADD_FORCING 0       /* set to 1 to add periodic forcing */
 #define FORCING_AMP 0.0     /* amplitude of periodic forcing */
-#define FORCING_CONST_AMP 1.0-10    /* amplitude of periodic forcing */
+#define FORCING_CONST_AMP 1.0e-10    /* amplitude of periodic forcing */
 #define FORCING_PERIOD 2400  /* period of forcing */
 
 #define DRIFT_WAVE 0        /* add drift of wave to the right (experimental) */
@@ -178,10 +171,9 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 1500       /* number of frames of movie */
-// #define NSTEPS 500         /* number of frames of movie */
-// #define NVID 6            /* number of iterations between images displayed on screen */
-#define NVID 10            /* number of iterations between images displayed on screen */
+// #define NSTEPS 2800       /* number of frames of movie */
+#define NSTEPS 1800         /* number of frames of movie */
+#define NVID 4            /* number of iterations between images displayed on screen */
 #define NSEG 1000          /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
@@ -197,9 +189,9 @@
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 0.03           /* amplitude of initial condition */
-#define INITIAL_VARIANCE 0.00005    /* variance of initial condition */
-#define INITIAL_WAVELENGTH  0.002  /* wavelength of initial condition */
+#define INITIAL_AMP 2.5            /* amplitude of initial condition */
+#define INITIAL_VARIANCE 0.003    /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.1   /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 
@@ -215,8 +207,8 @@
 #define SHADE_3D 0              /* set to 1 to change luminosity according to normal vector */
 #define SHADE_2D 1              /* set to 1 to change luminosity according to normal vector to plane */
 #define SHADE_WAVE 1            /* set to 1 to have luminosity depend on wave height */
-#define NON_DIRICHLET_BC 0      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
-#define FLOOR_ZCOORD 1          /* set to 1 to draw only facets with z not too negative */
+#define NON_DIRICHLET_BC 1      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
+#define FLOOR_ZCOORD 0          /* set to 1 to draw only facets with z not too negative */
 #define DRAW_BILLIARD 0         /* set to 1 to draw boundary */
 #define DRAW_BILLIARD_FRONT 0   /* set to 1 to draw front of boundary after drawing wave */
 #define DRAW_CONSTRUCTION_LINES 0   /* set to 1 to draw construction lines of certain domains */
@@ -234,14 +226,13 @@
 #define REPRESENTATION_3D 1     /* choice of 3D representation */ 
 #define PLOT_2D 1               /* switch to 2D representation, equirectangular projection */
 #define PHISHIFT 0.0            /* shift of phi in 2D plot (in degrees) */
-#define FLOODING 1              /* set to 1 to draw waves above altitude (for Earth representations) */
+#define FLOODING 0              /* set to 1 to draw waves above altitude (for Earth representations) */
 
 #define REP_AXO_3D 0        /* linear projection (axonometry) */
 #define REP_PROJ_3D 1       /* projection on plane orthogonal to observer line of sight */
 
 #define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
-#define ROTATE_ANGLE -360.0   /* total angle of rotation during simulation */
-// #define ROTATE_ANGLE -50.0   /* total angle of rotation during simulation */
+#define ROTATE_ANGLE 360.0   /* total angle of rotation during simulation */
 #define ROTATE_VIEW_WHILE_FADE 1    /* set to 1 to keep rotating viewpoint during fade */
 
 #define VIEWPOINT_TRAJ 1    /* type of viewpoint trajectory */
@@ -249,7 +240,7 @@
 
 /* Color schemes */
 
-#define COLOR_PALETTE 11      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 14      /* Color palette, see list in global_pdes.c  */
 #define COLOR_PALETTE_B 16     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
@@ -261,7 +252,7 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
-#define VSCALE_AMPLITUDE 50.0  /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSCALE_AMPLITUDE 0.5  /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define VSHIFT_AMPLITUDE 0.0   /* additional shift for wave amplitude */
 #define VSCALE_ENERGY 5.0     /* additional scaling factor for color scheme P_3D_ENERGY */
 #define PHASE_FACTOR 20.0      /* factor in computation of phase in color scheme P_3D_PHASE */
@@ -298,7 +289,7 @@
 #define MAZE_WIDTH 0.02     /* half width of maze walls */
 
 #define DRAW_COLOR_SCHEME 0       /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 3.0      /* scale of color scheme bar */
+#define COLORBAR_RANGE 1.5      /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 6.0    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0     /* set to 1 to draw color scheme horizontally */
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
@@ -327,7 +318,7 @@
 #define INITIAL_SHIFT 20.0          /* time shift of initial wave packet (in oscillation periods) */
 #define WAVE_PACKET_SHIFT 200.0     /* time shift between wave packets (in oscillation periods) */
 #define FADE_IN_OBSTACLE 0      /* set to 1 to fade color inside obstacles */
-#define N_SOURCES 1                     /* number of sources, for option draw_sources */
+#define N_SOURCES 20                     /* number of sources, for option draw_sources */
 #define XYIN_INITIALISED (B_DOMAIN == D_IMAGE)
 /* end of constants only used by sub_wave and sub_maze */
 
@@ -344,28 +335,27 @@ double light[3] = {-0.816496581, -0.40824829, 0.40824829};      /* vector of "li
 double observer[3] = {-5.0, -5.0, 3.5};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
-#define ADD_DEM 1               /* add DEM (digital elevation model) */
-#define ADD_NEGATIVE_DEM 1      /* add DEM with bathymetric data */
+#define ADD_DEM 0               /* add DEM (digital elevation model) */
+#define ADD_NEGATIVE_DEM 0      /* add DEM with bathymetric data */
 #define RSCALE_DEM 0.1         /* scaling factor of radial component for DEM */
 #define SMOOTH_DEM 5            /* set to 1 to smoothen DEM (to make altitude less constant) */
 #define DEM_SMOOTH_STEPS 1      /* number of smoothening steps */
 #define DEM_SMOOTH_HEIGHT 2.0   /* relative height below which to smoothen */
 #define DEM_MAXHEIGHT 9000.0     /* max height of DEM (estimated from Everest/Olympus Mons) */
 #define DEM_MAXDEPTH -10000     /* max depth of DEM */
-#define PLANET_SEALEVEL 0.0      /* sea level for flooded planet */
+#define PLANET_SEALEVEL -10000.0      /* sea level for flooded planet */
 #define VENUS_NODATA_FACTOR 0.5     /* altitude to assign to DEM points without data (fraction of mean altitude) */
 #define TRANSPARENT_WAVE 0      /* set to 1 for waves to be "transparent" */
 
-#define RSCALE 1.0             /* scaling factor of radial component */
-#define RMAX 10.0               /* max value of radial component */
-#define Z_SCALING_FACTOR 0.8    /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define RMIN 0.5               /* min value of radial component */
+#define RSCALE 1.0              /* scaling factor of radial component */
+#define RMAX 1.1               /* max value of radial component */
+#define RMIN 0.9               /* min value of radial component */
 #define Z_SCALING_FACTOR 0.8   /* overall scaling factor of z axis for REP_PROJ_3D representation */
 #define XY_SCALING_FACTOR 2.2   /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0         /* max value of z coordinate for REP_PROJ_3D representation */
 #define XSHIFT_3D 0.0           /* overall x shift for REP_PROJ_3D representation */
 #define YSHIFT_3D 0.0           /* overall y shift for REP_PROJ_3D representation */
-#define COS_VISIBLE -0.3        /* limit on cosine of normal to shown facets */
+#define COS_VISIBLE -0.02        /* limit on cosine of normal to shown facets */
 
 #include "global_pdes.c"        /* constants and global variables */
 #include "global_3d.c"          /* constants and global variables */
@@ -719,7 +709,7 @@ void viewpoint_schedule(int i)
 
 void animation()
 {
-    double time, scale, ratio, startleft[2], startright[2], sign = 1.0, r2, xy[2], fade_value, yshift, speed = 0.0, a, b, c, angle = 0.0, lambda1, y, x1, sign1, omega, phase_shift, theta, amp; 
+    double time, scale, ratio, startleft[2], startright[2], sign = -1.0, r2, xy[2], fade_value, yshift, speed = 0.0, a, b, c, angle = 0.0, lambda1, y, x1, sign1, omega, phase_shift, theta, amp; 
     double *phi, *psi, *tmp, *color_scale, *tc, *tcc, *tgamma;
 //     double *total_energy;
     short int *xy_in;
@@ -841,11 +831,11 @@ void animation()
     
 //     init_moving_tidal_wave_sphere(0.0, 0.05, 0.025, phi, psi, xy_in, wsphere);
 
-    init_moving_tidal_wave_sphere(0.0, 2.5, 1.25, phi, psi, xy_in, wsphere);
+//     init_moving_tidal_wave_sphere(0.0, 2.5, 1.25, phi, psi, xy_in, wsphere);
     
 //     init_circular_wave_sphere(0.0, -0.5, phi, psi, xy_in, wsphere);
     
-//      init_wave_flat_sphere(phi, psi, xy_in, wsphere);
+     init_wave_flat_sphere(phi, psi, xy_in, wsphere);
     
 //     init_wave_flat_sphere(phi, psi, xy_in, wsphere);
 //     for (j=0; j<6; j++)
@@ -853,6 +843,31 @@ void animation()
     
 //     add_circular_wave_sphere(1.0, 1.0 - PI/9.0 + DPI/3.0, 0.15, phi, psi, xy_in, wsphere);
 //     add_circular_wave_sphere(1.0, 1.0 - PI/9.0 + 2.0*DPI/3.0, 0.15, phi, psi, xy_in, wsphere);
+    
+    for (j=0; j<5; j++)
+    {
+        a = circ_sphere[1].x + circ_sphere[2].x;
+        b = circ_sphere[1].y + circ_sphere[2].y;
+        c = 1.0 + circ_sphere[1].z + circ_sphere[2].z;
+        theta = acos(c/sqrt(a*a + b*b + c*c));
+        
+        wave_source_x[4*j] = (double)j*DPI/5.0;
+        wave_source_y[4*j] = PID - theta;
+        wave_source_x[4*j+1] = (double)j*DPI/5.0 + PI/5.0;
+        wave_source_y[4*j+1] = theta - PID;
+        
+        a = circ_sphere[1].x + circ_sphere[2].x + circ_sphere[6].x;
+        b = circ_sphere[1].y + circ_sphere[2].y + circ_sphere[6].y;
+        c = circ_sphere[1].z + circ_sphere[2].z + circ_sphere[6].z;
+        theta = acos(c/sqrt(a*a + b*b + c*c));
+        
+        wave_source_x[4*j+2] = (double)j*DPI/5.0 + PI/5.0;
+        wave_source_y[4*j+2] = theta - PID;
+        wave_source_x[4*j+3] = (double)j*DPI/5.0;
+        wave_source_y[4*j+3] = PID - theta;
+        
+    }
+    
     
 //     printf("Wave initialized\n");
 
@@ -958,12 +973,11 @@ void animation()
         if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, CIRC_COLORBAR, fade, fade_value); 
         
         /* add oscillating waves */
-//         if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == OSCILLATING_SOURCE_PERIOD - 1))
         if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == 1))
         {
             if (ALTERNATE_OSCILLATING_SOURCE) sign = -sign;
-            for (j=0; j<6; j++)
-                add_circular_wave_sphere(sign, (double)j*PI/3.0, 0.925*PID, phi, psi, xy_in, wsphere);
+            for (j=0; j<N_SOURCES; j++)
+                add_circular_wave_sphere(sign,wave_source_x[j], wave_source_y[j], phi, psi, xy_in, wsphere);
         }
         if (PRINT_SPEED) print_speed_3d(speed, 0, 1.0);
 

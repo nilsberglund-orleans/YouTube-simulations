@@ -1422,6 +1422,142 @@ double init_linear_blob_sphere(int add, double phi0, double theta0, double vx, d
         }
         for (j=0; j<DPOLE; j++)
         {
+            pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+            pscal += wsphere[i*NY+j].ctheta*cos(theta0);
+            dist2 = acos(pscal);
+            dist2 *= dist2;
+            module = amp*exp(-dist2/varx);
+            
+            phi[0][i*NY+j] = min + a*module*wsphere[i*NY+DPOLE].stheta;
+            phi[1][i*NY+j] = 0.0;
+            phi[2][i*NY+j] = 0.0;
+        }
+        for (j=NY-DPOLE; j<NY; j++)
+        {
+            pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+            pscal += wsphere[i*NY+j].ctheta*cos(theta0);
+            dist2 = acos(pscal);
+            dist2 *= dist2;
+            module = amp*exp(-dist2/varx);
+            
+            phi[0][i*NY+j] = min + a*module*wsphere[i*NY+NY-DPOLE].stheta;
+            phi[1][i*NY+j] = 0.0;
+            phi[2][i*NY+j] = 0.0;
+        }
+    }
+}
+
+void init_expanding_blob_sphere(int add, double phi0, double theta0, double v, double amp, double radius, double min, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise gaussian wave height for shallow water equation */
+{
+    int i, j;
+    double xy[2], var, a, pscal, dist2, module, x0, y0, z0, x1, y1, z1, x2, y2, z2, r, vphi, vtheta;
+    
+    var = radius*radius; 
+    a = amp/(sqrt(DPI*var));
+    
+    printf("[init_gaussian_wave_sphere]: a = %.3lg, var = %.3lg\n", a, var); 
+    
+    if (add) for (i=0; i<NX; i++)
+    {
+        for (j=DPOLE; j<NY-DPOLE; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+            pscal += wsphere[i*NY+j].ctheta*cos(theta0);
+            dist2 = acos(pscal);
+            dist2 *= dist2;
+            module = amp*exp(-dist2/var);
+            
+            /* compute radial vector between X0 and X */
+            x0 = cos(phi0)*sin(theta0);
+            y0 = sin(phi0)*sin(theta0);
+            z0 = -cos(theta0);
+            
+            x1 = y0*wsphere[i*NY+j].z - z0*wsphere[i*NY+j].y;
+            y1 = z0*wsphere[i*NY+j].x - x0*wsphere[i*NY+j].z;
+            z1 = x0*wsphere[i*NY+j].y - y0*wsphere[i*NY+j].x;
+            
+            x2 = y1*wsphere[i*NY+j].z - z1*wsphere[i*NY+j].y;
+            y2 = z1*wsphere[i*NY+j].x - x1*wsphere[i*NY+j].z;
+            z2 = x1*wsphere[i*NY+j].y - y1*wsphere[i*NY+j].x;
+            
+            r = x2*x2 + y2*y2 + z2*z2;
+            r = 1.0/sqrt(r);
+            x2 *= r;
+            y2 *= r;
+            z2 *= r;
+            
+            vphi = -x2*sin(wsphere[i*NY+j].phi) + y2*cos(wsphere[i*NY+j].phi);
+            vtheta = (x2*cos(wsphere[i*NY+j].phi) + y2*sin(wsphere[i*NY+j].phi))*cos(wsphere[i*NY+j].theta) + z2*sin(wsphere[i*NY+j].theta);
+            
+            
+//             printf("[init_gaussian_wave_sphere]: dist2 = %.3lg, module = %.3lg\n", dist2, module);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] += a*module*wsphere[i*NY+j].stheta;
+                phi[1][i*NY+j] += v*module*vphi;
+                phi[2][i*NY+j] += v*module*vtheta;
+            }
+        }
+    }
+    else for (i=0; i<NX; i++)
+    {
+        for (j=DPOLE; j<NY-DPOLE; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            pscal = cos(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta*sin(theta0);
+            pscal += wsphere[i*NY+j].ctheta*cos(theta0);
+            dist2 = acos(pscal);
+            dist2 *= dist2;
+            module = amp*exp(-dist2/var);
+            
+            /* compute radial vector between X0 and X */
+            x0 = cos(phi0)*sin(theta0);
+            y0 = sin(phi0)*sin(theta0);
+            z0 = -cos(theta0);
+            
+            x1 = y0*wsphere[i*NY+j].z - z0*wsphere[i*NY+j].y;
+            y1 = z0*wsphere[i*NY+j].x - x0*wsphere[i*NY+j].z;
+            z1 = x0*wsphere[i*NY+j].y - y0*wsphere[i*NY+j].x;
+            
+            x2 = y1*wsphere[i*NY+j].z - z1*wsphere[i*NY+j].y;
+            y2 = z1*wsphere[i*NY+j].x - x1*wsphere[i*NY+j].z;
+            z2 = x1*wsphere[i*NY+j].y - y1*wsphere[i*NY+j].x;
+            
+            r = x2*x2 + y2*y2 + z2*z2;
+            r = 1.0/sqrt(r);
+            x2 *= r;
+            y2 *= r;
+            z2 *= r;
+            
+            vphi = -x2*sin(wsphere[i*NY+j].phi) + y2*cos(wsphere[i*NY+j].phi);
+            vtheta = (x2*cos(wsphere[i*NY+j].phi) + y2*sin(wsphere[i*NY+j].phi))*cos(wsphere[i*NY+j].theta) + z2*sin(wsphere[i*NY+j].theta);
+            
+//             printf("[init_gaussian_wave_sphere]: dist2 = %.3lg, module = %.3lg\n", dist2, module);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] = min + a*module*wsphere[i*NY+j].stheta;
+                phi[1][i*NY+j] = v*module*vphi;
+                phi[2][i*NY+j] = v*module*vtheta;
+//                 phi[1][i*NY+j] = v*module*sin(wsphere[i*NY+j].phi - phi0)*wsphere[i*NY+j].stheta;
+//                 phi[2][i*NY+j] = v*module*sin(wsphere[i*NY+j].theta - theta0)*wsphere[i*NY+j].stheta;
+            }
+            else
+            {
+                phi[0][i*NY+j] = min;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+        for (j=0; j<DPOLE; j++)
+        {
             phi[0][i*NY+j] = min;
             phi[1][i*NY+j] = 0.0;
             phi[2][i*NY+j] = 0.0;
@@ -1615,6 +1751,63 @@ double init_swater_laminar_flow_sphere(int add, double vx, double amp, int nx, i
             phi[2][i*NY+j] = 0.0;
         }
     }
+}
+
+void init_tidal_state(int add, double amp, double min, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initial state for tide simulations */
+{
+    int i, j;
+    double phase, xy[2];
+    
+    phase = ZERO_MERIDIAN*PI/180.0 + 0.5*PID;
+        
+    if (add) for (i=0; i<NX; i++)
+    {
+        for (j=DPOLE; j<NY-DPOLE; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] += amp*wsphere[i*NY+j].stheta*sin(2.0*(wsphere[i*NY+j].phi - phase));
+            }
+        }
+    }
+    else for (i=0; i<NX; i++)
+    {
+        for (j=DPOLE; j<NY-DPOLE; j++)
+        {
+            ij_to_xy(i, j, xy);
+            xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            
+            if (xy_in[i*NY+j])
+            {
+                phi[0][i*NY+j] = min + amp*wsphere[i*NY+j].stheta*sin(2.0*(wsphere[i*NY+j].phi - phase));;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+            else
+            {
+                phi[0][i*NY+j] = min;
+                phi[1][i*NY+j] = 0.0;
+                phi[2][i*NY+j] = 0.0;
+            }
+        }
+        for (j=0; j<DPOLE; j++)
+        {
+            phi[0][i*NY+j] = min;
+            phi[1][i*NY+j] = 0.0;
+            phi[2][i*NY+j] = 0.0;
+        }
+        for (j=NY-DPOLE; j<NY; j++)
+        {
+            phi[0][i*NY+j] = min;
+            phi[1][i*NY+j] = 0.0;
+            phi[2][i*NY+j] = 0.0;
+        }
+    }
+    
 }
 
 double distance_to_segment(double x, double y, double x1, double y1, double x2, double y2)
@@ -1909,7 +2102,7 @@ void initialize_bcfield(double bc_field[NX*NY], double bc_field2[NX*NY], t_recta
                 {
                     /* set dummy values */
                     height = wsphere[i*NY+j+1].altitude;
-                    if (height == 0.0) bc_field[i*NY+j] = 1.0;
+                    if (height <= 0.0) bc_field[i*NY+j] = 1.0;
                     else 
                     {   
                         f = tanh(BC_STIFFNESS*height);
@@ -5965,9 +6158,9 @@ void compute_cfield_rde(short int xy_in[NX*NY], int cplot, int palette, t_rde rd
 
 
 
-void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], int fade, double fade_value)
+void draw_wave_2d_rde_old(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], int movie, int fade, double fade_value)
 {
-    int i, j, k, ii;
+    int i, j, k, ii, i1, j1;
     short int draw;
     double ca, rgb[3];
     static int ishift, first = 1;
@@ -5986,16 +6179,24 @@ void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere ws
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
-            for (k=0; k<3; k++) rgb[k] = rde[i*NY+j].rgb[k];
-            glColor3f(rgb[0], rgb[1], rgb[2]);
-                                            
-            ii = NX-i-1+ishift;
-            if (ii > NX) ii -= NX;
+            /* NEW */
+            if (FLOODING) 
+                draw = ((wsphere[i*NY+j].indomain)||((*rde[i*NY+j].p_zfield[movie] >= wsphere[i*NY+j].altitude + FLOODING_VSHIFT)));
+            else draw = wsphere[i*NY+j].indomain;
             
-            glVertex2i(HRES*ii, HRES*j);
-            glVertex2i(HRES*(ii+1), HRES*j);
-            glVertex2i(HRES*(ii+1), HRES*(j+1));
-            glVertex2i(HRES*ii, HRES*(j+1));
+            if (draw)
+            {
+                for (k=0; k<3; k++) rgb[k] = rde[i*NY+j].rgb[k];
+                glColor3f(rgb[0], rgb[1], rgb[2]);
+                                            
+                ii = NX-i-1+ishift;
+                if (ii > NX) ii -= NX;
+            
+                glVertex2i(HRES*ii, HRES*j);
+                glVertex2i(HRES*(ii+1), HRES*j);
+                glVertex2i(HRES*(ii+1), HRES*(j+1));
+                glVertex2i(HRES*ii, HRES*(j+1));
+            }
         }
     glEnd ();
     
@@ -6006,7 +6207,17 @@ void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere ws
         for (i=0; i<HRES*NX; i++)
             for (j=0; j<HRES*NY; j++)
             {
-                if (!wsphere_hr[i*HRES*NY+j].indomain)
+                i1 = i/HRES;
+                j1 = j/HRES;
+//                 printf("i = %i, j = %j, i1 = %i, j1 = %i\n", i, j, i1, j1);
+                /* NEW */
+                if (FLOODING) draw = ((wsphere_hr[i*HRES*NY+j].indomain)&&((*rde[i1*NY+j1].p_zfield[movie] >= wsphere[i1*NY+j1].altitude + FLOODING_VSHIFT)));
+                else draw = wsphere_hr[i*HRES*NY+j].indomain;
+//                 if (FLOODING) draw = ((wsphere_hr[i*HRES*NY+j].indomain)||((*rde[i1*NY+j1].p_zfield[movie] >= wsphere[i1*NY+j1].altitude + FLOODING_VSHIFT)));
+//                 else draw = wsphere_hr[i*HRES*NY+j].indomain;
+//                 draw_hr[p*HRES+q] = (draw)&&(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
+//                 if (!wsphere_hr[i*HRES*NY+j].indomain)
+                if (!draw)
                 {
                     ca = wsphere_hr[i*HRES*NY+j].cos_angle;
                     ca = (ca + 1.0)*0.4 + 0.2;
@@ -6028,6 +6239,116 @@ void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere ws
     if (DRAW_BILLIARD) draw_billiard(0, 1.0);
 }
 
+void draw_wave_2d_rde_ij(int i, int j, int movie, short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], int fade, double fade_value)
+{
+    int p, q, k, ii, i1, j1, iplus1, jplus1;
+    double ca, rgb[3], r_hr[HRES*HRES], g_hr[HRES*HRES], b_hr[HRES*HRES];
+    short int draw, draw_hr[HRES*HRES];
+    static int ishift, first = 1;
+    
+    if (first)
+    {
+        ishift = (int)((double)NX*PHISHIFT/360.0);
+        first = 0;
+    }
+        
+    if (FLOODING) 
+        draw = ((wsphere[i*NY+j].indomain)||((*rde[i*NY+j].p_zfield[movie] >= wsphere[i*NY+j].altitude + FLOODING_VSHIFT_2D)));
+    else draw = wsphere[i*NY+j].indomain;
+    
+    for (p=0; p<HRES; p++)
+        for (q=0; q<HRES; q++)
+            draw_hr[p*HRES+q] = (draw)||(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
+    
+    for (p=0; p<HRES; p++)
+        for (q=0; q<HRES; q++)
+        {
+            i1 = HRES*i + p;
+            j1 = HRES*j + q;
+            ca = wsphere_hr[i1*HRES*NY+j1].cos_angle;
+            ca = (ca + 1.0)*0.4 + 0.2;
+            if (fade) ca *= fade_value;
+            if (RDE_PLANET)
+            {
+                r_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].r*ca;
+                g_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].g*ca;
+                b_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].b*ca;
+            }
+            else
+            {
+                r_hr[p*HRES + q] = COLOR_OUT_R*ca;
+                g_hr[p*HRES + q] = COLOR_OUT_G*ca;
+                b_hr[p*HRES + q] = COLOR_OUT_B*ca;
+            }
+        }
+    
+    ii = NX-i-1+ishift;
+    if (ii > NX) ii -= NX;
+        
+    if (draw)
+    {
+        for (k=0; k<3; k++) rgb[k] = rde[i*NY+j].rgb[k];
+        glColor3f(rgb[0], rgb[1], rgb[2]);
+            
+        glVertex2i(HRES*ii, HRES*j);
+        glVertex2i(HRES*(ii+1), HRES*j);
+        glVertex2i(HRES*(ii+1), HRES*(j+1));
+        glVertex2i(HRES*ii, HRES*(j+1));
+    }
+    
+    /* draw continents in higher resolution */
+    if (RDE_PLANET) for (p=0; p<HRES; p++)
+    {
+        for (q=0; q<HRES; q++) if (!draw_hr[p*HRES+q])
+        {
+            i1 = HRES*ii + p;
+            j1 = HRES*j + q;
+            iplus1 = HRES*(ii+1) + p;
+            jplus1 = HRES*(j+1) + q;
+                
+            glColor3f(r_hr[p*HRES + q], g_hr[p*HRES + q], b_hr[p*HRES + q]);
+            
+            glVertex2i(i1, j1);
+            glVertex2i(iplus1, j1);
+            glVertex2i(iplus1, jplus1);
+            glVertex2i(i1, jplus1);
+        }
+    } 
+}
+
+void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], int movie, int fade, double fade_value)
+{
+    int i, j, ii;
+    static int ishift, first;
+    
+    if (first)
+    {
+        ishift = (int)((double)NX*PHISHIFT/360.0);
+        first = 0;
+    }
+    
+    /* draw the field */
+    glBegin(GL_QUADS);
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+            draw_wave_2d_rde_ij(i, j, movie, xy_in, rde, wsphere, wsphere_hr, fade, fade_value);
+    glEnd ();
+    
+    if (DRAW_BILLIARD) draw_billiard(0, 1.0);
+    
+    if (DRAW_MOON_POSITION)
+    {
+        ii = NX-moon_position-1+ishift;
+        if (ii > NX) ii -= NX;
+        else if (ii < 0) ii += NX;
+        glColor3f(fade_value, fade_value, fade_value);
+        glBegin(GL_LINE_STRIP);
+        glVertex2i(ii*HRES, 0);
+        glVertex2i(ii*HRES, NY*HRES);
+        glEnd();
+    }
+}
+
 void draw_wave_sphere_rde_ij(int i, int iplus, int j, int jplus, int jcolor, int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], int zplot, int cplot, int palette, int fade, double fade_value)
 /* draw wave at simulation grid point (i,j) */
 {
@@ -6039,10 +6360,13 @@ void draw_wave_sphere_rde_ij(int i, int iplus, int j, int jplus, int jcolor, int
         draw_bc = (xy_in[i*NY+j])&&(xy_in[iplus*NY+j])&&(xy_in[i*NY+jplus])&&(xy_in[iplus*NY+jplus]);
     
 //     draw = wsphere[i*NY+j].indomain;
-    draw = 1;
+    if (FLOODING) 
+        draw = ((wsphere[i*NY+j].indomain)||((*rde[i*NY+j].p_zfield[movie] >= wsphere[i*NY+j].altitude + FLOODING_VSHIFT)));
+    else draw = wsphere[i*NY+j].indomain;
+//     draw = 1;
     for (p=0; p<HRES; p++)
         for (q=0; q<HRES; q++)
-            draw_hr[p*HRES+q] = wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain;
+            draw_hr[p*HRES+q] = (draw)&&(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
     for (k=0; k<3; k++) rgb[k] = rde[i*NY+jcolor].rgb[k];
         glColor3f(rgb[0], rgb[1], rgb[2]);
     
@@ -6070,7 +6394,7 @@ void draw_wave_sphere_rde_ij(int i, int iplus, int j, int jplus, int jcolor, int
 
     if (draw_bc)
     {
-//         if (draw)
+        if (draw)
         {
             glBegin(GL_TRIANGLE_FAN);
             glColor3f(rgb[0], rgb[1], rgb[2]);
@@ -6709,7 +7033,7 @@ void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rd
             draw_periodicised_wave_3d(movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
         else draw_wave_3d_rde(movie, phi, xy_in, rde, potential, zplot, cplot, palette, fade, fade_value);
     }
-    else draw_wave_2d_rde(xy_in, rde, wsphere, wsphere_hr, fade, fade_value);
+    else draw_wave_2d_rde(xy_in, rde, wsphere, wsphere_hr, movie, fade, fade_value);
 }
 
 void draw_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], int time, int fade, double fade_value)
@@ -6717,6 +7041,15 @@ void draw_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], int 
 {
     int tracer, t, t1, length = 50, ij[2];
     double x1, y1, x2, y2, lum;
+    static double xshift, maxlength;
+    static int first = 1;
+    
+    if (first)
+    {
+        xshift = PHISHIFT*(XMAX - XMIN)/360.0;
+        maxlength = 0.01*(XMAX - XMIN);
+        first = 0;
+    }
     
     glColor3f(1.0, 1.0, 1.0);
     glLineWidth(1);
@@ -6729,10 +7062,12 @@ void draw_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], int 
     for (t = t1 + 1; t < time; t++) 
         for (tracer = 0; tracer < N_TRACERS; tracer++)
         {
-            x1 = -tracers[2*(t-1)*N_TRACERS + 2*tracer];
+            x1 = -tracers[2*(t-1)*N_TRACERS + 2*tracer] + xshift;
+            if (x1 > XMAX) x1 += XMIN - XMAX;
             y1 = tracers[2*(t-1)*N_TRACERS + 2*tracer + 1];
         
-            x2 = -tracers[2*t*N_TRACERS + 2*tracer];
+            x2 = -tracers[2*t*N_TRACERS + 2*tracer] + xshift;
+            if (x2 > XMAX) x2 += XMIN - XMAX;
             y2 = tracers[2*t*N_TRACERS + 2*tracer + 1];
             
             lum = 1.0 - 0.75*(double)(time - t)/(double)length;
@@ -6740,7 +7075,7 @@ void draw_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], int 
             
             glColor3f(lum, lum, lum);
             
-            if (module2(x2 - x1, y2 - y1) < 0.2) draw_line_hres(x1, y1, x2, y2);
+            if (module2(x2 - x1, y2 - y1) < maxlength) draw_line_hres(x1, y1, x2, y2);
             
 //             printf("time = %i, tracer = %i, coord = %i, x1 = %.2lg, y1 = %.2lg, x2 = %.2lg, y2 = %.2lg\n", t, tracer,2*t*N_TRACERS + 2*tracer, x1, y1, x2, y2);
         }

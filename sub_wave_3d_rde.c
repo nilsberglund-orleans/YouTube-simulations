@@ -70,6 +70,9 @@ void init_wave_sphere_rde(t_wave_sphere *wsphere, int res)
             wsphere[i*res*NY+j].y2d = xy[1]; 
             
             wsphere[i*res*NY+j].cos_angle_sphere = wsphere[i*res*NY+j].x*light[0] + wsphere[i*res*NY+j].y*light[1] + wsphere[i*res*NY+j].z*light[2];
+            
+            /* default value, to be changed by init_dem */
+            wsphere[i*res*NY+j].evolve_wave = 1;
         }
         
         /* cotangent, taking care of not dividing by zero */
@@ -94,12 +97,152 @@ void init_wave_sphere_rde(t_wave_sphere *wsphere, int res)
     }
 }
 
+
+void read_negative_dem_values_rde(double *height_values, t_wave_sphere *wsphere)
+/* init bathymetric data */
+{
+    int i, j, k, ii, jj, nx, ny, maxrgb, nmaxpixels = 6480000, hmin, hmax, ishift, nshift, sshift, rgbval, scan, rgbtot;
+    int *rgb_values, *int_height_values;
+    int hcont = 50, rgbdiff;
+    double cratio, rx, ry, height;
+    double *height_values_tmp, *height_values_tmp2;
+    FILE *image_file;
+    
+    printf("Reading bathymetric data\n");
+    
+    rgb_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+    int_height_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+    height_values_tmp = (double *)malloc(NX*NY*sizeof(double));
+    height_values_tmp2 = (double *)malloc(NX*NY*sizeof(double));
+    
+//     image_file = fopen("bathymetry_gebco_3600x1800_color.ppm", "r");
+    image_file = fopen("bathymetry_gebco_2560_1280_mod2_color.ppm", "r");
+    scan = fscanf(image_file,"%i %i\n", &nx, &ny);
+    scan = fscanf(image_file,"%i\n", &maxrgb);
+    
+    for (i=0; i<NX*NY; i++) 
+    {
+        height_values_tmp[i] = 0.0;
+        height_values_tmp2[i] = 0.0;
+    }
+    
+    hmin = maxrgb;
+    hmax = 0;
+    
+    if (nx*ny > nmaxpixels)
+    {
+        printf("bathymetric data file too large, increase nmaxpixels in read_negative_dem_values()\n");
+        exit(0);
+    }
+    
+    /* shift due to min/max latitudes of image */
+    sshift = 0 + DPOLE;
+    nshift = 0 + DPOLE; 
+    
+    /* choice of zero meridian */
+    ishift = (int)(nx*ZERO_MERIDIAN/360.0);
+    
+    /* read rgb values */
+    for (j=0; j<ny; j++)
+        for (i=0; i<nx; i++)
+        {
+            rgbtot = 0;
+            for (k=0; k<3; k++)
+            {
+                scan = fscanf(image_file,"%i\n", &rgbval);
+                rgb_values[3*(j*nx+i)+k] = rgbval;
+                rgbtot += rgbval;
+            }
+            if ((rgbtot < hmin)&&(rgbtot > hcont)) hmin = rgbtot;
+            if (rgbtot > hmax) hmax = rgbtot;
+            int_height_values[3*(j*nx+i)] = rgbtot;
+        }
+    
+    printf("hmin = %i, hmax = %i\n", hmin, hmax);
+    
+    /* remove remaining black continents */
+    for (i=0; i<3*nx*ny; i++) if (int_height_values[i] < hcont) int_height_values[i] = hmax;
+    
+    cratio = 1.0/(double)(hmax-hmin);
+    rx = (double)nx/(double)NX;
+    ry = (double)ny/(double)(NY - sshift - nshift);
+        
+    /* build underwater height table */
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++) 
+        {
+            ii = (int)(rx*(double)(NX-1 - i)) + nx/2 + ishift;
+            if (ii > nx-1) ii -= nx;
+            jj = (int)(ry*(double)(NY-nshift - j));
+            if (jj > ny-1) jj = ny-1;
+            if (jj < 0) jj = 0;
+                        
+            if (wsphere[i*NY+j].indomain)
+            {
+                /* set height to zero if color is black (due to black patches in bathymetric map) */
+                if (int_height_values[3*(jj*nx+ii)] < hcont) height = 0.0;
+                else height = -1.0 + (double)(int_height_values[3*(jj*nx+ii)])*cratio;
+                if (height > 0.0) height = 0.0;
+                height_values_tmp[i*NY+j] = height;
+                wsphere[i*NY+j].altitude = height;
+
+//                 if (int_height_values[3*(jj*nx+ii)] > hcont)
+//                 {
+//                     wsphere[i*NY+j].r = 0.9*(double)rgb_values[3*(jj*nx+ii)]*cratio;
+//                     wsphere[i*NY+j].g = 0.9*(double)rgb_values[3*(jj*nx+ii)+1]*cratio;
+//                     wsphere[i*NY+j].b = 0.9*(double)rgb_values[3*(jj*nx+ii)+2]*cratio;
+//                 }
+//                 else 
+//                 {
+//                     wsphere[i*NY+j].r = 0.29;
+//                     wsphere[i*NY+j].g = 0.29;
+//                     wsphere[i*NY+j].b = 0.29;
+//                 }
+            }
+            else 
+            {
+                height_values_tmp[i*NY+j] = 0.0;
+                height_values_tmp2[i*NY+j] = 0.0;
+            }
+        }
+    
+    /* smoothen values at low depth */
+    if (SMOOTH_DEM) for (k=1; k<DEM_SMOOTH_STEPS; k++)
+    {
+        printf("Smoothing step %i\n", k);
+        for (i=1; i<NX-1; i++)
+            for (j=1; j<NY-1; j++) 
+                if ((wsphere[i*NY+j].indomain)&&(height_values[i*NY+j] >= -0.25))
+                {
+                    height_values_tmp2[i*NY+j] = height_values_tmp[i*NY+j] + 0.1*(height_values_tmp[(i+1)*NY+j] + height_values_tmp[(i-1)*NY+j] + height_values_tmp[i*NY+j+1] + height_values_tmp[i*NY+j-1] - 4.0*height_values_tmp[i*NY+j]);
+            
+                    height_values_tmp[i*NY+j] = height_values_tmp2[i*NY+j] + 0.1*(height_values_tmp2[(i+1)*NY+j] + height_values_tmp2[(i-1)*NY+j] + height_values_tmp2[i*NY+j+1] + height_values_tmp2[i*NY+j-1] - 4.0*height_values_tmp2[i*NY+j]);
+                }
+    }
+            
+    if (SMOOTH_DEM) for (i=1; i<NX-1; i++)
+        for (j=1; j<NY-1; j++) 
+            if ((wsphere[i*NY+j].indomain)&&(height_values[i*NY+j] >= -0.25))
+            {
+                wsphere[i*NY+j].altitude = height_values_tmp[i*NY+j];
+            }
+    
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++) 
+            height_values[i*NY+j] = height_values_tmp[i*NY+j];
+    
+    free(rgb_values);
+    free(int_height_values);
+    free(height_values_tmp);
+    free(height_values_tmp2);
+}
+
 void init_dem_rde(t_wave_sphere *wsphere, int dem_number, int res)
 /* init heights from digital elevation map */
 {
     int i, j, ii, jj, k, nx, ny, maxrgb, nmaxpixels = 4915200, scan, rgbval, diff, sshift, nshift, hmin, hmax, ishift, hsum, rnx, rny;
     int *rgb_values;
-    double cratio, rx, ry, cy, dx, dy, pscal, norm, vscale1, vscale2, gradx, grady, deltar, deltai[3], deltaj[3], dphi, dtheta, n[3], hsea, hmean, vshift;
+    double cratio, rx, ry, cy, dx, dy, pscal, norm, vscale1, vscale2, gradx, grady, deltar, deltai[3], deltaj[3], dphi, dtheta, n[3], hsea, hmean, vshift, altitude;
     double *height_values, *height_values_tmp;
     FILE *image_file;
     
@@ -328,13 +471,23 @@ void init_dem_rde(t_wave_sphere *wsphere, int dem_number, int res)
                 wsphere[i*rny+j].altitude = height_values[i*rny+j];
             }
                 
-//     if ((ADD_NEGATIVE_DEM)&&(dem_number == DEM_EARTH)) 
-//         read_negative_dem_values(height_values, wsphere);
+    if ((ADD_NEGATIVE_DEM)&&(dem_number == DEM_EARTH)) 
+        read_negative_dem_values_rde(height_values, wsphere);
             
     /* set radius */
+//     for (i=0; i<rnx; i++)
+//         for (j=0; j<rny; j++)
+//         {
+//             altitude = wsphere[i*rny+j].altitude - vshift;
+//             if (!wsphere[i*rny+j].indomain) wsphere[i*rny+j].radius_dem = 1.0 + RSCALE_DEM*altitude;
+// //             if (altitude >= 0.0) wsphere[i*rny+j].radius_dem = 1.0 + RSCALE_DEM*altitude;
+//             else wsphere[i*rny+j].radius_dem = 1.0;
+//         }
+
+    /* set domain in which wave is evolved */
     for (i=0; i<rnx; i++)
         for (j=0; j<rny; j++)
-                wsphere[i*rny+j].radius_dem = 1.0 + RSCALE_DEM*(wsphere[i*rny+j].altitude - vshift);
+            wsphere[i*rny+j].evolve_wave = (wsphere[i*rny+j].altitude < vshift + 0.01); 
     
     /* compute light angle */  
     dx = 2.0*(XMAX - XMIN)/(double)rnx;
@@ -599,7 +752,10 @@ void init_earth_map_rde(t_wave_sphere *wsphere, int res)
     for (i=0; i<res*NX; i++)
         for (j=0; j<res*NY; j++)
         {
-            wsphere[i*res*NY+j].radius_dem = 1.0 + RSCALE_DEM*(wsphere[i*res*NY+j].altitude - vshift);
+//             wsphere[i*res*NY+j].indomain = (wsphere[i*res*NY+j].altitude < vshift + 1.0e-7);
+            if (!wsphere[i*res*NY+j].indomain)
+                wsphere[i*res*NY+j].radius_dem = 1.0 + RSCALE_DEM*(wsphere[i*res*NY+j].altitude - vshift);
+            else wsphere[i*res*NY+j].radius_dem = 1.0;
 //             printf("Radius_dem at (%i,%i) = %.3lg\n", i, j, wsphere[i*NY+j].radius_dem);
         }
 }

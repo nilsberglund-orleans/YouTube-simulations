@@ -40,7 +40,7 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1           /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
@@ -50,7 +50,7 @@
 #define WINHEIGHT 	1150  /* window height */
 #define NX 960          /* number of grid points on x axis */
 #define NY 575          /* number of grid points on y axis */
-#define HRES 1          /* factor for high resolution plots */
+#define HRES 4          /* factor for high resolution plots */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
@@ -64,7 +64,7 @@
 #define NLAPLACIANS 0   /* number of fields for which to compute Laplacian */
 
 #define SPHERE 1        /* set to 1 to simulate equation on sphere */
-#define DPOLE 1         /* safety distance to poles */
+#define DPOLE 0         /* safety distance to poles */
 #define DSMOOTH 1       /* size of neighbourhood of poles that are smoothed */
 #define SMOOTHPOLE 0.05  /* smoothing coefficient at poles */
 #define SMOOTHCOTPOLE 0.05  /* smoothing coefficient of cotangent at poles */
@@ -72,21 +72,21 @@
 #define SMOOTHBLOCKS 1  /* set to 1 to use blocks of points near the poles */
 #define BLOCKDIST 64    /* distance to poles where points are blocked */ 
 #define ZERO_MERIDIAN 190.0     /* choice of zero meridian (will be at left/right boundary of 2d plot) */
-#define POLE_NODRAW 10  /* distance around poles where wave is not drawn */
+#define POLE_NODRAW 2  /* distance around poles where wave is not drawn */
 
 #define ADD_POTENTIAL 0 /* set to 1 to add a potential (for Schrodinger equation) */
 #define ADD_MAGNETIC_FIELD 0    /* set to 1 to add a magnetic field (for Schrodinger equation) - then set POTENTIAL 1 */
-#define ADD_FORCE_FIELD 0   /* set to 1 to add a foce field (for compressible Euler equation) */
+#define ADD_FORCE_FIELD 1   /* set to 1 to add a foce field (for compressible Euler equation) */
 #define POTENTIAL 7         /* type of potential or vector potential, see list in global_3d.c  */
 #define FORCE_FIELD 6       /* type of force field, see list in global_3d.c  */
 #define ADD_CORIOLIS_FORCE 1    /* set to 1 to add Coriolis force (quasigeostrophic Euler equations) */
 #define VARIABLE_DEPTH 1    /* set to 1 for variable depth in shallow water equation */
-#define SWATER_DEPTH 5      /* variable depth in shallow water equation */
+#define SWATER_DEPTH 10     /* variable depth in shallow water equation */
 
 #define ANTISYMMETRIZE_WAVE_FCT 0   /* set tot 1 to make wave function antisymmetric */
-#define ADAPT_STATE_TO_BC 0     /* to smoothly adapt initial state to obstacles */
+#define ADAPT_STATE_TO_BC 1     /* to smoothly adapt initial state to obstacles */
 #define OBSTACLE_GEOMETRY 84     /* geometry of obstacles, as in B_DOMAIN */
-#define BC_STIFFNESS 50.0        /* controls region of boundary condition control */
+#define BC_STIFFNESS 0.25        /* controls region of boundary condition control */
 #define CHECK_INTEGRAL 1     /* set to 1 to check integral of first field */
 
 #define JULIA_SCALE 0.5 /* scaling for Julia sets */
@@ -140,7 +140,8 @@
 
 #define VISCOSITY 0.02
 #define POISSON_STIFFNESS 1.0   /* stiffness of Poisson equation solver for incompressible Euler */
-#define DISSIPATION 1.0e-8
+#define DISSIPATION 0.0
+#define DISSIPATION_EXT 1.0e-3  /* dissipation of shallow water eq. outside domain */
 
 #define RPSA 0.75         /* parameter in Rock-Paper-Scissors-type interaction */
 #define RPSLZB 0.0       /* second parameter in Rock-Paper-Scissors-Lizard-Spock type interaction */
@@ -156,25 +157,29 @@
 #define BZQ 0.0008      /* parameter in BZ equation */
 #define BZF 1.2         /* parameter in BZ equation */
 #define B_FIELD 10.0    /* magnetic field */
-#define G_FIELD 0.002   /* gravity/Coriolis force */
-#define BC_FIELD 1.0e-5     /* constant in repulsive field from obstacles */
+#define G_FIELD 0.025    /* gravity/Coriolis force */
+#define BC_FIELD 1.0e-6     /* constant in repulsive field from obstacles */
 #define AB_RADIUS 0.2   /* radius of region with magnetic field for Aharonov-Bohm effect */
 #define K_EULER 50.0    /* constant in stream function integration of Euler equation */
 #define K_EULER_INC 0.5    /* constant in incompressible Euler equation */
 #define C_EULER_COMP 0.1   /* constant in compressible Euler equation */
+#define SWATER_VARDEPTH_FACTOR 0.1      /* force constant in front of variable depth term */
+#define SWATER_CORIOLIS_FORCE 0.002     /* Coriolis force for shallow water equation */
 
 #define SMOOTHEN_VORTICITY 0    /* set to 1 to smoothen vorticity field in Euler equation */
 #define SMOOTHEN_VELOCITY 1     /* set to 1 to smoothen velocity field in Euler equation */
 #define SMOOTHEN_PERIOD 7       /* period between smoothenings */
-#define SMOOTH_FACTOR 0.15      /* factor by which to smoothen */
+#define SMOOTH_FACTOR 0.2       /* factor by which to smoothen */
 
 #define ADD_OSCILLATING_SOURCE 0        /* set to 1 to add an oscillating wave source */
 #define OSCILLATING_SOURCE_PERIOD 1     /* period of oscillating source */
 #define OSCILLATING_SOURCE_OMEGA 0.2    /* frequency of oscillating source */
 
-#define ADD_TRACERS 1    /* set to 1 to add tracer particles (for Euler equations) */
+#define ADD_TRACERS 1    /* set to 1 tof add tracer particles (for Euler equations) */
 #define N_TRACERS 2000    /* number of tracer particles */
 #define TRACERS_STEP 0.1  /* step size in tracer evolution */
+#define RESPAWN_TRACERS 1   /* set to 1 to randomly move tracer position */
+#define RESPAWN_PROBABILTY 0.005    /* probability of moving tracer */
 
 #define T_OUT 2.0       /* outside temperature */
 #define T_IN 0.0        /* inside temperature */
@@ -208,11 +213,16 @@
 #define LAMINAR_FLOW_YPERIOD 1.0    /* period of laminar flow in y direction */
 #define PRESSURE_GRADIENT 0.2       /* amplitude of pressure gradient for Euler equation */
 
-#define SWATER_MIN_HEIGHT 0.025      /* min height of initial condition for shallow water equation */
-#define DEPTH_FACTOR 0.075       /* proportion of min height in variable depth */
-#define TANH_FACTOR 1.0         /* steepness of variable depth */
+#define SWATER_MIN_HEIGHT 0.05     /* min height of initial condition for shallow water equation */
+#define DEPTH_FACTOR 0.00002       /* proportion of min height in variable depth */
+#define TANH_FACTOR 5.0            /* steepness of variable depth */
 
 #define EULER_GRADIENT_YSHIFT 0.0    /* y-shift in computation of gradient in Euler equation */
+#define ADD_MOON_FORCING 1          /* set to 1 to simulate tidal forces from Moon */
+#define FORCING_AMP 5.0e-6          /* amplitude of periodic forcing */
+#define FORCING_CONST_AMP 0.0       /* amplitude of periodic forcing */
+#define FORCING_PERIOD 1600         /* period of forcing */
+#define FORCING_SHIFT 1.5           /* phase shift of forcing in units of Pi */
 
 /* Boundary conditions, see list in global_pdes.c  */
 
@@ -225,8 +235,8 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 950           /* number of frames of movie */
-#define NVID 85           /* number of iterations between images displayed on screen */
+#define NSTEPS 1400       /* number of frames of movie */
+#define NVID 80           /* number of iterations between images displayed on screen */
 #define ACCELERATION_FACTOR 1.0 /* factor by which to increase NVID in course of simulation */
 #define DT_ACCELERATION_FACTOR 1.0 /* factor by which to increase time step in course of simulation  */
 #define MAX_DT 0.024     /* maximal value of integration step */
@@ -248,13 +258,14 @@
 #define PLOT_SPHERE 1   /* draws fields on a sphere */
 
 #define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
-#define ROTATE_ANGLE 360.0   /* total angle of rotation during simulation */
+#define ROTATE_ANGLE -45.0   /* total angle of rotation during simulation */
 #define SHADE_3D 1              /* set to 1 to change luminosity according to normal vector */
 #define SHADE_2D 0              /* set to 1 to change luminosity according to normal vector */
 #define VIEWPOINT_TRAJ 1    /* type of viewpoint trajectory */
 #define MAX_LATITUDE 45.0   /* maximal latitude for viewpoint trajectory VP_ORBIT2 */
 
 #define DRAW_PERIODICISED 0     /* set to 1 to repeat wave periodically in x and y directions */
+#define DRAW_MOON_POSITION 0    /* set to 1 to draw vertical lines for tidal sim */
 
 /* Plot type - color scheme */
 
@@ -275,8 +286,12 @@
 #define ADD_POTENTIAL_TO_Z 0    /* set to 1 to add the external potential to z-coordinate of plot */
 #define ADD_POT_CONSTANT 0.35   /* constant added to wave height */
 #define DRAW_DEPTH 0            /* set to 1 to draw water depth */
-#define DEPTH_SCALE 0.75         /* vertical scaling of depth plot */
+#define DEPTH_SCALE 0.75        /* vertical scaling of depth plot */
 #define DEPTH_SHIFT -0.015      /* vertical shift of depth plot */
+#define FLOODING 1              /* set to 1 for drawing water when higher than continents */
+// #define FLOODING_VSHIFT 0.51    /* controls when wave is considered higher than land */
+#define FLOODING_VSHIFT 0.56    /* controls when wave is considered higher than land */
+#define FLOODING_VSHIFT_2D 0.61    /* controls when wave is considered higher than land */
 
 #define PLOT_SCALE_ENERGY 0.05      /* vertical scaling in energy plot */
 
@@ -306,8 +321,8 @@
 
 /* Color schemes, see list in global_pdes.c  */
 
-#define COLOR_PALETTE 10       /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 12      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 11       /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 16      /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
 #define COLOR_OUT_R 1.0    /* color outside domain */
@@ -330,8 +345,8 @@
 #define VSCALE_PRESSURE 2.0      /* additional scaling factor for color scheme Z_EULER_PRESSURE */
 #define PRESSURE_SHIFT 10.0        /* shift for color scheme Z_EULER_PRESSURE */
 #define PRESSURE_LOG_SHIFT -2.5     /* shift for color scheme Z_EULER_PRESSURE */
-#define VSCALE_WATER_HEIGHT 30.0     /* vertical scaling of water height */
-#define ADD_HEIGHT_CONSTANT -0.025   /* constant added to wave height */
+#define VSCALE_WATER_HEIGHT 15.0     /* vertical scaling of water height */
+#define ADD_HEIGHT_CONSTANT -0.016    /* constant added to wave height */
 #define SHADE_SCALE_2D 0.25     /* controls "depth" of 2D shading */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
@@ -354,7 +369,7 @@
 #define ZSCALE_SPEED 300.0        /* additional scaling factor for z-coord Z_EULER_SPEED and Z_SWATER_SPEED */
 #define ZSHIFT_SPEED 0.0        /* additional shift of z-coord Z_EULER_SPEED and Z_SWATER_SPEED */
 #define ZSCALE_NORMGRADIENT -0.0001  /* vertical scaling for Z_NORM_GRADIENT */
-#define VSCALE_SWATER 50.0        /* additional scaling factor for color scheme Z_EULER_DENSITY */
+#define VSCALE_SWATER 60.0        /* additional scaling factor for color scheme Z_EULER_DENSITY */
 
 #define NXMAZE 7      /* width of maze */
 #define NYMAZE 7      /* height of maze */
@@ -364,7 +379,7 @@
 #define MAZE_WIDTH 0.04     /* half width of maze walls */
 
 #define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 2.5      /* scale of color scheme bar */
+#define COLORBAR_RANGE 3.0      /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 2.5    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
@@ -427,35 +442,35 @@
 double u_3d[2] = {0.75, -0.45};     /* projections of basis vectors for REP_AXO_3D representation */
 double v_3d[2] = {-0.75, -0.45};
 double w_3d[2] = {0.0, 0.015};
-double light[3] = {0.40824829, -0.816496581, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
-double observer[3] = {8.0, 4.0, 2.5};    /* location of observer for REP_PROJ_3D representation */ 
+double light[3] = {-0.816496581, 0.40824829, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
+double observer[3] = {-6.0, -6.0, 4.5};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
 /* constants for simulations on planets */
 #define ADD_DEM 1               /* add DEM (digital elevation model) */
-#define ADD_NEGATIVE_DEM 0      /* add DEM with bathymetric data */
-#define RSCALE_DEM 0.1          /* scaling factor of radial component for DEM */
-#define SMOOTH_DEM 0            /* set to 1 to smoothen DEM (to make altitude less constant) */
-#define DEM_SMOOTH_STEPS 1      /* number of smoothening steps */
+#define ADD_NEGATIVE_DEM 1      /* add DEM with bathymetric data */
+#define RSCALE_DEM 0.075        /* scaling factor of radial component for DEM */
+#define SMOOTH_DEM 1            /* set to 1 to smoothen DEM (to make altitude less constant) */
+#define DEM_SMOOTH_STEPS 10      /* number of smoothening steps */
 #define DEM_SMOOTH_HEIGHT 2.0   /* relative height below which to smoothen */
 #define DEM_MAXHEIGHT 9000.0     /* max height of DEM (estimated from Everest/Olympus Mons) */
 #define DEM_MAXDEPTH -10000     /* max depth of DEM */
-#define PLANET_SEALEVEL 2500.0      /* sea level for flooded planet */
+#define PLANET_SEALEVEL 0.0      /* sea level for flooded planet */
 #define VENUS_NODATA_FACTOR 0.5     /* altitude to assign to DEM points without data (fraction of mean altitude) */
 
 #define Z_SCALING_FACTOR 0.8   /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define XY_SCALING_FACTOR 2.0  /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define XY_SCALING_FACTOR 2.1  /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0        /* max value of z coordinate for REP_PROJ_3D representation */
 #define XSHIFT_3D 0.0          /* overall x shift for REP_PROJ_3D representation */
 #define YSHIFT_3D 0.0          /* overall y shift for REP_PROJ_3D representation */
 #define BORDER_PADDING 0       /* distance from boundary at which to plot points, to avoid boundary effects due to gradient */
-#define DRAW_ARROW 1           /* set to 1 to draw arrow above sphere */
+#define DRAW_ARROW 0           /* set to 1 to draw arrow above sphere */
 
-#define RSCALE 0.2               /* scaling factor of radial component */
-#define RSHIFT -0.01             /* shift in radial component */
+#define RSCALE 0.15              /* scaling factor of radial component */
+#define RSHIFT -0.075            /* shift in radial component */
 #define RMAX 2.0                 /* max value of radial component */
 #define RMIN 0.5                 /* min value of radial component */
-#define COS_VISIBLE -0.75         /* limit on cosine of normal to shown facets */
+#define COS_VISIBLE -0.35        /* limit on cosine of normal to shown facets */
 
 /* For debugging purposes only */
 #define FLOOR 1         /* set to 1 to limit wave amplitude to VMAX */
@@ -670,6 +685,8 @@ void compute_gfield(int i, int j, double *gx, double *gy)
         }
     }
 }
+
+
 void initialize_potential(double potential_field[NX*NY])
 /* initialize the potential field, e.g. for the Schrödinger equation */
 {
@@ -744,9 +761,18 @@ void initialize_gfield(double gfield[2*NX*NY], double bc_field[NX*NY], double bc
         
             #pragma omp parallel for private(i,j)
             for (i=1; i<NX-1; i++){
-                for (j=1; j<NY-1; j++){
-                    gfield[i*NY+j] = BC_FIELD*(wsphere[(i+1)*NY+j].altitude - wsphere[(i-1)*NY+j].altitude)/dx;
-                    gfield[NX*NY+i*NY+j] = BC_FIELD*(wsphere[i*NY+j+1].altitude - wsphere[i*NY+j-1].altitude)/dy;
+                for (j=1; j<NY-1; j++)
+                {
+                    if (wsphere[i*NY+j].altitude > 0.0)
+                    {
+                        gfield[i*NY+j] = -BC_FIELD*(wsphere[(i+1)*NY+j].altitude - wsphere[(i-1)*NY+j].altitude)/dx;
+                        gfield[NX*NY+i*NY+j] = -BC_FIELD*(wsphere[i*NY+j+1].altitude - wsphere[i*NY+j-1].altitude)/dy;
+                    }
+                    else
+                    {
+                        gfield[i*NY+j] = 0.0;
+                        gfield[NX*NY+i*NY+j] = 0.0;                        
+                    }
                 }
             }
         
@@ -846,7 +872,7 @@ void initialize_gfield(double gfield[2*NX*NY], double bc_field[NX*NY], double bc
 void compute_water_depth(int i, int j, t_rde *rde, t_wave_sphere wsphere[NX*NY], int ncircles)
 /* initialize the vector potential, for Schrodinger equation in a magnetic field */
 {
-    double x, y, xy[2], r0, r, z, h, h0, hh, x1, y1, z1, d, rmax, rmin, phi;
+    double x, y, xy[2], r0, r, z, h, h0, hh, x1, y1, z1, d, rmax, rmin, phi, vshift;
     int n, nx, ny;
     static double phi1, phi2, phi3, sq3, rico;
     static int first = 1;
@@ -998,15 +1024,29 @@ void compute_water_depth(int i, int j, t_rde *rde, t_wave_sphere wsphere[NX*NY],
             rde->depth = SWATER_MIN_HEIGHT*DEPTH_FACTOR*h;
             break;
         }
+        case (SH_EARTH):
+        {
+            /* TODO */
+            vshift = PLANET_SEALEVEL/(DEM_MAXHEIGHT - DEM_MAXDEPTH);
+            h = 0.5 - RSCALE_DEM*(wsphere[i*NY+j].altitude - vshift);
+            rde->depth = SWATER_MIN_HEIGHT*DEPTH_FACTOR*h;
+            break;
+        }
     }
 }
 
-double initialize_water_depth(t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
+double initialize_water_depth(t_rde rde[NX*NY], t_wave_sphere *wsphere, t_wave_sphere *wsphere_hr)
 {
     int i, j, ncircles;
     double dx, dy, min, max, pscal, norm, vz = 0.01;
     
     if (SWATER_DEPTH == SH_CIRCLES) ncircles = init_circle_config_pattern(circles, CIRCLE_PATTERN);
+    
+    if (SWATER_DEPTH == SH_EARTH) 
+    {
+        init_earth_map_rde(wsphere, 1);
+        init_earth_map_rde(wsphere_hr, HRES);
+    }
     
     #pragma omp parallel for private(i,j)
     for (i=0; i<NX; i++){
@@ -1156,6 +1196,30 @@ double initialize_water_depth(t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
     
     return(max);
 }
+
+void compute_forcing_schedule(int t, t_wave_sphere wsphere[NX*NY])
+/* compute periodic forcing */
+{
+    int i, j;
+    double phase;
+    
+    phase = DPI*(double)t/(double)FORCING_PERIOD + ZERO_MERIDIAN*PI/180.0 + FORCING_SHIFT*PID;
+    
+    for (i=0; i<NX; i++) for (j=0.0; j<NY; j++)
+    {
+        wsphere[i*NY+j].force = FORCING_AMP*wsphere[i*NY+j].stheta*sin(2.0*(wsphere[i*NY+j].phi - phase));
+        wsphere[i*NY+j].force += FORCING_CONST_AMP*wsphere[i*NY+j].stheta*cos(2.0*(wsphere[i*NY+j].phi));
+    }
+    
+    moon_position = (int)((double)NX*(phase/DPI + 0.625));
+    while (moon_position < 0) moon_position += NX;
+    while (moon_position >= NX) moon_position -= NX;
+    
+//     i = NX/2;
+    i = moon_position;
+    printf("Phase = %.5lg, Forcing at i = %i: %.5lg, Moon position = %i\n", phase, i, wsphere[i*NY+NY/2].force, moon_position);
+}
+
 
 void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short int xy_in[NX*NY], double potential_field[NX*NY], double vector_potential_field[2*NX*NY], 
 double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
@@ -1485,6 +1549,18 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
                     
 //                     printf("etax = %.3lg, etay = %.3lg, ux = %.3lg, uy = %.3lg, vx = %.3lg, vy = %.3lg\n", etax, etay, ux, uy, vx, vy);
                     
+                    /* do not evolve wave at high altitude */
+                    if (FLOODING)
+                    {
+                        if (!wsphere[i*NY+j].evolve_wave)
+                        {
+                            phi_out[0][i*NY+j] = eta;
+                            phi_out[1][i*NY+j] = 0.0;
+                            phi_out[2][i*NY+j] = 0.0;
+                            break;
+                        }
+                    }
+                    
                     if (SPHERE)
                     {
                         /* TODO */
@@ -1492,11 +1568,12 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
                         {
                             phi_out[0][i*NY+j] = eta - intstep*(u*etax + v*etay + eta*(ux + vy));
                             phi_out[1][i*NY+j] = u - intstep*(u*ux + v*uy + G_FIELD*etax);
-                            phi_out[2][i*NY+j] = v - intstep*(u*vx + v*vy + G_FIELD*etax);
+                            phi_out[2][i*NY+j] = v - intstep*(u*vx + v*vy + G_FIELD*etay);
                         }   
                         else
                         {
-                            phi_out[0][i*NY+j] = SWATER_MIN_HEIGHT;
+//                             phi_out[0][i*NY+j] = SWATER_MIN_HEIGHT;
+                            phi_out[0][i*NY+j] = eta;
                             phi_out[1][i*NY+j] = 0.0;
                             phi_out[2][i*NY+j] = 0.0;
                         }
@@ -1507,7 +1584,11 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
                         phi_out[1][i*NY+j] = u - intstep*(u*ux + v*uy + G_FIELD*etax);
                         phi_out[2][i*NY+j] = v - intstep*(u*vx + v*vy + G_FIELD*etay);
                     }
-                    
+                    if (ADD_CORIOLIS_FORCE)
+                    {
+                        phi_out[1][i*NY+j] += intstep*SWATER_CORIOLIS_FORCE*v*wsphere[i*NY+j].ctheta;
+                        phi_out[2][i*NY+j] -= intstep*SWATER_CORIOLIS_FORCE*u*wsphere[i*NY+j].reg_cottheta;
+                    }
                     if (VISCOSITY > 0.0)
                     {
                         phi_out[1][i*NY+j] += intstep*VISCOSITY*delta_u[i*NY+j];
@@ -1518,18 +1599,32 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
                         phi_out[1][i*NY+j] -= intstep*DISSIPATION*u;
                         phi_out[2][i*NY+j] -= intstep*DISSIPATION*v;
                     }
+                    if ((DISSIPATION_EXT > 0.0)&&(!wsphere[i*NY+j].indomain))
+                    {   
+                        phi_out[1][i*NY+j] -= intstep*DISSIPATION_EXT*u;
+                        phi_out[2][i*NY+j] -= intstep*DISSIPATION_EXT*v;
+                    }
                     if (ADD_FORCE_FIELD)
                     {
                         phi_out[1][i*NY+j] += intstep*gfield[i*NY+j];
                         phi_out[2][i*NY+j] += intstep*gfield[NX*NY+i*NY+j];
                     }
-                    if (VARIABLE_DEPTH)
+                    if (ADD_MOON_FORCING)
                     {
-                        phi_out[0][i*NY+j] -= intstep*rde[i*NY+j].depth*(ux + vy);
-                        phi_out[0][i*NY+j] -= intstep*rde[i*NY+j].gradx*u;
-                        phi_out[0][i*NY+j] -= intstep*rde[i*NY+j].grady*v;
+                        phi_out[0][i*NY+j] += intstep*wsphere[i*NY+j].force;
+                    }
+                    if ((VARIABLE_DEPTH)&&(j > DSMOOTH)&&(j < NY-DSMOOTH))
+                    {
+                        phi_out[0][i*NY+j] -= intstep*SWATER_VARDEPTH_FACTOR*rde[i*NY+j].depth*(ux + vy);
+                        phi_out[0][i*NY+j] -= intstep*SWATER_VARDEPTH_FACTOR*rde[i*NY+j].gradx*u;
+                        phi_out[0][i*NY+j] -= intstep*SWATER_VARDEPTH_FACTOR*rde[i*NY+j].grady*v;
                     }   
                     
+                    if ((j <= DSMOOTH)||(j >= NY-DSMOOTH))
+                    {
+//                         printf("Pole reset\n");
+                        phi_out[0][i*NY+j] = SWATER_MIN_HEIGHT;
+                    }
                     break;
                 }
             }
@@ -1605,7 +1700,15 @@ void update_tracer_table(double tracers[2*N_TRACERS*NSTEPS], t_rde rde[NX*NY], i
 /* update tracer information in rde */
 {
     int tracer, t, t1, maxtime, i, j, n, ij[2], length = 50, cell, oldcell; 
-    double x, y; 
+    double x, y, x1, y1, dist; 
+    static double maxlength;
+    static int first = 1;
+    
+    if (first)
+    {
+        maxlength = pow(0.01*(XMAX - XMIN), 2.0);
+        first = 0;
+    }
     
     #pragma omp parallel for private(cell)
     for (cell=0; cell<NX*NY; cell++) 
@@ -1621,6 +1724,8 @@ void update_tracer_table(double tracers[2*N_TRACERS*NSTEPS], t_rde rde[NX*NY], i
     #pragma omp parallel for private(tracer)
     for (tracer = 0; tracer < N_TRACERS; tracer++)
     {
+        x1 = XMIN;
+        y1 = YMIN;
         for (t = 0; t < maxtime; t++)
         {
             t1 = time - t;
@@ -1641,10 +1746,13 @@ void update_tracer_table(double tracers[2*N_TRACERS*NSTEPS], t_rde rde[NX*NY], i
             }
 //             else printf("More than %i tracer points per cell\n", NMAX_TRACER_PTS);
             
-            if ((cell != oldcell)&&(t > 0))
+            dist = (x-x1)*(x-x1) + (y-y1)*(y-y1);
+            if ((cell != oldcell)&&(t > 0)&&(dist < maxlength))
                 rde[cell].prev_cell = oldcell;
             
             oldcell = cell;
+            x1 = x;
+            y1 = y;
         }
     }
 }
@@ -1654,6 +1762,7 @@ void evolve_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], t_
 {
     int tracer, i, j, n, t, ij[2], iplus, jplus, prev_cell, new_cell;
     double x, y, xy[2], vx, vy; 
+    static int n_respawn = 0;
     
     step = TRACERS_STEP;
     
@@ -1717,7 +1826,14 @@ void evolve_tracers(double *phi[NFIELDS], double tracers[2*N_TRACERS*NSTEPS], t_
         if (y < YMIN) y += (YMAX - YMIN);
         
         if (time+1 < NSTEPS)
-        {
+        {            
+            if ((RESPAWN_TRACERS)&&((double)rand()/RAND_MAX < RESPAWN_PROBABILTY))
+            {
+                x = XMIN + 0.05 + (XMAX - XMIN - 0.1)*rand()/RAND_MAX;
+                y = YMIN + 0.05 + (YMAX - YMIN - 0.1)*rand()/RAND_MAX;
+                n_respawn++;
+                printf("Respawning tracer %i, %i respawns\n", tracer, n_respawn); 
+            }
             tracers[(time+1)*2*N_TRACERS + 2*tracer] = x;
             tracers[(time+1)*2*N_TRACERS + 2*tracer + 1] = y;
         }
@@ -2024,7 +2140,7 @@ void animation()
     if (VARIABLE_DEPTH) 
     {
 //         water_depth = (t_swater_depth *)malloc(NX*NY*sizeof(t_swater_depth));
-        max_depth = initialize_water_depth(rde, wsphere);
+        max_depth = initialize_water_depth(rde, wsphere, wsphere_hr);
         printf("Max depth = %.3lg\n", max_depth);
     }
     
@@ -2119,8 +2235,15 @@ void animation()
 
     //     init_linear_wave(-1.0, 0.01, 5.0e-8, 0.25, SWATER_MIN_HEIGHT, phi, xy_in);
     
-    init_swater_laminar_flow_sphere(0, -0.75, 0.0075, 6, 1, 0.0025, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
-        
+    
+//     init_swater_laminar_flow_sphere(0, 0.25, 0.00075, 4, 4, 0.0025, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
+
+//     init_tidal_state(1, 0.0015, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
+
+//     init_linear_blob_sphere(0, 1.3*PI, 0.65*PI, 0.0, 0.0, 0.3, 0.1, 0.1, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
+    
+    init_expanding_blob_sphere(0, (220.0/180.0)*PI, (140.0/180.0)*PI, 1.0, 0.075, 0.1, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
+    
 //     add_gaussian_wave(-1.6, -0.5, 0.015, 0.25, SWATER_MIN_HEIGHT, phi, xy_in);
     
     if (SMOOTHBLOCKS) for (k=0; k<NFIELDS; k++) block_poles(phi[k]);
@@ -2140,6 +2263,8 @@ void animation()
         tracers[2*i] = XMIN + 0.05 + (XMAX - XMIN - 0.1)*rand()/RAND_MAX;
         tracers[2*i+1] = YMIN + 0.05 + (YMAX - YMIN - 0.1)*rand()/RAND_MAX;
     }
+    
+    if (ADD_MOON_FORCING) compute_forcing_schedule(0, wsphere);
     
     blank();
     glColor3f(0.0, 0.0, 0.0);
@@ -2179,6 +2304,7 @@ void animation()
         if (CHANGE_RPSLZB) rpslzb = rpslzb_schedule(i);
         if (CHANGE_FLOW_SPEED) flow_speed = flow_speed_schedule(i); 
         else flow_speed = IN_OUT_FLOW_AMP;
+        if (ADD_MOON_FORCING) compute_forcing_schedule(i, wsphere);
         
         if (ROTATE_VIEW) 
         {

@@ -106,6 +106,9 @@
 #define D_IMAGE 77              /* Taken from image file */
 #define D_MAGNETRON 78          /* simplified magnetron */
 #define D_MAGNETRON_CATHODE 781 /* simplified magnetron with central cathode */
+#define D_TWOCIRCLES 79         /* two circles of different size */
+#define D_POLYCIRCLES 791       /* one large circle and NPOLY small ones */
+#define D_POLYCIRCLES_ANGLED 792    /* variant of D_POLYCIRCLES with angled small cavities */
 
 /* for wave_sphere.c */
 
@@ -125,7 +128,7 @@
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
-#define NMAXSOURCES 10      /* maximal number of sources */
+#define NMAXSOURCES 30      /* maximal number of sources */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */

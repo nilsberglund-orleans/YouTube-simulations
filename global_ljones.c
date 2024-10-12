@@ -21,6 +21,7 @@
 #define NMAXPARTNERMOLECULES 30 /* max number of partners of a molecule */
 #define NMAXPARTINCLUSTER 500   /* max number of particles in cluster */
 #define NMAXBELTS 10        /* max number of conveyor belts */
+#define NMAXSHOVELS 50      /* max number of shovels */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -53,6 +54,10 @@
 #define O_HEX 6             /* hexagonal lattice */
 #define O_SIDES 7           /* grid along the sides of the simulation rectangle */
 #define O_SIDES_B 71        /* finer grid along the sides of the simulation rectangle */
+#define O_SIEVE 8           /* obstacles form a sieve */
+#define O_SIEVE_B 81        /* obstacles form a sieve, v2 */
+#define O_SIEVE_LONG 82     /* obstacles form a long sieve */
+#define O_SIEVE_LONG_B 83   /* obstacles form a long sieve, version with varying spacing */
 
 /* pattern of additional repelling segments */
 #define S_RECTANGLE 0       /* segments forming a rectangle */
@@ -95,6 +100,13 @@
 #define S_TWO_CONVEYOR_BELTS 31 /* two angled conveyor belts */
 #define S_PERIODIC_CONVEYORS 32 /* one wrapping belt, and one short horizontal belt */
 #define S_TEST_CONVEYORS 321    /* test */
+#define S_CONVEYOR_SHOVELS 33   /* conveyor belt with shovels */
+#define S_CONVEYOR_MIXED 34     /* multiple conveyor belts with and without shovels */
+#define S_CONVEYOR_SIEVE 35     /* conveyor belts for polygon sieve */
+#define S_CONVEYOR_SIEVE_B 351  /* conveyor belts for polygon sieve, v2 with backward top conveyor */
+#define S_CONVEYOR_SIEVE_LONG 352  /* conveyor belts for long polygon sieve */
+#define S_MASS_SPECTROMETER 36  /* bins for mass spectrometer */
+#define S_WIND_FORCE 361        /* bins for sorting by wind force */
 
 /* particle interaction */
 
@@ -278,6 +290,7 @@
 #define P_CLUSTER_SIZE 20 /* colors depend on size of connected component */
 #define P_CLUSTER_SELECTED 21   /* colors show which clusters are slected for growth */
 #define P_COLLISION 22    /* colors depend on number of collision/reaction */
+#define P_RADIUS 23       /* colors depend on particle radius */
 
 /* Rotation schedules */
 
@@ -288,6 +301,11 @@
 
 #define IP_X 0      /* color depends on x coordinate of initial position */
 #define IP_Y 1      /* color depends on y coordinate of initial position */
+
+/* Space dependence of magnetic field */
+
+#define BF_CONST 0  /* constant magnetic field */
+#define BF_SQUARE 1 /* magnetic field concentrated in square */
 
 /* Interaction types for polyatomic molecules */
 
@@ -368,6 +386,7 @@ typedef struct
     double fx;                  /* x component of force on particle */
     double fy;                  /* y component of force on particle */
     double torque;              /* torque on particle */
+    double damping;             /* factor in front of damping coefficient */
     double dirmean;             /* time averaged direction */
     int close_to_boundary;      /* has value 1 if particle is close to a boundary */
     short int thermostat;       /* whether particle is coupled to thermostat */
@@ -456,8 +475,14 @@ typedef struct
 typedef struct
 {
     double xc, yc, radius;      /* center and radius of circle */
+    double xc0, yc0;            /* center of oscillation for option RATTLE_OBSTACLES */
     short int active;           /* circle is active */
     double charge;              /* charge of obstacle, for EM simulations */
+    double omega0, omega;       /* speed of rotation */
+    double angle;               /* angle of obstacle */
+    short int oscillate;        /* has value 1 if the obstacles oscillates over time */
+    int period;                 /* oscillation period */
+    double amplitude, phase;    /* amplitude and phase of oscillation */
 } t_obstacle;
 
 typedef struct
@@ -465,6 +490,7 @@ typedef struct
     double x1, x2, y1, y2;      /* extremities of segment */
     double xc, yc;              /* mid-point of segment */
     double nx, ny;              /* normal vector */
+    double nangle;              /* angle of normal vector */
     double c;                   /* constant term in cartesian eq nx*x + ny*y = c */
     double length;              /* length of segment */
     short int concave;          /* corner is concave, to add extra repelling force */
@@ -482,6 +508,7 @@ typedef struct
     short int inactivate;       /* set to 1 for segment to become inactive at time SEGMENT_DEACTIVATION_TIME */
     short int conveyor;         /* set to 1 for segment to exert lateral force */
     double conveyor_speed;      /* speed of conveyor belt */
+    short int align_torque;     /* set to 1 for segment to exert aligning torque */
 } t_segment;
 
 typedef struct
@@ -533,6 +560,9 @@ typedef struct
     double length;              /* distance between (x1,x2) and (y1,y2) */
     double angle;               /* angle of (x1,x2) - (y1,y2) */
     double tx, ty;              /* coordinates of tangent vector */
+    int nshovels;               /* number of shovels */
+    double shovel_pos[NMAXSHOVELS];    /* position od each shovel */
+    int shovel_segment[NMAXSHOVELS];   /* first segment of each shovel */
 } t_belt;
 
 typedef struct
@@ -556,6 +586,6 @@ typedef struct
 
 
 
-int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0, nbelts = 0;
+int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0, nbelts = 0, n_tracers = 0;
 FILE *lj_log;
 

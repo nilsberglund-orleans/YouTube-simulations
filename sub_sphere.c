@@ -480,6 +480,11 @@ void init_dem(t_wave_sphere wsphere[NX*NY], int dem_number)
 //             else wsphere[i*NY+j].radius = 1.0;
                 wsphere[i*NY+j].radius_dem = 1.0 + RSCALE_DEM*(wsphere[i*NY+j].altitude - vshift);
     
+    /* set domain of evolution for simulations with flooding */
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+            wsphere[i*NY+j].evolve_wave = (wsphere[i*NY+j].altitude < vshift + 0.1); 
+    
     /* compute light angle */  
     dx = 2.0*(XMAX - XMIN)/(double)NX;
     dy = 2.0*(YMAX - YMIN)/(double)NY;

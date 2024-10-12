@@ -62,8 +62,8 @@
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
-#define YMIN -1.197916667
-#define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
+#define YMIN -0.997916667
+#define YMAX 1.397916667	/* y interval for 9/16 aspect ratio */
 
 #define HIGHRES 1       /* set to 1 if resolution of grid is double that of displayed image */
 #define HRES 1          /* dummy, only used by rde.c */
@@ -72,7 +72,7 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 6        /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 792        /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 202   /* pattern of circles or polygons, see list in global_pdes.c */
 
@@ -85,11 +85,11 @@
 #define PDISC_FACTOR 3.5    /* controls density of Poisson disc process (default: 3.25) */
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 
-#define LAMBDA 0.3	    /* parameter controlling the dimensions of domain */
-#define MU 1.0              /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.85	    /* parameter controlling the dimensions of domain */
+#define MU 0.18             /* parameter controlling the dimensions of domain */
 #define MU_B 1.0            /* parameter controlling the dimensions of domain */
-#define NPOLY 6             /* number of sides of polygon */
-#define APOLY -0.666666666666          /* angle by which to turn polygon, in units of Pi/2 */ 
+#define NPOLY 3            /* number of sides of polygon */
+#define APOLY -0.17           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 6            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
@@ -97,7 +97,7 @@
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
 #define NGRIDX 60           /* number of grid point for grid of disks */
 #define NGRIDY 25           /* number of grid point for grid of disks */
-#define WALL_WIDTH 0.05      /* width of wall separating lenses */
+#define WALL_WIDTH 0.05     /* width of wall separating lenses */
 #define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
 
 #define X_SHOOTER -0.2
@@ -116,7 +116,7 @@
 
 /* Physical parameters of wave equation */
 
-#define TWOSPEEDS 1         /* set to 1 to replace hardcore boundary by medium with different speed */
+#define TWOSPEEDS 0         /* set to 1 to replace hardcore boundary by medium with different speed */
 #define OSCILLATE_LEFT 0     /* set to 1 to add oscilating boundary condition on the left */
 #define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
 #define OSCILLATION_SCHEDULE 61  /* oscillation schedule, see list in global_pdes.c */
@@ -146,9 +146,10 @@
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
 #define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
-#define OSCILLATING_SOURCE_PERIOD 3     /* period of oscillating source */
+#define OSCILLATING_SOURCE_PERIOD 16    /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
-#define N_SOURCES 1                     /* number of sources, for option draw_sources */
+#define N_SOURCES 3                     /* number of sources, for option draw_sources */
+#define ALTERNATE_SOURCE_PHASES 0       /* set to 1 to alternate initial phases of sources */
 
 #define ADD_WAVE_PACKET_SOURCES 0       /* set to 1 to add several sources emitting wave packets */
 #define WAVE_PACKET_SOURCE_TYPE 3       /* type of wave packet sources */
@@ -163,9 +164,8 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 1000      /* number of frames of movie */
-// #define NSTEPS 2000         /* number of frames of movie */
-#define NVID 10             /* number of iterations between images displayed on screen */
+#define NSTEPS 2300         /* number of frames of movie */
+#define NVID 8              /* number of iterations between images displayed on screen */
 #define NSEG 1000           /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
@@ -182,7 +182,7 @@
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 0.75             /* amplitude of initial condition */
+#define INITIAL_AMP 1.5            /* amplitude of initial condition */
 #define INITIAL_VARIANCE 0.00001    /* variance of initial condition */
 #define INITIAL_WAVELENGTH  0.025   /* wavelength of initial condition */
 
@@ -194,8 +194,8 @@
 
 /* Color schemes */
 
-#define COLOR_PALETTE 11     /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 13   /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 13     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 17   /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
@@ -205,20 +205,18 @@
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
-// #define COLOR_PHASE_SHIFT 0.0   /* phase shift of color scheme, in units of Pi */
 #define ATTENUATION 0.0   /* exponential attenuation coefficient of contrast with time */
 #define VSHIFT_AMPLITUDE 0.0   /* additional shift for wave amplitude */
 #define VSCALE_AMPLITUDE 0.5   /* additional scaling factor for wave amplitude */
-#define E_SCALE 50.0       /* scaling factor for energy representation */
+#define E_SCALE 10.0       /* scaling factor for energy representation */
 #define LOG_SCALE 0.75     /* scaling factor for energy log representation */
 #define LOG_SHIFT 0.75     /* shift of colors on log scale */
 #define FLUX_SCALE 250.0    /* scaling factor for energy flux represtnation */
-#define AVRG_E_FACTOR 0.75   /* controls time window size in P_AVERAGE_ENERGY scheme */
+#define AVRG_E_FACTOR 0.8   /* controls time window size in P_AVERAGE_ENERGY scheme */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 #define FADE_IN_OBSTACLE 1      /* set to 1 to fade color inside obstacles */
-#define SHADE_2D 1       /* set to 1 to add pseudo-3d shading effect */ 
-// #define SHADE_SCALE_2D 0.25  /* lower value increases sensitivity of shading */
-#define SHADE_SCALE_2D 0.05  /* lower value increases sensitivity of shading */
+#define SHADE_2D 0       /* set to 1 to add pseudo-3d shading effect */ 
+#define SHADE_SCALE_2D 0.25  /* lower value increases sensitivity of shading */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
@@ -227,9 +225,9 @@
 #define HUEMEAN 180.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -180.0      /* amplitude of variation of hue for color scheme C_HUE */
 
-#define DRAW_COLOR_SCHEME 1    /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 1.4     /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 1.2   /* scale of color scheme bar for 2nd part */
+#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 2.0      /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 0.2    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
 #define CIRC_COLORBAR_B 0       /* set to 1 to draw circular color scheme */
@@ -599,7 +597,7 @@ void animation()
     double time, scale, ratio, startleft[2], startright[2], sign[N_SOURCES], r2, xy[2], fade_value, yshift, speed = 0.0, a, b, c, x, y, angle = 0.0, x1, ior_angle = 0.0, omega, phase_shift, vshift, dsource, finv, source_amp; 
     double *phi[NX], *psi[NX], *tmp[NX], *total_energy[NX], *average_energy[NX], *color_scale[NX], *total_flux, *tcc_table[NX], *tgamma_table[NX], *fade_table;
     short int *xy_in[NX];
-    int i, j, k, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, p, q, first_source = 1, imin, imax, ij[2], source, source_period, source_shift;
+    int i, j, k, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, p, q, first_source = 1, imin, imax, ij[2], source, source_period, source_shift[N_SOURCES];
 //     static int image_counter = 0;
     int image_counter = 0;
     long int wave_value;
@@ -636,7 +634,8 @@ void animation()
         init_wave_packets(packet, WAVE_PACKET_RADIUS);
     }
     
-    for (i=0; i<N_SOURCES; i++) sign[i] = 1.0;
+    if (ALTERNATE_SOURCE_PHASES) for (i=0; i<N_SOURCES; i++) sign[i] = pow(-1.0,(double)i);
+    else for (i=0; i<N_SOURCES; i++) sign[i] = 1.0;
     
     /* initialise positions and radii of circles */
     if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)) ncircles = init_circle_config(circles);
@@ -792,8 +791,6 @@ void animation()
 
     glutSwapBuffers();
 
-
-
     sleep(SLEEP1);
 
     for (i=0; i<=INITIAL_TIME + NSTEPS; i++)
@@ -830,13 +827,17 @@ void animation()
         if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, CIRC_COLORBAR, fade, fade_value);
         
         /* add oscillating waves */
-        wave_source_x[0] = XMIN + 2.0*(XMAX - XMIN)*(double)i/(double)NSTEPS;
-        wave_source_y[0] = 0.3;
-        if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == 1))
+        for (source = 0; source < N_SOURCES; source++)
         {
-            if (ALTERNATE_OSCILLATING_SOURCE) sign[0] = -sign[0];
-            for (source = 0; source < N_SOURCES; source++)
-                add_circular_wave(-sign[0]*INITIAL_AMP, wave_source_x[source], wave_source_y[source], phi, psi, xy_in);
+            angle = APOLY*PID + (double)source*DPI/(double)NPOLY;
+            wave_source_x[source] = LAMBDA*cos(angle) + 2.0*MU*cos(angle - 0.5*PID);
+            wave_source_y[source] = LAMBDA*sin(angle) + 2.0*MU*sin(angle - 0.5*PID);
+            source_shift[source] = source*OSCILLATING_SOURCE_PERIOD/N_SOURCES;
+            if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == source_shift[source]))
+            {
+                if (ALTERNATE_OSCILLATING_SOURCE) sign[source] = -sign[source];
+                add_circular_wave(-sign[source]*INITIAL_AMP, wave_source_x[source], wave_source_y[source], phi, psi, xy_in);
+            }
         }
 
         

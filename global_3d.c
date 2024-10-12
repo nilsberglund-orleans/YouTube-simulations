@@ -51,6 +51,7 @@
 #define SH_SPHERE_OCTAHEDRON 6   /* octahedron embedded in sphere */
 #define SH_SPHERE_DODECAHEDRON 7 /* dodecahedron embedded in sphere */
 #define SH_SPHERE_ICOSAHEDRON 8  /* icosahedron embedded in sphere */
+#define SH_EARTH 10         /* depth of Earth oceans */
 
 /* Type of rotating viewpoint */
 
@@ -89,7 +90,8 @@
 #define PLANET ((B_DOMAIN == D_SPHERE_EARTH)||(B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON)||(B_DOMAIN == D_SPHERE_VENUS)||(B_DOMAIN == D_SPHERE_MERCURY))
 #define OTHER_PLANET ((B_DOMAIN == D_SPHERE_MARS)||(B_DOMAIN == D_SPHERE_MOON)||(B_DOMAIN == D_SPHERE_VENUS)||(B_DOMAIN == D_SPHERE_MERCURY))
 
-#define RDE_PLANET ((ADAPT_STATE_TO_BC)&&((OBSTACLE_GEOMETRY == D_SPHERE_EARTH)||(OBSTACLE_GEOMETRY == D_SPHERE_MARS)||(OBSTACLE_GEOMETRY == D_SPHERE_VENUS)))
+#define RDE_PLANET (((ADAPT_STATE_TO_BC)&&((OBSTACLE_GEOMETRY == D_SPHERE_EARTH)||(OBSTACLE_GEOMETRY == D_SPHERE_MARS)||(OBSTACLE_GEOMETRY == D_SPHERE_VENUS))))
+// #define RDE_PLANET (((ADAPT_STATE_TO_BC)&&((OBSTACLE_GEOMETRY == D_SPHERE_EARTH)||(OBSTACLE_GEOMETRY == D_SPHERE_MARS)||(OBSTACLE_GEOMETRY == D_SPHERE_VENUS)))||((RDE_EQUATION == E_SHALLOW_WATER)&&(SWATER_DEPTH == SH_EARTH)))
 
 #define NMAXCIRC_SPHERE 100     /* max number of circles on sphere */
 #define NMAX_TRACER_PTS 20       /* max number of tracer points recorded per cell */
@@ -168,6 +170,7 @@ typedef struct
     double r, g, b;             /* RGB values for image */
     short int indomain;         /* has value 1 if lattice point is in domain */
     short int draw_wave;        /* has value 1 if wave instead of DEM is drawn */
+    short int evolve_wave;      /* has value 1 where there is wave evolution */
     double x2d, y2d;            /* x and y coordinates for 2D representation */
     double altitude;            /* altitude in case of Earth with digital elevation model */
     double cos_angle;           /* cosine of light angle */

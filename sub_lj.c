@@ -1257,8 +1257,16 @@ void add_obstacle(double x, double y, double radius, t_obstacle obstacle[NMAXOBS
 void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
 /* initialise circular obstacle configuration */
 {
-    int i, j, n, jmin, jmax, nx, ny; 
-    double x, y, dx, dy, width, lpocket, xmid = 0.5*(BCXMIN + BCXMAX), radius;
+    int i, j, n, jmin, jmax, nx, ny, ntot; 
+    double x, y, dx, dy, width, lpocket, xmid = 0.5*(BCXMIN + BCXMAX), radius, c;
+    
+    /* set default rotation to 0 */
+    for (i=0; i<NMAXOBSTACLES; i++) 
+    {
+        obstacle[i].omega = 0.0;
+        obstacle[i].angle = 0.0;
+        obstacle[i].oscillate = 0;
+    }
     
     switch (OBSTACLE_PATTERN) {
         case (O_CORNERS):
@@ -1442,17 +1450,166 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
             for (i = 0; i < nx+1; i++)
                 for (j = 0; j < ny+1; j++)
                     if ((i == 0)||(i == nx)||(j == 0)||(j == ny))
-                {
-                    obstacle[n].xc = BCXMIN + (double)i*dx;
-                    obstacle[n].yc = BCYMIN + (double)j*dy;
-                    obstacle[n].radius = OBSTACLE_RADIUS;
-                    obstacle[n].active = 1;
-                    n++;
-                }
+                    {
+                        obstacle[n].xc = BCXMIN + (double)i*dx;
+                        obstacle[n].yc = BCYMIN + (double)j*dy;
+                        obstacle[n].radius = OBSTACLE_RADIUS;
+                        obstacle[n].active = 1;
+                        n++;
+                    }
             nobstacles = n;
             break;
         }
-        
+        case (O_SIEVE):
+        {
+            n = 0;
+            width = 1.0;
+            
+            dx = width/12.0;
+            dy = dx*0.6;
+            for (i = 0; i < 13; i++)
+            {
+                obstacle[n].xc = -1.0 + (double)i*dx;
+                obstacle[n].yc = 0.7 - (double)i*dy;
+                obstacle[n].radius = 0.95*OBSTACLE_RADIUS;
+                obstacle[n].omega = 1.25*OBSTACLE_OMEGA;
+                obstacle[n].active = 1;
+                n++;
+            }
+            for (i = 0; i < 13; i++)
+            {
+                obstacle[n].xc = -1.0 + (double)i*dx;
+                obstacle[n].yc = 0.2 - (double)i*dy;
+                obstacle[n].radius = 1.2*OBSTACLE_RADIUS;
+                obstacle[n].omega = OBSTACLE_OMEGA;
+                obstacle[n].active = 1;
+                n++;
+            }
+            for (i = 0; i < 13; i++)
+            {
+                obstacle[n].xc = -1.0 + (double)i*dx;
+                obstacle[n].yc = -0.3 - (double)i*dy;
+                obstacle[n].radius = 1.6*OBSTACLE_RADIUS;
+                obstacle[n].omega = 0.75*OBSTACLE_OMEGA;
+                obstacle[n].active = 1;
+                n++;
+            }
+                        
+            nobstacles = n;
+            break;
+        }
+        case (O_SIEVE_B):
+        {
+            n = 0;
+            width = 1.2;
+            
+            dx = width/14.0;
+            dy = dx*0.6;
+            for (i = 0; i < 15; i++)
+            {
+                obstacle[n].xc = -1.2 + (double)i*dx;
+                obstacle[n].yc = 0.85 - (double)i*dy;
+                obstacle[n].radius = 0.9*OBSTACLE_RADIUS;
+                obstacle[n].omega = 1.25*OBSTACLE_OMEGA;
+                obstacle[n].active = 1;
+                n++;
+            }
+            for (i = 0; i < 15; i++)
+            {
+                obstacle[n].xc = -1.2 + (double)i*dx;
+                obstacle[n].yc = 0.35 - (double)i*dy;
+                obstacle[n].radius = 1.2*OBSTACLE_RADIUS;
+                obstacle[n].omega = OBSTACLE_OMEGA;
+                obstacle[n].active = 1;
+                n++;
+            }
+            for (i = 0; i < 15; i++)
+            {
+                obstacle[n].xc = -1.2 + (double)i*dx;
+                obstacle[n].yc = -0.15 - (double)i*dy;
+                obstacle[n].radius = 1.6*OBSTACLE_RADIUS;
+                obstacle[n].omega = 0.75*OBSTACLE_OMEGA;
+                obstacle[n].active = 1;
+                n++;
+            }
+            
+            if (RATTLE_OBSTACLES) for (i = 0; i < n; i++)
+            {
+                obstacle[i].oscillate = 1;
+                obstacle[i].period = 8;
+                obstacle[i].amplitude = 0.0015;
+                obstacle[i].phase = (double)i*DPI/10.0;
+            }
+                        
+            nobstacles = n;
+            break;
+        }
+        case (O_SIEVE_LONG):
+        {
+            n = 0;
+            ntot = 36;
+            width = 1.2;
+            
+            dx = (XMAX - XMIN)/(double)ntot;
+            dy = dx*0.3;
+            for (i = 0; i < ntot + 1; i++)
+            {
+                obstacle[n].xc = XMIN + (double)i*dx;
+                obstacle[n].yc = 0.6 - (double)i*dy;
+                obstacle[n].radius = OBSTACLE_RADIUS*(2.4 - 1.6*(double)i/(double)ntot);
+                obstacle[n].omega = OBSTACLE_OMEGA;
+                obstacle[n].active = 1;
+                n++;
+            }
+            
+            if (RATTLE_OBSTACLES) for (i = 0; i < n; i++)
+            {
+                obstacle[i].oscillate = 1;
+                obstacle[i].period = 8;
+                obstacle[i].amplitude = 0.0018;
+                obstacle[i].phase = (double)i*DPI/10.0;
+            }
+                        
+            nobstacles = n;
+            break;
+        }
+        case (O_SIEVE_LONG_B):
+        {
+            n = 0;
+            ntot = 45;
+            width = 1.2;
+            
+            dx = (XMAX - XMIN)/(double)ntot;
+            dy = dx*0.2;
+            x = XMIN;
+            y = 0.4;
+            c = 0.019;
+            
+            while (x < XMAX)
+            {
+                obstacle[n].xc = x;
+                obstacle[n].yc = y;
+                obstacle[n].radius = OBSTACLE_RADIUS;
+                obstacle[n].omega = OBSTACLE_OMEGA;
+                obstacle[n].active = 1;
+                x += dx;
+                y -= dy;
+                dx += c*dx;
+                dy += c*dy;
+                n++;
+            }
+            
+            if (RATTLE_OBSTACLES) for (i = 0; i < n; i++)
+            {
+                obstacle[i].oscillate = 1;
+                obstacle[i].period = 8;
+                obstacle[i].amplitude = 0.0018;
+                obstacle[i].phase = (double)i*DPI/10.0;
+            }
+                        
+            nobstacles = n;
+            break;
+        }
         default: 
         {
             printf("Function init_obstacle_config not defined for this pattern \n");
@@ -1461,6 +1618,13 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
     
     if (CHARGE_OBSTACLES)
         for (n=0; n<nobstacles; n++) obstacle[n].charge = OBSTACLE_CHARGE;
+        
+    for (n=0; n<nobstacles; n++) 
+    {
+        obstacle[n].omega0 = obstacle[n].omega;
+        obstacle[n].xc0 = obstacle[n].xc;
+        obstacle[n].yc0 = obstacle[n].yc;
+    }
 }
 
 void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, double width, int center, t_segment segment[NMAXSEGMENTS], int group)
@@ -1954,11 +2118,184 @@ int init_maze_segments(t_segment segment[NMAXSEGMENTS], int diag)
     free(maze);
 }
 
-int add_conveyor_belt(double x1, double y1, double x2, double y2, double width, double speed, t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[NMAXBELTS])
+void translate_segments(t_segment segment[NMAXSEGMENTS], double deltax[2], double deltay[2])
+/* rotates the repelling segments by given angle */
+{
+    int i, group;
+    
+    for (i=0; i<nsegments; i++) 
+    {
+        group = segment[i].group;
+        if (group == 0)
+        {
+            segment[i].x1 = segment[i].x01 + deltax[group] - SEGMENTS_X0;
+            segment[i].x2 = segment[i].x02 + deltax[group] - SEGMENTS_X0;
+        }
+        else
+        {
+            segment[i].x1 = segment[i].x01 + deltax[group] + SEGMENTS_X0;
+            segment[i].x2 = segment[i].x02 + deltax[group] + SEGMENTS_X0;
+        }
+            
+        segment[i].y1 = segment[i].y01 + deltay[group] - SEGMENTS_Y0;
+        segment[i].y2 = segment[i].y02 + deltay[group] - SEGMENTS_Y0;
+        segment[i].c = segment[i].nx*segment[i].x1 + segment[i].ny*segment[i].y1;
+    }
+}
+
+void translate_one_segment(t_segment segment[NMAXSEGMENTS], int i, double deltax, double deltay)
+/* translates the repelling segment by given vector */
+{
+    segment[i].x1 += deltax;
+    segment[i].x2 += deltax;
+        
+    segment[i].y1 += deltay;
+    segment[i].y2 += deltay;
+    segment[i].c = segment[i].nx*segment[i].x1 + segment[i].ny*segment[i].y1;
+    
+    segment[i].xc += deltax;
+    segment[i].yc += deltay;
+    
+}
+
+void rotate_one_segment(t_segment segment[NMAXSEGMENTS], int i, double dalpha, double xc, double yc)
+/* rotates the repelling segment by given angle around (xc, yc) */
+{
+    double ca, sa, x, y, nx, ny;
+    
+    ca = cos(dalpha);
+    sa = sin(dalpha);
+    
+    x = segment[i].x1 - xc;
+    y = segment[i].y1 - yc;
+    
+    segment[i].x1 = xc + x*ca - y*sa;
+    segment[i].y1 = yc + x*sa + y*ca;
+    
+    x = segment[i].x2 - xc;
+    y = segment[i].y2 - yc;
+    
+    segment[i].x2 = xc + x*ca - y*sa;
+    segment[i].y2 = yc + x*sa + y*ca;
+    
+    segment[i].xc = 0.5*(segment[i].x1 + segment[i].x2);
+    segment[i].yc = 0.5*(segment[i].y1 + segment[i].y2);
+    
+    nx = segment[i].nx;
+    ny = segment[i].ny;
+    
+    segment[i].nx = ca*nx - sa*ny;
+    segment[i].ny = sa*nx + ca*ny;
+    
+    segment[i].c = segment[i].nx*segment[i].x1 + segment[i].ny*segment[i].y1;
+    
+    if (segment[i].concave)
+    {
+        segment[i].angle1 += dalpha;
+        segment[i].angle2 += dalpha;
+        while (segment[i].angle1 > DPI)
+        {
+            segment[i].angle1 -= DPI;
+            segment[i].angle2 -= DPI;
+        }
+        while (segment[i].angle2 < 0.0)
+        {
+            segment[i].angle1 += DPI;
+            segment[i].angle2 += DPI;
+        }
+    }
+}
+
+
+int add_shovel_to_belt(double x, double y, double angle, double size, double width, t_segment segment[NMAXSEGMENTS], t_belt belt)
+/* add showver to conveyor belt */
+{
+    int i, n, iminus, iplus;
+    double sq2, angle1, angle2, cg, sg, t;
+    
+    if (nsegments + 6 > NMAXSEGMENTS) 
+    {
+        printf("NMAXSEGMENTS too small");
+        return(0);
+    }
+    
+    n = nsegments; 
+//     sq2 = sqrt(2.0)/2.0;
+    cg = cos(PI/6.0);
+    sg = sin(PI/6.0);
+    t = size + width*(cg - 1.0)/sg;
+    
+    segment[n].x1 = 0.0;
+    segment[n].y1 = 0.0;
+    
+    segment[n+1].x1 = 0.0;
+    segment[n+1].y1 = size;
+    
+    segment[n+2].x1 = size*sg;
+    segment[n+2].y1 = size*(1.0+cg);
+    
+    segment[n+3].x1 = size*sg + width*cg;
+    segment[n+3].y1 = size*(1.0+cg) - width*sg;
+    
+    segment[n+4].x1 = width;
+    segment[n+4].y1 = size*(1.0 + cg) - width*sg - t*cg;
+    
+//     segment[n+2].x1 = size*sq2;
+//     segment[n+2].y1 = size*(1.0+sq2);
+//     
+//     segment[n+3].x1 = size*sq2 + width*sq2;
+//     segment[n+3].y1 = size*(1.0+sq2) - width*sq2;
+//     
+//     segment[n+4].x1 = width;
+//     segment[n+4].y1 = size + width*(1.0 - sqrt(2.0));
+
+    segment[n+5].x1 = width;
+    segment[n+5].y1 = 0.0;    
+    
+    for (i=0; i<6; i++)
+    {
+        segment[n+i].x2 = segment[n+i+1].x1;
+        segment[n+i].y2 = segment[n+i+1].y1;
+    }
+    segment[n+6].x2 = segment[n].x1;
+    segment[n+6].y2 = segment[n].y1;
+    
+    for (i=n; i<n+6; i++) 
+    {
+        segment[i].inactivate = 0;
+        segment[i].conveyor = 0;
+        segment[i].concave = 1;
+    }
+    
+    /* deal with concave corners */
+    for (i=n; i<n+6; i++)
+    {
+        iminus = i-1;  
+        iplus = i+1;  
+        if (iminus < n) iminus = n + 5;
+        if (iplus > n + 5) iplus = n;
+        angle1 = argument(segment[iplus].x1 - segment[i].x1, segment[iplus].y1 - segment[i].y1) + PID;
+        angle2 = argument(segment[i].x1 - segment[iminus].x1, segment[i].y1 - segment[iminus].y1) + PID;
+        if (angle2 < angle1) angle2 += DPI;
+        segment[i].angle1 = angle1;
+        segment[i].angle2 = angle2;
+    }
+    
+    for (i=n; i<n+6; i++)
+    {
+        translate_one_segment(segment, i, x, y);
+        rotate_one_segment(segment, i, angle, x, y);
+    }
+    
+    nsegments += 6;
+    return(1);
+}
+
+int add_conveyor_belt(double x1, double y1, double x2, double y2, double width, double speed, int nshovels, t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[NMAXBELTS])
 /* add segments forming a conveyor belt */
 {
-    double length, tx, ty, angle, angle1, angle2;
-    int i, n, iplus, iminus;
+    double length, tx, ty, angle, angle1, angle2, beltlength, shovel_dist, shovel_pos, x, y, beta;
+    int i, n, iplus, iminus, shovel;
     
     length = module2(x2 - x1, y2 - y1);
     angle = argument(x2 - x1, y2 - y1);
@@ -2000,31 +2337,29 @@ int add_conveyor_belt(double x1, double y1, double x2, double y2, double width, 
     }
     segment[n+13].x2 = segment[n].x1;
     segment[n+13].y2 = segment[n].y1;
-            
-    for (i=n; i<n+14; i++) segment[i].concave = 1;
-            
+                        
     for (i=n; i<n+14; i++) 
     {
+        segment[i].concave = 1;
         segment[i].inactivate = 0;
         segment[i].conveyor = 1;
         segment[i].conveyor_speed = speed;
+        segment[i].align_torque = 1;
     }
     
     /* deal with concave corners */
     for (i=n; i<n+14; i++)
-        {
-            iminus = i-1;  
-            iplus = i+1;  
-            if (iminus < n) iminus = n + 13;
-            if (iplus > n + 13) iplus = n;
-            angle1 = argument(segment[iplus].x1 - segment[i].x1, segment[iplus].y1 - segment[i].y1) + PID;
-            angle2 = argument(segment[i].x1 - segment[iminus].x1, segment[i].y1 - segment[iminus].y1) + PID;
-            if (angle2 < angle1) angle2 += DPI;
-            segment[i].angle1 = angle1;
-            segment[i].angle2 = angle2;
-            
-//             printf("i = %i, iplus = %i, iminus = %i, angle1 = %.0f, angle2 = %.0f\n", i, iplus, iminus, angle*360.0/DPI, angle2*360.0/DPI);
-        }
+    {
+        iminus = i-1;  
+        iplus = i+1;  
+        if (iminus < n) iminus = n + 13;
+        if (iplus > n + 13) iplus = n;
+        angle1 = argument(segment[iplus].x1 - segment[i].x1, segment[iplus].y1 - segment[i].y1) + PID;
+        angle2 = argument(segment[i].x1 - segment[iminus].x1, segment[i].y1 - segment[iminus].y1) + PID;
+        if (angle2 < angle1) angle2 += DPI;
+        segment[i].angle1 = angle1;
+        segment[i].angle2 = angle2;
+    }
     
     nsegments += 14;
 
@@ -2039,7 +2374,66 @@ int add_conveyor_belt(double x1, double y1, double x2, double y2, double width, 
     conveyor_belt[nbelts].angle = angle;
     conveyor_belt[nbelts].tx = tx;
     conveyor_belt[nbelts].ty = ty;
+    conveyor_belt[nbelts].nshovels = nshovels; 
     nbelts++; 
+    
+    if (nshovels > NMAXSHOVELS)
+    {
+        printf("NMAXSHOVELS too small");
+        conveyor_belt[nbelts].nshovels = 0; 
+        return(0);
+    }
+    
+    if (nshovels > 0)
+    {
+        beltlength = 2.0*length + DPI*width;
+        shovel_dist = beltlength/(double)nshovels; 
+        shovel_pos = 0.0;
+        shovel = 0;
+        
+        while (shovel_pos < length)
+        {
+            x = x1 - width*ty + shovel_pos*tx;
+            y = y1 + width*tx + shovel_pos*ty;
+            conveyor_belt[nbelts-1].shovel_segment[shovel] = nsegments;
+            add_shovel_to_belt(x, y, angle, width, 0.3*width, segment, conveyor_belt[nbelts-1]);
+            conveyor_belt[nbelts-1].shovel_pos[shovel] = shovel_pos;
+            shovel_pos += shovel_dist;
+            shovel++;
+        }
+        while (shovel_pos < length + width*PI)
+        {
+            beta = (shovel_pos - length)/width;
+            x = x2 + width*cos(angle + PID - beta);
+            y = y2 + width*sin(angle + PID - beta);
+            conveyor_belt[nbelts-1].shovel_segment[shovel] = nsegments;
+            add_shovel_to_belt(x, y, angle - beta, width, 0.3*width, segment, conveyor_belt[nbelts-1]);
+            conveyor_belt[nbelts-1].shovel_pos[shovel] = shovel_pos;
+            shovel_pos += shovel_dist;
+            shovel++;
+        }
+        while (shovel_pos < 2.0*length + width*PI)
+        {
+            x = x2 + width*ty - (shovel_pos - length - width*PI)*tx;
+            y = y2 - width*tx - (shovel_pos - length - width*PI)*ty;
+            conveyor_belt[nbelts-1].shovel_segment[shovel] = nsegments;
+            add_shovel_to_belt(x, y, angle - PI, width, 0.3*width, segment, conveyor_belt[nbelts-1]);
+            conveyor_belt[nbelts-1].shovel_pos[shovel] = shovel_pos;
+            shovel_pos += shovel_dist;
+            shovel++;
+        }
+        while (shovel_pos < beltlength)
+        {
+            beta = (shovel_pos - 2.0*length - width*PI)/width;
+            x = x1 + width*cos(angle - PID - beta);
+            y = y1 + width*sin(angle - PID - beta);
+            conveyor_belt[nbelts-1].shovel_segment[shovel] = nsegments;
+            add_shovel_to_belt(x, y, angle - PI - beta, width, 0.3*width, segment, conveyor_belt[nbelts-1]);
+            conveyor_belt[nbelts-1].shovel_pos[shovel] = shovel_pos;
+            shovel_pos += shovel_dist;
+            shovel++;
+        }
+    }
     
     return(1);
 }
@@ -2051,8 +2445,12 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
     double angle, angle2, dangle, dx, width, height, a, b, length, xmid = 0.5*(BCXMIN + BCXMAX), lpocket, r, x, x1, y1, x2, y2, nozx, nozy, y, yy, dy, ca, sa, padding;
     double lfoot[NTREES][2], rfoot[NTREES][2];
     
-    /* set default to no conveyor */
-    for (i=0; i<NMAXSEGMENTS; i++) segment[i].conveyor = 0;
+    /* set default to no conveyor, no torque */
+    for (i=0; i<NMAXSEGMENTS; i++) 
+    {
+        segment[i].conveyor = 0;
+        segment[i].align_torque = 0;
+    }
     
     switch (SEGMENT_PATTERN) {
         case (S_RECTANGLE):
@@ -3059,7 +3457,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
         }
         case (S_CONVEYOR_BELT):
         {
-            add_conveyor_belt(XMIN + 0.05, 0.0, 0.5, 0.0, 0.05, BELT_SPEED1, segment, conveyor_belt);
+            add_conveyor_belt(XMIN + 0.05, 0.0, 0.5, 0.0, 0.05, BELT_SPEED1, 0, segment, conveyor_belt);
                                 
             cycle = 0;
             concave = 0;
@@ -3067,8 +3465,8 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
         }
         case (S_TWO_CONVEYOR_BELTS):
         {
-            add_conveyor_belt(XMIN + 0.05, 0.2, 0.8, 0.5, 0.05, BELT_SPEED1, segment, conveyor_belt);
-            add_conveyor_belt(-0.5, -0.3, XMAX - 0.05, -0.8, 0.05, BELT_SPEED2, segment, conveyor_belt);
+            add_conveyor_belt(XMIN + 0.05, 0.2, 0.8, 0.5, 0.05, BELT_SPEED1, 0, segment, conveyor_belt);
+            add_conveyor_belt(-0.5, -0.3, XMAX - 0.05, -0.8, 0.05, BELT_SPEED2, 0, segment, conveyor_belt);
                                 
             cycle = 0;
             concave = 0;
@@ -3076,17 +3474,114 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
         }
         case (S_PERIODIC_CONVEYORS):
         {
-            add_conveyor_belt(0.05, -0.3, XMAX - XMIN - 0.125, 0.4, 0.05, BELT_SPEED1, segment, conveyor_belt);
-            add_conveyor_belt(XMIN - XMAX + 0.05, -0.3, -0.125, 0.4, 0.05, BELT_SPEED1, segment, conveyor_belt);
-            add_conveyor_belt(-1.0, -0.6, 0.2, -0.6, 0.05, BELT_SPEED2, segment, conveyor_belt);
+            add_conveyor_belt(0.05, -0.3, XMAX - XMIN - 0.125, 0.4, 0.05, BELT_SPEED1, 0, segment, conveyor_belt);
+            add_conveyor_belt(XMIN - XMAX + 0.05, -0.3, -0.125, 0.4, 0.05, BELT_SPEED1, 0, segment, conveyor_belt);
+            add_conveyor_belt(-1.0, -0.6, 0.2, -0.6, 0.05, BELT_SPEED2, 0, segment, conveyor_belt);
                                 
             cycle = 0;
             concave = 0;
             break;            
         }
+        case (S_CONVEYOR_SHOVELS):
+        {
+            add_conveyor_belt(-1.0, -0.97, 1.0, 0.8, 0.05, BELT_SPEED1, 25, segment, conveyor_belt);
+            add_rectangle_to_segments(WALL_WIDTH, YMIN - 0.05, -WALL_WIDTH, -0.5, segment, 0);
+            
+            cycle = 0;
+            concave = 0;
+            break;
+        }
+        case (S_CONVEYOR_MIXED):
+        {
+            add_conveyor_belt(XMIN - 0.32, 0.65, -0.2, 0.65, 0.05, BELT_SPEED2, 0, segment, conveyor_belt);
+            add_conveyor_belt(XMAX - 0.32, 0.65, XMAX - XMIN - 0.2, 0.65, 0.05, BELT_SPEED2, 0, segment, conveyor_belt);
+            add_conveyor_belt(XMIN + 0.3, 0.3, 0.0, 0.3, 0.05, -BELT_SPEED1, 0, segment, conveyor_belt);
+            add_conveyor_belt(XMIN + 0.1, -0.05, -0.2, -0.05, 0.05, BELT_SPEED2, 0, segment, conveyor_belt);
+            add_conveyor_belt(XMIN - 0.5, -0.4, 0.0, -0.4, 0.05, -BELT_SPEED1, 0, segment, conveyor_belt);
+            add_conveyor_belt(XMAX - 0.5, -0.4, XMAX - XMIN, -0.4, 0.05, -BELT_SPEED1, 0, segment, conveyor_belt);
+            add_conveyor_belt(XMIN - 0.3, -0.75, -0.25, -0.75, 0.05, BELT_SPEED2, 0, segment, conveyor_belt);
+            add_conveyor_belt(XMAX - 0.7, -0.75, XMAX - XMIN - 0.25, -0.75, 0.05, BELT_SPEED2, 0, segment, conveyor_belt);
+            
+            add_conveyor_belt(-0.13, -0.97, 1.67, 0.95, 0.05, BELT_SPEED3, 24, segment, conveyor_belt);
+            
+            cycle = 0;
+            concave = 0;
+            break;
+        }
+        case (S_CONVEYOR_SIEVE):
+        {
+            add_conveyor_belt(XMIN, 0.8, -0.4, 0.8, 0.05, BELT_SPEED1, 0, segment, conveyor_belt);
+            
+            add_conveyor_belt(0.05, 0.0, XMAX - 0.3, 0.0, 0.05, BELT_SPEED1, 0, segment, conveyor_belt);
+            add_conveyor_belt(0.05, -0.5, XMAX - 1.0, -0.5, 0.05, BELT_SPEED1, 0, segment, conveyor_belt);
+            
+            add_rectangle_to_segments(1.3, YMIN - 0.05, 1.3 - WALL_WIDTH, -0.3, segment, 0);
+            add_rectangle_to_segments(0.6, YMIN - 0.05, 0.6 - WALL_WIDTH, -0.75, segment, 0);
+            add_rectangle_to_segments(0.0, YMIN - 0.05, - WALL_WIDTH, -0.95, segment, 0);
+            
+            cycle = 0;
+            concave = 0;
+            break;
+        }
+        case (S_CONVEYOR_SIEVE_B):
+        {
+            add_conveyor_belt(-0.7, 0.8, XMAX + 0.1, 0.8, 0.05, -BELT_SPEED1, 0, segment, conveyor_belt);
+            
+            add_conveyor_belt(0.05, 0.0, XMAX - 0.3, 0.0, 0.05, BELT_SPEED2, 0, segment, conveyor_belt);
+            add_conveyor_belt(0.05, -0.5, XMAX - 1.0, -0.5, 0.05, BELT_SPEED2, 0, segment, conveyor_belt);
+            
+            add_rectangle_to_segments(1.5, YMIN - 0.05, 1.5 - WALL_WIDTH, -0.15, segment, 0);
+            add_rectangle_to_segments(0.75, YMIN - 0.05, 0.75 - WALL_WIDTH, -0.75, segment, 0);
+            add_rectangle_to_segments(0.0, YMIN - 0.05, 0.0 - WALL_WIDTH, -0.95, segment, 0);
+            add_rectangle_to_segments(-1.0, YMIN - 0.05, -1.0 - WALL_WIDTH, -0.95, segment, 0);
+            
+            cycle = 0;
+            concave = 0;
+            break;
+        }
+        case (S_CONVEYOR_SIEVE_LONG):
+        {
+            add_conveyor_belt(-1.4, 0.8, XMAX + 0.1, 0.8, 0.05, -BELT_SPEED1, 0, segment, conveyor_belt);
+                       
+            for (i=0; i<7; i++)
+            {
+                x = XMIN + (double)i*(XMAX-XMIN)/7.0; 
+                add_rectangle_to_segments(x, YMIN - 0.05, x - WALL_WIDTH, -0.75, segment, 0);
+            }
+            
+            cycle = 0;
+            concave = 0;
+            break;
+        }
+        case (S_MASS_SPECTROMETER):
+        {
+            for (i=0; i<7; i++)
+            {                
+                y = YMIN + (double)i*(YMAX-YMIN)/7.0;
+                add_rectangle_to_segments(XMAX + 0.2, y, XMAX - 0.6, y + WALL_WIDTH, segment, 0);
+            }
+            
+            cycle = 0;
+            concave = 0;
+            break;
+        }
+        case (S_WIND_FORCE):
+        {
+            for (i=0; i<10; i++)
+            {                
+                x = XMIN + (double)i*(XMAX-XMIN)/10.0; 
+                add_rectangle_to_segments(x, YMIN - 0.05, x - WALL_WIDTH, WIND_YMIN - 0.1, segment, 0);
+            }
+            
+            cycle = 0;
+            concave = 0;
+            break;
+        }
         case (S_TEST_CONVEYORS):
         {
-            add_conveyor_belt(-1.0, -0.7, 1.0, 0.7, 0.05, BELT_SPEED1, segment, conveyor_belt);
+            add_conveyor_belt(-1.0, -0.7, 1.0, 0.7, 0.05, BELT_SPEED1, 25, segment, conveyor_belt);
+//             add_conveyor_belt(-0.5, -0.3, 0.5, 0.3, 0.05, BELT_SPEED1, 100, segment, conveyor_belt);
+            
                                 
             cycle = 0;
             concave = 0;
@@ -3135,6 +3630,7 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
         length = module2(a, b);
         segment[i].nx = a/length;
         segment[i].ny = b/length;
+        segment[i].nangle = argument(segment[i].nx, segment[i].ny);
         segment[i].c = segment[i].nx*segment[i].x1 + segment[i].ny*segment[i].y1;
         segment[i].length = length;
         segment[i].fx = 0.0;
@@ -3517,94 +4013,6 @@ void rotate_segments(t_segment segment[NMAXSEGMENTS], double angle)
     
 }
  
-void translate_segments(t_segment segment[NMAXSEGMENTS], double deltax[2], double deltay[2])
-/* rotates the repelling segments by given angle */
-{
-    int i, group;
-    
-    for (i=0; i<nsegments; i++) 
-    {
-        group = segment[i].group;
-        if (group == 0)
-        {
-            segment[i].x1 = segment[i].x01 + deltax[group] - SEGMENTS_X0;
-            segment[i].x2 = segment[i].x02 + deltax[group] - SEGMENTS_X0;
-        }
-        else
-        {
-            segment[i].x1 = segment[i].x01 + deltax[group] + SEGMENTS_X0;
-            segment[i].x2 = segment[i].x02 + deltax[group] + SEGMENTS_X0;
-        }
-            
-        segment[i].y1 = segment[i].y01 + deltay[group] - SEGMENTS_Y0;
-        segment[i].y2 = segment[i].y02 + deltay[group] - SEGMENTS_Y0;
-        segment[i].c = segment[i].nx*segment[i].x1 + segment[i].ny*segment[i].y1;
-    }
-}
-
-void translate_one_segment(t_segment segment[NMAXSEGMENTS], int i, double deltax, double deltay)
-/* translates the repelling segment by given vector */
-{
-    segment[i].x1 += deltax;
-    segment[i].x2 += deltax;
-        
-    segment[i].y1 += deltay;
-    segment[i].y2 += deltay;
-    segment[i].c = segment[i].nx*segment[i].x1 + segment[i].ny*segment[i].y1;
-    
-    segment[i].xc += deltax;
-    segment[i].yc += deltay;
-    
-}
-
-void rotate_one_segment(t_segment segment[NMAXSEGMENTS], int i, double dalpha, double xc, double yc)
-/* rotates the repelling segment by given angle around (xc, yc) */
-{
-    double ca, sa, x, y, nx, ny;
-    
-    ca = cos(dalpha);
-    sa = sin(dalpha);
-    
-    x = segment[i].x1 - xc;
-    y = segment[i].y1 - yc;
-    
-    segment[i].x1 = xc + x*ca - y*sa;
-    segment[i].y1 = yc + x*sa + y*ca;
-    
-    x = segment[i].x2 - xc;
-    y = segment[i].y2 - yc;
-    
-    segment[i].x2 = xc + x*ca - y*sa;
-    segment[i].y2 = yc + x*sa + y*ca;
-    
-    segment[i].xc = 0.5*(segment[i].x1 + segment[i].x2);
-    segment[i].yc = 0.5*(segment[i].y1 + segment[i].y2);
-    
-    nx = segment[i].nx;
-    ny = segment[i].ny;
-    
-    segment[i].nx = ca*nx - sa*ny;
-    segment[i].ny = sa*nx + ca*ny;
-    
-    segment[i].c = segment[i].nx*segment[i].x1 + segment[i].ny*segment[i].y1;
-    
-    if (segment[i].concave)
-    {
-        segment[i].angle1 += dalpha;
-        segment[i].angle2 += dalpha;
-        while (segment[i].angle1 > DPI)
-        {
-            segment[i].angle1 -= DPI;
-            segment[i].angle2 -= DPI;
-        }
-        while (segment[i].angle2 < 0.0)
-        {
-            segment[i].angle1 += DPI;
-            segment[i].angle2 += DPI;
-        }
-    }
-}
-
 /* Computation of interaction force */
 
 double lennard_jones_force(double r, t_particle particle)
@@ -4188,7 +4596,7 @@ void polygon_interaction(t_particle part_i, t_particle part_k, double ca, double
 /* computes force and torque of particle k on particle i */
 {
     int s, k, s0, s1;
-    double x0, y0, x, y, f, fx, fy, cb, sb, cab, sab, r, r0, z2, phi, ckt, skt, d;
+    double x0, y0, x, y, f, fx, fy, cb, sb, cab, sab, r, r0, z2, phi, ckt, skt, d, fx1, fy1, dmax2;
     double torque, mu_i, mu_k, r3, width, gamma_beta, rot, cr, sr, xx[NPOLY], yy[NPOLY], dd[NPOLY], z, z0, z02, d1, dmin;
     static double theta, twotheta, ctheta, stheta, cornerx[NPOLY+1], cornery[NPOLY+1], nx[NPOLY], ny[NPOLY];
     static int first = 1;
@@ -4220,6 +4628,7 @@ void polygon_interaction(t_particle part_i, t_particle part_k, double ca, double
     torque = 0.0;
     mu_i = part_i.radius; 
     mu_k = part_k.radius;
+    dmax2 = 4.0*mu_i*mu_i;
     width = 0.1*mu_i;
     mu_i -= width;
     gamma_beta = part_k.angle - part_i.angle;
@@ -4250,7 +4659,7 @@ void polygon_interaction(t_particle part_i, t_particle part_k, double ca, double
     }
         
     /* compute force from vertices */
-    for (s = 0; s<NPOLY; s++) if (dd[s] < 2.0*mu_i)
+    for (s = 0; s<NPOLY; s++) if (dd[s] < dmax2)
     {
         x = xx[s];
         y = yy[s];
@@ -4269,21 +4678,30 @@ void polygon_interaction(t_particle part_i, t_particle part_k, double ca, double
             {
                 f = r0 + width - d;
                 if (f > width) f = width;
-                fx -= f*nx[k];
-                fy -= f*ny[k];
-                torque += x*fy - y*fx;
+                fx1 = f*nx[k];
+                fy1 = f*ny[k];
+                fx -= fx1;
+                fy -= fy1;
+                torque += x*fy1 - y*fx1;
+//                 fx -= f*nx[k];
+//                 fy -= f*ny[k];
+//                 torque += x*fy - y*fx;
             }
             else for (s1=0; s1<NPOLY; s1++)    /* corners */
             {
                 d1 = module2(x - mu_i*cornerx[s1], y - mu_i*cornery[s1]) + 1.0e-8;
+                fx1 = 0.0;
+                fy1 = 0.0;
                 if (d1 < width)
                 {
                     f = width - d1;
                     if (f > width) f = width;
-                    fx -= f*(x - mu_i*cornerx[s1])/d1;
-                    fy -= f*(y - mu_i*cornery[s1])/d1;
+                    fx1 -= f*(x - mu_i*cornerx[s1])/d1;
+                    fy1 -= f*(y - mu_i*cornery[s1])/d1;
                 }
-                torque += x*fy - y*fx;
+                fx += fx1;
+                fy += fy1;
+                torque += x*fy1 - y*fx1;
             }
         }
     }
@@ -6046,19 +6464,27 @@ int add_particle(double x, double y, double vx, double vy, double mass, short in
         particle[i].energy = 0.0;
         particle[i].emean = 0.0;
         particle[i].dirmean = 0.0;
-
-        if (RANDOM_RADIUS) particle[i].radius = particle[i].radius*(0.75 + 0.5*((double)rand()/RAND_MAX));
+        
+        if (RANDOM_RADIUS) particle[i].radius = particle[i].radius*(RANDOM_RADIUS_MIN + RANDOM_RADIUS_RANGE*((double)rand()/RAND_MAX));
         
         particle[i].mass_inv = 1.0/mass;
         if (particle[i].type == 0) particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
         else particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
+        
+        if ((RANDOM_RADIUS)&&(ADAPT_MASS_TO_RADIUS > 0.0)) 
+            particle[i].mass_inv *= 1.0/(1.0 + pow(particle[i].radius/MU, ADAPT_MASS_TO_RADIUS));
+        if ((RANDOM_RADIUS)&&(ADAPT_DAMPING_TO_RADIUS > 0.0))
+            particle[i].damping = 1.0 + ADAPT_DAMPING_FACTOR*pow(particle[i].radius/MU, ADAPT_DAMPING_TO_RADIUS);
+       
                 
         particle[i].vx = vx;
         particle[i].vy = vy;
         particle[i].energy = (particle[i].vx*particle[i].vx + particle[i].vy*particle[i].vy)*particle[i].mass_inv;
         
         particle[i].angle = DPI*(double)rand()/RAND_MAX;
-        particle[i].omega = 0.0;
+        particle[i].omega = OMEGA_INITIAL*gaussian();
+        
+//         printf("Particle[%i].omega = %.4lg\n", i, particle[i].omega); 
         
 //         if (particle[i].type == 1)
 //         {
@@ -6402,6 +6828,16 @@ void compute_particle_colors(t_particle particle, t_cluster cluster[NMAXCIRCLES]
 //                 hue += 10.0;
 //                 hue *= 1.0/(40.0 + hue);
 //             }
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*hue;
+            *radius = particle.radius;
+            *width = BOUNDARY_WIDTH;
+            break;
+        }
+        case (P_RADIUS):
+        {
+//             hue = atan(5.0*(particle.radius/MU - 0.75))/PID;
+            hue = (particle.radius/MU - RANDOM_RADIUS_MIN)/RANDOM_RADIUS_RANGE;
+//             hue = 0.5*(hue + 1.0);
             hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*hue;
             *radius = particle.radius;
             *width = BOUNDARY_WIDTH;
@@ -7240,24 +7676,27 @@ void draw_collisions(t_collision *collisions, int ncollisions)
     
 }
 
-void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], int traj_position, int traj_length)
+void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], int traj_position, int traj_length, t_particle *particle, t_cluster *cluster, int *tracer_n, int plot)
 /* draw tracer particle trajectory */
 {
-    int i, j, time;
-    double x1, x2, y1, y2, rgb[3], lum;
+    int i, j, time, p, width;
+    double x1, x2, y1, y2, rgb[3], rgbx[3], rgby[3], radius, lum;
     
 //     blank();
     glLineWidth(TRAJECTORY_WIDTH);
     printf("drawing trajectory\n");
     
-    for (j=0; j<N_TRACER_PARTICLES; j++)
+    for (j=0; j<n_tracers; j++)
     {
 //         if (j == 0) hsl_to_rgb(HUE_TYPE1, 0.9, 0.5, rgb);
 //         else if (j == 1) hsl_to_rgb(HUE_TYPE2, 0.9, 0.5, rgb);
 //         else hsl_to_rgb(HUE_TYPE3, 0.9, 0.5, rgb);
-        set_type_color(j+2, 0.5, rgb);
+//         set_type_color(j+2, 0.5, rgb);
+        
+        compute_particle_colors(particle[tracer_n[j]], cluster, plot, rgb, rgbx, rgby, &radius, &width, particle);
+        
         glColor3f(rgb[0], rgb[1], rgb[2]);
-    
+            
         if (traj_length < TRAJECTORY_LENGTH) 
             for (i=0; i < traj_length-1; i++)
             {
@@ -7267,12 +7706,13 @@ void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
                 y2 = trajectory[j*TRAJECTORY_LENGTH + i+1].yc;
             
                 time = traj_length - i;
-                lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
+                lum = 0.8 - TRACER_LUM_FACTOR*(double)time/(double)TRAJECTORY_LENGTH;
+                if (lum < 0.0) lum = 0.0;
                 glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
         
                 if (module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
             
-//             printf("(x1, y1) = (%.3lg, %.3lg), (x2, y2) = (%.3lg, %.3lg)\n", x1, y1, x2, y2);
+//                 printf("tracer = %i, (x1, y1) = (%.3lg, %.3lg), (x2, y2) = (%.3lg, %.3lg)\n", j, x1, y1, x2, y2);
             }
         else 
         {
@@ -7287,7 +7727,7 @@ void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
                 lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
                 glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
         
-                if (module2(x2 - x1, y2 - y1) < 0.1*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+                if (module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
             }
             for (i=0; i < traj_position-1; i++)
             {
@@ -7300,7 +7740,7 @@ void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
                 lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
                 glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
         
-                if (module2(x2 - x1, y2 - y1) < 0.1*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+                if (module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
             }
         }
     }
@@ -7466,7 +7906,7 @@ void draw_particles(t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRC
     if (plot == P_NOPARTICLE) blank();
     
     if ((COLOR_BACKGROUND)&&(bg_color > 0)) color_background(particle, bg_color, hashgrid);
-    else blank();
+    else if (!TRACER_PARTICLE) blank();
     
     glColor3f(1.0, 1.0, 1.0);
     
@@ -7782,6 +8222,14 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
             {
                 draw_line(x - r, y, x + r, y);
                 draw_line(x, y - r, x, y + r);
+            }
+            if (ROTATE_OBSTACLES)
+            {
+                ca = cos(obstacle[i].angle);
+                sa = sin(obstacle[i].angle);
+//                 printf("Obstacle %i angle = %.5lg\n", i, obstacle[i].angle);
+                draw_line(x - r*ca, y - r*sa, x + r*ca, y + r*sa);
+                draw_line(x + r*sa, y - r*ca, x - r*sa, y + r*ca);
             }
         }
     }
@@ -8785,8 +9233,16 @@ void print_particles_speeds(t_particle particle[NMAXCIRCLES])
 
 double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], double xleft, double xright, double *pleft, double *pright, double pressure[N_PRESSURES], int wall, double krepel)
 {
-    int i, k;
-    double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, f, fperp = 0.0, x, y, xtube, distance, dx, dy, width, ybin, angle, x1, x2, h, ytop, norm, dleft, dplus, dminus, tmp_pleft = 0.0, tmp_pright = 0.0, proj, pscal, pvect, pvmin, charge, d2, speed;
+    int i, k, corner;
+    double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, f, fperp = 0.0, x, y, xtube, distance, dx, dy, width, ybin, angle, x1, y1, x2, h, ytop, norm, dleft, dplus, dminus, tmp_pleft = 0.0, tmp_pright = 0.0, proj, pscal, pvect, pvmin, charge, d2, speed, pangle, distance1, sangle;
+    static int first = 1;
+    static double seqangle;
+    
+    if (first)
+    {
+        seqangle = PI/(double)NPOLY;
+        first = 0;
+    }
     
     /* compute force from fixed circular obstacles */
     if (ADD_FIXED_OBSTACLES) for (i=0; i<nobstacles; i++)
@@ -8804,6 +9260,14 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
             f = KSPRING_OBSTACLE*(r2 - distance);
             particle[j].fx += f*cphi;
             particle[j].fy += f*sphi;
+            
+            if (ROTATE_OBSTACLES)
+            {
+                speed = particle[j].vx*sphi - particle[j].vy*cphi;
+                f = KSPRING_BELT*(obstacle[i].omega*obstacle[i].radius/particle[j].mass_inv - speed);
+                particle[j].fx += f*sphi;
+                particle[j].fy -= f*cphi;
+            }
         }
         
         if (CHARGE_OBSTACLES)
@@ -8814,6 +9278,8 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
             particle[j].fx += f*cphi;
             particle[j].fy += f*sphi;
         }
+        
+        
     }
     /* compute force from fixed linear obstacles */
     particle[j].close_to_boundary = 0;
@@ -8822,11 +9288,36 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
         x = particle[j].xc;
         y = particle[j].yc;
         proj = (segment[i].ny*(x - segment[i].x1) - segment[i].nx*(y - segment[i].y1))/segment[i].length;
+        
         if ((proj > 0.0)&&(proj < 1.0))
         {
 //             distance = segment[i].nx*x + segment[i].ny*y - segment[i].c;
             distance = segment[i].nx*x + segment[i].ny*y - segment[i].c;
-            r = 1.5*particle[j].radius;
+            /* case of interacting polygons */
+//             if (POLYGON_INTERACTION) 
+//             {
+// //                 distance = segment[i].nx*x + segment[i].ny*y - segment[i].c;
+//                 pangle = DPI/(double)NPOLY;
+//                 dx = 0.0;
+//                 dy = 0.0;
+//                 for (corner=0; corner<NPOLY; corner++)
+//                 {
+//                     angle = particle[j].angle + pangle*(double)corner;
+//                     x1 = x + particle[j].radius*cos(angle);
+//                     y1 = y + particle[j].radius*sin(angle);
+//                     distance1 = segment[i].nx*x1 + segment[i].ny*y1 - segment[i].c;
+//                     if (distance1 < distance)
+//                     {
+//                         x = x1;
+//                         y = y1;
+//                         distance = distance1;
+//                         dx = x1 - particle[j].xc;
+//                         dy = y1 - particle[j].yc;
+//                     }
+//                 }
+// //                 printf("(dx, dy) = (%.3lg, %.3lg)\n", dx, dy);
+//             }
+            r = SEGMENT_FORCE_EQR*particle[j].radius;
             if (vabs(distance) < r)
             {
                 particle[j].close_to_boundary = 1;
@@ -8840,7 +9331,6 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                     segment[i].fx -= f*segment[i].nx;
                     segment[i].fy -= f*segment[i].ny;
                     segment[i].torque -= (x - segment[i].xc)*f*segment[i].ny - (y - segment[i].yc)*f*segment[i].nx;
-//                     printf("Segment %i: f = (%.3lg, %.3lg)\n", i, segment[i].fx, segment[i].fy);
                 }
                 
                 if (SHOW_SEGMENTS_PRESSURE)
@@ -8860,16 +9350,23 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
 //                     printf("Belt force (%.5lg, %.5lg)\n", f*segment[i].ny, -f*segment[i].nx); 
                 }
                 
+                if ((POLYGON_INTERACTION)&&(segment[i].align_torque))
+                {
+                    sangle = segment[i].nangle;
+                    particle[j].torque -=        KTORQUE_BOUNDARY*sin(particle[j].spin_freq*(particle[j].angle - sangle) - seqangle);
+//                     particle[j].torque -= KTORQUE_BOUNDARY*(dx*f*segment[i].ny - dy*f*segment[i].nx);
+//                     printf("Torque on particle %i = %.3lg\n", j, particle[j].torque);
+                }
                 
             }
-            if ((VICSEK_INT)&&(vabs(distance) < 1.5*r))
+            if ((VICSEK_INT)&&(vabs(distance) < SEGMENT_FORCE_EQR*r))
             {
                 pvmin = 2.0;
                 pvect = cos(particle[j].angle)*segment[i].ny - sin(particle[j].angle)*segment[i].nx;
                 if ((pvect > 0.0)&&(pvect < pvmin)) pvect = pvmin;
                 else if ((pvect < 0.0)&&(pvect > -pvmin)) pvect = -pvmin;
 //                 particle[j].torque += KTORQUE_BOUNDARY*pvect;
-                particle[j].torque += KTORQUE_BOUNDARY*pvect*(1.5*r - vabs(distance));
+                particle[j].torque += KTORQUE_BOUNDARY*pvect*(SEGMENT_FORCE_EQR*r - vabs(distance));
             }
         }
         
@@ -8883,7 +9380,7 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
             /* added 24/9/22 */
             else if (angle > segment[i].angle2) angle -= DPI;
             
-            r = 1.5*particle[j].radius;
+            r = SEGMENT_FORCE_EQR*particle[j].radius;
             
             if ((distance < r)&&(angle > segment[i].angle1)&&(angle < segment[i].angle2))
             {
@@ -8917,7 +9414,7 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
         case (BC_RECTANGLE):
         {
             /* add harmonic force outside rectangular box */
-            padding = MU + 0.01;
+            padding = particle[j].radius + 0.01;
             xmin = xleft + padding;
             xmax = xright - padding;
             ymin = BCYMIN + padding;
@@ -9740,6 +10237,7 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
         particle[i].thermostat = 1;
         particle[i].close_to_boundary = 0;
         particle[i].emean = 0.0;
+        particle[i].damping = 1.0;
         particle[i].dirmean = 0.0;
         particle[i].paired = 0;
         particle[i].collision = 0;
@@ -9751,7 +10249,7 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
 //         if (y >= YMAX) y -= particle[i].radius;
 //         if (y <= YMIN) y += particle[i].radius;
 
-        if (RANDOM_RADIUS) particle[i].radius = particle[i].radius*(0.75 + 0.5*((double)rand()/RAND_MAX));
+        if (RANDOM_RADIUS) particle[i].radius = particle[i].radius*(RANDOM_RADIUS_MIN + RANDOM_RADIUS_RANGE*((double)rand()/RAND_MAX));
         
         if (particle[i].type == 0)
         {
@@ -9760,6 +10258,10 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
             particle[i].spin_range = SPIN_RANGE;
             particle[i].spin_freq = SPIN_INTER_FREQUENCY;
             particle[i].mass_inv = 1.0/PARTICLE_MASS;
+            if ((RANDOM_RADIUS)&&(ADAPT_MASS_TO_RADIUS > 0.0)) 
+                particle[i].mass_inv *= 1.0/(1.0 + pow(particle[i].radius/MU, ADAPT_MASS_TO_RADIUS));
+            if ((RANDOM_RADIUS)&&(ADAPT_DAMPING_TO_RADIUS > 0.0))
+                particle[i].damping = 1.0 + ADAPT_DAMPING_FACTOR*pow(particle[i].radius/MU, ADAPT_DAMPING_TO_RADIUS);
             particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
             particle[i].charge = CHARGE;
         }
@@ -9851,6 +10353,7 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
         particle[i].thermostat = 0;
         particle[i].energy = 0.0;
         particle[i].emean = 0.0;
+        particle[i].damping = 1.0;
         particle[i].dirmean = 0.0;
         particle[i].mass_inv = 1.0/PARTICLE_MASS;
         particle[i].inertia_moment_inv = 1.0/PARTICLE_INERTIA_MOMENT;
@@ -9914,7 +10417,7 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
     }
     
     /* change type of tracer particle */
-    if (TRACER_PARTICLE) for (j=0; j<N_TRACER_PARTICLES; j++)
+    if (TRACER_PARTICLE) for (j=0; j<n_tracers; j++)
     {
         i = 0;
         if (j%2==0) xx = 1.0;
@@ -9935,6 +10438,8 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
         particle[i].thermostat = 0;
         px[i] *= 0.1;
         py[i] *= 0.1;
+        
+        n_tracers++;
     }
     
     /* position-dependent particle type */
@@ -10183,7 +10688,8 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
 }
 
 
-int add_particles(t_particle particle[NMAXCIRCLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], int nadd_particle, int type, t_molecule molecule[NMAXCIRCLES])
+int add_particles(t_particle particle[NMAXCIRCLES], double px[NMAXCIRCLES], double py[NMAXCIRCLES], int nadd_particle, int type, t_molecule molecule[NMAXCIRCLES], 
+int tracer_n[N_TRACER_PARTICLES])
 /* add several particles to the system */
 {
     static int i = 0;
@@ -10207,16 +10713,27 @@ int add_particles(t_particle particle[NMAXCIRCLES], double px[NMAXCIRCLES], doub
             break;
         }
     }
+    
+    add_particle(x, y, 0.0, V_INITIAL, PARTICLE_MASS, type, particle);
+    
+//     add_particle(x, y, V_INITIAL*(double)rand()/RAND_MAX, 0.0, PARTICLE_MASS, type, particle);
         
-    if (y > 0.0)
-        add_particle(x, y, 5.0*V_INITIAL*(double)rand()/RAND_MAX, -10.0*V_INITIAL, PARTICLE_MASS, type, particle);
-    else
-        add_particle(x, y, 5.0*V_INITIAL*(double)rand()/RAND_MAX, 10.0*V_INITIAL, PARTICLE_MASS, type, particle);        
+//     if (y > 0.0)
+//         add_particle(x, y, 5.0*V_INITIAL*(double)rand()/RAND_MAX, -10.0*V_INITIAL, PARTICLE_MASS, type, particle);
+//     else
+//         add_particle(x, y, 5.0*V_INITIAL*(double)rand()/RAND_MAX, 10.0*V_INITIAL, PARTICLE_MASS, type, particle);        
 
     particle[ncircles - 1].eq_dist = EQUILIBRIUM_DIST;
     particle[ncircles - 1].thermostat = 1;
     px[ncircles - 1] = particle[ncircles - 1].vx;
     py[ncircles - 1] = particle[ncircles - 1].vy;
+    
+    if ((TRACER_PARTICLE)&&(n_tracers < N_TRACER_PARTICLES))
+    {
+        tracer_n[n_tracers] = ncircles - 1;
+        n_tracers++;
+        printf("%i tracer particles\n", n_tracers); 
+    }
     
 //     init_molecule_data(particle, molecule);
 
@@ -10402,6 +10919,17 @@ int partial_thermostat_coupling(t_particle particle[NMAXCIRCLES], double xmin, t
     }
     return(nthermo);
 }
+
+
+int partial_bfield(double x, double y)
+/*  */
+{
+    switch (BFIELD_REGION) {
+        case (BF_CONST): return(1);
+        case (BF_SQUARE): return(vabs(x) < YMAX);
+    }
+}
+
 
 double compute_mean_energy(t_particle particle[NMAXCIRCLES])
 {
@@ -14671,6 +15199,100 @@ void compute_cluster_force(t_cluster cluster[NMAXCIRCLES], t_particle particle[N
     }
 }
 
+
+void update_conveyor_belts(t_segment segment[NMAXSEGMENTS], t_belt belt[NMAXBELTS])
+/* move shovels of conveyor belt */
+{
+    int b, shovel, firstseg, seg;
+    double position, length, width, angle, newpos, deltapos, beltlength, shift, beta;
+    
+    for (b = 0; b < nbelts; b++)
+    {
+        length = belt[b].length;
+        width = belt[b].width;
+        angle = belt[b].angle;
+        beltlength = 2.0*length + DPI*width;
+        for (shovel = 0; shovel < belt[b].nshovels; shovel++)
+        {
+            position = belt[b].shovel_pos[shovel];
+            deltapos = belt[b].speed*DT_PARTICLE;
+            newpos = position + deltapos;
+            firstseg = belt[b].shovel_segment[shovel];
+            if (newpos < length)
+            {
+                shift = deltapos;
+                for (seg = firstseg; seg < firstseg+6; seg++)
+                    translate_one_segment(segment, seg, shift*belt[b].tx, shift*belt[b].ty);
+            }
+            else if (newpos < length + deltapos)
+            {
+                shift = length - position;
+                beta = (newpos - length)/width;
+                for (seg = firstseg; seg < firstseg+6; seg++)
+                {
+                    translate_one_segment(segment, seg, shift*belt[b].tx, shift*belt[b].ty);
+                    rotate_one_segment(segment, seg, -beta, belt[b].x2, belt[b].y2);
+                }
+            }
+            else if (newpos < length + PI*width)
+            {
+                beta = deltapos/width;
+                for (seg = firstseg; seg < firstseg+6; seg++)
+                {
+                    rotate_one_segment(segment, seg, -beta, belt[b].x2, belt[b].y2);
+                }
+            }
+            else if (newpos < length + PI*width + deltapos)
+            {
+                beta = (length + PI*width - position)/width;
+                shift = newpos - length - PI*width;
+                for (seg = firstseg; seg < firstseg+6; seg++)
+                {
+                    rotate_one_segment(segment, seg, -beta, belt[b].x2, belt[b].y2);
+                    translate_one_segment(segment, seg, -shift*belt[b].tx, -shift*belt[b].ty);
+                }
+            }
+            else if (newpos < 2.0*length + PI*width)
+            {
+                shift = deltapos;
+                for (seg = firstseg; seg < firstseg+6; seg++)
+                    translate_one_segment(segment, seg, -shift*belt[b].tx, -shift*belt[b].ty);
+            }
+            else if (newpos < 2.0*length + PI*width + deltapos)
+            {
+                shift = 2.0*length + PI*width - position;
+                beta = (newpos - 2.0*length - PI*width)/width;
+                for (seg = firstseg; seg < firstseg+6; seg++)
+                {
+                    translate_one_segment(segment, seg, -shift*belt[b].tx, -shift*belt[b].ty);
+                    rotate_one_segment(segment, seg, -beta, belt[b].x2, belt[b].y2);
+                }
+            }
+            else if (newpos < beltlength)
+            {
+                beta = deltapos/width;
+                for (seg = firstseg; seg < firstseg+6; seg++)
+                {
+                    rotate_one_segment(segment, seg, -beta, belt[b].x1, belt[b].y1);
+                }
+            }
+            else
+            {
+                beta = (beltlength - position)/width;
+                shift = newpos - beltlength;
+                for (seg = firstseg; seg < firstseg+6; seg++)
+                {
+                    rotate_one_segment(segment, seg, -beta, belt[b].x1, belt[b].y1);
+                    translate_one_segment(segment, seg, shift*belt[b].tx, shift*belt[b].ty);
+                }
+            }
+            
+            if (newpos > beltlength) newpos -= beltlength;
+            belt[b].shovel_pos[shovel] = newpos;
+        }
+    }
+}
+
 void draw_frame(int i, int plot, int bg_color, int ncollisions, int traj_position, 
                 int traj_length, 
                 int wall, double pressure[N_PRESSURES], double pleft, double pright, 
@@ -14681,10 +15303,10 @@ void draw_frame(int i, int plot, int bg_color, int ncollisions, int traj_positio
                 t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
                 t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], 
                 t_group_data *group_speeds, t_group_segments *segment_group, 
-                t_belt *conveyor_belt)
+                t_belt *conveyor_belt, int *tracer_n)
 /* draw a movie frame */
 {
-    if (TRACER_PARTICLE) draw_trajectory(trajectory, traj_position, traj_length);
+    if (TRACER_PARTICLE) draw_trajectory(trajectory, traj_position, traj_length, particle, cluster, tracer_n, plot);
     draw_particles(particle, cluster, plot, params.beta, collisions, ncollisions, bg_color, hashgrid, params);
     draw_container(params.xmincontainer, params.xmaxcontainer, obstacle, segment, conveyor_belt, wall);
     if (PRINT_PARAMETERS) print_parameters(params, PRINT_LEFT, pressure, refresh);

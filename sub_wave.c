@@ -2700,7 +2700,7 @@ int init_xyin_from_image(short int * xy_in[NX])
 int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_circle *circles)
 /* returns 1 if (x,y) represents a point in the billiard */
 {
-    double l2, r1, r2, r2mu, omega, b, c, d, angle, z, x1, y1, x2, y2, y3, u, v, u1, v1, dx, dy, width, alpha, s, a, r, height, ca, sa, l, ht, xshift, zz[9][2], x5, x6, f, fp, h1;
+    double l2, r1, r2, r2mu, omega, b, c, d, angle, z, x1, y1, x2, y2, y3, u, v, u1, v1, dx, dy, width, alpha, s, a, r, height, ca, sa, l, ht, xshift, zz[9][2], x5, x6, f, fp, h1, cb, sb, c1, c2;
     int i, j, k, k1, k2, condition = 0, m;
     static int first = 1, nsides;
     static double h, hh, ra, rb, ll, salpha;
@@ -3720,8 +3720,6 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
                 r = module2(x - x1, y - y1);
                 if (r < MU) return(1);
             }
-            
-            
             return(0);
         }
         case (D_MAGNETRON_CATHODE):
@@ -3741,8 +3739,55 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
                 r = module2(x - x1, y - y1);
                 if (r < MU) return(1);
             }
-            
-            
+            return(0);
+        }
+        case (D_TWOCIRCLES):
+        {
+            x1 = 0.25*(LAMBDA + 5.0*MU);
+            x2 = -0.75*(LAMBDA + 2.0*MU);
+            if (module2(x - x1, y) < LAMBDA) return(1);
+            if (module2(x - x2, y) < MU) return(1);
+            if ((x < x1)&&(x > x2)&&(vabs(y) < WALL_WIDTH)) return(1);
+            return(0);
+        }
+        case (D_POLYCIRCLES):
+        {
+            if (module2(x, y) < LAMBDA) return(1);
+            for (k=0; k<NPOLY; k++)
+            {
+                angle = APOLY*PID + (double)k*DPI/(double)NPOLY;
+                ca = cos(angle);
+                sa = sin(angle);
+                x1 = (LAMBDA + 2.0*MU)*ca;
+                y1 = (LAMBDA + 2.0*MU)*sa;
+                if (module2(x - x1, y - y1) < MU) return(1);
+                x1 = x*ca + y*sa;
+                y1 = -x*sa + y*ca;
+                if ((x1 > 0.0)&&(x1 < LAMBDA + 2.0*MU)&&(vabs(y1) < WALL_WIDTH)) return(1);
+            }
+            return(0);
+        }
+        case (D_POLYCIRCLES_ANGLED):
+        {
+            if (module2(x, y) < LAMBDA) return(1);
+            alpha = -0.5*PID;
+            cb = cos(alpha);
+            sb = sin(alpha);
+            for (k=0; k<NPOLY; k++)
+            {
+                angle = APOLY*PID + (double)k*DPI/(double)NPOLY;
+                ca = cos(angle);
+                sa = sin(angle);
+                x1 = x*ca + y*sa;
+                y1 = -x*sa + y*ca;
+                x2 = LAMBDA + 2.0*MU*cb;
+                y2 = 2.0*MU*sb;
+                if (module2(x1 - x2, y1 - y2) < MU) return(1);
+                c1 = -sb*LAMBDA + cb*WALL_WIDTH;
+                c2 = -sb*LAMBDA - cb*WALL_WIDTH;
+                b = -sb*x1 + cb*y1;
+                if ((x1 > 0.5*LAMBDA)&&(x1 < LAMBDA+MU)&&(b < c1)&&(b > c2)) return(1);
+            }
             return(0);
         }
         case (D_MENGER):       
@@ -4029,7 +4074,7 @@ void draw_rc_hyp()
 
 void draw_billiard(int fade, double fade_value)      /* draws the billiard boundary */
 {
-    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, width, a, b, c, d, r1, r2, ymax, height, xmin, xmax, ca, sa, xshift, x5, x6, f, fp, xratio, w;
+    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, alpha2, dphi, omega, z, l, width, a, b, c, d, r1, r2, ymax, height, xmin, xmax, ca, sa, xshift, x5, x6, f, fp, xratio, w;
     int i, j, k, k1, k2, mr2, ntiles;
     static int first = 1, nsides;
     static double h, hh, sqr3, ll, salpha, arcangle;
@@ -5841,6 +5886,57 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
         case (D_MAGNETRON_CATHODE):
         {
             /* TODO */
+            break;
+        }
+        case (D_TWOCIRCLES):
+        {
+            x1 = 0.25*(LAMBDA + 5.0*MU);
+            x2 = -0.75*(LAMBDA + 2.0*MU);
+            alpha = asin(WALL_WIDTH/LAMBDA);
+            alpha2 = asin(WALL_WIDTH/MU);
+            draw_circle_arc(x1, 0.0, LAMBDA, -PI + alpha, DPI - 2.0*alpha, NSEG);
+            draw_line(x1 - LAMBDA*cos(alpha), WALL_WIDTH, x2 + MU*cos(alpha2), WALL_WIDTH);
+            draw_circle_arc(x2, 0.0, MU, alpha2, DPI - 2.0*alpha2, NSEG);
+            draw_line(x2 + MU*cos(alpha2), -WALL_WIDTH, x1 - LAMBDA*cos(alpha), -WALL_WIDTH);
+            break; 
+        }
+        case (D_POLYCIRCLES):
+        {
+            alpha = asin(WALL_WIDTH/LAMBDA);
+            alpha2 = asin(WALL_WIDTH/MU);
+            for (k=0; k<NPOLY; k++)
+            {
+                phi = APOLY*PID + (double)k*DPI/(double)NPOLY;
+                x1 = (LAMBDA + 2.0*MU)*cos(phi);
+                y1 = (LAMBDA + 2.0*MU)*sin(phi);
+                draw_line(LAMBDA*cos(-alpha + phi), LAMBDA*sin(-alpha + phi), x1 - MU*cos(alpha2 + phi), y1 - MU*sin(alpha2 + phi));
+                draw_circle_arc(x1, y1, MU, -PI + alpha2 + phi, DPI - 2.0*alpha2, NSEG); 
+                draw_line(x1 - MU*cos(-alpha2 + phi), y1 - MU*sin(-alpha2 + phi), LAMBDA*cos(alpha + phi), LAMBDA*sin(alpha + phi)); 
+                draw_circle_arc(0.0, 0.0, LAMBDA, alpha + phi, DPI/(double)NPOLY - 2.0*alpha, NSEG); 
+            }
+            break;
+        }
+        case (D_POLYCIRCLES_ANGLED):
+        {
+            alpha = atan(WALL_WIDTH/LAMBDA);
+            alpha2 = asin(WALL_WIDTH/(MU*sqrt(2.0)));
+            for (k=0; k<NPOLY; k++)
+            {
+                phi = APOLY*PID + (double)k*DPI/(double)NPOLY;
+                x1 = LAMBDA*cos(phi);
+                y1 = LAMBDA*sin(phi);
+                x2 = x1 + 2.0*MU*cos(phi - 0.5*PID);
+                y2 = y1 + 2.0*MU*sin(phi - 0.5*PID);
+                draw_line(LAMBDA*cos(phi-alpha), LAMBDA*sin(phi-alpha), 
+                          x2 - MU*cos(phi -0.5*PID + alpha2), 
+                          y2 - MU*sin(phi -0.5*PID + alpha2));
+                draw_circle_arc(x2, y2, MU, PI + phi - 0.5*PID + alpha2, DPI - 2.0*alpha2, NSEG); 
+                draw_line(x2 - MU*cos(phi -0.5*PID - alpha2), 
+                          y2 - MU*sin(phi -0.5*PID - alpha2), 
+                          LAMBDA*cos(phi+alpha), LAMBDA*sin(phi+alpha)); 
+                draw_circle_arc(0.0, 0.0, LAMBDA, phi + alpha, DPI/(double)NPOLY - 2.0*alpha, NSEG);
+            }
+            
             break;
         }
         case (D_MENGER):
