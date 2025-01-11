@@ -1894,14 +1894,26 @@ void init_wave_flat_mod(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX
     int i, j;
     double xy[2];
 
+    
+    if (!XYIN_INITIALISED) 
+    {
+        #pragma omp parallel for private(i,j,xy)
+        for (i=0; i<NX; i++) {
+            if (i%100 == 0) printf("Wave and table xy_in - Initialising column %i of %i\n", i, NX);
+            for (j=0; j<NY; j++)
+            {
+                ij_to_xy(i, j, xy);
+                xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+            }
+        }
+    }
+    
     #pragma omp parallel for private(i,j,xy)
     for (i=0; i<NX; i++) {
         if (i%100 == 0) printf("Wave and table xy_in - Initialising column %i of %i\n", i, NX);
         for (j=0; j<NY; j++)
         {
-            ij_to_xy(i, j, xy);
-	    xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
-	    phi[i*NY+j] = 0.0;
+            phi[i*NY+j] = 0.0;
             psi[i*NY+j] = 0.0;
         }
     }

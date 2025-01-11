@@ -109,6 +109,12 @@
 #define D_TWOCIRCLES 79         /* two circles of different size */
 #define D_POLYCIRCLES 791       /* one large circle and NPOLY small ones */
 #define D_POLYCIRCLES_ANGLED 792    /* variant of D_POLYCIRCLES with angled small cavities */
+#define D_TWOCIRCLES_ELLIPSE 793    /* ellipse with two adjacent circular cavities */
+#define D_CIRCLES_ELLIPSE 794   /* ellipse with NPOLY adjacent circles */
+
+#define D_CARDIOID 90           /* cardioid */
+#define D_NEPHROID 91           /* nephroid */
+#define D_EPICYCLOID 92         /* epicycloid */
 
 /* for wave_sphere.c */
 
@@ -125,6 +131,16 @@
 #define D_SPHERE_MAZE 100       /* circular maze on the sphere */
 #define D_SPHERE_MAZE_SPIRAL 101 /* circular maze on the sphere with slanted walls */
 #define D_SPHERE_MAZE_WAVE 102  /* circular maze on the sphere with wavy walls */
+
+/* image files for D_IMAGE option */
+
+#define IM_PHOTONS 0            /* word "photons" */
+#define IM_GUITAR 1             /* guitar shape */
+#define IM_GUITAR_NOHOLE 11     /* guitar shape without sound hole or neck */
+#define IM_EGUITAR 2            /* electric guitar shape */
+#define IM_HAPPY_NEW_YEAR 3     /* "Happy New Year 2025" */
+#define IM_DICKSON 4            /* Dickson fjord and others nearbys in Greenland */
+#define IM_DICKSON_ZOOM 5       /* zoom on Dickson fjord in Greenland */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
@@ -466,3 +482,6 @@ double julia_x = 0.37468, julia_y = 0.21115;    /* parameters for Julia sets */
 double wave_source_x[NMAXSOURCES], wave_source_y[NMAXSOURCES];    /* position of wave source */
 double focus_x = XMAX;                         /* position of focus */
 double michelson_position = 0.0;        /* position of mirror in Michelson interferometer */
+
+#define NEPICYCLOID 2000    /* number of sampled values for epicycloid */
+double epicycloid_phi_to_r[NEPICYCLOID];     /* angles for epicycloid */

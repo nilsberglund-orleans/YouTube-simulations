@@ -361,6 +361,11 @@ void draw_colored_triangle(double x1, double y1, double x2, double y2, double x3
     glEnd();    
 }
 
+double triangle_area(double x1, double y1, double x2, double y2, double x3, double y3)
+{
+    return((x2-x1)*(y3-y1)-(y2-y1)*(x3-x1));
+}
+    
 void draw_colored_triangle_turbo(double x1, double y1, double x2, double y2, double x3, double y3, double h, double s, double l)
 {    
     double rgb[3];
@@ -717,6 +722,65 @@ void init_angles()
     }
 }
 
+int generate_poisson_discs(t_point *point, int nmax, double xmin, double xmax, double ymin, double ymax, double dpoisson)
+/* generate a Poisson disc sample in a given rectangle */
+{
+    int i, j, k, n_p_active, ncandidates=PDISC_CANDIDATES, naccepted, npoints; 
+    double r, phi, x, y;
+    short int active_poisson[nmax], far;
+    
+    printf("Generating Poisson disc sample\n");
+    /* generate first circle */
+    point[0].xc = (xmax - xmin)*(double)rand()/RAND_MAX + xmin;
+    point[0].yc = (ymax - ymin)*(double)rand()/RAND_MAX + ymin;
+    active_poisson[0] = 1;
+    n_p_active = 1;
+    npoints = 1;
+            
+    while ((n_p_active > 0)&&(npoints < nmax))
+    {
+        /* randomly select an active circle */
+        i = rand()%(npoints);
+        while (!active_poisson[i]) i = rand()%(npoints);                 
+        /* generate new candidates */
+        naccepted = 0;
+        for (j=0; j<ncandidates; j++)
+        {
+            r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
+            phi = DPI*(double)rand()/RAND_MAX;
+            x = point[i].xc + r*cos(phi);
+            y = point[i].yc + r*sin(phi);
+            far = 1;
+            for (k=0; k<npoints; k++) if ((k!=i))
+            {
+                /* new circle is far away from circle k */
+                far = far*((x - point[k].xc)*(x - point[k].xc) + (y - point[k].yc)*(y - point[k].yc) >= dpoisson*dpoisson);
+                /* new circle is in domain */
+                far = far*(x < xmax)*(x > xmin)*(y < ymax)*(y > ymin);
+            }
+            if (far)    /* accept new circle */
+            {
+                printf("New npoint at (%.3f,%.3f) accepted\n", x, y);
+                point[npoints].xc = x;
+                point[npoints].yc = y;
+                active_poisson[npoints] = 1;
+                npoints++;
+                n_p_active++;
+                naccepted++;
+            }
+        }
+        if (naccepted == 0)    /* inactivate circle i */ 
+        {
+            active_poisson[i] = 0;
+            n_p_active--;
+        }
+        printf("%i active npoints\n", n_p_active);
+    }
+            
+    printf("Generated %i points\n", npoints);
+    return(npoints);
+}
+
 void init_particle_config(t_particle particles[NMAXCIRCLES])
 /* initialise particle configuration */
 {
@@ -887,6 +951,7 @@ void init_particle_config(t_particle particles[NMAXCIRCLES])
         }        
         case (C_POISSON_DISC):
         {
+            /* TODO: use generate_poisson_discs */
             printf("Generating Poisson disc sample\n");
             /* generate first circle */
 //             particles[0].xc = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
@@ -1125,7 +1190,7 @@ void add_particle_config(t_particle particles[NMAXCIRCLES], double xmin, double 
                 }
             break;
         }
-        case (C_HEX):   /* TODO */
+        case (C_HEX):
         {
             dx = (xmax - xmin)/((double)NGRIDX);
             dy = (ymax - ymin)/((double)NGRIDY);
@@ -1253,12 +1318,488 @@ void add_obstacle(double x, double y, double radius, t_obstacle obstacle[NMAXOBS
     else printf("Warning: NMAXOBSTACLES should be increased\n");
 }
 
+void sort_angles(double *angle, int n, int *table)
+/* writes to table positions of angles in increasing order */
+{
+    int i, j, temp;
+    double min, temp_angle[NMAX_OBSTACLE_NEIGHBOURS];
+    
+    for (i=0; i<n; i++) table[i] = i;
+    
+    /* bubble sort */
+    for (i = 0; i < n - 1; i++) 
+    {
+        for (j = 0; j < n - i - 1; j++) 
+        {
+            if (angle[table[j]] > angle[table[j+1]]) 
+            {
+                temp = table[j];
+                table[j] = table[j+1];
+                table[j+1] = temp;
+            }
+        }
+    }
+    
+    /* TEST */
+    for (i=0; i<n; i++) temp_angle[i] = angle[i];
+    for (i=0; i<n; i++) angle[i] = temp_angle[table[i]];
+}
 
-void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
+
+int triangle_vertex_overlap(int s1, int t1, int u1, int s2, int t2, int u2, t_otriangle triangle1, t_otriangle triangle2, t_obstacle obstacle[NMAXOBSTACLES])
+/* returns 1 if triangles with specified common vertices overlap */
+{
+    int i1, j1, k1, i2, j2, k2;
+    double x1, y1, x2, y2, x3, y3, xp3, yp3, a, b, q1, q2;
+    
+    i1 = triangle1.i[s1];
+    j1 = triangle1.i[t1];
+    k1 = triangle1.i[u1];
+    i2 = triangle2.i[s2];
+    j2 = triangle2.i[t2];
+    k2 = triangle2.i[u2];
+    
+    x1 = obstacle[i1].xc;
+    y1 = obstacle[i1].yc;
+    x2 = obstacle[j1].xc;
+    y2 = obstacle[j1].yc;
+    x3 = obstacle[k1].xc;
+    y3 = obstacle[k1].yc;
+    xp3 = obstacle[k2].xc;
+    yp3 = obstacle[k2].yc;
+    
+    a =y2 - y1;
+    b = x2 - x1;
+    
+    q1 = a*(x3-x1) - b*(y3-y1);
+    q2 = a*(xp3-x1) - b*(yp3-y1);
+    
+    return(q1*q2 > 0.0);
+}
+
+int old_triangle_overlap(t_otriangle triangle1, t_otriangle triangle2, t_obstacle obstacle[NMAXOBSTACLES])
+/* returns 1 if triangles overlap */
+{
+    int j, jplus, jminus;
+    
+    /* find first vertex equal to triangle1.i[0] */
+    j = 0;
+    while (triangle2.i[j] != triangle1.i[0]) j++;
+    
+    if (j < 3)
+    {
+        jplus = (j+1)%3;
+        jminus = (j+5)%3;
+        if (triangle1.i[1] == triangle2.i[jplus])
+            return(triangle_vertex_overlap(0, 1, 2, j, jplus, jminus, triangle1, triangle2, obstacle));
+        else if (triangle1.i[2] == triangle2.i[jminus])
+            return(triangle_vertex_overlap(2, 0, 1, j, jminus, jplus, triangle1, triangle2, obstacle));
+        else return(0);
+    }
+    else
+    {
+        if ((triangle1.i[1] == triangle2.i[1])&&(triangle1.i[2] == triangle2.i[2]))
+            return(triangle_vertex_overlap(1, 2, 0, 1, 2, 0, triangle1, triangle2, obstacle));
+        else return(0);
+    }
+}
+
+int triangle_overlap(t_otriangle triangle1, t_otriangle triangle2)
+/* returns 1 if triangles overlap */
+{
+    int j, jplus, jminus;
+    
+//     printf("Testing triangles (%i, %i, %i) and (%i, %i, %i)\n", triangle1.i[0], triangle1.i[1], triangle1.i[2], triangle2.i[0], triangle2.i[1], triangle2.i[2]);
+    
+    /* find first vertex equal to triangle1.i[0] */
+    j = 0;
+    while ((j<3)&&(triangle2.i[j] != triangle1.i[0])) j++;
+    
+    if (j < 3)
+    {
+        jplus = (j+1)%3;
+        jminus = (j+5)%3;
+        if (triangle1.i[1] == triangle2.i[jplus])
+            return(1);
+        else if (triangle1.i[2] == triangle2.i[jminus])
+            return(1);
+        else return(0);
+    }
+    else
+    {
+        if ((triangle1.i[1] == triangle2.i[1])&&(triangle1.i[2] == triangle2.i[2]))
+            return(1);
+        else return(0);
+    }
+}
+
+int init_obstacle_facets(t_otriangle otriangle[NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES], t_ofacet ofacet[NMAXOBSTACLES])
+/* group triangles into facets, for option COUPLE_OBSTACLES */
+{
+    int i, j, k, n, ik, f, nt;
+    
+    printf("Initializing obstacle facets from %i triangles\n", n_otriangles);
+//     printf("1\n");
+    
+//     printf("2\n");
+    for (i=0; i<n_otriangles; i++) otriangle[i].infacet = 0;
+    
+    for (i=0; i<NMAXOBSTACLES; i++) ofacet[i].ntriangles = 0;
+    
+//     printf("3\n");
+    n_ofacets = 0;
+    i = 0;
+    
+    while (i < n_otriangles)
+    {
+//         printf("Triangle %i\t", i);
+        if (!otriangle[i].infacet)
+        {
+            otriangle[i].infacet = 1;
+            ofacet[n_ofacets].ntriangles = 1;
+            ofacet[n_ofacets].triangle[0] = i;
+            j = i + 1;
+            while ((j < n_otriangles)&&(ofacet[n_ofacets].ntriangles < NMAX_TRIANGLES_PER_FACET))
+            {
+                n = ofacet[n_ofacets].ntriangles;
+                for (k=0; k<n; k++)
+                {
+                    ik = ofacet[n_ofacets].triangle[k];
+                    if ((!otriangle[j].infacet)&&(triangle_overlap(otriangle[ik], otriangle[j])))
+                    {
+                        ofacet[n_ofacets].ntriangles++;
+                        ofacet[n_ofacets].triangle[n] = j;
+                        otriangle[j].infacet = 1;
+                    }
+                }
+                j++;
+            }
+            nt = ofacet[n_ofacets].ntriangles;
+//             printf("Facet %i contains %i triangles: ", n_ofacets, nt);
+//             for (f=0; f<nt; f++) printf("%i ", ofacet[n_ofacets].triangle[f]);
+//             printf("\n");
+            n_ofacets++;
+        }
+        i++;
+    }
+    
+    if (n_ofacets > NMAXOBSTACLES)
+    {
+        printf("NMAXOBSTACLES should be at least %i\n", n_ofacets);
+        exit(1);
+    }
+    
+    return(n_ofacets);
+}
+
+double otriangle_area(t_obstacle obstacle[NMAXOBSTACLES], t_otriangle triangle)
+{
+    int s1, s2, s3;
+ 
+    s1 = triangle.i[0]; 
+    s2 = triangle.i[1]; 
+    s3 = triangle.i[2]; 
+    return(vabs(triangle_area(obstacle[s1].xc, obstacle[s1].yc, obstacle[s2].xc, obstacle[s2].yc, obstacle[s3].xc, obstacle[s3].yc)));
+}
+
+
+int init_obstacle_coupling(t_obstacle obstacle[NMAXOBSTACLES], t_otriangle otriangle[NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES], t_ofacet ofacet[NMAXOBSTACLES])
+/* initialize list of neighbours, for option COUPLE_OBSTACLES */
+{
+    int i, j, n, m, table[NMAX_OBSTACLE_NEIGHBOURS], neigh_table[NMAX_OBSTACLE_NEIGHBOURS];
+    double dist, bdistx, bdisty, angle[NMAX_OBSTACLE_NEIGHBOURS], dist_table[NMAX_OBSTACLE_NEIGHBOURS];
+    short int near_boundary;
+    
+    printf("Initializing obstacle neighbours\n");
+    n_otriangles = 0;
+    
+    for (i=0; i<nobstacles; i++) obstacle[i].nneighb = 0;
+    
+    for (i=0; i<nobstacles; i++)
+    {
+        for (j=i+1; j<nobstacles; j++) if (j != i)
+        {
+            dist = module2(obstacle[i].xc - obstacle[j].xc, obstacle[i].yc - obstacle[j].yc);
+            if ((dist < OBSTACLE_COUPLING_DIST)&&(obstacle[i].nneighb < NMAX_OBSTACLE_NEIGHBOURS))
+            {
+                n = obstacle[i].nneighb;
+                obstacle[i].neighb[n] = j;
+                obstacle[i].eqdist[n] = dist;
+                obstacle[i].nneighb++;
+                
+                n = obstacle[j].nneighb;
+                obstacle[j].neighb[n] = i;
+                obstacle[j].eqdist[n] = dist;
+                obstacle[j].nneighb++;
+            }
+        }
+//     for (i=0; i<nobstacles; i++)
+//     {
+//         obstacle[i].nneighb = 0;
+//         for (j=0; j<nobstacles; j++) if (j != i)
+//         {
+//             dist = module2(obstacle[i].xc - obstacle[j].xc, obstacle[i].yc - obstacle[j].yc);
+//             if ((dist < OBSTACLE_COUPLING_DIST)&&(obstacle[i].nneighb < NMAX_OBSTACLE_NEIGHBOURS))
+//             {
+//                 n = obstacle[i].nneighb;
+//                 obstacle[i].neighb[n] = j;
+//                 obstacle[i].eqdist[n] = dist;
+//                 obstacle[i].nneighb++;
+//             }
+//         }
+//         printf("Obstacle %i has %i neighbours\t", i, obstacle[i].nneighb);
+        
+        /* sort neighbours by angle */
+        n = obstacle[i].nneighb;
+        for (j=0; j<n; j++)
+        {
+            m = obstacle[i].neighb[j];
+            angle[j] = argument(obstacle[m].xc - obstacle[i].xc, obstacle[m].yc - obstacle[i].yc);
+            if (angle[j] < 0.0) angle[j] += DPI;
+        }
+        sort_angles(angle, n, table);
+        
+//         for (j=0; j<n; j++) printf("angle %i = %.3lg\t", j, angle[j]*180.0/PI);
+//         printf("\n");
+        
+        /* update neighbour list */
+        for (j=0; j<n; j++)
+        {
+            neigh_table[j] = obstacle[i].neighb[j];
+            dist_table[j] = obstacle[i].eqdist[j];
+        }
+        for (j=0; j<n; j++)
+        {
+            obstacle[i].neighb[j] = neigh_table[table[j]];
+            obstacle[i].eqdist[j] = dist_table[table[j]];
+        }
+        
+        /* build list of triangles */
+        if (FILL_OBSTACLE_TRIANGLES)
+        {
+//             printf("Building triangle %i\n", n_otriangles);
+            for (j=0; j<n-1; j++) if (angle[j+1] - angle[j] < PI)
+            {
+                otriangle[n_otriangles].i[0] = i;
+                otriangle[n_otriangles].i[1] = obstacle[i].neighb[j];
+                otriangle[n_otriangles].i[2] = obstacle[i].neighb[j+1];
+                n_otriangles++;
+            }
+            if (angle[0] - angle[n-1] + DPI < PI)
+            {
+                otriangle[n_otriangles].i[0] = i;
+                otriangle[n_otriangles].i[1] = obstacle[i].neighb[n-1];
+                otriangle[n_otriangles].i[2] = obstacle[i].neighb[0];
+                n_otriangles++;
+            }
+        }
+    }
+    
+    /* initialize triangle areas */
+    for (i=0; i<n_otriangles; i++)
+        otriangle[i].area0 = otriangle_area(obstacle, otriangle[i]); 
+    
+    /* build facet table */
+    printf("Initializing facets from %i triangles\n", n_otriangles);
+    if (FILL_OBSTACLE_TRIANGLES) n_ofacets = init_obstacle_facets(otriangle, ofacet);
+    
+    /* pin obstacles that have less than NMAX_OBSTACLE_PINNED neighbours */
+    bdistx = (BCXMAX - BCXMIN)/(double)NOBSX;
+    bdisty = (BCYMAX - BCYMIN)/(double)NOBSY;
+    for (i=0; i<nobstacles; i++)
+    {
+        near_boundary = ((obstacle[i].xc <= BCXMIN + bdistx)||(obstacle[i].xc >= BCXMAX - bdistx)||(obstacle[i].yc <= BCYMIN + bdisty)||(obstacle[i].yc >= BCYMAX - bdisty));
+        switch (OBSTACLE_PINNING_TYPE) {
+            case (OP_NPINNED):
+            {
+                obstacle[i].pinned = (obstacle[i].nneighb <= NMAX_OBSTACLE_PINNED);
+                break;
+            }
+            case (OP_LEFT):
+            {
+                obstacle[i].pinned = (obstacle[i].xc <= BCXMIN + bdistx);
+                break;
+            }
+            case (OP_LEFTTOPBOT):
+            {
+                obstacle[i].pinned = near_boundary;
+                break;
+            }
+            case (OP_CORNERS):
+            {
+                obstacle[i].pinned = (((obstacle[i].xc <= BCXMIN + bdistx)||(obstacle[i].xc >= BCXMAX - bdistx))&&((obstacle[i].yc <= BCYMIN + bdisty)||(obstacle[i].yc >= BCYMAX - bdisty)));
+                break;
+            }
+            case (OP_LEFTCORNERS):
+            {
+                obstacle[i].pinned = ((near_boundary)&&((obstacle[i].xc < 0.0)||(obstacle[i].xc > BCXMAX - bdistx)));
+                break;
+            }
+            case (OP_BNDRY_STEP):
+            {
+                obstacle[i].pinned = ((near_boundary)&&(obstacle[i].chessboard == 0));
+            }
+        }
+        
+    }
+    
+    printf("Found %i facets\n", n_ofacets);
+//     for (i=0; i<n_ofacets; i++)
+//     {
+//         printf("Facet %i has %i triangles: ", i, ofacet[i].ntriangles);
+//         for (j=0; j<ofacet[i].ntriangles; j++)
+//         {
+//             n = ofacet[i].triangle[j];
+//             printf("%i (%i, %i, %i)", n, otriangle[n].i[0], otriangle[n].i[1], otriangle[n].i[2]);
+//         }
+//         printf("\n");
+//     }
+//     for (i=0; i<n_otriangles; i++)
+//     {
+//         printf("Triangle %i has vertices (%i, %i, %i)\n", i, otriangle[i].i[0], otriangle[i].i[1], otriangle[i].i[2]);
+//     }
+//     
+//     exit(0);
+    printf("Facets initialized\n");
+    return(n_ofacets); 
+}
+
+int reset_obstacle_coupling(t_obstacle obstacle[NMAXOBSTACLES], t_otriangle otriangle[NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES], t_ofacet ofacet[NMAXOBSTACLES])
+/* initialize list of neighbours, for option COUPLE_OBSTACLES */
+{
+    int i, j, n, m, table[NMAX_OBSTACLE_NEIGHBOURS], neigh_table[NMAX_OBSTACLE_NEIGHBOURS];
+    double dist, dist1, bdistx, bdisty, angle[NMAX_OBSTACLE_NEIGHBOURS], dist_table[NMAX_OBSTACLE_NEIGHBOURS];
+    short int *connected;
+    
+    connected = (short int *)malloc(nobstacles*sizeof(short int));
+    
+    printf("Resetting obstacle neighbours\n");
+    n_otriangles = 0;
+//     for (i=0; i<nobstacles; i++) obstacle[i].nneighb = 0;
+    
+    for (i=0; i<nobstacles; i++)
+    {
+        for (j=0; j<nobstacles; j++) connected[j] = 0;
+        n = obstacle[i].nneighb;
+        for (j=0; j<n; j++)
+        {
+            m = obstacle[i].neighb[j];
+            connected[m] = 1;
+//             printf("Obstacle %i is connected to obstacle %i\n", m, i);
+        }
+        
+        obstacle[i].nneighb = 0;
+        for (j=0; j<nobstacles; j++) if (j!=i)
+        {
+            dist = module2(obstacle[i].xc - obstacle[j].xc, obstacle[i].yc - obstacle[j].yc);
+            if (connected[j])
+            {
+                if ((dist < UNCOUPLE_MAXLENGTH*OBSTACLE_COUPLING_DIST)&&(obstacle[i].nneighb < NMAX_OBSTACLE_NEIGHBOURS))
+                {
+                    n = obstacle[i].nneighb;
+                    obstacle[i].neighb[n] = j;
+                    dist1 = obstacle[i].eqdist[n];
+                    obstacle[i].eqdist[n] = dist;
+//                     obstacle[i].eqdist[n] = 0.99*dist + 0.01*dist1;
+                    obstacle[i].nneighb++;
+                }
+            }
+            else
+            {
+                if ((dist < COUPLE_MINLENGTH*OBSTACLE_COUPLING_DIST)&&(obstacle[i].nneighb < NMAX_OBSTACLE_NEIGHBOURS))
+                {
+                    n = obstacle[i].nneighb;
+                    obstacle[i].neighb[n] = j;
+                    obstacle[i].eqdist[n] = dist;
+                    obstacle[i].nneighb++;
+                }
+            }
+        }
+//         for (j=i+1; j<nobstacles; j++)
+//         {
+//             dist = module2(obstacle[i].xc - obstacle[j].xc, obstacle[i].yc - obstacle[j].yc);
+//             if ((dist < OBSTACLE_COUPLING_DIST)&&(obstacle[i].nneighb < NMAX_OBSTACLE_NEIGHBOURS))
+//             {
+//                 n = obstacle[i].nneighb;
+//                 obstacle[i].neighb[n] = j;
+//                 obstacle[i].eqdist[n] = dist;
+//                 obstacle[i].nneighb++;
+//                 
+//                 n = obstacle[j].nneighb;
+//                 obstacle[j].neighb[n] = i;
+//                 obstacle[j].eqdist[n] = dist;
+//                 obstacle[j].nneighb++;
+//             }
+//         }
+//         printf("Obstacle %i has %i neighbours\t", i, obstacle[i].nneighb);
+//     }
+//     for (i=0; i<nobstacles; i++)
+//     {    
+        /* sort neighbours by angle */
+        n = obstacle[i].nneighb;
+        for (j=0; j<n; j++)
+        {
+            m = obstacle[i].neighb[j];
+            angle[j] = argument(obstacle[m].xc - obstacle[i].xc, obstacle[m].yc - obstacle[i].yc);
+            if (angle[j] < 0.0) angle[j] += DPI;
+        }
+        sort_angles(angle, n, table);
+        
+//         for (j=0; j<n; j++) printf("angle %i = %.3lg\t", j, angle[j]*180.0/PI);
+//         printf("\n");
+        
+        /* update neighbour list */
+        for (j=0; j<n; j++)
+        {
+            neigh_table[j] = obstacle[i].neighb[j];
+            dist_table[j] = obstacle[i].eqdist[j];
+        }
+        for (j=0; j<n; j++)
+        {
+            obstacle[i].neighb[j] = neigh_table[table[j]];
+            obstacle[i].eqdist[j] = dist_table[table[j]];
+        }
+        
+        /* build list of triangles */
+        if (FILL_OBSTACLE_TRIANGLES)
+        {
+//             printf("Building triangle %i\n", n_otriangles);
+            for (j=0; j<n-1; j++) if (angle[j+1] - angle[j] < PI)
+            {
+                otriangle[n_otriangles].i[0] = i;
+                otriangle[n_otriangles].i[1] = obstacle[i].neighb[j];
+                otriangle[n_otriangles].i[2] = obstacle[i].neighb[j+1];
+                n_otriangles++;
+            }
+            if (angle[0] - angle[n-1] + DPI < PI)
+            {
+                otriangle[n_otriangles].i[0] = i;
+                otriangle[n_otriangles].i[1] = obstacle[i].neighb[n-1];
+                otriangle[n_otriangles].i[2] = obstacle[i].neighb[0];
+                n_otriangles++;
+            }
+        }
+    }
+    
+    /* initialize triangle areas */
+    for (i=0; i<n_otriangles; i++)
+        otriangle[i].area0 = otriangle_area(obstacle, otriangle[i]); 
+    
+    /* build facet table */
+    printf("Initializing facets from %i triangles\n", n_otriangles);
+    if (FILL_OBSTACLE_TRIANGLES) n_ofacets = init_obstacle_facets(otriangle, ofacet);
+    
+    free(connected);
+    printf("Facets initialized\n");
+    return(n_ofacets); 
+}
+
+void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES], t_otriangle otriangle[NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES], t_ofacet ofacet[NMAXOBSTACLES])
 /* initialise circular obstacle configuration */
 {
     int i, j, n, jmin, jmax, nx, ny, ntot; 
     double x, y, dx, dy, width, lpocket, xmid = 0.5*(BCXMIN + BCXMAX), radius, c;
+    t_point *point;
     
     /* set default rotation to 0 */
     for (i=0; i<NMAXOBSTACLES; i++) 
@@ -1266,6 +1807,9 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
         obstacle[i].omega = 0.0;
         obstacle[i].angle = 0.0;
         obstacle[i].oscillate = 0;
+        obstacle[i].vx = 0.0;
+        obstacle[i].vy = 0.0; 
+        obstacle[i].mass = OBSTACLE_MASS;
     }
     
     switch (OBSTACLE_PATTERN) {
@@ -1291,6 +1835,23 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
             n = 0;
             for (i = 0; i < NGRIDX + 1; i++)
                 for (j = 0; j < i; j++)
+                {
+                    obstacle[n].yc = YMAX - ((double)i)*dy;
+                    obstacle[n].xc = ((double)j - 0.5*(double)i + 0.5)*dx;
+                    obstacle[n].radius = OBSTACLE_RADIUS;
+                    obstacle[n].active = 1;
+                    n++;
+                }
+            nobstacles = n;
+            break;
+        }
+        case (O_GALTON_BOARD_WIDE):
+        {
+            dy = (YMAX - YMIN)/((double)NGRIDX + 3);
+            dx = dy/cos(PI/6.0);
+            n = 0;
+            for (i = 1; i < NGRIDX + 1; i++)
+                for (j = -5; j < i+5; j++)
                 {
                     obstacle[n].yc = YMAX - ((double)i)*dy;
                     obstacle[n].xc = ((double)j - 0.5*(double)i + 0.5)*dx;
@@ -1359,7 +1920,8 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
             obstacle[n].active = 1;
             nobstacles = 1;
             break;
-        }case (O_FOUR_CIRCLES):
+        }
+        case (O_FOUR_CIRCLES):
         {
             n = 0;
             
@@ -1392,6 +1954,70 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
         }
         case (O_HEX):
         {
+            dx = (OBSXMAX - OBSXMIN)/(double)NOBSX;
+            dy = (OBSYMAX - OBSYMIN)/(double)NOBSY;
+            n = 0;
+            
+            if ((ADD_FIXED_SEGMENTS)&&(SEGMENT_PATTERN == S_CYLINDER))
+            /* pseudo-cylindrical boundary conditions (e.g. for Hall effect) */
+            {
+                jmin = 1; 
+                jmax = NOBSY-1;
+            }
+            else
+            {
+                jmin = 0;
+                jmax = NOBSY;
+            }
+            
+            for (i=0; i<NOBSX; i++)
+                for (j=jmin; j<jmax; j++)
+                {
+                    obstacle[n].xc = OBSXMIN + ((double)i + 0.25)*dx;
+                    obstacle[n].yc = OBSYMIN + ((double)j + 0.5)*dy;
+                    if (j%2 == 1) obstacle[n].xc += 0.5*dx;
+                    if (obstacle[n].xc > OBSXMAX) obstacle[n].xc += (OBSXMAX - OBSXMIN);
+                    obstacle[n].radius = OBSTACLE_RADIUS;
+                    obstacle[n].active = 1;
+                    n++;
+                }
+            nobstacles = n;
+            break;
+        }
+        case (O_SQUARE):
+        {
+            dx = (OBSXMAX - OBSXMIN)/(double)NOBSX;
+            dy = (OBSYMAX - OBSYMIN)/(double)NOBSY;
+            n = 0;
+            
+            if ((ADD_FIXED_SEGMENTS)&&(SEGMENT_PATTERN == S_CYLINDER))
+            /* pseudo-cylindrical boundary conditions (e.g. for Hall effect) */
+            {
+                jmin = 1; 
+                jmax = NOBSY-1;
+            }
+            else
+            {
+                jmin = 0;
+                jmax = NOBSY;
+            }
+            
+            for (i=0; i<NOBSX; i++)
+                for (j=jmin; j<jmax; j++)
+                {
+                    obstacle[n].xc = OBSXMIN + ((double)i + 0.25)*dx;
+                    obstacle[n].yc = OBSYMIN + ((double)j + 0.5)*dy;
+                    if (obstacle[n].xc > OBSXMAX) obstacle[n].xc += (OBSXMAX - OBSXMIN);
+                    obstacle[n].radius = OBSTACLE_RADIUS;
+                    obstacle[n].active = 1;
+                    obstacle[n].chessboard = (i+j)%BDRY_PINNING_STEP;
+                    n++;
+                }
+            nobstacles = n;
+            break;
+        }
+        case (O_SQUARE_TWOMASSES):
+        {
             dx = (XMAX - XMIN)/(double)NOBSX;
             dy = (YMAX - YMIN)/(double)NOBSY;
             n = 0;
@@ -1413,15 +2039,18 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
                 {
                     obstacle[n].xc = XMIN + ((double)i + 0.25)*dx;
                     obstacle[n].yc = YMIN + ((double)j + 0.5)*dy;
-                    if (j%2 == 1) obstacle[n].xc += 0.5*dx;
                     if (obstacle[n].xc > XMAX) obstacle[n].xc += (XMAX - XMIN);
                     obstacle[n].radius = OBSTACLE_RADIUS;
+                    if ((i+j)%2 == 0) 
+                    {
+                        obstacle[n].radius *= sqrt(2.0);
+                        obstacle[n].mass *= 2.0;
+                    }
                     obstacle[n].active = 1;
+                    obstacle[n].chessboard = (i+j)%BDRY_PINNING_STEP;
                     n++;
                 }
             nobstacles = n;
-//             printf("Added %i obstacles\n", nobstacles);
-//             for (n=0; n<nobstacles; n++) printf("Obstacle %i at (%.3f, %.3f)\n", n, obstacle[n].xc, obstacle[n].yc);
             break;
         }
         case (O_SIDES):
@@ -1610,6 +2239,53 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
             nobstacles = n;
             break;
         }
+        case (O_SIEVE_VIDEO1400):
+        {
+            n = 0;
+            ntot = 28;
+            width = 1.2;
+            
+            dx = 2.9/(double)ntot;
+            dy = dx*0.3;
+            for (i = 0; i < ntot + 1; i++)
+            {
+                obstacle[n].xc = 2.5 + (double)i*dx;
+                obstacle[n].yc = 0.6 - (double)i*dy;
+                obstacle[n].radius = OBSTACLE_RADIUS*(2.4 - 1.6*(double)i/(double)ntot);
+                obstacle[n].omega = OBSTACLE_OMEGA;
+                obstacle[n].active = 1;
+                n++;
+            }
+            
+            if (RATTLE_OBSTACLES) for (i = 0; i < n; i++)
+            {
+                obstacle[i].oscillate = 1;
+                obstacle[i].period = 8;
+                obstacle[i].amplitude = 0.0018;
+                obstacle[i].phase = (double)i*DPI/10.0;
+            }
+                        
+            nobstacles = n;
+            break;
+        }
+        case (O_POISSON_DISC):
+        {
+            point = (t_point *)malloc(NMAXOBSTACLES*sizeof(t_point));
+            nobstacles = generate_poisson_discs(point, NMAXOBSTACLES, OBSXMIN, OBSXMAX, OBSYMIN, OBSYMAX, OBSTACLE_PISC_DISTANCE);
+            printf("Generated %i obstacles\n", nobstacles);
+            for (n=0; n<nobstacles; n++)
+            {
+//                 printf("Obstacle %i at (%.3lg, %.3lg)\n", n, point[n].xc, point[n].yc);
+                obstacle[n].xc = point[n].xc;
+                obstacle[n].yc = point[n].yc;
+                if (obstacle[n].xc > XMAX) obstacle[n].xc += (XMAX - XMIN);
+                obstacle[n].radius = OBSTACLE_RADIUS;
+                obstacle[n].active = 1;
+            }
+            free(point);
+            break;
+        }
+        
         default: 
         {
             printf("Function init_obstacle_config not defined for this pattern \n");
@@ -1624,13 +2300,16 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES])
         obstacle[n].omega0 = obstacle[n].omega;
         obstacle[n].xc0 = obstacle[n].xc;
         obstacle[n].yc0 = obstacle[n].yc;
+        obstacle[n].nneighb = 0;
     }
+    
+    if (COUPLE_OBSTACLES) init_obstacle_coupling(obstacle, otriangle, ofacet);
 }
 
 void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, double width, int center, t_segment segment[NMAXSEGMENTS], int group)
 /* add four segments forming a rectangle, specified by two adjacent corners and width */
 {
-    double tx, ty, ux, uy, norm, x3, y3, x4, y4;
+    double tx, ty, ux, uy, norm, x3, y3, x4, y4, angle;
     int i, n = nsegments; 
     
     tx = x2 - x1;
@@ -1671,9 +2350,25 @@ void add_rotated_angle_to_segments(double x1, double y1, double x2, double y2, d
         segment[n+3].y1 = y4;
         segment[n+3].x2 = x1;
         segment[n+3].y2 = y1;
+                
+        segment[n].angle1 = -PID;
+        segment[n].angle2 = 0.0;
         
+        segment[n+1].angle1 = PI;
+        segment[n+1].angle2 = 1.5*PI;
+        
+        segment[n+2].angle1 = PID;
+        segment[n+2].angle2 = PI;
+        
+        segment[n+3].angle1 = 0.0;
+        segment[n+3].angle2 = PID;
+        
+        angle = argument(tx, ty) + PI;
+
         for (i=0; i<4; i++) 
         {
+            segment[n+i].angle1 += angle;
+            segment[n+i].angle2 += angle;
             segment[n+i].concave = 1;
             segment[n+i].group = group;
         }
@@ -3440,6 +4135,43 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
             
             break;
         }
+        case (S_TREES_B):
+        {
+            for (i=0; i<NTREES; i++)
+            {
+                x = XMIN + ((double)i - 0.5 + 0.1*(double)rand()/(double)RAND_MAX)*(XMAX-XMIN)*1.1/(double)NTREES; 
+                if (i<NTREES/2) y = YMIN + 0.03*(double)i*(YMAX - YMIN);
+                else y = YMIN + 0.03*(double)(NTREES/2)*(YMAX - YMIN) - 0.025*(double)(i - NTREES/2)*(YMAX - YMIN);
+                add_tree_to_segments(x, y, LAMBDA*(1.0 +  0.4*(double)rand()/(double)RAND_MAX), lfoot[i], rfoot[i], segment, i+1);
+            }
+            /* add ground */
+            for (i=0; i<NTREES-1; i++)
+            {
+                segment[nsegments].x1 = rfoot[i][0];
+                segment[nsegments].y1 = rfoot[i][1];
+                segment[nsegments].x2 = lfoot[i+1][0];
+                segment[nsegments].y2 = lfoot[i+1][1];
+                segment[nsegments].concave = 0;
+                nsegments++;
+                segment[nsegments].x1 = lfoot[i+1][0];
+                segment[nsegments].y1 = lfoot[i+1][1];
+                segment[nsegments].x2 = rfoot[i+1][0];
+                segment[nsegments].y2 = rfoot[i+1][1];
+                segment[nsegments].concave = 0;
+                nsegments++;
+            }
+            cycle = 0;
+            concave = 0;
+            ngroups = 1;
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].concave = 1;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
         case (S_CONE):
         {
             add_rotated_angle_to_segments(LAMBDA, LAMBDA, 0.05, -0.2, WALL_WIDTH, 0, segment, 0);
@@ -3553,6 +4285,34 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
             concave = 0;
             break;
         }
+        case (S_CONVEYORS_1400):
+        {
+            add_conveyor_belt(-2.0 + 0.07, 0.7, 0.5, 0.7, 0.05, BELT_SPEED1, 0, segment, conveyor_belt);
+            add_conveyor_belt(-2.0 + 0.25, 0.2, 0.7, 0.2, 0.05, -BELT_SPEED2, 0, segment, conveyor_belt);
+            add_conveyor_belt(-2.0 + 0.07, -0.3, 0.5, -0.3, 0.05, BELT_SPEED1, 0, segment, conveyor_belt);
+            
+            add_conveyor_belt(0.3, -0.97, 3.0, 1.5, 0.05, BELT_SPEED1, 35, segment, conveyor_belt);
+                        
+//             add_rotated_angle_to_segments(4.0, 0.6, 2.9, 0.4, WALL_WIDTH, 1, segment, 0);
+            
+//             add_conveyor_belt(1.5, -0.5, 4.5, -0.5, 0.05, -BELT_SPEED2, 0, segment, conveyor_belt);
+               
+            add_rectangle_to_segments(2.0, -0.5, 2.0 - WALL_WIDTH, -0.15, segment, 0);
+            add_rectangle_to_segments(3.5, -0.5, 2.0, -0.5 + WALL_WIDTH, segment, 0);
+            add_rectangle_to_segments(3.5, -0.5, 3.5 - WALL_WIDTH, -0.15, segment, 0);
+            
+            add_conveyor_belt(1.5, -1.4, 5.5, -1.4, 0.05, -BELT_SPEED2, 0, segment, conveyor_belt);
+            add_conveyor_belt(-1.4, -1.4, 2.0, -1.8, 0.05, -BELT_SPEED2, 0, segment, conveyor_belt);
+            
+            add_rotated_angle_to_segments(-1.0, -1.6, -2.5, -2.6, WALL_WIDTH, 1, segment, 0);
+            add_rotated_angle_to_segments(-1.9, -2.6, -3.4, -1.6, WALL_WIDTH, 1, segment, 0);
+            
+            add_conveyor_belt(-2.2, -2.13, -2.2, 1.45, 0.07, 1.5*BELT_SPEED2, 36, segment, conveyor_belt);
+            
+            cycle = 0;
+            concave = 0;
+            break;
+        }
         case (S_MASS_SPECTROMETER):
         {
             for (i=0; i<7; i++)
@@ -3571,6 +4331,34 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
             {                
                 x = XMIN + (double)i*(XMAX-XMIN)/10.0; 
                 add_rectangle_to_segments(x, YMIN - 0.05, x - WALL_WIDTH, WIND_YMIN - 0.1, segment, 0);
+            }
+            
+            cycle = 0;
+            concave = 0;
+            break;
+        }
+        case (S_BINS_GALTON):
+        {
+            dy = (YMAX - YMIN)/((double)(NGRIDX + 3));
+            dx = dy/cos(PI/6.0);
+            for (i=-1; i<=NGRIDX; i++)
+            {                
+                x = ((double)i - 0.5*(double)NGRIDX + 0.5)*dx;
+                add_rectangle_to_segments(x + 0.5*WALL_WIDTH, YMIN - 0.05, x - 0.5*WALL_WIDTH, YMIN + 2.75*dy, segment, 0);
+            }
+            
+            cycle = 0;
+            concave = 0;
+            break;
+        }
+        case (S_BINS_GALTON_WIDE):
+        {
+            dy = (YMAX - YMIN)/((double)(NGRIDX + 3));
+            dx = dy/cos(PI/6.0);
+            for (i=-5; i<=NGRIDX+4; i++)
+            {                
+                x = ((double)i - 0.5*(double)NGRIDX + 0.5)*dx;
+                add_rectangle_to_segments(x + 0.5*WALL_WIDTH, YMIN - 0.05, x - 0.5*WALL_WIDTH, YMIN + 2.75*dy, segment, 0);
             }
             
             cycle = 0;
@@ -7008,9 +7796,9 @@ void set_segment_pressure_color(double pressure, double lum, double rgb[3])
     double hue;
     
 //     if (pressure < 0.0) pressure = 0.0;
-    hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*pressure/SEGMENT_PMAX;
-    if (hue > PARTICLE_HUE_MIN) hue = PARTICLE_HUE_MIN;
-    else if (hue < PARTICLE_HUE_MAX) hue = PARTICLE_HUE_MAX;
+    hue = SEGMENT_HUE_MIN + (SEGMENT_HUE_MAX - SEGMENT_HUE_MIN)*pressure/SEGMENT_PMAX;
+    if (hue > SEGMENT_HUE_MIN) hue = SEGMENT_HUE_MIN;
+    else if (hue < SEGMENT_HUE_MAX) hue = SEGMENT_HUE_MAX;
         
 //     hsl_to_rgb_turbo(hue, 0.9, lum, rgb);
     
@@ -7055,7 +7843,7 @@ void draw_one_triangle(t_particle particle, int same_table[9*HASHMAX], int p, in
     x = particle.xc + (double)p*(BCXMAX - BCXMIN);
     y = particle.yc + (double)q*(BCYMAX - BCYMIN);
     
-    if (TRACK_SEGMENT_GROUPS) 
+    if (TRACK) 
     {
         x -= xtrack;
         y -= ytrack;
@@ -7542,7 +8330,7 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     
     if (CENTER_VIEW_ON_OBSTACLE) xc1 = xc - xshift;
     else xc1 = xc;
-    if (TRACK_SEGMENT_GROUPS) 
+    if (TRACK) 
     {
         xc1 -= xtrack;
         yc1 = yc - ytrack;
@@ -7663,7 +8451,7 @@ void draw_collisions(t_collision *collisions, int ncollisions)
         
         if (CENTER_VIEW_ON_OBSTACLE) x1 = x - xshift;
         else x1 = x;
-        if (TRACK_SEGMENT_GROUPS) 
+        if (TRACK) 
         {
             x1 -= xtrack;
             y1 = y - ytrack;
@@ -7686,72 +8474,155 @@ void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
     glLineWidth(TRAJECTORY_WIDTH);
     printf("drawing trajectory\n");
     
-    for (j=0; j<n_tracers; j++)
-    {
-//         if (j == 0) hsl_to_rgb(HUE_TYPE1, 0.9, 0.5, rgb);
-//         else if (j == 1) hsl_to_rgb(HUE_TYPE2, 0.9, 0.5, rgb);
-//         else hsl_to_rgb(HUE_TYPE3, 0.9, 0.5, rgb);
-//         set_type_color(j+2, 0.5, rgb);
+    
+            
+    if (traj_length < TRAJECTORY_LENGTH*TRACER_STEPS) 
+        for (i=0; i < traj_length-1; i++)
+//         for (i=traj_length-2; i >= 0; i--)
+            for (j=0; j<n_tracers; j++)
+            {        
+                compute_particle_colors(particle[tracer_n[j]], cluster, plot, rgb, rgbx, rgby, &radius, &width, particle);
         
+                glColor3f(rgb[0], rgb[1], rgb[2]);
+            
+                x1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].xc;
+                x2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].xc;
+                y1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].yc;
+                y2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].yc;
+            
+                time = traj_length - i;
+                lum = 0.9 - TRACER_LUM_FACTOR*(double)time/(double)(TRAJECTORY_LENGTH*TRACER_STEPS);
+                if (lum < 0.0) lum = 0.0;
+                glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+        
+                if ((lum > 0.1)&&(module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN))) 
+                    draw_line(x1, y1, x2, y2);
+            }
+    else 
+    {
+//         for (i = traj_length-2; i >= traj_position + 1; i--)
+        for (i = traj_position + 1; i < traj_length-1; i++)
+            for (j=0; j<n_tracers; j++)
+            {        
+                compute_particle_colors(particle[tracer_n[j]], cluster, plot, rgb, rgbx, rgby, &radius, &width, particle);
+        
+                glColor3f(rgb[0], rgb[1], rgb[2]);
+            
+                x1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].xc;
+                x2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].xc;
+                y1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].yc;
+                y2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].yc;
+        
+                time = traj_position + traj_length - i;
+                lum = 0.9 - TRACER_LUM_FACTOR*(double)time/(double)(TRAJECTORY_LENGTH*TRACER_STEPS);
+                if (lum < 0.0) lum = 0.0;
+                glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+        
+                if ((lum > 0.1)&&(module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN))) 
+                    draw_line(x1, y1, x2, y2);
+            }
+        for (i=0; i < traj_position-1; i++)
+//         for (i = traj_position-2; i >= 0; i--)
+            for (j=0; j<n_tracers; j++)
+            {        
+                compute_particle_colors(particle[tracer_n[j]], cluster, plot, rgb, rgbx, rgby, &radius, &width, particle);
+        
+                glColor3f(rgb[0], rgb[1], rgb[2]);
+            
+                x1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].xc;
+                x2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].xc;
+                y1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].yc;
+                y2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].yc;
+        
+                time = traj_position - i;
+                lum = 0.9 - TRACER_LUM_FACTOR*(double)time/(double)(TRAJECTORY_LENGTH*TRACER_STEPS);
+                if (lum < 0.0) lum = 0.0;
+                glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+        
+                if ((lum > 0.1)&&(module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN))) 
+                    draw_line(x1, y1, x2, y2);
+            }
+    }
+}
+
+void old_draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], int traj_position, int traj_length, t_particle *particle, t_cluster *cluster, int *tracer_n, int plot)
+/* draw tracer particle trajectory */
+{
+    int i, j, time, p, width;
+    double x1, x2, y1, y2, rgb[3], rgbx[3], rgby[3], radius, lum;
+    
+//     blank();
+    glLineWidth(TRAJECTORY_WIDTH);
+    printf("drawing trajectory\n");
+    
+    for (j=0; j<n_tracers; j++)
+    {        
         compute_particle_colors(particle[tracer_n[j]], cluster, plot, rgb, rgbx, rgby, &radius, &width, particle);
         
         glColor3f(rgb[0], rgb[1], rgb[2]);
             
-        if (traj_length < TRAJECTORY_LENGTH) 
-            for (i=0; i < traj_length-1; i++)
+        if (traj_length < TRAJECTORY_LENGTH*TRACER_STEPS) 
+//             for (i=0; i < traj_length-1; i++)
+            for (i=traj_length-2; i >= 0; i--)
             {
-                x1 = trajectory[j*TRAJECTORY_LENGTH + i].xc;
-                x2 = trajectory[j*TRAJECTORY_LENGTH + i+1].xc;
-                y1 = trajectory[j*TRAJECTORY_LENGTH + i].yc;
-                y2 = trajectory[j*TRAJECTORY_LENGTH + i+1].yc;
+                x1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].xc;
+                x2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].xc;
+                y1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].yc;
+                y2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].yc;
             
                 time = traj_length - i;
-                lum = 0.8 - TRACER_LUM_FACTOR*(double)time/(double)TRAJECTORY_LENGTH;
+                lum = 0.9 - TRACER_LUM_FACTOR*(double)time/(double)(TRAJECTORY_LENGTH*TRACER_STEPS);
                 if (lum < 0.0) lum = 0.0;
                 glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
         
-                if (module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+                if ((lum > 0.1)&&(module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN))) 
+                    draw_line(x1, y1, x2, y2);
             
 //                 printf("tracer = %i, (x1, y1) = (%.3lg, %.3lg), (x2, y2) = (%.3lg, %.3lg)\n", j, x1, y1, x2, y2);
             }
         else 
         {
-            for (i = traj_position + 1; i < traj_length-1; i++)
+//             for (i = traj_position + 1; i < traj_length-1; i++)
+            for (i = traj_length-2; i >= traj_position + 1; i--)
             {
-                x1 = trajectory[j*TRAJECTORY_LENGTH + i].xc;
-                x2 = trajectory[j*TRAJECTORY_LENGTH + i+1].xc;
-                y1 = trajectory[j*TRAJECTORY_LENGTH + i].yc;
-                y2 = trajectory[j*TRAJECTORY_LENGTH + i+1].yc;
+                x1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].xc;
+                x2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].xc;
+                y1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].yc;
+                y2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].yc;
         
                 time = traj_position + traj_length - i;
-                lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
+                lum = 0.9 - TRACER_LUM_FACTOR*(double)time/(double)(TRAJECTORY_LENGTH*TRACER_STEPS);
+                if (lum < 0.0) lum = 0.0;
                 glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
         
-                if (module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+                if ((lum > 0.1)&&(module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN))) 
+                    draw_line(x1, y1, x2, y2);
             }
-            for (i=0; i < traj_position-1; i++)
+//             for (i=0; i < traj_position-1; i++)
+            for (i = traj_position-2; i >= 0; i--)
             {
-                x1 = trajectory[j*TRAJECTORY_LENGTH + i].xc;
-                x2 = trajectory[j*TRAJECTORY_LENGTH + i+1].xc;
-                y1 = trajectory[j*TRAJECTORY_LENGTH + i].yc;
-                y2 = trajectory[j*TRAJECTORY_LENGTH + i+1].yc;
+                x1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].xc;
+                x2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].xc;
+                y1 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i].yc;
+                y2 = trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + i+1].yc;
         
                 time = traj_position - i;
-                lum = 1.0 - (double)time/(double)TRAJECTORY_LENGTH;
+                lum = 0.9 - TRACER_LUM_FACTOR*(double)time/(double)(TRAJECTORY_LENGTH*TRACER_STEPS);
+                if (lum < 0.0) lum = 0.0;
                 glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
         
-                if (module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN)) draw_line(x1, y1, x2, y2);
+                if ((lum > 0.1)&&(module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN))) 
+                    draw_line(x1, y1, x2, y2);
             }
         }
     }
 }
 
-
-void color_background(t_particle particle[NMAXCIRCLES], int bg_color, t_hashgrid hashgrid[HASHX*HASHY])
+void color_background(t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES], int bg_color, t_hashgrid hashgrid[HASHX*HASHY])
 /* color background according to particle properties */
 {
-    int i, j, k, n, p, q, m, nnb, number, avrg_fact;
-    double rgb[3], hue, value, p1, p2, pp1, pp2, oldhue;
+    int i, j, k, n, p, q, m, nnb, number, avrg_fact, obs;
+    double rgb[3], hue, value, p1, p2, pp1, pp2, oldhue, valx, valy, lum;
     static int first = 1, counter = 0;
     
     p1 = 0.75;
@@ -7851,6 +8722,119 @@ void color_background(t_particle particle[NMAXCIRCLES], int bg_color, t_hashgrid
                     hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_EKIN);
                     break;
                 }
+                case (BG_EOBSTACLES):
+                {
+                    value = 0.0;
+                    nnb = hashgrid[n].nneighb;
+                    for (q=0; q<nnb; q++)
+                    {
+                        m = hashgrid[n].neighbour[q];
+                        if (hashgrid[m].nobs) value += obstacle[hashgrid[m].obstacle].energy;
+                    }
+                    /* hashcell n counts four times */
+                    if (hashgrid[n].nobs) value += 3.0*obstacle[hashgrid[n].obstacle].energy;
+                    value *= 1.0/(double)(nnb + 4);
+                    
+//                     if (hashgrid[n].nobs) value += obstacle[hashgrid[n].obstacle].energy;
+                    hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*value/OBSTACLE_EMAX;
+                    if (hue > ENERGY_HUE_MIN) hue = ENERGY_HUE_MIN;
+                    if (hue < ENERGY_HUE_MAX) hue = ENERGY_HUE_MAX;
+                    hue = p1*oldhue + p2*hue;
+                    hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_EKIN);
+                    break;
+                }
+                case (BG_EKIN_OBSTACLES):
+                {
+                    value = 0.0;
+                    nnb = hashgrid[n].nneighb;
+                    for (q=0; q<nnb; q++)
+                    {
+                        m = hashgrid[n].neighbour[q];
+                        for (k=0; k<hashgrid[m].number; k++)
+                        {
+                            p = hashgrid[m].particles[k];
+                            value += particle[p].energy;
+                        }
+                    }
+                    /* hashcell n counts double */
+                    for (k=0; k<hashgrid[n].number; k++)
+                    {
+                        p = hashgrid[n].particles[k];
+                        value += particle[p].energy;
+                    }
+                    value *= 1.0/(double)(nnb + 1);
+                    if (hashgrid[n].nobs) value += obstacle[hashgrid[n].obstacle].energy;
+                    hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*value/OBSTACLE_EMAX;
+                    if (hue > ENERGY_HUE_MIN) hue = ENERGY_HUE_MIN;
+                    if (hue < ENERGY_HUE_MAX) hue = ENERGY_HUE_MAX;
+                    hue = p1*oldhue + p2*hue;
+                    hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_EKIN);
+                    break;
+                }
+                case (BG_DIR_OBSTACLES):
+                {
+                    valx = 0.0;
+                    valy = 0.0;
+                    nnb = hashgrid[n].nneighb;
+                    for (q=0; q<nnb; q++)
+                    {
+                        m = hashgrid[n].neighbour[q];
+                        if (hashgrid[m].nobs)
+                        {
+                            valx += obstacle[hashgrid[m].obstacle].vx;
+                            valy += obstacle[hashgrid[m].obstacle].vy;
+                        }
+                    }
+                    /* hashcell n counts more */
+                    if (hashgrid[n].nobs)
+                    {
+                        valx += 4.0*obstacle[hashgrid[n].obstacle].vx;
+                        valy += 4.0*obstacle[hashgrid[n].obstacle].vy;
+                    }
+                    valx *= 1.0/(double)(nnb + 4);
+                    valy *= 1.0/(double)(nnb + 4);
+                    hue = argument(valx, valy);
+                    if (hue > DPI) hue -= DPI;
+                    if (hue < 0.0) hue += DPI;
+                    hue = pp1*oldhue + pp2*hue;
+                    lum = module2(valx, valy)/OBSTACLE_VMAX;
+                    if (lum > 1.0) lum = 1.0;
+                    hsl_to_rgb_palette(hue*360.0/DPI, 0.9, 0.5*lum, rgb, COLOR_PALETTE_DIRECTION);
+                    break;
+                }
+                case (BG_POS_OBSTACLES):
+                {
+                    valx = 0.0;
+                    valy = 0.0;
+                    nnb = hashgrid[n].nneighb;
+//                     for (q=0; q<nnb; q++)
+//                     {
+//                         m = hashgrid[n].neighbour[q];
+//                         if (hashgrid[m].nobs)
+//                         {
+//                             valx += obstacle[hashgrid[m].obstacle].xc;
+//                             valy += obstacle[hashgrid[m].obstacle].yc;
+//                         }
+//                     }
+                    /* hashcell n counts double */
+                    if (hashgrid[n].nobs)
+                    {
+                        obs = hashgrid[n].obstacle;
+                        valx += obstacle[obs].xc - obstacle[obs].xc0;
+                        valy += obstacle[obs].yc - obstacle[obs].yc0;
+                    }
+//                     valx *= 1.0/(double)(nnb + 1);
+//                     valy *= 1.0/(double)(nnb + 1);
+                    hue = argument(valx, valy);
+                    if (hue > DPI) hue -= DPI;
+                    if (hue < 0.0) hue += DPI;
+                    hue = pp1*oldhue + pp2*hue;
+                    lum = module2(valx, valy);
+                    if (lum > 1.0) lum = 1.0;
+//                     lum = 1.0;
+                    hsl_to_rgb_palette(hue*360.0/DPI, 0.9, 0.5*lum, rgb, COLOR_PALETTE_DIRECTION);
+                    break;
+                }
                 case (BG_FORCE):
                 {
                     value = 0.0;
@@ -7902,12 +8886,15 @@ void draw_particles(t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRC
     double ej, hue, huex, huey, rgb[3], rgbx[3], rgby[3], radius, x1, y1, x2, y2, angle, ca, sa, length, linkcolor, sign = 1.0, angle1, signy = 1.0, periodx, periody, x, y, lum, logratio;
     char message[100];
     
+    printf("Drawing particles\n");
 //     if (!TRACER_PARTICLE) blank();
     if (plot == P_NOPARTICLE) blank();
     
-    if ((COLOR_BACKGROUND)&&(bg_color > 0)) color_background(particle, bg_color, hashgrid);
-    else if (!TRACER_PARTICLE) blank();
+//     if ((COLOR_BACKGROUND)&&(bg_color > 0)) color_background(particle, bg_color, hashgrid);
+//     else 
+    if ((!TRACER_PARTICLE)&&(!COLOR_BACKGROUND)&&(!DRAW_OBSTACLE_LINKS)&&(!FILL_OBSTACLE_TRIANGLES)) blank();
     
+//     printf("Drawing particles 1\n");
     glColor3f(1.0, 1.0, 1.0);
     
     /* show region of partial thermostat */
@@ -7986,6 +8973,8 @@ void draw_particles(t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRC
             }
         }
     }
+//     printf("Drawing particles 2\n");
+    
     
     /* draw "altitude lines" */
     if (ALTITUDE_LINES) draw_altitude_lines();
@@ -8195,12 +9184,254 @@ void draw_particles(t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRC
     }
 }
 
+void obstacle_hue(t_obstacle obstacle, double rgb[3])
+/* compute obstacle color hue */
+{
+    int k;
+    double etot, angle, hue, lum;
+    
+    switch (OBSTACLE_COLOR) {
+        case (OC_ENERGY):
+        {
+            etot = obstacle.energy;
+            hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*etot/OBSTACLE_EMAX;
+            if (hue > ENERGY_HUE_MIN) hue = ENERGY_HUE_MIN;
+            if (hue < ENERGY_HUE_MAX) hue = ENERGY_HUE_MAX;
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_EKIN);
+            break;
+        }
+        case (OC_DIRECTION):
+        {
+            hue = argument(obstacle.vx, obstacle.vy);
+            if (hue < 0.0) hue += DPI;
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*(hue)/DPI;
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_DIRECTION);
+            break;
+        }
+        case (OC_DIRECTION_ENERGY):
+        {
+            hue = argument(obstacle.vx, obstacle.vy);
+            etot = obstacle.energy;
+            if (hue < 0.0) hue += DPI;
+            hue = PARTICLE_HUE_MIN + (PARTICLE_HUE_MAX - PARTICLE_HUE_MIN)*(hue)/DPI;
+            lum = etot/OBSTACLE_EMAX;
+            if (lum > 0.5) lum = 0.5;
+            hsl_to_rgb_palette(hue, 0.9, lum, rgb, COLOR_PALETTE_DIRECTION);
+            break;
+        }
+    }
+}
+
+int area_to_rgb(t_obstacle obstacle[NMAXOBSTACLES], int i, int n1, int n2, double rgb[3])
+/* computes rgb code of triangle according to area */
+/* returns 1 if angle of triangle is less than PI/2 */
+/* OLD VERSION */
+{
+    int p, q, k, n, counter;
+    double area, angle1, angle2;
+    static int first;
+    static double mean_area;
+
+    if (first)
+    {
+        /* compute mean area of triangles */
+        if (FILL_OBSTACLE_TRIANGLES)
+        {
+            counter = 0;
+            mean_area = 0.0;
+            for (p = 0; p < nobstacles; p++)
+            {
+                n = obstacle[p].nneighb;
+                for (q = 0; q < n - 1; q++)
+                {
+                    n1 = obstacle[p].neighb[q]; 
+                    n2 = obstacle[p].neighb[q+1]; 
+                    mean_area += vabs(triangle_area(obstacle[p].xc, obstacle[p].yc, obstacle[n1].xc, obstacle[n1].yc, obstacle[n2].xc, obstacle[n2].yc));
+                    counter++;
+                }
+                n1 = obstacle[p].neighb[n-1]; 
+                n2 = obstacle[p].neighb[0]; 
+                mean_area += vabs(triangle_area(obstacle[p].xc, obstacle[p].yc, obstacle[n1].xc, obstacle[n1].yc, obstacle[n2].xc, obstacle[n2].yc));
+                counter++;    
+            }
+            mean_area *= 1.0/(double)counter;
+        }
+        first = 0;
+    }
+    
+    area = vabs(triangle_area(obstacle[i].xc, obstacle[i].yc, obstacle[n1].xc, obstacle[n1].yc, obstacle[n2].xc, obstacle[n2].yc));
+    area = OBSTACLE_AREA_SHADE_FACTOR*(area - mean_area);
+    if (area > 1.0) area = 1.0;
+    if (area < 0.0) area = 0.0;
+    for (k=0; k<3; k++) rgb[k] = area;
+    
+    angle1 = argument(obstacle[n1].xc - obstacle[i].xc, obstacle[n1].yc - obstacle[i].yc);
+    angle2 = argument(obstacle[n2].xc - obstacle[i].xc, obstacle[n2].yc - obstacle[i].yc);
+    if (angle2 < angle1) angle2 += DPI;
+    
+    return(angle2 - angle1 < 1.5*PID);
+}
+
+void old_draw_obstacle_triangles(t_obstacle obstacle[NMAXOBSTACLES])
+/* draw the triangles between obstacles, for option FILL_OBSTACLE_TRIANGLES */
+{
+    int i, j, k, n, n1, n2, neigh;
+    short int acute;
+    double rgb[3], angle1, angle2;
+    
+    if (FILL_OBSTACLE_TRIANGLES) for (i = 0; i < nobstacles; i++)
+    {
+        n = obstacle[i].nneighb;
+        for (j = 0; j < n - 1; j++)
+        {
+            n1 = obstacle[i].neighb[j]; 
+            n2 = obstacle[i].neighb[j+1];
+            acute = area_to_rgb(obstacle, i,  n1,  n2, rgb);
+            if (acute) draw_colored_triangle(obstacle[i].xc, obstacle[i].yc, obstacle[n1].xc, obstacle[n1].yc, obstacle[n2].xc, obstacle[n2].yc, rgb);
+        }
+        n1 = obstacle[i].neighb[n-1]; 
+        n2 = obstacle[i].neighb[0]; 
+        acute = area_to_rgb(obstacle, i,  n1,  n2, rgb);
+        if (acute) draw_colored_triangle(obstacle[i].xc, obstacle[i].yc, obstacle[n1].xc, obstacle[n1].yc, obstacle[n2].xc, obstacle[n2].yc, rgb);
+    }
+    glColor3f(1.0, 1.0, 1.0);
+    for (i = 0; i < nobstacles; i++)
+        for (j = 0; j < obstacle[i].nneighb; j++)
+        {
+            neigh = obstacle[i].neighb[j];
+            draw_line(obstacle[i].xc, obstacle[i].yc, obstacle[neigh].xc, obstacle[neigh].yc);
+        }
+}
+
+void facet_area_to_rgb(t_obstacle obstacle[NMAXOBSTACLES], t_otriangle triangle[NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES], t_ofacet facet[NMAXOBSTACLES], int nfacet, double rgb[3])
+/* computes rgb code of triangle according to area */
+/* returns 1 if angle of triangle is less than PI/2 */
+{
+    int p, q, k, n, counter;
+    double area, area0;
+    static int first;
+    static double mean_area;
+
+    if (first)
+    {
+        /* compute mean area of triangles */
+        if (FILL_OBSTACLE_TRIANGLES)
+        {
+            counter = 0;
+            mean_area = 0.0;
+            for (p = 0; p < n_otriangles; p++)
+            {
+                mean_area += otriangle_area(obstacle, triangle[p]);
+                counter++;    
+            }
+            mean_area *= 1.0/(double)counter;
+            
+            for (p = 0; p < n_ofacets; p++)
+            {
+                area0 = 0.0;
+                for (k = 0; k < facet[p].ntriangles; k++)
+                    area0 += triangle[facet[p].triangle[k]].area0;
+                facet[p].area0 = area0/(double)facet[p].ntriangles;
+            }
+        }
+        first = 0;
+    }
+    
+    area = 0.0;
+    for (k = 0; k < facet[nfacet].ntriangles; k++)
+    {
+        p = facet[nfacet].triangle[k];
+        area += otriangle_area(obstacle, triangle[p]);
+    }
+    area *= 1.0/(double)facet[nfacet].ntriangles;
+    
+    area = OBSTACLE_AREA_SHADE_FACTOR*(area - facet[nfacet].area0);
+    if (area > 1.0) area = 1.0;
+    if (area < 0.0) area = 0.0;
+    for (k=0; k<3; k++) rgb[k] = area;
+}
+
+double triangle_area_to_rgb(t_obstacle obstacle[NMAXOBSTACLES], t_otriangle otriangle[NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES], int triangle, double rgb[3])
+{
+    double area;
+    int k, p;
+    
+    area = otriangle_area(obstacle, otriangle[triangle]); 
+    area = 0.6 + OBSTACLE_AREA_SHADE_FACTOR*(area - otriangle[triangle].area0);
+    if (area > 0.9) area = 0.9;
+    if (area < 0.1) area = 0.1;
+    for (k=0; k<3; k++) rgb[k] = area;
+    
+    return(area);
+}
+
+void draw_obstacle_triangles(t_obstacle obstacle[NMAXOBSTACLES],
+                t_otriangle otriangle[NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES], 
+                t_ofacet ofacet[NMAXOBSTACLES])
+/* draw the triangles between obstacles, for option FILL_OBSTACLE_TRIANGLES */
+{
+    int i, j, k, n, n1, n2, neigh, nf, f, t, s1, s2, s3;
+    short int acute;
+    double rgb[3], pvect;
+    
+    printf("drawing %i facets with %i triangles\n", n_ofacets, n_otriangles);
+    if (FILL_OBSTACLE_TRIANGLES) 
+    {
+        /* determine acute angles */
+        for (t = 0; t < n_otriangles; t++)
+        {
+            s1 = otriangle[t].i[0]; 
+            s2 = otriangle[t].i[1]; 
+            s3 = otriangle[t].i[2];
+            
+            pvect = (obstacle[s2].xc - obstacle[s1].xc)*(obstacle[s3].yc - obstacle[s1].yc);
+            pvect -= (obstacle[s2].yc - obstacle[s1].yc)*(obstacle[s3].xc - obstacle[s1].xc);
+            
+            otriangle[t].acute = (pvect > 0.0);
+        }
+        
+        if (SHADE_OBSTACLE_FACETS) for (i = 0; i < n_ofacets; i++) 
+        {
+            facet_area_to_rgb(obstacle, otriangle, ofacet, i, rgb);
+            nf = ofacet[i].ntriangles;
+            for (f = 0; f < nf; f++) 
+            {
+                t = ofacet[i].triangle[f];
+                if (otriangle[t].acute)
+                {
+                    s1 = otriangle[t].i[0]; 
+                    s2 = otriangle[t].i[1]; 
+                    s3 = otriangle[t].i[2]; 
+        
+                    draw_colored_triangle(obstacle[s1].xc, obstacle[s1].yc, obstacle[s2].xc, obstacle[s2].yc, obstacle[s3].xc, obstacle[s3].yc, rgb);
+                }
+            }
+        }
+        else for (t = 0; t < n_otriangles; t++) if (otriangle[t].acute)
+        {
+            triangle_area_to_rgb(obstacle, otriangle, t, rgb);
+            s1 = otriangle[t].i[0]; 
+            s2 = otriangle[t].i[1]; 
+            s3 = otriangle[t].i[2]; 
+        
+            draw_colored_triangle(obstacle[s1].xc, obstacle[s1].yc, obstacle[s2].xc, obstacle[s2].yc, obstacle[s3].xc, obstacle[s3].yc, rgb);
+        }
+    }
+        
+    glColor3f(1.0, 1.0, 1.0);
+    for (i = 0; i < nobstacles; i++)
+        for (j = 0; j < obstacle[i].nneighb; j++)
+        {
+            neigh = obstacle[i].neighb[j];
+            draw_line(obstacle[i].xc, obstacle[i].yc, obstacle[neigh].xc, obstacle[neigh].yc);
+        }
+}
 
 void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], t_belt *conveyor_belt, int wall)
 /* draw the container, for certain boundary conditions */
 {
-    int i, j;
-    double rgb[3], x, y, r, phi, angle, dx, dy, ybin, x1, x2, y1, y2, h, bangle, blength, pos0, pos, bsegment, tx, ty, bwidth, ca, sa;
+    int i, j, k, n, n1, n2, neigh;
+    double rgb[3], x, y, r, phi, angle, dx, dy, ybin, x1, x2, y1, y2, h, bangle, blength, pos0, pos, bsegment, tx, ty, bwidth, ca, sa, ekin, epot, etot, hue, area;
     char message[100];
     
     /* draw fixed obstacles */
@@ -8208,9 +9439,16 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
     {
         glLineWidth(CONTAINER_WIDTH);
         if (CHARGE_OBSTACLES) hsl_to_rgb(30.0, 0.1, 0.5, rgb);
-        else hsl_to_rgb(300.0, 0.1, 0.5, rgb);
+        else if (!OSCILLATE_OBSTACLES) hsl_to_rgb(300.0, 0.1, 0.5, rgb);
         for (i = 0; i < nobstacles; i++)
+        {
+            
+            if (OSCILLATE_OBSTACLES)
+            {                
+                obstacle_hue(obstacle[i], rgb);
+            }
             draw_colored_circle_precomp(obstacle[i].xc - xtrack, obstacle[i].yc - ytrack, obstacle[i].radius, rgb);
+        }
         glColor3f(1.0, 1.0, 1.0);
         for (i = 0; i < nobstacles; i++)
         {
@@ -8256,14 +9494,14 @@ void draw_container(double xmin, double xmax, t_obstacle obstacle[NMAXOBSTACLES]
             dx = r*cos(bangle);
             dy = r*sin(bangle);
             
-            x1 = conveyor_belt[i].x1;
-            y1 = conveyor_belt[i].y1;
+            x1 = conveyor_belt[i].x1 - xtrack;
+            y1 = conveyor_belt[i].y1 - ytrack;
             draw_line(x1-dx, y1-dy, x1+dx, y1+dy);
             draw_line(x1+dy, y1-dx, x1-dy, y1+dx);
             draw_circle_precomp(x1, y1, r);
 
-            x2 = conveyor_belt[i].x2;
-            y2 = conveyor_belt[i].y2;
+            x2 = conveyor_belt[i].x2 - xtrack;
+            y2 = conveyor_belt[i].y2 - ytrack;
             draw_line(x2-dx, y2-dy, x2+dx, y2+dy);
             draw_line(x2+dy, y2-dx, x2-dy, y2+dx);
             draw_circle_precomp(x2, y2, r);
@@ -9231,10 +10469,13 @@ void print_particles_speeds(t_particle particle[NMAXCIRCLES])
     write_text(xrighttext + 0.1, y, message);
 }
 
-double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], double xleft, double xright, double *pleft, double *pright, double pressure[N_PRESSURES], int wall, double krepel)
+double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], double xleft, double xright, double *pleft, double *pright, double pressure[N_PRESSURES], int wall, double krepel, int reset)
 {
-    int i, k, corner;
+    int i, s, k, corner, group, ngroups;
     double xmin, xmax, ymin, ymax, padding, r, rp, r2, cphi, sphi, f, fperp = 0.0, x, y, xtube, distance, dx, dy, width, ybin, angle, x1, y1, x2, h, ytop, norm, dleft, dplus, dminus, tmp_pleft = 0.0, tmp_pright = 0.0, proj, pscal, pvect, pvmin, charge, d2, speed, pangle, distance1, sangle;
+    double group_pressure[NMAXGROUPS];
+    int segments_per_group[NMAXGROUPS];
+    short int inactivate_group[NMAXGROUPS], inactivate_segment;
     static int first = 1;
     static double seqangle;
     
@@ -9242,6 +10483,12 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
     {
         seqangle = PI/(double)NPOLY;
         first = 0;
+    }
+    
+    if ((OSCILLATE_OBSTACLES)&&(reset)) for (i=0; i<nobstacles; i++)
+    {
+        obstacle[i].fx = 0.0;
+        obstacle[i].fy = 0.0;
     }
     
     /* compute force from fixed circular obstacles */
@@ -9260,6 +10507,12 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
             f = KSPRING_OBSTACLE*(r2 - distance);
             particle[j].fx += f*cphi;
             particle[j].fy += f*sphi;
+            
+            if (OSCILLATE_OBSTACLES)
+            {
+                obstacle[i].fx -= f*cphi;
+                obstacle[i].fy -= f*sphi;
+            }
             
             if (ROTATE_OBSTACLES)
             {
@@ -9394,6 +10647,34 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                     segment[i].torque -= (x - segment[i].xc)*f*sin(angle) - (y - segment[i].yc)*f*cos(angle);
                 }
             }
+        }
+    }
+    
+    if (INACTIVATE_SEGMENTS_UNDER_PRESSURE)
+    {
+        ngroups = 0;
+        for (group=0; group<NMAXGROUPS; group++)
+        {
+            segments_per_group[group] = 0;
+            group_pressure[group] = 0.0;
+        }
+        for (i=0; i<nsegments; i++)
+        {
+            group = segment[i].group;
+            segments_per_group[group]++;
+            group_pressure[group] += segment[i].avrg_pressure;
+            if (group > ngroups) ngroups = group;
+        }
+        for (group=1; group<ngroups; group++) if (segments_per_group[group] > 0)
+        {
+//             group_pressure[group] *= 1.0/(double)segments_per_group[group];
+            if (group_pressure[group] > SEGMENT_P_INACTIVATE*(double)segments_per_group[group]) inactivate_group[group] = 1;
+            else inactivate_group[group] = 0;
+        }
+        for (i=0; i<nsegments; i++)
+        {
+            group = segment[i].group;
+            if ((group > 0)&&(inactivate_group[group])) segment[i].active = 0;
         }
     }
 
@@ -9827,6 +11108,30 @@ double compute_boundary_force(int j, t_particle particle[NMAXCIRCLES], t_obstacl
                 if (y > BCYMAX + padding) particle[j].fy -= KSPRING_BOUNDARY*(y - BCYMAX - padding);
                 if (x > BCXMAX - padding) particle[j].fx -= KSPRING_BOUNDARY*(x - BCXMAX + padding);
                 else if (x < BCXMIN + padding) particle[j].fx += KSPRING_BOUNDARY*(BCXMIN - x + padding);
+            }
+                        
+            return(0.0);
+        }
+        case (BC_REFLECT_ABS_RIGHT):
+        {
+            /* add harmonic force outside screen */
+            padding = MU;
+            x = particle[j].xc;
+            y = particle[j].yc;
+            
+            if (x > BCXMAX + padding)
+            {
+                particle[j].active = 0;
+                particle[j].vx = 0.0;
+                particle[j].vy = 0.0;
+                particle[j].xc = BCXMAX + 2.0*padding;
+                particle[j].yc = BCYMIN - 2.0*padding;
+            }
+            else 
+            {
+                if (y > BCYMAX - padding) particle[j].fy -= KSPRING_BOUNDARY*(y - BCYMAX + padding);
+                else if (y < BCYMIN + padding) particle[j].fy += KSPRING_BOUNDARY*(BCYMIN - y + padding);
+                if (x < BCXMIN + padding) particle[j].fx += KSPRING_BOUNDARY*(BCXMIN - x + padding);
             }
                         
             return(0.0);
@@ -10714,8 +12019,14 @@ int tracer_n[N_TRACER_PARTICLES])
         }
     }
     
-    add_particle(x, y, 0.0, V_INITIAL, PARTICLE_MASS, type, particle);
+    printf("Added a particle at (%.5lg, %.5lg)\n\n\n", x, y);
+    fprintf(lj_log, "Added a particle at (%.5lg, %.5lg)\n\n\n", x, y);
     
+    add_particle(x, y, V_INITIAL, 0.05*V_INITIAL*(double)rand()/RAND_MAX, PARTICLE_MASS, type, particle);
+    
+    printf("Particle number %i\n", ncircles-1);
+    
+//     add_particle(x, y, V_INITIAL, 0.25*V_INITIAL*(double)rand()/RAND_MAX, PARTICLE_MASS, type, particle);
 //     add_particle(x, y, V_INITIAL*(double)rand()/RAND_MAX, 0.0, PARTICLE_MASS, type, particle);
         
 //     if (y > 0.0)
@@ -10920,6 +12231,16 @@ int partial_thermostat_coupling(t_particle particle[NMAXCIRCLES], double xmin, t
     return(nthermo);
 }
 
+
+int partial_efield(double x, double y)
+/*  */
+{
+    switch (EFIELD_REGION) {
+        case (EF_CONST): return(1);
+        case (EF_SQUARE): return(vabs(x) < YMAX);
+        case (EF_LEFT): return(x < YMIN);
+    }
+}
 
 int partial_bfield(double x, double y)
 /*  */
@@ -15303,9 +16624,15 @@ void draw_frame(int i, int plot, int bg_color, int ncollisions, int traj_positio
                 t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
                 t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], 
                 t_group_data *group_speeds, t_group_segments *segment_group, 
-                t_belt *conveyor_belt, int *tracer_n)
+                t_belt *conveyor_belt, int *tracer_n,
+                t_otriangle otriangle[NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES], t_ofacet ofacet[NMAXOBSTACLES])
 /* draw a movie frame */
 {
+    printf("Drawing frame\n");
+    if ((COLOR_BACKGROUND)&&(bg_color > 0)) color_background(particle, obstacle, bg_color, hashgrid);
+//     else if (!TRACER_PARTICLE) blank();
+    if (DRAW_OBSTACLE_LINKS) draw_obstacle_triangles(obstacle, otriangle, ofacet);
+//     if (DRAW_OBSTACLE_LINKS) old_draw_obstacle_triangles(obstacle);
     if (TRACER_PARTICLE) draw_trajectory(trajectory, traj_position, traj_length, particle, cluster, tracer_n, plot);
     draw_particles(particle, cluster, plot, params.beta, collisions, ncollisions, bg_color, hashgrid, params);
     draw_container(params.xmincontainer, params.xmaxcontainer, obstacle, segment, conveyor_belt, wall);
@@ -15322,5 +16649,6 @@ void draw_frame(int i, int plot, int bg_color, int ncollisions, int traj_positio
     }
     else if (PRINT_PARTICLE_SPEEDS) print_particles_speeds(particle);
     else if (PRINT_SEGMENTS_SPEEDS) print_segment_group_speeds(segment_group);
+//     printf("5\n");
 }
 

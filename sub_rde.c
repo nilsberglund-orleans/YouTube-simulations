@@ -4877,6 +4877,98 @@ void compute_laplacian_rde(double phi_in[NX*NY], double phi_out[NX*NY], short in
     }
 }
 
+void compute_kuramoto_int_planar(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY])
+/* computes Kuramoto interaction of phi_in and stores it in phi_out - case with whole rectangular domain */
+{
+    int i, j, iplus, iminus, jplus, jminus;
+    double phi;
+    
+    #pragma omp parallel for private(i,j)
+    for (i=1; i<NX-1; i++){
+        for (j=1; j<NY-1; j++){
+            if (xy_in[i*NY+j]){
+                phi = phi_in[i*NY+j];
+                phi_out[i*NY+j] = sin(phi_in[(i+1)*NY+j] - phi) + sin(phi_in[(i-1)*NY+j] - phi) + sin(phi_in[i*NY+j+1] - phi) + sin(phi_in[i*NY+j-1] - phi);
+            }
+        }
+    }
+    
+    /* TODO */
+    
+    /* boundary conditions - left side */
+    switch (B_COND_LEFT) {
+        case (BC_PERIODIC):
+        {
+            for (j = 0; j < NY; j++) 
+            {
+                jplus = j+1;  if (jplus == NY) jplus = 0;
+                jminus = j-1; if (jminus == -1) jminus = NY-1;
+                
+                phi = phi_in[j];
+                phi_out[j] = sin(phi_in[jminus] - phi) + sin(phi_in[jplus] - phi) + sin(phi_in[(NX-1)*NY+j] - phi) + sin(phi_in[NY+j] - phi);
+            }
+            break;
+        }
+    }
+
+    /* boundary conditions - right side */
+    switch (B_COND_RIGHT) {
+        case (BC_PERIODIC):
+        {
+            for (j = 0; j < NY; j++) 
+            {
+                jplus = j+1;  if (jplus == NY) jplus = 0;
+                jminus = j-1; if (jminus == -1) jminus = NY-1;
+                
+                phi = phi_in[(NX-1)*NY+j];
+                phi_out[(NX-1)*NY+j] = sin(phi_in[(NX-1)*NY+jminus] - phi) + sin(phi_in[(NX-1)*NY+jplus] - phi) + sin(phi_in[(NX-2)*NY+j] - phi) + sin(phi_in[j] - phi);
+            }
+            break;
+        }
+    }
+
+    /* boundary conditions - bottom side */
+    switch (B_COND_BOTTOM) {
+        case (BC_PERIODIC):
+        {
+            for (i = 1; i < NX-1; i++) 
+            {
+                iplus = i+1;  /*if (iplus == NX) iplus = 0;*/
+                iminus = i-1; /*if (iminus == -1) iminus = NX-1;*/
+                
+                phi = phi_in[i*NY];
+                phi_out[i*NY] = sin(phi_in[iminus*NY] - phi) + sin(phi_in[iplus*NY] - phi) + sin(phi_in[i*NY+1] - phi) + sin(phi_in[i*NY+NY-1] -phi);
+            }
+            break;
+        }
+    }
+    
+        /* boundary conditions - top side */
+    switch (B_COND_TOP) {
+        case (BC_PERIODIC):
+        {
+            for (i = 1; i < NX-1; i++) 
+            {
+                iplus = i+1;  /*if (iplus == NX) iplus = 0;*/
+                iminus = i-1; /*if (iminus == -1) iminus = NX-1;*/
+                
+                phi = phi_in[i*NY+NY-1];
+                phi_out[i*NY+NY-1] = sin(phi_in[iminus*NY+NY-1] - phi) + sin(phi_in[iplus*NY+NY-1] - phi) + sin(phi_in[i*NY] - phi) + sin(phi_in[i*NY+NY-2] - phi);
+            }
+            break;
+        }
+    }
+
+}
+
+
+void compute_kuramoto_interaction(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* computes interaction for Kuramoto model */
+{
+    
+    compute_kuramoto_int_planar(phi_in, phi_out, xy_in);
+}
+
 
 void compute_light_angle_sphere_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], double potential[NX*NY], int movie, int transparent)
 /* computes cosine of angle between normal vector and vector light */
@@ -6327,6 +6419,7 @@ void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere ws
         first = 0;
     }
     
+//     printf("Drawing wave\n"); 
     /* draw the field */
     glBegin(GL_QUADS);
     for (i=0; i<NX; i++)
@@ -6366,7 +6459,8 @@ void draw_wave_sphere_rde_ij(int i, int iplus, int j, int jplus, int jcolor, int
 //     draw = 1;
     for (p=0; p<HRES; p++)
         for (q=0; q<HRES; q++)
-            draw_hr[p*HRES+q] = (draw)&&(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
+            draw_hr[p*HRES+q] = (draw)||(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
+//             draw_hr[p*HRES+q] = (draw)&&(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
     for (k=0; k<3; k++) rgb[k] = rde[i*NY+jcolor].rgb[k];
         glColor3f(rgb[0], rgb[1], rgb[2]);
     

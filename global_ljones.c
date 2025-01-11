@@ -13,15 +13,17 @@
 
 #define NMAXCIRCLES 200000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define MAXNEIGH 20         /* max number of neighbours kept in memory */
-#define NMAXOBSTACLES 1000  /* max number of obstacles */
-#define NMAXSEGMENTS 1000   /* max number of repelling segments */
-#define NMAXGROUPS 50       /* max number of groups of segments */
+#define NMAXOBSTACLES 5000  /* max number of obstacles */
+#define NMAXSEGMENTS 1200   /* max number of repelling segments */
+#define NMAXGROUPS 100      /* max number of groups of segments */
 #define NMAXCOLLISIONS 200000   /* max number of collisions */
 #define NMAXPARTNERS 30     /* max number of partners in molecule */
 #define NMAXPARTNERMOLECULES 30 /* max number of partners of a molecule */
 #define NMAXPARTINCLUSTER 500   /* max number of particles in cluster */
 #define NMAXBELTS 10        /* max number of conveyor belts */
 #define NMAXSHOVELS 50      /* max number of shovels */
+#define NMAX_TRIANGLES_PER_OBSTACLE 10  /* max number of triangles per obstacle */
+#define NMAX_TRIANGLES_PER_FACET 5  /* max number of triangles per facet between obstacles */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -46,6 +48,7 @@
 /* pattern of additional obstacles */
 #define O_CORNERS 0         /* obstacles in the corners (for Boy b.c.) */
 #define O_GALTON_BOARD 1    /* Galton board pattern */
+#define O_GALTON_BOARD_WIDE 11    /* wide Galton board pattern */
 #define O_GENUS_TWO 2       /* obstacles in corners of L-shape domeain (for genus 2 b.c.) */
 #define O_POOL_TABLE 3      /* obstacles around pockets of pool table */
 #define O_HLINE_HOLE_SPOKES 181    /* tips of spokes for S_HLINE_HOLE_SPOKES segment pattern */
@@ -58,6 +61,22 @@
 #define O_SIEVE_B 81        /* obstacles form a sieve, v2 */
 #define O_SIEVE_LONG 82     /* obstacles form a long sieve */
 #define O_SIEVE_LONG_B 83   /* obstacles form a long sieve, version with varying spacing */
+#define O_SIEVE_VIDEO1400 84    /* sieve for vide #1400 */
+#define O_SQUARE 9          /* square lattice */
+#define O_SQUARE_TWOMASSES 91   /* square lattice with alternating masses */
+#define O_POISSON_DISC 20   /* Poisson disc sample */
+
+/* type of obstacle pinning */
+#define OP_NPINNED 0        /* obstacles with NMAX_OBSTACLE_PINNED neighbours or less are pinned*/
+#define OP_LEFT 1           /* obstacles on the left are pinned */
+#define OP_LEFTTOPBOT 2     /* obstacles on the left, top or bottom are pinned */
+#define OP_CORNERS 3        /* obstacles in corners are pinned */
+#define OP_LEFTCORNERS 4    /* obstacles in left half and corners are pinned */
+#define OP_BNDRY_STEP 5     /* obstacles on boundary are pinned when at distance BDRY_PINNING_STEP */
+
+/* type of obstacle recoupling */
+#define OR_FIXED_DIST 0     /* resample within fixed distance */
+#define OR_BREAK_MAX 1      /* break bonds when max length is reached */
 
 /* pattern of additional repelling segments */
 #define S_RECTANGLE 0       /* segments forming a rectangle */
@@ -95,6 +114,7 @@
 #define S_COANDA_SHORT 26       /* shorter wall for Coanda effect */
 #define S_CYLINDER 27           /* walls at top and bottom, for cylindrical b.c. */
 #define S_TREE 28               /* Christmas tree(s) */
+#define S_TREES_B 281           /* Christmas trees, variant 2 */
 #define S_CONE 29               /* cone */
 #define S_CONVEYOR_BELT 30      /* conveyor belt */
 #define S_TWO_CONVEYOR_BELTS 31 /* two angled conveyor belts */
@@ -105,8 +125,11 @@
 #define S_CONVEYOR_SIEVE 35     /* conveyor belts for polygon sieve */
 #define S_CONVEYOR_SIEVE_B 351  /* conveyor belts for polygon sieve, v2 with backward top conveyor */
 #define S_CONVEYOR_SIEVE_LONG 352  /* conveyor belts for long polygon sieve */
+#define S_CONVEYORS_1400 353    /* conveyors for video #1400 */
 #define S_MASS_SPECTROMETER 36  /* bins for mass spectrometer */
 #define S_WIND_FORCE 361        /* bins for sorting by wind force */
+#define S_BINS_GALTON 362       /* bins for Galton board */
+#define S_BINS_GALTON_WIDE 363  /* more bins for Galton board */
 
 /* particle interaction */
 
@@ -151,6 +174,7 @@
 #define BC_ABSORBING 20     /* "no-return" boundary conditions outside BC area */
 #define BC_REFLECT_ABS 21   /* reflecting on lower boundary, and "no-return" boundary conditions outside BC area */
 #define BC_REFLECT_ABS_BOTTOM 22    /* absorbing on lower boundary, and reflecting elsewhere */
+#define BC_REFLECT_ABS_RIGHT 23     /* absorbing on right boundary, and reflecting elsewhere */
 
 /* Regions for partial thermostat couplings */
 
@@ -302,6 +326,12 @@
 #define IP_X 0      /* color depends on x coordinate of initial position */
 #define IP_Y 1      /* color depends on y coordinate of initial position */
 
+/* Space dependence of electric field */
+
+#define EF_CONST 0  /* constant magnetic field */
+#define EF_SQUARE 1 /* magnetic field concentrated in square */
+#define EF_LEFT 2   /* magnetic field concentrated region x < YMIN */
+
 /* Space dependence of magnetic field */
 
 #define BF_CONST 0  /* constant magnetic field */
@@ -336,6 +366,16 @@
 #define BG_CHARGE 2     /* background color depends on charge density */
 #define BG_EKIN 3       /* background color depends on kinetic energy */
 #define BG_FORCE 4      /* background color depends on total force */
+#define BG_EOBSTACLES 5 /* background color depends on obstacle energy */
+#define BG_EKIN_OBSTACLES 6 /* background color depends on kinetic energy plus obstacle energy */
+#define BG_DIR_OBSTACLES 7  /* background color depends on direction of velocity of obstacles */
+#define BG_POS_OBSTACLES 8  /* background color depends on displacement of obstacles */
+
+/* Obstacle color schemes */
+
+#define OC_ENERGY 0     /* obstacle color depends on energy */
+#define OC_DIRECTION 1  /* obstacle color depends on direction */
+#define OC_DIRECTION_ENERGY 2  /* obstacle hue depends on direction, luminosity on energy */
 
 /* Particle add regions */
 
@@ -447,6 +487,8 @@ typedef struct
 {
     int number;                 /* total number of particles in cell */
     int particles[HASHMAX];     /* numbers of particles in cell */
+    int nobs;                   /* number of obstacles in cell */
+    int obstacle;               /* obstacle number */
     int nneighb;                /* number of neighbouring cells */
     int neighbour[9];           /* numbers of neighbouring cells */
     double x1, y1, x2, y2;      /* coordinates of hashcell corners */
@@ -475,15 +517,46 @@ typedef struct
 typedef struct
 {
     double xc, yc, radius;      /* center and radius of circle */
+    double vx, vy;              /* speed for option OSCILLATING_OBSTACLES */
+    double fx, fy;              /* force for option OSCILLATING_OBSTACLES */
     double xc0, yc0;            /* center of oscillation for option RATTLE_OBSTACLES */
+    double energy;              /* total energy (kinetic + potential) of obstacle */
     short int active;           /* circle is active */
     double charge;              /* charge of obstacle, for EM simulations */
+    double mass;                /* mass  for option OSCILLATING_OBSTACLES */
     double omega0, omega;       /* speed of rotation */
     double angle;               /* angle of obstacle */
     short int oscillate;        /* has value 1 if the obstacles oscillates over time */
     int period;                 /* oscillation period */
     double amplitude, phase;    /* amplitude and phase of oscillation */
+    int nneighb;                /* number of neighbours, for option OSCILLATING_OBSTACLES */
+    int neighb[NMAX_OBSTACLE_NEIGHBOURS];    /* list of neighour numbers */
+    double eqdist[NMAX_OBSTACLE_NEIGHBOURS]; /* equilibrium distance to neighbours */
+    short int pinned;           /* has value 1 if particle is pinned to a fixed position */
+    short int chessboard;       /* has value 1 on a chessboard, for some arrangements */
 } t_obstacle;
+
+typedef struct
+{
+    int i[3];                   /* indices of obstacles forming triangle */
+    int facet;                  /* index of facet triangle belongs to */
+    short int acute;            /* value depends on central angle */
+    short int infacet;          /* has value 1 if triangle belongs to a facet */ 
+    double area0;               /* initial area */
+} t_otriangle;
+
+typedef struct 
+{
+    int ntriangles;             /* number of triangles belonging to facet */
+    int triangle[NMAX_TRIANGLES_PER_FACET];    /* indices of triangles belonging to facet */
+    double area0;               /* initial area */
+} t_ofacet;
+
+
+typedef struct 
+{
+    double xc, yc;              /* point in R^2, for Poisson disc generation */
+} t_point;
 
 typedef struct
 {
@@ -586,6 +659,6 @@ typedef struct
 
 
 
-int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0, nbelts = 0, n_tracers = 0;
+int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0, nbelts = 0, n_tracers = 0, n_otriangles = 0, n_ofacets = 0;
 FILE *lj_log;
 

@@ -2503,3 +2503,161 @@ void init_wave_fields(t_wave wave[NX*NY])
     }
     
 }
+
+int init_xyin_from_image_3d(short int *xy_in)
+/* initialize table xy_in from an image file */
+{
+    FILE *image_file;
+    int nx, ny, maxrgb, i, j, k, ii, jj, nmaxpixels, rgbtot, rgbmax, scan, rgbval, sign;
+    int *rgb_values;
+    double scalex, scaley, scale;
+    short int flipy = 1;
+
+    switch (IMAGE_FILE)
+    {
+        case (IM_PHOTONS): 
+        {
+            image_file = fopen("PHOTONSband.ppm", "r");
+            nmaxpixels = 2000000;
+            break;
+        }
+        case (IM_GUITAR): 
+        {
+            image_file = fopen("guitar.ppm", "r");
+            nmaxpixels = 11059200;
+            break;
+        }  
+        case (IM_GUITAR_NOHOLE): 
+        {
+            image_file = fopen("guitar_nohole.ppm", "r");
+            nmaxpixels = 11059200;
+            break;
+        }  
+        case (IM_EGUITAR): 
+        {
+            image_file = fopen("electric_guitar.ppm", "r");
+            nmaxpixels = 2459520;
+            break;
+        }  
+        case (IM_HAPPY_NEW_YEAR): 
+        {
+            image_file = fopen("Happy_New_Year_2025.ppm", "r");
+            nmaxpixels = 2073600;
+            break;
+        }
+        case (IM_DICKSON): 
+        {
+            image_file = fopen("Greenland.ppm", "r");
+            nmaxpixels = 1756*948;
+            break;
+        }
+        case (IM_DICKSON_ZOOM): 
+        {
+            image_file = fopen("Dickson_fjord.ppm", "r");
+            nmaxpixels = 1070*601;
+            break;
+        }
+    }
+    
+    scan = fscanf(image_file,"%i %i\n", &nx, &ny);
+    scan = fscanf(image_file,"%i\n", &maxrgb);
+    
+    rgb_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+    
+    scalex = (double)nx/(double)NX;
+    scaley = (double)ny/(double)NY;
+    
+    switch (IMAGE_FILE)
+    {
+        case (IM_PHOTONS): 
+        {
+            rgbmax = 3*maxrgb/2;
+            scale = scalex;
+            sign = 1;
+            break;
+        }
+        case (IM_GUITAR): 
+        {
+            rgbmax = 150;
+            scale = scaley;
+            sign = 1;
+            break;
+        }  
+        case (IM_GUITAR_NOHOLE): 
+        {
+            rgbmax = 150;
+            scale = scaley;
+            sign = 1;
+            break;
+        }  
+        case (IM_EGUITAR): 
+        {
+            rgbmax = 700;
+            scale = scaley;
+            sign = -1;
+            break;
+        } 
+        case (IM_HAPPY_NEW_YEAR): 
+        {
+            rgbmax = 3*maxrgb/2;
+            scale = scalex;
+            sign = -1;
+            break;
+        }
+        case (IM_DICKSON): 
+        {
+            rgbmax = 1;
+            scale = scalex;
+            sign = -1;
+            flipy = -1;
+            break;
+        }
+        case (IM_DICKSON_ZOOM): 
+        {
+            rgbmax = 1;
+            scale = scalex;
+            sign = -1;
+            flipy = -1;
+            break;
+        }
+    }
+    
+    
+    
+    if (nx*ny > nmaxpixels)
+    {
+        printf("Image too large, increase nmaxpixels in init_xyin_from_image() to %i\n", nx*ny);
+        exit(0);
+    }
+    
+    /* read rgb values */
+    for (j=0; j<ny; j++)
+        for (i=0; i<nx; i++)
+            for (k=0; k<3; k++)
+                {
+                    scan = fscanf(image_file,"%i\n", &rgbval);
+                    rgb_values[3*(j*nx+i)+k] = rgbval;
+                }
+                
+    for (i=0; i<NX; i++)
+        for (j=0; j<NY; j++)
+        {
+            ii = nx/2 + (int)((double)(i-NX/2)*scale);
+            jj = ny/2 - flipy*(int)((double)(j-NY/2)*scale);
+            if (ii > nx-1) ii = nx-1;
+            if (ii < 0) ii = 0;
+            if (jj > ny-1) jj = ny-1;
+            if (jj < 0) jj = 0;
+            k = 3*(jj*nx+ii);
+            rgbtot = rgb_values[k] + rgb_values[k+1] + rgb_values[k+2];
+            if (rgbtot*sign > rgbmax*sign) xy_in[i*NY+j] = 1;
+            else xy_in[i*NY+j] = 0;
+            
+            if (ii == 0) xy_in[i*NY+j] = 0;
+//             if (ii == nx-1) xy_in[i*NY+j] = 0;
+        }   
+    
+    fclose(image_file);
+    free(rgb_values);
+    return(1);
+}

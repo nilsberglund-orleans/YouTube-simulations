@@ -71,11 +71,12 @@
 
 #define B_DOMAIN 81         /* choice of domain shape, see list in global_pdes.c */
 
-#define CIRCLE_PATTERN 31   /* pattern of circles or polygons, see list in global_pdes.c */
+#define CIRCLE_PATTERN 32   /* pattern of circles or polygons, see list in global_pdes.c */
 
 #define COMPARISON 0        /* set to 1 to compare two different patterns */
 #define B_DOMAIN_B 20       /* second domain shape, for comparisons */
 #define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
+#define IMAGE_FILE 0        /* for option D_IMAGE */
 
 #define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
 #define IOR 20              /* choice of index of refraction, see list in global_pdes.c */
@@ -88,7 +89,7 @@
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 0.75	    /* parameter controlling the dimensions of domain */
-#define MU 0.2              /* parameter controlling the dimensions of domain */
+#define MU 0.1              /* parameter controlling the dimensions of domain */
 #define MU_B 1.0            /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
@@ -128,7 +129,7 @@
 #define AMPLITUDE 0.8     /* amplitude of periodic excitation */ 
 #define ACHIRP 0.2        /* acceleration coefficient in chirp */
 #define DAMPING 0.0       /* damping of periodic excitation */
-#define COURANT 0.1       /* Courant number */
+#define COURANT 0.12      /* Courant number */
 #define COURANTB 0.005    /* Courant number in medium B */
 #define GAMMA 0.0         /* damping factor in wave equation */
 #define GAMMAB 0.0        /* damping factor in wave equation */
@@ -144,7 +145,7 @@
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
 #define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
-#define OSCILLATING_SOURCE_PERIOD 25    /* period of oscillating source */
+#define OSCILLATING_SOURCE_PERIOD 50    /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
 
 #define ADD_WAVE_PACKET_SOURCES 0       /* set to 1 to add several sources emitting wave packets */
@@ -171,8 +172,7 @@
 
 /* Parameters for length and speed of simulation */
 
-// #define NSTEPS 2800       /* number of frames of movie */
-#define NSTEPS 1800         /* number of frames of movie */
+#define NSTEPS 2200         /* number of frames of movie */
 #define NVID 4            /* number of iterations between images displayed on screen */
 #define NSEG 1000          /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
@@ -184,14 +184,15 @@
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1        /* final sleeping time */
 #define MID_FRAMES 100    /* number of still frames between parts of two-part movie */
-#define END_FRAMES 500   /* number of still frames at end of movie */
+#define END_FRAMES 250   /* number of still frames at end of movie */
 #define FADE 1           /* set to 1 to fade at end of movie */
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 2.5            /* amplitude of initial condition */
-#define INITIAL_VARIANCE 0.003    /* variance of initial condition */
-#define INITIAL_WAVELENGTH  0.1   /* wavelength of initial condition */
+#define INITIAL_AMP 2.5           /* amplitude of initial condition */
+#define INITIAL_VARIANCE 0.01     /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.2   /* wavelength of initial condition */
+#define N_SOURCES 6               /* number of sources, for option draw_sources */
 
 /* Plot type, see list in global_pdes.c  */
 
@@ -204,8 +205,8 @@
 #define CHANGE_LUMINOSITY 1     /* set to 1 to let luminosity depend on energy flux intensity */
 #define FLUX_WINDOW 30          /* size of averaging window of flux intensity */
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of plot */
-#define SHADE_3D 0              /* set to 1 to change luminosity according to normal vector */
-#define SHADE_2D 1              /* set to 1 to change luminosity according to normal vector to plane */
+#define SHADE_3D 1              /* set to 1 to change luminosity according to normal vector */
+#define SHADE_2D 0              /* set to 1 to change luminosity according to normal vector to plane */
 #define SHADE_WAVE 1            /* set to 1 to have luminosity depend on wave height */
 #define NON_DIRICHLET_BC 1      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
 #define FLOOR_ZCOORD 0          /* set to 1 to draw only facets with z not too negative */
@@ -224,7 +225,7 @@
 /* 3D representation */
 
 #define REPRESENTATION_3D 1     /* choice of 3D representation */ 
-#define PLOT_2D 1               /* switch to 2D representation, equirectangular projection */
+#define PLOT_2D 0               /* switch to 2D representation, equirectangular projection */
 #define PHISHIFT 0.0            /* shift of phi in 2D plot (in degrees) */
 #define FLOODING 0              /* set to 1 to draw waves above altitude (for Earth representations) */
 
@@ -240,7 +241,7 @@
 
 /* Color schemes */
 
-#define COLOR_PALETTE 14      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 11      /* Color palette, see list in global_pdes.c  */
 #define COLOR_PALETTE_B 16     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
@@ -252,7 +253,7 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
-#define VSCALE_AMPLITUDE 0.5  /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSCALE_AMPLITUDE 0.5   /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define VSHIFT_AMPLITUDE 0.0   /* additional shift for wave amplitude */
 #define VSCALE_ENERGY 5.0     /* additional scaling factor for color scheme P_3D_ENERGY */
 #define PHASE_FACTOR 20.0      /* factor in computation of phase in color scheme P_3D_PHASE */
@@ -288,10 +289,10 @@
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_WIDTH 0.02     /* half width of maze walls */
 
-#define DRAW_COLOR_SCHEME 0       /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 1.5      /* scale of color scheme bar */
+#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 2.5      /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 6.0    /* scale of color scheme bar for 2nd part */
-#define ROTATE_COLOR_SCHEME 0     /* set to 1 to draw color scheme horizontally */
+#define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
 #define CIRC_COLORBAR_B 0       /* set to 1 to draw circular color scheme */
 #define DRAW_MOON_POSITION 0    /* set to 1 to draw position of Moon (for tide simulation) */
@@ -318,7 +319,6 @@
 #define INITIAL_SHIFT 20.0          /* time shift of initial wave packet (in oscillation periods) */
 #define WAVE_PACKET_SHIFT 200.0     /* time shift between wave packets (in oscillation periods) */
 #define FADE_IN_OBSTACLE 0      /* set to 1 to fade color inside obstacles */
-#define N_SOURCES 20                     /* number of sources, for option draw_sources */
 #define XYIN_INITIALISED (B_DOMAIN == D_IMAGE)
 /* end of constants only used by sub_wave and sub_maze */
 
@@ -332,7 +332,7 @@ double u_3d[2] = {0.75, -0.45};     /* projections of basis vectors for REP_AXO_
 double v_3d[2] = {-0.75, -0.45};
 double w_3d[2] = {0.0, 0.015};
 double light[3] = {-0.816496581, -0.40824829, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
-double observer[3] = {-5.0, -5.0, 3.5};    /* location of observer for REP_PROJ_3D representation */ 
+double observer[3] = {-5.0, -5.0, 5.5};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
 #define ADD_DEM 0               /* add DEM (digital elevation model) */
@@ -348,8 +348,8 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 #define TRANSPARENT_WAVE 0      /* set to 1 for waves to be "transparent" */
 
 #define RSCALE 1.0              /* scaling factor of radial component */
-#define RMAX 1.1               /* max value of radial component */
-#define RMIN 0.9               /* min value of radial component */
+#define RMAX 7.5               /* max value of radial component */
+#define RMIN 0.2               /* min value of radial component */
 #define Z_SCALING_FACTOR 0.8   /* overall scaling factor of z axis for REP_PROJ_3D representation */
 #define XY_SCALING_FACTOR 2.2   /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0         /* max value of z coordinate for REP_PROJ_3D representation */
@@ -710,10 +710,11 @@ void viewpoint_schedule(int i)
 void animation()
 {
     double time, scale, ratio, startleft[2], startright[2], sign = -1.0, r2, xy[2], fade_value, yshift, speed = 0.0, a, b, c, angle = 0.0, lambda1, y, x1, sign1, omega, phase_shift, theta, amp; 
-    double *phi, *psi, *tmp, *color_scale, *tc, *tcc, *tgamma;
+    double *phi, *psi, *tmp, *color_scale, *tc, *tcc, *tgamma, wave_signs[N_SOURCES];
 //     double *total_energy;
     short int *xy_in;
-    int i, j, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, k, p, q, drift_counter = 0;
+    char message[100];
+    int i, j, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, k, p, q, drift_counter = 0, wave_shift[N_SOURCES];
     static int counter = 0, first_source = 1;
     long int wave_value;
     t_wave *wave;
@@ -844,30 +845,23 @@ void animation()
 //     add_circular_wave_sphere(1.0, 1.0 - PI/9.0 + DPI/3.0, 0.15, phi, psi, xy_in, wsphere);
 //     add_circular_wave_sphere(1.0, 1.0 - PI/9.0 + 2.0*DPI/3.0, 0.15, phi, psi, xy_in, wsphere);
     
-    for (j=0; j<5; j++)
+    for (j=0; j<ncircles; j++)
     {
-        a = circ_sphere[1].x + circ_sphere[2].x;
-        b = circ_sphere[1].y + circ_sphere[2].y;
-        c = 1.0 + circ_sphere[1].z + circ_sphere[2].z;
-        theta = acos(c/sqrt(a*a + b*b + c*c));
-        
-        wave_source_x[4*j] = (double)j*DPI/5.0;
-        wave_source_y[4*j] = PID - theta;
-        wave_source_x[4*j+1] = (double)j*DPI/5.0 + PI/5.0;
-        wave_source_y[4*j+1] = theta - PID;
-        
-        a = circ_sphere[1].x + circ_sphere[2].x + circ_sphere[6].x;
-        b = circ_sphere[1].y + circ_sphere[2].y + circ_sphere[6].y;
-        c = circ_sphere[1].z + circ_sphere[2].z + circ_sphere[6].z;
-        theta = acos(c/sqrt(a*a + b*b + c*c));
-        
-        wave_source_x[4*j+2] = (double)j*DPI/5.0 + PI/5.0;
-        wave_source_y[4*j+2] = theta - PID;
-        wave_source_x[4*j+3] = (double)j*DPI/5.0;
-        wave_source_y[4*j+3] = PID - theta;
-        
+        wave_source_x[j] = circ_sphere[j].phi;
+        wave_source_y[j] = circ_sphere[j].theta - PID;
     }
-    
+    wave_shift[0] = 0;
+    wave_signs[0] = 1.0;
+    wave_shift[1] = OSCILLATING_SOURCE_PERIOD/3;
+    wave_signs[1] = -1.0;
+    wave_shift[2] = OSCILLATING_SOURCE_PERIOD*2/3;
+    wave_signs[2] = 1.0;
+    wave_shift[3] = OSCILLATING_SOURCE_PERIOD/3;
+    wave_signs[3] = -1.0;
+    wave_shift[4] = OSCILLATING_SOURCE_PERIOD*2/3;
+    wave_signs[4] = 1.0;
+    wave_shift[5] = 0;
+    wave_signs[5] = 1.0;    
     
 //     printf("Wave initialized\n");
 
@@ -973,12 +967,20 @@ void animation()
         if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, CIRC_COLORBAR, fade, fade_value); 
         
         /* add oscillating waves */
-        if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == 1))
-        {
-            if (ALTERNATE_OSCILLATING_SOURCE) sign = -sign;
-            for (j=0; j<N_SOURCES; j++)
-                add_circular_wave_sphere(sign,wave_source_x[j], wave_source_y[j], phi, psi, xy_in, wsphere);
-        }
+        for (j=0; j<N_SOURCES; j++)
+            if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == 1 + wave_shift[j]))
+            {
+                if (ALTERNATE_OSCILLATING_SOURCE) wave_signs[j] = -wave_signs[j];
+            
+                add_circular_wave_sphere(wave_signs[j], wave_source_x[j], wave_source_y[j], phi, psi, xy_in, wsphere);
+            }
+//         /* add oscillating waves */
+//         if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == 1))
+//         {
+//             if (ALTERNATE_OSCILLATING_SOURCE) sign = -sign;
+//             for (j=0; j<N_SOURCES; j++)
+//                 add_circular_wave_sphere(sign*wave_signs[j], wave_source_x[j], wave_source_y[j], phi, psi, xy_in, wsphere);
+//         }
         if (PRINT_SPEED) print_speed_3d(speed, 0, 1.0);
 
 	if (!((NO_EXTRA_BUFFER_SWAP)&&(MOVIE))) glutSwapBuffers();
@@ -1086,6 +1088,10 @@ void animation()
         }
         
         s = system("mv wave*.tif tif_wave/");
+        
+        /* sometimes, image NSTEPS+1 is black, replace by image NSTEPS */
+        sprintf(message, "cp tif_wave/wave.%05i.tif tif_wave/wave.%05i.tif", NSTEPS, NSTEPS+1);
+        s = system(message);
     }
     
     free(xy_in);

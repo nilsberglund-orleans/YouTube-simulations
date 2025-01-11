@@ -31,6 +31,7 @@ int bc_grouped(int bc)
         case (BC_ABSORBING): return(0);
         case (BC_REFLECT_ABS): return(0);
         case (BC_REFLECT_ABS_BOTTOM): return(0);
+        case (BC_REFLECT_ABS_RIGHT): return(0);
         default: 
         {
             printf("Warning: Hashgrid will not be properly initialised, update bc_grouped()\n\n");
@@ -417,7 +418,7 @@ void init_hashgrid(t_hashgrid hashgrid[HASHX*HASHY])
 //     sleep(1);
 }
 
-void update_hashgrid(t_particle* particle, t_hashgrid* hashgrid, int verbose)
+void update_hashgrid(t_particle* particle, t_obstacle *obstacle, t_hashgrid* hashgrid, int verbose)
 {
     int i, j, k, n, m, max = 0, hashcell;
     
@@ -439,6 +440,19 @@ void update_hashgrid(t_particle* particle, t_hashgrid* hashgrid, int verbose)
             
             if (n > max) max = n;
         }
+        
+    if (OSCILLATE_OBSTACLES) 
+    {
+        for (i=0; i<HASHX*HASHY; i++) hashgrid[i].nobs = 0;
+        for (k=0; k<nobstacles; k++)
+            if (obstacle[k].active)
+            {
+                hashcell = hash_cell(obstacle[k].xc, obstacle[k].yc);
+                /* note: only one obstacle per cell is counted */
+                hashgrid[hashcell].nobs = 1;
+                hashgrid[hashcell].obstacle = k;
+            }
+    }
     
     if(verbose) printf("Maximal number of particles per hash cell: %i\n", max);
 }

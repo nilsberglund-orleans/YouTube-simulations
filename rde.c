@@ -50,7 +50,7 @@
 #define WINHEIGHT 	1150  /* window height */
 #define NX 960          /* number of grid points on x axis */
 #define NY 575          /* number of grid points on y axis */
-#define HRES 4          /* factor for high resolution plots */
+#define HRES 6          /* factor for high resolution plots */
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
@@ -254,13 +254,13 @@
 
 /* Visualisation */
 
-#define PLOT_3D 1    /* controls whether plot is 2D or 3D */
+#define PLOT_3D 0    /* controls whether plot is 2D or 3D */
 #define PLOT_SPHERE 1   /* draws fields on a sphere */
 
 #define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
 #define ROTATE_ANGLE -45.0   /* total angle of rotation during simulation */
-#define SHADE_3D 1              /* set to 1 to change luminosity according to normal vector */
-#define SHADE_2D 0              /* set to 1 to change luminosity according to normal vector */
+#define SHADE_3D 0              /* set to 1 to change luminosity according to normal vector */
+#define SHADE_2D 1              /* set to 1 to change luminosity according to normal vector */
 #define VIEWPOINT_TRAJ 1    /* type of viewpoint trajectory */
 #define MAX_LATITUDE 45.0   /* maximal latitude for viewpoint trajectory VP_ORBIT2 */
 
@@ -291,7 +291,8 @@
 #define FLOODING 1              /* set to 1 for drawing water when higher than continents */
 // #define FLOODING_VSHIFT 0.51    /* controls when wave is considered higher than land */
 #define FLOODING_VSHIFT 0.56    /* controls when wave is considered higher than land */
-#define FLOODING_VSHIFT_2D 0.61    /* controls when wave is considered higher than land */
+#define FLOODING_VSHIFT_2D 0.56    /* controls when wave is considered higher than land */
+// #define FLOODING_VSHIFT_2D 0.61    /* controls when wave is considered higher than land */
 
 #define PLOT_SCALE_ENERGY 0.05      /* vertical scaling in energy plot */
 
@@ -369,7 +370,7 @@
 #define ZSCALE_SPEED 300.0        /* additional scaling factor for z-coord Z_EULER_SPEED and Z_SWATER_SPEED */
 #define ZSHIFT_SPEED 0.0        /* additional shift of z-coord Z_EULER_SPEED and Z_SWATER_SPEED */
 #define ZSCALE_NORMGRADIENT -0.0001  /* vertical scaling for Z_NORM_GRADIENT */
-#define VSCALE_SWATER 60.0        /* additional scaling factor for color scheme Z_EULER_DENSITY */
+#define VSCALE_SWATER 100.0        /* additional scaling factor for color scheme Z_EULER_DENSITY */
 
 #define NXMAZE 7      /* width of maze */
 #define NYMAZE 7      /* height of maze */
@@ -378,7 +379,7 @@
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_WIDTH 0.04     /* half width of maze walls */
 
-#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
+#define DRAW_COLOR_SCHEME 0     /* set to 1 to plot the color scheme */
 #define COLORBAR_RANGE 3.0      /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 2.5    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
@@ -437,13 +438,14 @@
 #define MESSAGE_LINTERLETTER 1  /* length of interval between letters for Morse code message */
 #define MESSAGE_LSPACE 1        /* length of space for Morse code message */
 #define MESSAGE_INITIAL_TIME 1  /* initial time before starting message for Morse code message */    
+#define IMAGE_FILE 0        /* for option D_IMAGE */
 /* end of constants added only for compatibility with wave_common.c */
 
 double u_3d[2] = {0.75, -0.45};     /* projections of basis vectors for REP_AXO_3D representation */
 double v_3d[2] = {-0.75, -0.45};
 double w_3d[2] = {0.0, 0.015};
-double light[3] = {-0.816496581, 0.40824829, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
-double observer[3] = {-6.0, -6.0, 4.5};    /* location of observer for REP_PROJ_3D representation */ 
+double light[3] = {0.40824829, -0.816496581, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
+double observer[3] = {0.0, -6.0, 2.5};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
 /* constants for simulations on planets */
@@ -2242,7 +2244,7 @@ void animation()
 
 //     init_linear_blob_sphere(0, 1.3*PI, 0.65*PI, 0.0, 0.0, 0.3, 0.1, 0.1, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
     
-    init_expanding_blob_sphere(0, (220.0/180.0)*PI, (140.0/180.0)*PI, 1.0, 0.075, 0.1, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
+    init_expanding_blob_sphere(0, (279.0/180.0)*PI, (115.0/180.0)*PI, 0.75, 0.04, 0.06, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
     
 //     add_gaussian_wave(-1.6, -0.5, 0.015, 0.25, SWATER_MIN_HEIGHT, phi, xy_in);
     

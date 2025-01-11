@@ -12,6 +12,7 @@
 #define E_EULER_INCOMP 6    /* incompressible Euler equation */
 #define E_EULER_COMP 7      /* compressible Euler equation */
 #define E_SHALLOW_WATER 8   /* shallow water equation */
+#define E_KURAMOTO 9        /* Kuramoto-type equation (nearest neighbor coupling) */
 
 /* Choice of potential */
 

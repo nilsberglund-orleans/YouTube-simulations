@@ -58,42 +58,57 @@
 #define YMIN -1.125
 #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
 
-#define INITXMIN -2.1
-#define INITXMAX -2.0	/* x interval for initial condition */
-#define INITYMIN -0.7
-#define INITYMAX -0.6	/* y interval for initial condition */
+#define INITXMIN -1.0
+#define INITXMAX -1.9	/* x interval for initial condition */
+#define INITYMIN -0.1
+#define INITYMAX 0.1	/* y interval for initial condition */
 
 #define THERMOXMIN -1.25
 #define THERMOXMAX 1.25	/* x interval for initial condition */
 #define THERMOYMIN 0.0
 #define THERMOYMAX 0.75	/* y interval for initial condition */
 
-#define ADDXMIN -2.1
-#define ADDXMAX -2.0	/* x interval for adding particles */
-#define ADDYMIN -0.6
-#define ADDYMAX -0.5	/* y interval for adding particles */
+#define ADDXMIN -2.2
+#define ADDXMAX -2.0	  /* x interval for adding particles */
+#define ADDYMIN -1.0
+#define ADDYMAX 1.0       /* y interval for adding particles */
 #define ADDRMIN 4.75 
 #define ADDRMAX 6.0     /* r interval for adding particles */
 
-#define BCXMIN -2.2
-#define BCXMAX 2.0	/* x interval for boundary condition */
+#define BCXMIN -2.5
+#define BCXMAX 2.5	/* x interval for boundary condition */
 #define BCYMIN -1.125
-#define BCYMAX 1.4	/* y interval for boundary condition */
+#define BCYMAX 1.125	/* y interval for boundary condition */
 
-#define OBSXMIN -2.0
+#define OBSXMIN -1.8
 #define OBSXMAX 2.0     /* x interval for motion of obstacle */
+#define OBSYMIN -1.125
+#define OBSYMAX 1.125     /* x interval for motion of obstacle */
 
 #define CIRCLE_PATTERN 1  /* pattern of circles, see list in global_ljones.c */
 
 #define ADD_INITIAL_PARTICLES 0 /* set to 1 to add a second type of particles */
 #define CIRCLE_PATTERN_B 0  /* pattern of circles for additional particles */
 
-#define ADD_FIXED_OBSTACLES 0   /* set to 1 do add fixed circular obstacles */
-#define OBSTACLE_PATTERN 82     /* pattern of obstacles, see list in global_ljones.c */
-#define RATTLE_OBSTACLES 1      /* set to 1 to rattle obstacles (for pattern O_SIEVE_B) */
+#define ADD_FIXED_OBSTACLES 1   /* set to 1 do add fixed circular obstacles */
+#define OBSTACLE_PATTERN 20     /* pattern of obstacles, see list in global_ljones.c */
+#define RATTLE_OBSTACLES 0      /* set to 1 to rattle obstacles (for pattern O_SIEVE_B) */
+#define OSCILLATE_OBSTACLES 1   /* set to 1 to make obstacles oscillate */ 
+#define COUPLE_OBSTACLES 1      /* set to 1 to couple obstacles to neighbours */
+#define OBSTACLE_PISC_DISTANCE 0.12  /* minimal distance in Poisson disc process for obstacles, controls density of obstacles */
+#define OBSTACLE_COUPLING_DIST 0.18  /* max distance of coupled obstacles */
+#define NMAX_OBSTACLE_NEIGHBOURS 8  /* max number of obstacle neighbours */
+#define NMAX_OBSTACLE_PINNED 10      /* max number of neighbours to be pinned */
+#define OBSTACLE_PINNING_TYPE 0     /* type of obstacle pinning, see OP_ in global_ljones */
+#define BDRY_PINNING_STEP 4         /* interval between pinned obstacles on boundary */
+#define RECOUPLE_OBSTACLES 0        /* set to 1 to reset obstacle coupling */
+#define OBSTACLE_RECOUPLE_TYPE 1    /* algorithm for recoupling, see OR_ in global_ljones */
+#define OBSTACLE_RECOUPLE_TIME 200    /* time between obstacle recouplings */
+#define UNCOUPLE_MAXLENGTH 2.0      /* length at which bonds decouple */
+#define COUPLE_MINLENGTH 0.5        /* length at which bonds decouple */
 
-#define ADD_FIXED_SEGMENTS 1    /* set to 1 to add fixed segments as obstacles */
-#define SEGMENT_PATTERN 361     /* pattern of repelling segments, see list in global_ljones.c */
+#define ADD_FIXED_SEGMENTS 0    /* set to 1 to add fixed segments as obstacles */
+#define SEGMENT_PATTERN 15     /* pattern of repelling segments, see list in global_ljones.c */
 #define ROCKET_SHAPE 3        /* shape of rocket combustion chamber, see list in global_ljones.c */
 #define ROCKET_SHAPE_B 3      /* shape of second rocket */
 #define NOZZLE_SHAPE 6        /* shape of nozzle, see list in global_ljones.c */
@@ -124,7 +139,7 @@
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 0.2	    /* parameter controlling the dimensions of domain */
-#define MU 0.02 	    /* parameter controlling radius of particles */
+#define MU 0.007 	    /* parameter controlling radius of particles */
 #define MU_B 0.03           /* parameter controlling radius of particles of second type */
 #define NPOLY 3             /* number of sides of polygon */
 #define APOLY 0.075           /* angle by which to turn polygon, in units of Pi/2 */ 
@@ -140,8 +155,8 @@
 #define EHRENFEST_WIDTH 0.035     /* width of tube for Ehrenfest urn configuration */
 #define TWO_CIRCLES_RADIUS_RATIO 0.8    /* ratio of radii for S_TWO_CIRCLES_EXT segment configuration */
 #define DAM_WIDTH 0.05       /* width of dam for S_DAM segment configuration */
-#define NOBSX 10
-#define NOBSY 5            /* obstacles for O_HEX obstacle pattern */
+#define NOBSX 20
+#define NOBSY 10            /* obstacles for O_HEX obstacle pattern */
 #define NTREES 15           /* number of trees in S_TREES */
 
 #define X_SHOOTER -0.2
@@ -150,9 +165,9 @@
 #define Y_TARGET 0.7        /* shooter and target positions in laser fight */
 
 /* Parameters for length and speed of simulation */
-
-#define NSTEPS 4800      /* number of frames of movie */
-#define NVID 120         /* number of iterations between images displayed on screen */
+ 
+#define NSTEPS 4500      /* number of frames of movie */
+#define NVID 4500          /* number of iterations between images displayed on screen */
 #define NSEG 25          /* number of segments of boundary of circles */
 #define INITIAL_TIME 0     /* time after which to start saving frames */
 #define OBSTACLE_INITIAL_TIME 0     /* time after which to start moving obstacle */
@@ -169,29 +184,34 @@
 
 /* Boundary conditions, see list in global_ljones.c */
 
-#define BOUNDARY_COND 1
+#define BOUNDARY_COND 23
 
 /* Plot type, see list in global_ljones.c  */
 
-#define PLOT 23
-#define PLOT_B 13        /* plot type for second movie */
+#define PLOT 13
+#define PLOT_B 12        /* plot type for second movie */
 
 /* Background color depending on particle properties */
 
 #define COLOR_BACKGROUND 0  /* set to 1 to color background */
-#define BG_COLOR 2          /* type of background coloring, see list in global_ljones.c */
-#define BG_COLOR_B 0        /* type of background coloring, see list in global_ljones.c */
+#define BG_COLOR 7          /* type of background coloring, see list in global_ljones.c */
+#define BG_COLOR_B 5        /* type of background coloring, see list in global_ljones.c */
+#define OBSTACLE_COLOR 0    /* type of obstacle, see OC_ in global_ljones.c */
 
 #define DRAW_BONDS 0    /* set to 1 to draw bonds between neighbours */
 #define COLOR_BONDS 1   /* set to 1 to color bonds according to length */
 #define FILL_TRIANGLES 0    /* set to 1 to fill triangles between neighbours */
 #define DRAW_CLUSTER_LINKS 0    /* set to 1 to draw links between particles in cluster */
+#define DRAW_OBSTACLE_LINKS 1   /* set to 1 to draw links between interacting obstacles */
+#define FILL_OBSTACLE_TRIANGLES 0   /* set to 1 to fill triangles between interacting obstacles */
 #define ALTITUDE_LINES 0    /* set to 1 to add horizontal lines to show altitude */
 #define COLOR_SEG_GROUPS 0  /* set to 1 to collor segment groups differently */
-#define N_PARTICLE_COLORS 300   /* number of colors for P_NUMBER color scheme */
+#define N_PARTICLE_COLORS 5   /* number of colors for P_NUMBER color scheme */
 #define INITIAL_POS_TYPE 0     /* type of initial position dependence */
 #define ERATIO 0.995          /* ratio for time-averaging in P_EMEAN color scheme */
 #define DRATIO 0.999          /* ratio for time-averaging in P_DIRECT_EMEAN color scheme */
+#define OBSTACLE_AREA_SHADE_FACTOR 160.0     /* controls sensitivity of triangle shade for option FILL_OBSTACLE_TRIANGLES */
+#define SHADE_OBSTACLE_FACETS 0     /* set to 1 to shade facets instead of triangles */
 
 /* Color schemes */
 
@@ -242,8 +262,12 @@
 #define ENERGY_HUE_MAX 50.0         /* color of saturated particle */
 #define PARTICLE_HUE_MIN 359.0      /* color of original particle */
 #define PARTICLE_HUE_MAX 0.0        /* color of saturated particle */
-#define PARTICLE_EMIN 10.0          /* energy of particle with coolest color */
-#define PARTICLE_EMAX 2000.0        /* energy of particle with hottest color */
+#define PARTICLE_EMIN 100.0         /* energy of particle with coolest color */
+#define PARTICLE_EMAX 3000.0       /* energy of particle with hottest color */
+#define SEGMENT_HUE_MIN 275.0       /* color of original segment */
+#define SEGMENT_HUE_MAX 30.0        /* color of saturated segment */
+#define OBSTACLE_EMAX 200.0         /* energy of obstacle with hottest color */
+#define OBSTACLE_VMAX 4.0           /* speed of obstacle with largest luminosity */
 #define HUE_TYPE0 320.0      /* hue of particles of type 0 */
 #define HUE_TYPE1 60.0       /* hue of particles of type 1 */
 #define HUE_TYPE2 320.0      /* hue of particles of type 2 */
@@ -254,26 +278,26 @@
 #define HUE_TYPE7 150.0      /* hue of particles of type 7 */
 #define BG_FORCE_SLOPE 7.5e-8   /* contant in BG_FORCE backgound color scheme*/
 
-#define RANDOM_RADIUS 1          /* set to 1 for random particle radius */
-#define RANDOM_RADIUS_MIN 0.25   /* min of random particle radius (default 0.75) */
-#define RANDOM_RADIUS_RANGE 1.5  /* range of random particle radius (default 0.5) */
-#define ADAPT_MASS_TO_RADIUS 0   /* set to positive value to for mass prop to power of radius */
+#define RANDOM_RADIUS 0          /* set to 1 for random particle radius */
+#define RANDOM_RADIUS_MIN 0.4    /* min of random particle radius (default 0.75) */
+#define RANDOM_RADIUS_RANGE 1.0  /* range of random particle radius (default 0.5) */
+#define ADAPT_MASS_TO_RADIUS 1   /* set to positive value to for mass prop to power of radius */
 #define ADAPT_DAMPING_TO_RADIUS 0.5   /* set to positive value to for friction prop to power of radius */
 #define ADAPT_DAMPING_FACTOR 0.5    /* factor by which damping is adapted to radius */
-#define DT_PARTICLE 3.0e-6    /* time step for particle displacement */
+#define DT_PARTICLE 2.0e-7    /* time step for particle displacement */
 #define KREPEL 50.0          /* constant in repelling force between particles */
 #define EQUILIBRIUM_DIST 2.5    /* Lennard-Jones equilibrium distance */
 #define EQUILIBRIUM_DIST_B 2.5  /* Lennard-Jones equilibrium distance for second type of particle */
 #define SEGMENT_FORCE_EQR 1.0   /* equilibrium distance factor for force from segments (default 1.5) */
 #define REPEL_RADIUS 25.0    /* radius in which repelling force acts (in units of particle radius) */
-#define DAMPING 150.0          /* damping coefficient of particles */
+#define DAMPING 0.0          /* damping coefficient of particles */
 #define INITIAL_DAMPING 1000.0  /* damping coefficient of particles during initial phase */
 #define DAMPING_ROT 5.0      /* damping coefficient for rotation of particles */
 #define PARTICLE_MASS 2.0    /* mass of particle of radius MU */
 #define PARTICLE_MASS_B 2.0   /* mass of particle of radius MU_B */
 #define PARTICLE_INERTIA_MOMENT 0.5     /* moment of inertia of particle */
 #define PARTICLE_INERTIA_MOMENT_B 0.5     /* moment of inertia of second type of particle */
-#define V_INITIAL 800.0        /* initial velocity range */
+#define V_INITIAL 50.0        /* initial velocity range */
 #define OMEGA_INITIAL 100.0        /* initial angular velocity range */
 #define VICSEK_VMIN 1.0    /* minimal speed of particles in Vicsek model */
 #define VICSEK_VMAX 40.0    /* minimal speed of particles in Vicsek model */
@@ -289,7 +313,7 @@
 #define KSPRING_BOUNDARY 2.0e11    /* confining harmonic potential outside simulation region */
 #define KSPRING_OBSTACLE 1.0e9    /* harmonic potential of obstacles */
 #define NBH_DIST_FACTOR 4.0       /* radius in which to count neighbours */
-#define GRAVITY 5000.0            /* gravity acting on all particles */
+#define GRAVITY 0.0            /* gravity acting on all particles */
 #define GRAVITY_X 0.0          /* horizontal gravity acting on all particles */
 #define CIRCULAR_GRAVITY 0     /* set to 1 to have gravity directed to center */
 #define INCREASE_GRAVITY 0     /* set to 1 to increase gravity during the simulation */
@@ -300,10 +324,11 @@
 #define KSPRING_VICSEK 0.2   /* spring constant for I_VICSEK_SPEED interaction */
 #define VICSEK_REPULSION 10.0    /* repulsion between particles in Vicsek model */
 
-#define ADD_EFIELD 0     /* set to 1 to add an electric field */
-#define EFIELD 30000.0       /* value of electric field */
-#define ADD_BFIELD 0     /* set to 1 to add a magnetic field */
-#define BFIELD 225.0      /* value of magnetic field */
+#define ADD_EFIELD 1     /* set to 1 to add an electric field */
+#define EFIELD 0.0       /* value of electric field */
+#define EFIELD_Y 1500.0       /* value of electric field */
+#define ADD_BFIELD 1     /* set to 1 to add a magnetic field */
+#define BFIELD 1200.0      /* value of magnetic field */
 #define CHARGE 1.0      /* charge of particles of first type */
 #define CHARGE_B 1.0     /* charge of particles of second type */
 #define INCREASE_E 0     /* set to 1 to increase electric field */
@@ -312,14 +337,20 @@
 #define BFIELD_FACTOR 1.0    /* factor by which to increase magnetic field */
 #define CHARGE_OBSTACLES 0      /* set to 1 for obstacles to be charged */
 #define OBSTACLE_CHARGE 3.0     /* charge of obstacles */
+#define OBSTACLE_MASS 100.0       /* mass of obstacles, if oscillating */
+#define KSPRING_OBSTACLE_OSC 1.0e7   /* spring constant for oscillating obstacles */
+#define KSPRING_OBSTACLE_COUPLE 5.0e6   /* spring constant for coupled obstacles */
+#define OBSTACLE_HARDCORE 1         /* set to 1 to add "hard core" repulsion between obstacles */
+#define KSPRING_OBSTACLE_HARDCORE 1.0e11     /* spring constant for obstacle hard core repulsion */
 #define KCOULOMB_OBSTACLE 1000.0   /* Coulomb force constant for charged obstacles */
-#define BFIELD_REGION 1          /* space-dependent magnetic field (0 for constant) */
+#define EFIELD_REGION 0          /* space-dependent magnetic field (0 for constant) */
+#define BFIELD_REGION 0          /* space-dependent magnetic field (0 for constant) */
 
-#define ADD_WIND 1          /* set to 1 to add a "wind" friction force */
+#define ADD_WIND 0          /* set to 1 to add a "wind" friction force */
 #define WIND_FORCE 1.35e6    /* force of wind */
 #define WIND_YMIN -0.6      /* min altitude of region with wind */
 
-#define ROTATION 1           /* set to 1 to include rotation of particles */
+#define ROTATION 0           /* set to 1 to include rotation of particles */
 #define COUPLE_ANGLE_TO_THERMOSTAT 0    /* set to 1 to couple angular degrees of freedom to thermostat */
 #define DIMENSION_FACTOR 1.0  /* scaling factor taking into account number of degrees of freedom */  
 #define KTORQUE 1.0e5         /* force constant in angular dynamics */
@@ -355,7 +386,7 @@
 #define CENTER_VIEW_ON_OBSTACLE 0   /* set to 1 to center display on moving obstacle */
 #define RESAMPLE_Y 0         /* set to 1 to resample y coordinate of moved particles (for shock waves) */
 #define NTRIALS 2000         /* number of trials when resampling */
-#define OBSTACLE_RADIUS 0.018  /* radius of obstacle for circle boundary conditions */
+#define OBSTACLE_RADIUS 0.03  /* radius of obstacle for circle boundary conditions */
 #define FUNNEL_WIDTH  0.25   /* funnel width for funnel boundary conditions */
 #define OBSTACLE_XMIN 0.0    /* initial position of obstacle */
 #define OBSTACLE_XMAX 3.0    /* final position of obstacle */
@@ -382,17 +413,22 @@
 #define ADD_PARTICLES 1   /* set to 1 to add particles */
 #define ADD_REGION 0      /* shape of add regions, cf ADD_* in global_ljones */
 #define ADD_TIME 0       /* time at which to add first particle */
-#define ADD_PERIOD 15       /* time interval between adding further particles */
+#define ADD_PERIOD 150     /* time interval between adding further particles */
 #define N_ADD_PARTICLES 1  /* number of particles to add */
 #define FINAL_NOADD_PERIOD 500  /* final period where no particles are added */
 #define SAFETY_FACTOR 4.0  /* no particles are added at distance less than MU*SAFETY_FACTOR of other particles */
 
 #define TRACER_PARTICLE 1   /* set to 1 to have a tracer particle */
-#define N_TRACER_PARTICLES 500    /* number of tracer particles */
-#define TRAJECTORY_LENGTH 4800    /* length of recorded trajectory */
-#define TRACER_LUM_FACTOR 5.0     /* controls luminosity decrease of trajectories with time */
+#define N_TRACER_PARTICLES 100    /* number of tracer particles */
+#define TRACER_STEPS 5           /* number of tracer steps recorded between images */
+#define TRAJECTORY_LENGTH 40000    /* length of recorded trajectory */
+#define TRACER_LUM_FACTOR 100.0     /* controls luminosity decrease of trajectories with time */
 #define TRACER_PARTICLE_MASS 4.0  /* relative mass of tracer particle */
-#define TRAJECTORY_WIDTH 3        /* width of tracer particle trajectory */
+#define TRAJECTORY_WIDTH 2        /* width of tracer particle trajectory */
+
+#define TRACK_PARTICLE 0          /* set to 1 to track a given particle */
+#define TRACKED_PARTICLE 2        /* number of tracked particle */
+#define TRACK_INITIAL_TIME 900    /* time when starting to track */
 
 #define ROTATE_BOUNDARY 0           /* set to 1 to rotate the repelling segments */
 #define SMOOTH_ROTATION 1           /* set to 1 to update segments at each time step (rather than at each movie frame) */
@@ -416,9 +452,11 @@
 #define SHOW_SEGMENTS_PRESSURE 0    /* set to 1 to show (averaged) pressure acting on segments */
 #define SEGMENT_PMAX 7.5e7        /* pressure of segment with hottest color */
 #define P_AVRG_FACTOR 0.02      /* factor in computation of mean pressure */
+#define INACTIVATE_SEGMENTS_UNDER_PRESSURE 0    /* set to 1 to inactivate segment groups when limit pressure is reached */
+#define SEGMENT_P_INACTIVATE 6.0e7  /* pressure at which to inactivate group */
 
 #define MOVE_SEGMENT_GROUPS 0       /* set to 1 to group segments into moving units */
-#define SEGMENT_GROUP_MASS 500.0   /* mass of segment group */
+#define SEGMENT_GROUP_MASS 500.0    /* mass of segment group */
 #define SEGMENT_GROUP_I 1000.0      /* moment of inertia of segment group */
 #define SEGMENT_GROUP_DAMPING 0.0   /* damping of segment groups */
 #define GROUP_REPULSION 0           /* set to 1 for groups of segments to repel each other */
@@ -478,7 +516,7 @@
 #define LID_WIDTH 0.1       /* width of lid for BC_RECTANGLE_LID b.c. */
 #define WALL_MASS 2000.0    /* mass of wall for BC_RECTANGLE_WALL b.c. */
 #define WALL_FRICTION 0.0   /* friction on wall for BC_RECTANGLE_WALL b.c. */
-#define WALL_WIDTH 0.015    /* width of wall for BC_RECTANGLE_WALL b.c. */
+#define WALL_WIDTH 0.025    /* width of wall for BC_RECTANGLE_WALL b.c. */
 #define WALL_VMAX 100.0     /* max speed of wall */
 #define WALL_TIME 0         /* time during which to keep wall */
 
@@ -517,19 +555,19 @@
 #define PARTICLE_MASS_D 2.0  /* mass or partner particle */
 #define CHARGE_D 1.0         /* charge of partner particle */
 
-#define NXMAZE 12      /* width of maze */
-#define NYMAZE 12      /* height of maze */
+#define NXMAZE 16      /* width of maze */
+#define NYMAZE 16      /* height of maze */
 #define MAZE_MAX_NGBH 4     /* max number of neighbours of maze cell */
-#define RAND_SHIFT 4        /* seed of random number generator */
-#define MAZE_XSHIFT 0.5     /* horizontal shift of maze */
-#define MAZE_WIDTH 0.01     /* width of maze walls */
+#define RAND_SHIFT 5        /* seed of random number generator */
+#define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
+#define MAZE_WIDTH 0.015    /* width of maze walls */
 
 #define FLOOR_FORCE 1      /* set to 1 to limit force on particle to FMAX */
 #define FMAX 1.0e9         /* maximal force */
 #define FLOOR_OMEGA 0      /* set to 1 to limit particle momentum to PMAX */
 #define PMAX 1000.0        /* maximal force */
 
-#define HASHX 40     /* size of hashgrid in x direction */
+#define HASHX 29     /* size of hashgrid in x direction */
 #define HASHY 20      /* size of hashgrid in y direction */
 #define HASHMAX 100   /* maximal number of particles per hashgrid cell */
 #define HASHGRID_PADDING 0.1    /* padding of hashgrid outside simulation window */
@@ -549,10 +587,11 @@
 #define COUNT_PARTNER_TYPE ((RD_REACTION == CHEM_H2O_H_OH)||(RD_REACTION == CHEM_2H2O_H3O_OH))
 #define PAIR_FORCE ((PAIR_PARTICLES)||((REACTION_DIFFUSION)&&((RD_REACTION == CHEM_AGGREGATION)||(RD_REACTION == CHEM_AGGREGATION_CHARGE)||(RD_REACTION == CHEM_AGGREGATION_NNEIGH)||(RD_REACTION == CHEM_POLYGON_AGGREGATION))))
 #define COMPUTE_PAIR_TORQUE (KTORQUE_PAIR_ANGLE != 0.0)
-#define ADD_CONVEYOR_FORCE ((ADD_FIXED_SEGMENTS)&&((SEGMENT_PATTERN == S_CONVEYOR_BELT)||(SEGMENT_PATTERN == S_TWO_CONVEYOR_BELTS)||(SEGMENT_PATTERN == S_PERIODIC_CONVEYORS)||(SEGMENT_PATTERN == S_TEST_CONVEYORS)||(SEGMENT_PATTERN == S_CONVEYOR_SHOVELS)||(SEGMENT_PATTERN == S_CONVEYOR_MIXED)||(SEGMENT_PATTERN == S_CONVEYOR_SIEVE)||(SEGMENT_PATTERN == S_CONVEYOR_SIEVE_B)||(SEGMENT_PATTERN == S_CONVEYOR_SIEVE_LONG)))
-#define MOVE_CONVEYOR_BELT ((ADD_FIXED_SEGMENTS)&&((SEGMENT_PATTERN == S_CONVEYOR_SHOVELS)||(SEGMENT_PATTERN == S_CONVEYOR_MIXED)||(SEGMENT_PATTERN == S_CONVEYOR_SIEVE_LONG)))
-#define ROTATE_OBSTACLES ((ADD_FIXED_OBSTACLES)&&((OBSTACLE_PATTERN == O_SIEVE)||(OBSTACLE_PATTERN == O_SIEVE_B)||(OBSTACLE_PATTERN == O_SIEVE_LONG)))
+#define ADD_CONVEYOR_FORCE ((ADD_FIXED_SEGMENTS)&&((SEGMENT_PATTERN == S_CONVEYOR_BELT)||(SEGMENT_PATTERN == S_TWO_CONVEYOR_BELTS)||(SEGMENT_PATTERN == S_PERIODIC_CONVEYORS)||(SEGMENT_PATTERN == S_TEST_CONVEYORS)||(SEGMENT_PATTERN == S_CONVEYOR_SHOVELS)||(SEGMENT_PATTERN == S_CONVEYOR_MIXED)||(SEGMENT_PATTERN == S_CONVEYOR_SIEVE)||(SEGMENT_PATTERN == S_CONVEYOR_SIEVE_B)||(SEGMENT_PATTERN == S_CONVEYOR_SIEVE_LONG)||(SEGMENT_PATTERN == S_CONVEYORS_1400)))
+#define MOVE_CONVEYOR_BELT ((ADD_FIXED_SEGMENTS)&&((SEGMENT_PATTERN == S_CONVEYOR_SHOVELS)||(SEGMENT_PATTERN == S_CONVEYOR_MIXED)||(SEGMENT_PATTERN == S_CONVEYOR_SIEVE_LONG)||(SEGMENT_PATTERN == S_CONVEYORS_1400)))
+#define ROTATE_OBSTACLES ((ADD_FIXED_OBSTACLES)&&((OBSTACLE_PATTERN == O_SIEVE)||(OBSTACLE_PATTERN == O_SIEVE_B)||(OBSTACLE_PATTERN == O_SIEVE_LONG)||(OBSTACLE_PATTERN == O_SIEVE_VIDEO1400)))
 #define POLYGON_INTERACTION ((INTERACTION == I_POLYGON)||(INTERACTION == I_POLYGON_ALIGN))
+#define TRACK ((TRACK_SEGMENT_GROUPS)||(TRACK_PARTICLE))
 
 double xshift = 0.0;      /* x shift of shown window */
 double xspeed = 0.0;      /* x speed of obstacle */
@@ -981,7 +1020,8 @@ double radius_schedule(int i)
     return(1.0 + (MU_RATIO - 1.0)*(double)i/(double)NSTEPS);
 }
 
-double evolve_particles(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY], 
+double evolve_particles(t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES],  
+                        t_hashgrid hashgrid[HASHX*HASHY], 
                         double qx[NMAXCIRCLES], double qy[NMAXCIRCLES], double qangle[NMAXCIRCLES],
                         double px[NMAXCIRCLES], double py[NMAXCIRCLES], double pangle[NMAXCIRCLES], 
                         double beta, int *nactive, int *nsuccess, int *nmove, int *ncoupled, int initial_phase)
@@ -993,11 +1033,12 @@ double evolve_particles(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
     if (initial_phase) damping = INITIAL_DAMPING;
     else damping = DAMPING;
     
-//     printf("Evolving particles\n");
+//     printf("Evolving %i particles\n", ncircles);
     
-    #pragma omp parallel for private(j,xi,totalenergy,a,move)
+//     #pragma omp parallel for private(j,xi,totalenergy,a,move)
     for (j=0; j<ncircles; j++) if (particle[j].active)
     {
+//         printf("Particle %i\n", j);
         particle[j].vx = px[j] + 0.5*DT_PARTICLE*particle[j].fx;
         particle[j].vy = py[j] + 0.5*DT_PARTICLE*particle[j].fy;
         particle[j].omega = pangle[j] + 0.5*DT_PARTICLE*particle[j].torque;
@@ -1108,7 +1149,7 @@ double evolve_particles(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
                     {
                         px[j] = particle[j].vx;
                         py[j] = particle[j].vy;
-                        update_hashgrid(particle, hashgrid, 0);
+                        update_hashgrid(particle, obstacle, hashgrid, 0);
                         *nsuccess++;
                     }
                 }
@@ -1562,18 +1603,93 @@ void evolve_segment_groups(t_segment segment[NMAXSEGMENTS], int time, t_group_se
     }
 }
 
+void evolve_obstacles(t_obstacle obstacle[NMAXOBSTACLES])
+/* evolve obstacles, for option OSCILLATE_OBSTACLES */
+{
+    int i, j, n, m;
+    double dist, accel, ekin, epot, etot;
+    
+//     printf("Evolving %i obstacles\n", nobstacles);
+    /* Verlet scheme */
+    if (COUPLE_OBSTACLES)
+    {
+        for (i = 0; i < nobstacles; i++)
+        {
+            n = obstacle[i].nneighb;
+//             printf("Obstacle %i has %i neighbours\n", i, n);
+            obstacle[i].vx += DT_PARTICLE*obstacle[i].fx/obstacle[i].mass;
+            obstacle[i].vy += DT_PARTICLE*obstacle[i].fy/obstacle[i].mass;
+            obstacle[i].energy = 0.0;
+//             printf("1\n");
+            for (j=0; j<n; j++)
+            {
+                m = obstacle[i].neighb[j];
+//                 printf("Neighbour %i is number %i\n", j, m);
+                dist = module2(obstacle[i].xc - obstacle[m].xc, obstacle[i].yc - obstacle[m].yc);
+                /* test */
+//                 if (dist > 4.0*OBSTACLE_COUPLING_DIST) dist = 4.0*OBSTACLE_COUPLING_DIST;
+                if (dist > 5.0*obstacle[i].eqdist[j]) dist = 5.0*obstacle[i].eqdist[j];
+                if (dist < 0.2*OBSTACLE_RADIUS) dist = 0.2*OBSTACLE_RADIUS;
+                
+                accel = KSPRING_OBSTACLE_COUPLE*(obstacle[i].eqdist[j] - dist)/(dist*obstacle[i].mass);
+                if (OBSTACLE_HARDCORE) 
+                {
+                    if (dist < 2.0*OBSTACLE_RADIUS)
+                        accel += KSPRING_OBSTACLE_HARDCORE*(2.0*OBSTACLE_RADIUS - dist)/(obstacle[i].mass);
+                }   
+                obstacle[i].vx += DT_PARTICLE*(obstacle[i].xc - obstacle[m].xc)*accel;
+                obstacle[i].vy += DT_PARTICLE*(obstacle[i].yc - obstacle[m].yc)*accel;
+                obstacle[i].energy += 0.5*KSPRING_OBSTACLE_COUPLE*(obstacle[i].eqdist[j] - dist)*(obstacle[i].eqdist[j] - dist);
+            }
+//             printf("2\n");
+            if (obstacle[i].pinned)
+            {
+                obstacle[i].vx -= DT_PARTICLE*KSPRING_OBSTACLE_OSC*(obstacle[i].xc - obstacle[i].xc0)/obstacle[i].mass;
+                obstacle[i].vy -= DT_PARTICLE*KSPRING_OBSTACLE_OSC*(obstacle[i].yc - obstacle[i].yc0)/obstacle[i].mass;
+                obstacle[i].energy += KSPRING_OBSTACLE_OSC*((obstacle[i].xc - obstacle[i].xc0)*(obstacle[i].xc - obstacle[i].xc0) + (obstacle[i].yc - obstacle[i].yc0)*(obstacle[i].yc - obstacle[i].yc0));
+            }
+        }
+        for (i = 0; i < nobstacles; i++)
+        {
+            obstacle[i].xc += DT_PARTICLE*obstacle[i].vx;
+            obstacle[i].yc += DT_PARTICLE*obstacle[i].vy;
+        }
+        for (i = 0; i < nobstacles; i++)
+        {
+            ekin = obstacle[i].mass*(obstacle[i].vx*obstacle[i].vx + obstacle[i].vy*obstacle[i].vy);
+            obstacle[i].energy += ekin;
+        }
+    }
+    else 
+    {
+        for (i = 0; i < nobstacles; i++)
+        {
+            obstacle[i].vx += DT_PARTICLE*(obstacle[i].fx - KSPRING_OBSTACLE_OSC*(obstacle[i].xc - obstacle[i].xc0))/obstacle[i].mass;
+            obstacle[i].vy += DT_PARTICLE*(obstacle[i].fy - KSPRING_OBSTACLE_OSC*(obstacle[i].yc - obstacle[i].yc0))/obstacle[i].mass;
+            obstacle[i].xc += DT_PARTICLE*obstacle[i].vx;
+            obstacle[i].yc += DT_PARTICLE*obstacle[i].vy;
+        }
+        for (i = 0; i < nobstacles; i++)
+        {        
+            ekin = obstacle[i].mass*(obstacle[i].vx*obstacle[i].vx + obstacle[i].vy*obstacle[i].vy);
+            epot = KSPRING_OBSTACLE_OSC*((obstacle[i].xc - obstacle[i].xc0)*(obstacle[i].xc - obstacle[i].xc0) + (obstacle[i].yc - obstacle[i].yc0)*(obstacle[i].yc - obstacle[i].yc0));
+            etot = ekin + epot;
+            obstacle[i].energy = etot;
+        }
+    } 
+//     printf("Evolved %i obstacles\n", nobstacles);
+}
 
 void animation()
 {
     double time, scale, diss, rgb[3], dissip, gradient[2], x, y, dx, dy, dt, xleft, xright, 
-            a, b, length, fx, fy, force[2], totalenergy = 0.0, pos[2], prop, vx, xi = 0.0, torque, torque_ij, pleft = 0.0, pright = 0.0, entropy[2], speed_ratio, xmin, xmax, ymin, ymax, delta_energy, speed, ratio = 1.0, ratioc, cum_etot = 0.0, emean = 0.0, radius_ratio, t, 
-            angle, theta, sum, alpha, bfield;
+            a, b, length, fx, fy, force[2], totalenergy = 0.0, pos[2], prop, vx, xi = 0.0, torque, torque_ij, pleft = 0.0, pright = 0.0, entropy[2], speed_ratio, xmin, xmax, ymin, ymax, delta_energy, speed, ratio = 1.0, ratioc, cum_etot = 0.0, emean = 0.0, radius_ratio, t, angle, theta, sum, alpha, bfield, track_x0, track_y0, efield, efieldy;
     double *qx, *qy, *px, *py, *qangle, *pangle, *pressure, *obstacle_speeds;
     double *cqx, *cqy, *cpx, *cpy, *cqangle, *cpangle;
     int i, j, k, n, m, s, ij[2], i0, iplus, iminus, j0, jplus, jminus, p, q, p1, q1, p2, q2, total_neighbours = 0, cl, 
         min_nb, max_nb, close, wrapx = 0, wrapy = 0, nadd_particle = 0, nmove = 0, nsuccess = 0, 
         tracer_n[N_TRACER_PARTICLES], traj_position = 0, traj_length = 0, move = 0, old, m0, floor, nthermo, wall = 0,
-        group, gshift, n_total_active = 0, ncollisions = 0, ncoupled = 1, np, belt, obs;
+        group, gshift, n_total_active = 0, ncollisions = 0, ncoupled = 1, np, belt, obs, reset_obs;
     int *particle_numbers;
     static int imin, imax;
     static short int first = 1;
@@ -1589,6 +1705,8 @@ void animation()
     t_molecule *molecule;
     t_lj_parameters params;
     t_belt *conveyor_belt;
+    t_otriangle *otriangle;
+    t_ofacet *ofacet;
     char message[100];
 
     ratioc = 1.0 - ratio;
@@ -1616,7 +1734,7 @@ void animation()
     }
     
     if (TRACER_PARTICLE) 
-        trajectory = (t_tracer *)malloc(TRAJECTORY_LENGTH*N_TRACER_PARTICLES*sizeof(t_tracer));
+        trajectory = (t_tracer *)malloc(TRAJECTORY_LENGTH*N_TRACER_PARTICLES*TRACER_STEPS*sizeof(t_tracer));
     
     if (PAIR_PARTICLES)
         molecule = (t_molecule *)malloc(NMAXCIRCLES*sizeof(t_molecule));    /* molecules */ 
@@ -1641,6 +1759,12 @@ void animation()
         cpangle = (double *)malloc(NMAXCIRCLES*sizeof(double));
     }
     
+    if (FILL_OBSTACLE_TRIANGLES)
+    {
+        otriangle = (t_otriangle *)malloc(NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES*sizeof(t_otriangle));
+        ofacet = (t_ofacet *)malloc(NMAXOBSTACLES*sizeof(t_ofacet));
+    }
+    
     if (REACTION_DIFFUSION) 
     {
         collisions = (t_collision *)malloc(2*NMAXCOLLISIONS*sizeof(t_collision));
@@ -1655,7 +1779,7 @@ void animation()
     
     lj_log = fopen("lj_logfile.txt", "w");
     
-    if (ADD_FIXED_OBSTACLES) init_obstacle_config(obstacle);
+    if (ADD_FIXED_OBSTACLES) init_obstacle_config(obstacle, otriangle, ofacet);
     if (ADD_FIXED_SEGMENTS) init_segment_config(segment, conveyor_belt);
     
     if ((MOVE_SEGMENT_GROUPS)&&(ADD_FIXED_SEGMENTS)) 
@@ -1705,7 +1829,7 @@ void animation()
 //     }
 //     sleep(1);
         
-    update_hashgrid(particle, hashgrid, 1);
+    update_hashgrid(particle, obstacle, hashgrid, 1);
     printf("Updated hashgrid\n");
     compute_relative_positions(particle, hashgrid);
     printf("Computed relative positions\n");
@@ -1787,6 +1911,8 @@ void animation()
         pright = 0.0;
         if (RECORD_PRESSURES) for (j=0; j<N_PRESSURES; j++) pressure[j] = 0.0;
         
+        printf("1\n");
+        
 //         printf("evolving particles\n");
         for(n=0; n<NVID; n++)
         {
@@ -1819,11 +1945,12 @@ void animation()
                 segment[j].fy = 0.0;
                 segment[j].torque = 0.0;
             }
-            
             compute_relative_positions(particle, hashgrid);
-            update_hashgrid(particle, hashgrid, 0);
+            update_hashgrid(particle, obstacle, hashgrid, 0);
+            
             
             /* compute forces on particles */
+            reset_obs = 1;
             for (j=0; j<ncircles; j++) if (particle[j].active)
             {
                 particle[j].fx = 0.0;
@@ -1834,8 +1961,9 @@ void animation()
                 compute_particle_force(j, params.krepel, particle, hashgrid);
                 
                 /* take care of boundary conditions */
-                params.fboundary += compute_boundary_force(j, particle, obstacle, segment, params.xmincontainer, params.xmaxcontainer, &pleft, &pright, pressure, wall, params.krepel);
-
+                params.fboundary += compute_boundary_force(j, particle, obstacle, segment, params.xmincontainer, params.xmaxcontainer, &pleft, &pright, pressure, wall, params.krepel, reset_obs);
+                reset_obs = 0;
+                
                 /* align velocities in case of Vicsek models */
 //                 if (VICSEK_INT) 
                 if ((VICSEK_INT)&&(!particle[j].close_to_boundary))
@@ -1939,7 +2067,18 @@ void animation()
                 if (ADD_EFIELD) 
                 {
                     if (INCREASE_E) particle[j].fx += params.efield*particle[j].charge;
-                    else particle[j].fx += EFIELD*particle[j].charge;
+                    else 
+                    {
+                        efield = EFIELD;
+                        efieldy = EFIELD_Y;
+                        if (EFIELD_REGION != EF_CONST)
+                        {
+                            efield *= (double)partial_efield(particle[j].xc, particle[j].yc); 
+                            efieldy *= (double)partial_efield(particle[j].xc, particle[j].yc); 
+                        }
+                        particle[j].fx += efield*particle[j].charge;
+                        particle[j].fy += efieldy*particle[j].charge;
+                    }
                 }
                 
                 /* add magnetic force */
@@ -1972,8 +2111,6 @@ void animation()
             /* compute force and torque on clusters */
             if (CLUSTER_PARTICLES) compute_cluster_force(cluster, particle);
             
-            
-            
             /* timestep of thermostat algorithm */
             if (CLUSTER_PARTICLES) 
             {
@@ -1984,13 +2121,15 @@ void animation()
                     particle[j].emean = cluster[particle[j].cluster].emean;
             }
             else 
-                totalenergy = evolve_particles(particle, hashgrid, qx, qy, qangle, px, py, pangle, params.beta, &params.nactive, &nsuccess, &nmove, &ncoupled, i < INITIAL_TIME);
+                totalenergy = evolve_particles(particle, obstacle, hashgrid, qx, qy, qangle, px, py, pangle, params.beta, &params.nactive, &nsuccess, &nmove, &ncoupled, i < INITIAL_TIME);
             
+        
             /* TEST */
             /* repair clusters */
             if ((CLUSTER_PARTICLES)&&(REPAIR_CLUSTERS)) for (cl=0; cl<ncircles; cl++) 
                 if ((cluster[cl].active)&&(cluster[cl].nparticles >= 2))
                     repair_cluster(cl, particle, cluster, 1000/NVID, 1);
+            
             
             /* evolution of lid coordinate */
             if (BOUNDARY_COND == BC_RECTANGLE_LID) evolve_lid(params.fboundary);
@@ -2020,10 +2159,42 @@ void animation()
                 }
             }
             
+            if (OSCILLATE_OBSTACLES) evolve_obstacles(obstacle);
+            
             if ((MOVE_SEGMENT_GROUPS)&&(i > INITIAL_TIME + SEGMENT_DEACTIVATION_TIME)) evolve_segment_groups(segment, i, segment_group);
             
-//             if ((MOVE_SEGMENT_GROUPS)&&(i > OBSTACLE_INITIAL_TIME)) evolve_segment_groups(segment, i, segment_group);
+            /* update tracer particle trajectory */
+            if ((TRACER_PARTICLE)&&(i > INITIAL_TIME)&&(n%(NVID/TRACER_STEPS)==0)) 
+            {
+                for (j=0; j<n_tracers; j++)
+                {
+                    trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + traj_position].xc = particle[tracer_n[j]].xc;
+                    trajectory[j*TRAJECTORY_LENGTH*TRACER_STEPS + traj_position].yc = particle[tracer_n[j]].yc;
+                }
+                traj_position++;
+                if (traj_position >= TRAJECTORY_LENGTH*TRACER_STEPS) traj_position = 0;
+                traj_length++;
+                if (traj_length >= TRAJECTORY_LENGTH*TRACER_STEPS) 
+                    traj_length = TRAJECTORY_LENGTH*TRACER_STEPS - 1;
+            }
         } /* end of for (n=0; n<NVID; n++) */
+        
+        if (TRACK_PARTICLE)
+        {
+            if (i < TRACK_INITIAL_TIME)
+            {
+                track_x0 = particle[TRACKED_PARTICLE].xc;
+                track_y0 = particle[TRACKED_PARTICLE].yc;
+            }
+            else
+            {
+                xtrack *= 0.9;
+                ytrack *= 0.9;
+                xtrack += 0.1*(particle[TRACKED_PARTICLE].xc - track_x0);
+                ytrack += 0.1*(particle[TRACKED_PARTICLE].yc - track_y0);
+            }
+            printf("(xtrack, ytrack) = (%.3lg, %.3lg)\n", xtrack, ytrack); 
+        }
         
         /* TEST */
 //         for (j=0; j<ncircles; j++)
@@ -2099,20 +2270,20 @@ void animation()
         }
         
         /* update tracer particle trajectory */
-        if ((TRACER_PARTICLE)&&(i > INITIAL_TIME)) 
-        {
-            for (j=0; j<n_tracers; j++)
-            {
-                trajectory[j*TRAJECTORY_LENGTH + traj_position].xc = particle[tracer_n[j]].xc;
-                trajectory[j*TRAJECTORY_LENGTH + traj_position].yc = particle[tracer_n[j]].yc;
-            }
-            traj_position++;
-            if (traj_position >= TRAJECTORY_LENGTH) traj_position = 0;
-            traj_length++;
-            if (traj_length >= TRAJECTORY_LENGTH) traj_length = TRAJECTORY_LENGTH - 1;
-//             for (j=0; j<traj_length; j++)
-//                 printf("Trajectory[%i] = (%.3lg, %.3lg)\n", j, trajectory[j].xc, trajectory[j].yc);
-        }
+//         if ((TRACER_PARTICLE)&&(i > INITIAL_TIME)) 
+//         {
+//             for (j=0; j<n_tracers; j++)
+//             {
+//                 trajectory[j*TRAJECTORY_LENGTH + traj_position].xc = particle[tracer_n[j]].xc;
+//                 trajectory[j*TRAJECTORY_LENGTH + traj_position].yc = particle[tracer_n[j]].yc;
+//             }
+//             traj_position++;
+//             if (traj_position >= TRAJECTORY_LENGTH) traj_position = 0;
+//             traj_length++;
+//             if (traj_length >= TRAJECTORY_LENGTH) traj_length = TRAJECTORY_LENGTH - 1;
+// //             for (j=0; j<traj_length; j++)
+// //                 printf("Trajectory[%i] = (%.3lg, %.3lg)\n", j, trajectory[j].xc, trajectory[j].yc);
+//         }
                 
         printf("Mean kinetic energy: %.3f\n", totalenergy/(double)ncircles); 
         printf("Kinetic energy by coupled particle: %.3f\n",  totalenergy/(double)ncoupled);
@@ -2138,7 +2309,21 @@ void animation()
         printf("Boundary force: %.3f\n", params.fboundary/(double)(ncircles*NVID)); 
         if (RESAMPLE_Y) printf("%i succesful moves out of %i trials\n", nsuccess, nmove);
         if (INCREASE_GRAVITY) printf("Gravity: %.3f\n", params.gravity);
-                
+        
+        if ((RECOUPLE_OBSTACLES)&&(i%OBSTACLE_RECOUPLE_TIME == 0))
+            switch (OBSTACLE_RECOUPLE_TYPE) {
+                case (OR_FIXED_DIST):
+                {
+                    n_ofacets = init_obstacle_coupling(obstacle, otriangle, ofacet);
+                    break;
+                }
+                case (OR_BREAK_MAX):
+                {
+                    n_ofacets = reset_obstacle_coupling(obstacle, otriangle, ofacet);
+                    break;
+                }
+            }
+               
         total_neighbours = 0;
         min_nb = 100;
         max_nb = 0;
@@ -2178,10 +2363,10 @@ void animation()
             change_type_proportion(particle, params.prop);
         }
  
-        if (TRACER_PARTICLE) draw_trajectory(trajectory, traj_position, traj_length, particle, cluster, tracer_n, PLOT);
-        draw_particles(particle, cluster, PLOT, params.beta, collisions, ncollisions, BG_COLOR, hashgrid, params);
-        draw_container(params.xmincontainer, params.xmaxcontainer, obstacle, segment, conveyor_belt, wall);
-
+//         if (TRACER_PARTICLE) draw_trajectory(trajectory, traj_position, traj_length, particle, cluster, tracer_n, PLOT);
+//         draw_particles(particle, cluster, PLOT, params.beta, collisions, ncollisions, BG_COLOR, hashgrid, params);
+//         draw_container(params.xmincontainer, params.xmaxcontainer, obstacle, segment, conveyor_belt, wall);
+        
         /* add a particle */
         if ((ADD_PARTICLES)&&(i > ADD_TIME)&&((i - INITIAL_TIME - ADD_TIME)%ADD_PERIOD == 1)&&(i < NSTEPS - FINAL_NOADD_PERIOD))
         {
@@ -2215,7 +2400,7 @@ void animation()
         /* compute force on segments */
         if (PRINT_SEGMENTS_FORCE) compute_segments_force(&params, segment);
         
-        update_hashgrid(particle, hashgrid, 1);
+        update_hashgrid(particle, obstacle, hashgrid, 1);
                 
         if ((i > INITIAL_TIME + WALL_TIME)&&(PRINT_ENTROPY)) 
         {
@@ -2236,7 +2421,7 @@ void animation()
         
         draw_frame(i, PLOT, BG_COLOR, ncollisions, traj_position, traj_length, 
         wall, pressure, pleft, pright, particle_numbers, 1, params, particle, cluster, 
-        collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n);
+        collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet);
         
 	if (!((NO_EXTRA_BUFFER_SWAP)&&(MOVIE))) glutSwapBuffers();
 
@@ -2268,7 +2453,7 @@ void animation()
             {
                 draw_frame(i, PLOT_B, BG_COLOR_B, ncollisions, traj_position, traj_length, 
                 wall, pressure, pleft, pright, particle_numbers, 0, params, particle, cluster, 
-                collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n);
+                collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet);
                 glutSwapBuffers();
                 save_frame_lj_counter(NSTEPS + MID_FRAMES + 1 + counter);
                 counter++;
@@ -2309,7 +2494,7 @@ void animation()
             blank();
             draw_frame(NSTEPS, PLOT, BG_COLOR, ncollisions, traj_position, traj_length, 
             wall, pressure, pleft, pright, particle_numbers, 0, params, particle, cluster, 
-            collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n);
+            collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet);
         }
         if (DOUBLE_MOVIE) for (i=0; i<MID_FRAMES; i++) 
         {
@@ -2321,7 +2506,7 @@ void animation()
         {
             draw_frame(NSTEPS, PLOT_B, BG_COLOR_B, ncollisions, traj_position, traj_length, 
             wall, pressure, pleft, pright, particle_numbers, 0, params, particle, cluster, 
-            collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n);
+            collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet);
             if (!((NO_EXTRA_BUFFER_SWAP)&&(MOVIE))) glutSwapBuffers();
         }
         if ((TIME_LAPSE)&&(!DOUBLE_MOVIE)) 
@@ -2386,6 +2571,12 @@ void animation()
         free(cpy);
         free(cqangle);
         free(cpangle);
+    }
+    
+    if (FILL_OBSTACLE_TRIANGLES)
+    {
+        free(otriangle);
+        free(ofacet);
     }
     
     free(pressure);

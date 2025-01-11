@@ -312,6 +312,16 @@ void write_text( double x, double y, char *st)
 	return(i);
  }
 
+ double ipow(double x, int n)
+ {
+    double y;
+    int i;
+    
+    y = x;
+    for (i=1; i<n; i++) y *= x;
+    
+    return(y);
+ }
  
 double gaussian()
 /* returns standard normal random variable, using Box-Mueller algorithm */
@@ -632,6 +642,23 @@ void draw_circle_arc(double x, double y, double r, double angle1, double dangle,
     {
         alpha = angle1 + (double)i*dalpha;
         xy_to_pos(x + r*cos(alpha), y + r*sin(alpha), pos);
+        glVertex2d(pos[0], pos[1]);
+    }
+    glEnd();
+}
+
+void draw_ellipse_arc(double x, double y, double a, double b, double angle1, double dangle, int nseg)
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = dangle/(double)nseg;
+    
+    glBegin(GL_LINE_STRIP);
+    for (i=0; i<=nseg; i++)
+    {
+        alpha = angle1 + (double)i*dalpha;
+        xy_to_pos(x + a*cos(alpha), y + b*sin(alpha), pos);
         glVertex2d(pos[0], pos[1]);
     }
     glEnd();
@@ -2648,11 +2675,56 @@ int init_xyin_from_image(short int * xy_in[NX])
 /* initialize table xy_in from an image file */
 {
     FILE *image_file;
-    int nx, ny, maxrgb, i, j, k, ii, jj, nmaxpixels = 2000000, rgbtot, scan, rgbval;
+    int nx, ny, maxrgb, i, j, k, ii, jj, nmaxpixels, rgbtot, rgbmax, scan, rgbval, sign;
     int *rgb_values;
-    double scalex, scaley;
+    double scalex, scaley, scale;
 
-    image_file = fopen("PHOTONSband.ppm", "r");
+    switch (IMAGE_FILE)
+    {
+        case (IM_PHOTONS): 
+        {
+            image_file = fopen("PHOTONSband.ppm", "r");
+            nmaxpixels = 2000000;
+            break;
+        }
+        case (IM_GUITAR): 
+        {
+            image_file = fopen("guitar.ppm", "r");
+            nmaxpixels = 11059200;
+            break;
+        }  
+        case (IM_GUITAR_NOHOLE): 
+        {
+            image_file = fopen("guitar_nohole.ppm", "r");
+            nmaxpixels = 11059200;
+            break;
+        }  
+        case (IM_EGUITAR): 
+        {
+            image_file = fopen("electric_guitar.ppm", "r");
+            nmaxpixels = 2459520;
+            break;
+        }  
+        case (IM_HAPPY_NEW_YEAR): 
+        {
+            image_file = fopen("Happy_New_Year_2025.ppm", "r");
+            nmaxpixels = 2073600;
+            break;
+        }
+        case (IM_DICKSON): 
+        {
+            image_file = fopen("Greenland.ppm", "r");
+            nmaxpixels = 1756*948;
+            break;
+        }
+        case (IM_DICKSON_ZOOM): 
+        {
+            image_file = fopen("Dickson_fjord.ppm", "r");
+            nmaxpixels = 1070*601;
+            break;
+        }
+    }
+    
     scan = fscanf(image_file,"%i %i\n", &nx, &ny);
     scan = fscanf(image_file,"%i\n", &maxrgb);
     
@@ -2661,9 +2733,64 @@ int init_xyin_from_image(short int * xy_in[NX])
     scalex = (double)nx/(double)NX;
     scaley = (double)ny/(double)NY;
     
+    switch (IMAGE_FILE)
+    {
+        case (IM_PHOTONS): 
+        {
+            rgbmax = 3*maxrgb/2;
+            scale = scalex;
+            sign = 1;
+            break;
+        }
+        case (IM_GUITAR): 
+        {
+            rgbmax = 150;
+            scale = scaley;
+            sign = 1;
+            break;
+        }  
+        case (IM_GUITAR_NOHOLE): 
+        {
+            rgbmax = 150;
+            scale = scaley;
+            sign = 1;
+            break;
+        }  
+        case (IM_EGUITAR): 
+        {
+            rgbmax = 700;
+            scale = scaley;
+            sign = -1;
+            break;
+        } 
+        case (IM_HAPPY_NEW_YEAR): 
+        {
+            rgbmax = 3*maxrgb/2;
+            scale = scalex;
+            sign = -1;
+            break;
+        }
+        case (IM_DICKSON): 
+        {
+            rgbmax = 1;
+            scale = scalex;
+            sign = -1;
+            break;
+        }
+        case (IM_DICKSON_ZOOM): 
+        {
+            rgbmax = 1;
+            scale = scalex;
+            sign = -1;
+            break;
+        }
+    }
+    
+    
+    
     if (nx*ny > nmaxpixels)
     {
-        printf("Image too large, increase nmaxpixels in init_xyin_from_image()\n");
+        printf("Image too large, increase nmaxpixels in init_xyin_from_image() to %i\n", nx*ny);
         exit(0);
     }
     
@@ -2679,17 +2806,24 @@ int init_xyin_from_image(short int * xy_in[NX])
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
         {
-            ii = nx/2 + (int)((double)(i-NX/2)*scalex);
-            jj = ny/2 - (int)((double)(j-NY/2)*scalex);
+            ii = nx/2 + (int)((double)(i-NX/2)*scale);
+            jj = ny/2 - (int)((double)(j-NY/2)*scale);
             if (ii > nx-1) ii = nx-1;
             if (ii < 0) ii = 0;
             if (jj > ny-1) jj = ny-1;
             if (jj < 0) jj = 0;
             k = 3*(jj*nx+ii);
             rgbtot = rgb_values[k] + rgb_values[k+1] + rgb_values[k+2];
-            if (rgbtot > 3*maxrgb/2) xy_in[i][j] = 1;
+            if (rgbtot*sign > rgbmax*sign) xy_in[i][j] = 1;
             else xy_in[i][j] = 0;
+            
+            if (ii == 0) xy_in[i][j] = 0;
+//             if (ii == nx-1) xy_in[i][j] = 0;
         }   
+        
+    /* to avoid reflection on left boundary */
+    if (IMAGE_FILE == IM_HAPPY_NEW_YEAR)
+        for (j=0; j<NY; j++) xy_in[0][j] = 1;
     
     fclose(image_file);
     free(rgb_values);
@@ -2697,10 +2831,40 @@ int init_xyin_from_image(short int * xy_in[NX])
 }
 
 
+void init_epicyloid()
+/* initialise radii of epicycloid */
+{
+    int i, j, j0;
+    double phi, dphi, x, y, a, theta[NEPICYCLOID], r[NEPICYCLOID];
+    
+    dphi = DPI/(double)(NPOLY*NEPICYCLOID);
+    a = (double)(NPOLY + 1);
+    for (i=0; i<NEPICYCLOID; i++)
+    {
+        phi = dphi*(double)i;
+        x = a*cos(phi) - cos(a*phi);
+        y = a*sin(phi) - sin(a*phi);
+        theta[i] = argument(x,y);
+        r[i] = module2(x,y);
+    }
+    
+    j0 = 0;
+    for (i=0; i<NEPICYCLOID; i++)
+    {
+        j = (int)(theta[i]/dphi);
+        while (j0 < j)
+        {
+            epicycloid_phi_to_r[j0] = r[i];
+            j0++;
+        }
+    }
+}
+
+
 int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_circle *circles)
 /* returns 1 if (x,y) represents a point in the billiard */
 {
-    double l2, r1, r2, r2mu, omega, b, c, d, angle, z, x1, y1, x2, y2, y3, u, v, u1, v1, dx, dy, width, alpha, s, a, r, height, ca, sa, l, ht, xshift, zz[9][2], x5, x6, f, fp, h1, cb, sb, c1, c2;
+    double l2, r1, r2, r2mu, omega, b, c, d, angle, z, x1, y1, x2, y2, y3, u, v, u1, v1, dx, dy, width, alpha, s, a, r, height, ca, sa, l, ht, xshift, zz[9][2], x5, x6, f, fp, h1, cb, sb, c1, c2, nx, ny, phi;
     int i, j, k, k1, k2, condition = 0, m;
     static int first = 1, nsides;
     static double h, hh, ra, rb, ll, salpha;
@@ -3790,6 +3954,70 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             }
             return(0);
         }
+        case (D_TWOCIRCLES_ELLIPSE):
+        {
+            a = 0.9*XMAX - 3.0*MU;
+            b = a/LAMBDA;
+            if (x*x/(a*a) + y*y/(b*b) < 1.0) return(1);
+            x1 = a + 2.0*MU;
+            if ((x-x1)*(x-x1) + y*y < MU*MU) return(1);
+            if ((x+x1)*(x+x1) + y*y < MU*MU) return(1);
+            if ((vabs(x) < a + 2.0*MU)&&(vabs(y) < WALL_WIDTH)) return(1);
+            return(0); 
+        }
+        case (D_CIRCLES_ELLIPSE):
+        {
+            a = 0.9*XMAX - 3.0*MU;
+            b = a/LAMBDA;
+            x = x/JULIA_SCALE;
+            y = y/JULIA_SCALE;
+            if (x*x/(a*a) + y*y/(b*b) < 1.0) return(1);
+            for (k=0; k<NPOLY; k++)
+            {
+                phi = APOLY*PID + (double)k*DPI/(double)NPOLY;
+                x1 = a*cos(phi);
+                y1 = b*sin(phi);
+                nx = b*cos(phi);
+                ny = a*sin(phi);
+                r = 1.0/module2(nx,ny);
+                nx *= r;
+                ny *= r;
+                x2 = x1 + 2.0*MU*nx;
+                y2 = y1 + 2.0*MU*ny;
+                if (module2(x-x2, y-y2) < MU) return(1); 
+                r = module2(x-x1, y-y1);
+                h = (x-x1)*nx + (y-y1)*ny;
+                if ((h > -MU)&&(h < 2.0*MU)&&(r*r - h*h < WALL_WIDTH*WALL_WIDTH)) return(1);
+            }
+            return(0);
+        }
+        case (D_CARDIOID):
+        {
+            y1 = y - MU;
+            r = x*x + y1*y1;
+            return(r*r + 4.0*LAMBDA*y1*r - 4.0*LAMBDA*LAMBDA*x*x < 0.0);
+        }
+        case (D_NEPHROID):
+        {
+            return(108*ipow(LAMBDA,4)*x*x > ipow(x*x + y*y - 4.0*LAMBDA*LAMBDA,3));
+        }
+        case (D_EPICYCLOID):
+        {
+            if (first) 
+            {
+                init_epicyloid();
+                first = 0;
+            }
+            phi = argument(x, y) - APOLY*PID;
+            if (phi < 0.0) phi += DPI;
+            if (phi >= DPI) phi -= DPI;
+            a = DPI/(double)NPOLY;
+            phi += PID;
+            while (phi > a) phi -= a;
+            if (phi > 0.5*a) phi = a - phi;
+            k = (int)(phi*(double)NEPICYCLOID/a);
+            return(module2(x,y) < epicycloid_phi_to_r[k]*LAMBDA/(double)(NPOLY));
+        }
         case (D_MENGER):       
         {
             x1 = 0.5*(x+1.0);
@@ -4074,7 +4302,7 @@ void draw_rc_hyp()
 
 void draw_billiard(int fade, double fade_value)      /* draws the billiard boundary */
 {
-    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, alpha2, dphi, omega, z, l, width, a, b, c, d, r1, r2, ymax, height, xmin, xmax, ca, sa, xshift, x5, x6, f, fp, xratio, w;
+    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, alpha2, dphi, omega, z, l, width, a, b, c, d, r1, r2, ymax, height, xmin, xmax, ca, sa, xshift, x5, x6, f, fp, xratio, w, nx, ny, x3, y3, psi, psi0, psi2;
     int i, j, k, k1, k2, mr2, ntiles;
     static int first = 1, nsides;
     static double h, hh, sqr3, ll, salpha, arcangle;
@@ -5914,6 +6142,122 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 draw_line(x1 - MU*cos(-alpha2 + phi), y1 - MU*sin(-alpha2 + phi), LAMBDA*cos(alpha + phi), LAMBDA*sin(alpha + phi)); 
                 draw_circle_arc(0.0, 0.0, LAMBDA, alpha + phi, DPI/(double)NPOLY - 2.0*alpha, NSEG); 
             }
+            break;
+        }
+        case (D_TWOCIRCLES_ELLIPSE):
+        {
+            a = 0.9*XMAX - 3.0*MU;
+            b = a/LAMBDA;
+            alpha2 = asin(WALL_WIDTH/MU);
+            alpha = asin(WALL_WIDTH/b);
+            x1 = a + 2.0*MU;
+            draw_circle_arc(x1, 0.0, MU, -PI + alpha2, DPI - 2.0*alpha2, NSEG); 
+            draw_line(x1 - MU*cos(alpha2), WALL_WIDTH, a*cos(alpha), WALL_WIDTH);
+            draw_ellipse_arc(0.0, 0.0, a, b, alpha, PI - 2.0*alpha, NSEG);
+            draw_line(-a*cos(alpha), WALL_WIDTH, -x1 + MU*cos(alpha2), WALL_WIDTH);            
+            draw_circle_arc(-x1, 0.0, MU, alpha2, DPI - 2.0*alpha2, NSEG); 
+            draw_line(-x1 + MU*cos(alpha2), -WALL_WIDTH, -a*cos(alpha), -WALL_WIDTH);
+            draw_ellipse_arc(0.0, 0.0, a, b, PI + alpha, PI - 2.0*alpha, NSEG);
+            draw_line(a*cos(alpha), -WALL_WIDTH, x1 - MU*cos(alpha2), -WALL_WIDTH);            
+            break;
+        }
+        case (D_CIRCLES_ELLIPSE):
+        {
+            a = JULIA_SCALE*(0.9*XMAX - 3.0*MU);
+            b = a/LAMBDA;
+            alpha2 = asin(WALL_WIDTH/MU);
+            for (k=0; k<NPOLY; k++)
+            {
+                phi = APOLY*PID + (double)k*DPI/(double)NPOLY;
+                x1 = a*cos(phi);
+                y1 = b*sin(phi);
+                nx = b*cos(phi);
+                ny = a*sin(phi);
+                r = 1.0/module2(nx,ny);
+                nx *= r;
+                ny *= r;
+                x2 = x1 + 2.0*JULIA_SCALE*MU*nx;
+                y2 = y1 + 2.0*JULIA_SCALE*MU*ny;
+                alpha = argument(nx, ny);
+                
+                x3 = x1 + JULIA_SCALE*WALL_WIDTH*ny;
+                y3 = y1 - JULIA_SCALE*WALL_WIDTH*nx;
+                psi2 = argument(x3/a, y3/b);
+                if (psi2 < psi) psi2 += DPI;
+                
+                if (k>0) draw_ellipse_arc(0.0, 0.0, a, b, psi, psi2 - psi, NSEG);
+                
+                draw_line(x2 - JULIA_SCALE*MU*cos(alpha + alpha2), y2 - JULIA_SCALE*MU*sin(alpha + alpha2), x3, y3);
+               
+                draw_circle_arc(x2, y2, JULIA_SCALE*MU, alpha - PI + alpha2, DPI - 2.0*alpha2, NSEG); 
+                
+                x3 = x1 - JULIA_SCALE*WALL_WIDTH*ny;
+                y3 = y1 + JULIA_SCALE*WALL_WIDTH*nx;
+                draw_line(x2 - JULIA_SCALE*MU*cos(alpha - alpha2), y2 - JULIA_SCALE*MU*sin(alpha - alpha2), x3, y3);
+                
+                psi = argument(x3/a, y3/b);
+                if (k == 0) psi0 = psi2;
+            }
+            if (psi0 < psi) psi0 += DPI;
+            draw_ellipse_arc(0.0, 0.0, a, b, psi, psi0 - psi, NSEG);
+            
+            /* draw foci */
+            if (FOCI)
+            {
+                if (fade) glColor3f(0.3*fade_value, 0.3*fade_value, 0.3*fade_value);
+                else glColor3f(0.3, 0.3, 0.3);
+                x0 = sqrt(a*a - b*b);
+
+                glLineWidth(2);
+                glEnable(GL_LINE_SMOOTH);
+                
+                draw_circle(x0, 0.0, 0.01, NSEG);
+                draw_circle(-x0, 0.0, 0.01, NSEG);
+            }
+            
+            break;
+        }
+        case (D_CARDIOID):
+        {
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<NSEG; i++)
+            {
+                phi = DPI*(double)i/(double)NSEG;
+                r = 2.0*LAMBDA*(1.0 - sin(phi));
+                xy_to_pos(r*cos(phi), MU + r*sin(phi), pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd();  
+            break;
+        }
+        case (D_NEPHROID):
+        {
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<NSEG; i++)
+            {
+                phi = DPI*(double)i/(double)NSEG;
+                x = 3.0*sin(phi) - sin(3.0*phi);
+                y = 3.0*cos(phi) - cos(3.0*phi);
+                xy_to_pos(LAMBDA*x, LAMBDA*y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd();  
+            break;
+        }
+        case (D_EPICYCLOID):
+        {
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<NSEG; i++)
+            {
+                phi = DPI*(double)i/(double)NSEG + APOLY*PID;
+                a = (double)(NPOLY+1);
+                x = a*sin(phi) - sin(a*phi);
+                y = -(a*cos(phi) - cos(a*phi));
+                r = LAMBDA/(double)NPOLY;
+                xy_to_pos(r*x, r*y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd();  
             break;
         }
         case (D_POLYCIRCLES_ANGLED):

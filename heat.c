@@ -67,6 +67,7 @@
 #define B_DOMAIN 27      /* choice of domain shape, see list in global_pdes.c  */
 
 #define CIRCLE_PATTERN 0    /* pattern of circles, see list in global_pdes.c */
+#define IMAGE_FILE 5        /* for option D_IMAGE */
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
