@@ -92,6 +92,7 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define P_TOKA_PRIME 6    /* Tokarsky room made of 86 triangles */
 #define P_TREE 7          /* pine tree */
 #define P_TOKA_NONSELF 8  /* Tokarsky non-self-unilluminable room */
+#define P_ISOCELES_TRIANGLE 9   /* rectangle isoceles triangle */
 #define P_MAZE 10         /* maze */
 #define P_MAZE_DIAG 11    /* maze with 45 degrees angles */
 #define P_MAZE_RANDOM 12  /* maze with randomized wall positions */
@@ -99,6 +100,7 @@ double x_shooter = -0.2, y_shooter = -0.6, x_target = 0.4, y_target = 0.7;
 #define P_MAZE_CIRC_SCATTERER 14  /* circular maze with scatterers */
 #define P_MAZE_HEX 15     /* hexagonal maze */
 #define P_MAZE_OCT 16     /* maze with octagonal and square cells */
+#define P_STAR 17         /* star-shaped domain */
 
 /* Color palettes */
 

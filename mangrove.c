@@ -266,6 +266,8 @@
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
 #define WALL_WIDTH 0.1      /* width of wall separating lenses */
+#define PDISC_CONNECT_FACTOR 1.5    /* controls which discs are connected for D_CIRCLE_LATTICE_POISSON domain */
+#define WALL_WIDTH_RND 0.0  /* proportion of width of width for random arrangements */
 #define OSCIL_YMAX 0.35      /* defines oscillation range */
 #define MESSAGE_LDASH 14         /* length of dash for Morse code message */
 #define MESSAGE_LDOT 8           /* length of dot for Morse code message */

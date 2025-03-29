@@ -35,20 +35,20 @@
 #include <omp.h>
 #include <time.h>
 
-#define MOVIE 1         /* set to 1 to generate movie */
+#define MOVIE 0         /* set to 1 to generate movie */
 #define SAVE_MEMORY 1       /* set to 1 to save memory when writing tiff images */
 #define INVERT_COUNTER 0    /* set to 1 to save frames in inverse order */
 
 // #define WINWIDTH 	1280  /* window width */
-#define WINWIDTH 	720  /* window width */
-#define WINHEIGHT 	720   /* window height */
+#define WINWIDTH 	1200  /* window width */
+#define WINHEIGHT 	1200   /* window height */
 
 // #define XMIN -1.5
 // #define XMAX 2.5	/* x interval */
-#define XMIN -1.125
-#define XMAX 1.125	/* x interval */
-#define YMIN -1.125
-#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+#define XMIN -1.2
+#define XMAX 1.4	/* x interval */
+#define YMIN -1.4
+#define YMAX 1.2	/* y interval for 9/16 aspect ratio */
 
 #define SCALING_FACTOR 1.0       /* scaling factor of drawing, needed for flower billiards, otherwise set to 1.0 */
 
@@ -57,9 +57,10 @@
 #define B_DOMAIN 30     /* choice of domain shape */
 
 #define CIRCLE_PATTERN 1    /* pattern of circles */
-#define POLYLINE_PATTERN 10  /* pattern of polyline */
+#define POLYLINE_PATTERN 9  /* pattern of polyline */
 
-#define ABSORBING_CIRCLES 0 /* set to 1 for circular scatterers to be absorbing */
+#define ABSORBING_CIRCLES 1 /* set to 1 for circular scatterers to be absorbing */
+#define NABSCIRCLES 10       /* number of absorbing circles */
 
 #define NMAXCIRCLES 100000     /* total number of circles (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 100000        /* total number of sides of polygonal line */   
@@ -70,10 +71,13 @@
 #define SDEPTH 1            /* Sierpinski gastket depth */
 
 #define LAMBDA 1.5	/* parameter controlling shape of domain */
-#define MU 0.005          /* second parameter controlling shape of billiard */
+#define MU 0.02          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define LAMBDA_B 1.0  /* parameter controlling shape of domain (for P_POLYRING) */
+#define NPOLY_B 100000           /* number of sides of second polygon */
+#define APOLY_B 1.0         /* angle by which to turn second polygon, in units of Pi/2 */ 
 #define PENROSE_RATIO 2.5    /* parameter controlling the shape of small ellipses in Penrose room */
 
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
@@ -85,21 +89,21 @@
 
 /* Simulation parameters */
 
-// #define NPART 10      /* number of particles */
-#define NPART 50000      /* number of particles */
+#define NPART 21      /* number of particles */
+// #define NPART 50000      /* number of particles */
 #define NPARTMAX 100000	/* maximal number of particles after resampling */
 #define LMAX 0.01       /* minimal segment length triggering resampling */ 
 #define DMIN 0.02       /* minimal distance to boundary for triggering resampling */ 
 #define CYCLE 1         /* set to 1 for closed curve (start in all directions) */
-#define SHOWTRAILS 0    /* set to 1 to keep trails of the particles */
-#define HEATMAP 1       /* set to 1 to show heat map of particles */
-#define DRAW_FINAL_HEATMAP 1       /* set to 1 to show final heat map of particles */
+#define SHOWTRAILS 1    /* set to 1 to keep trails of the particles */
+#define HEATMAP 0       /* set to 1 to show heat map of particles */
+#define DRAW_FINAL_HEATMAP 0       /* set to 1 to show final heat map of particles */
 #define DRAW_HEATMAP_HISTOGRAM 0   /* set to 1 to draw a histogram of particle distribution in heat map */
 #define NBIN_FACTOR 6.0             /* constant controlling number of bins in histogram */
-#define DRAW_HEATMAP_PARTICLES 1    /* set to 1 to draw particles in heat map */
+#define DRAW_HEATMAP_PARTICLES 0    /* set to 1 to draw particles in heat map */
 #define HEATMAP_MAX_PART_BY_CELL 50     /* set to positive value to draw only limited number of particles in cell */
-#define PLOT_HEATMAP_AVERAGE 1      /* set to 1 to plot average number of particles in heat map */
-#define SHOWZOOM 0      /* set to 1 to show zoom on specific area */
+#define PLOT_HEATMAP_AVERAGE 0      /* set to 1 to plot average number of particles in heat map */
+#define SHOWZOOM 1      /* set to 1 to show zoom on specific area */
 #define PRINT_PARTICLE_NUMBER 0 /* set to 1 to print number of particles */
 #define PRINT_LEFT_RIGHT_PARTICLE_NUMBER 0 /* set to 1 to print number of particles on left and right side */
 #define PRINT_CIRCLE_PARTICLE_NUMBER 0 /* set to 1 to print number of particles outside circular maze */
@@ -108,11 +112,11 @@
 
 #define TEST_INITIAL_COND 0     /* set to 1 to allow only initial conditions that pass a test */
 
-#define NSTEPS 1300      /* number of frames of movie */
-#define TIME 3000        /* time between movie frames, for fluidity of real-time simulation */ 
+#define NSTEPS 6000      /* number of frames of movie */
+#define TIME 1000        /* time between movie frames, for fluidity of real-time simulation */ 
 // #define DPHI 0.000002     /* integration step */
-#define DPHI 0.00002     /* integration step */
-#define NVID 25          /* number of iterations between images displayed on screen */
+#define DPHI 0.000005     /* integration step */
+#define NVID 50          /* number of iterations between images displayed on screen */
 #define END_FRAMES 50    /* number of still frames at the end of the movie */
 
 /* Decreasing TIME accelerates the animation and the movie                               */
@@ -132,7 +136,7 @@
 #define RAINBOW_COLOR 1  /* set to 1 to use different colors for all particles */
 #define FLOWER_COLOR 0   /* set to 1 to adapt initial colors to flower billiard (tracks vs core) */
 #define NSEG 100         /* number of segments of boundary */
-#define LENGTH 0.025       /* length of velocity vectors */
+#define LENGTH 0.01       /* length of velocity vectors */
 #define BILLIARD_WIDTH 2    /* width of billiard */
 #define PARTICLE_WIDTH 2    /* width of particles */
 #define FRONT_WIDTH 3       /* width of wave front */
@@ -328,9 +332,14 @@ void draw_zoom(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTM
     glEnd();
     
     /* draw billiard boundaries in zoom */
-    glLineWidth(BILLIARD_WIDTH*2);
+    glLineWidth(BILLIARD_WIDTH*10);
     
-    if (y_target + width > 1.0)
+    if (POLYLINE_PATTERN == P_ISOCELES_TRIANGLE)
+    {
+        draw_line(shiftx, shifty, x1, shifty);
+        draw_line(shiftx, shifty, x1, y2);
+    }
+    else if (y_target + width > 1.0)
     {
         yb = shifty + 0.5*(1.0 - y_target)/width;
         glBegin(GL_LINE_STRIP);
@@ -352,6 +361,7 @@ void draw_zoom(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTM
     
 //     glLineWidth(PARTICLE_WIDTH*2);
     
+    /* draw particles */
     for (i=0; i<nparticles; i++)
     {
         cosphi = (configs[i][6] - configs[i][4])/configs[i][3];
@@ -393,6 +403,8 @@ void draw_zoom(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTM
             y1 = yb;
         }
         
+        
+        
 //         if ((active[i])&&(vabs(x1) < 1.0)&&(vabs(y1) < 1.0)&&(vabs(x2) < 1.0)&&(vabs(y2) < 1.0))  
         if (((active[i])&&(vabs(x1) < 1.0)&&(vabs(y1) < 1.0))||((vabs(x2) < 1.0)&&(vabs(y2) < 1.0))) 
         {
@@ -406,6 +418,40 @@ void draw_zoom(int color[NPARTMAX], double *configs[NPARTMAX], int active[NPARTM
         }
         
     }
+    
+    /* draw billiard boundaries in zoom */
+    if (POLYLINE_PATTERN == P_ISOCELES_TRIANGLE)
+    {
+        x1 = shiftx - zoomwidth;
+        y1 = shifty - zoomwidth;
+        x2 = shiftx + zoomwidth;
+        y2 = shifty + zoomwidth;
+        
+        glColor3f(0.0, 0.0, 0.0);
+        glBegin(GL_TRIANGLE_FAN);
+        glVertex2d(shiftx, shifty);
+        glVertex2d(x1,y2);
+        glVertex2d(x2,y2);
+        glVertex2d(x2,y1);
+        glVertex2d(x1,y1);
+        glVertex2d(x1,shifty);
+        glEnd ();
+        
+        glLineWidth(BILLIARD_WIDTH*20);
+        glColor3f(1.0, 1.0, 1.0);
+        draw_line(shiftx, shifty, x1, shifty);
+        draw_line(shiftx, shifty, x1, y2);
+    }
+    /* other boundaries not yet implemented */
+    
+    /* draw target in zoom */
+    glLineWidth(BILLIARD_WIDTH*2);
+    
+    if (shooter) glColor3f(1.0, 0.0, 0.0);
+    else glColor3f(0.0, 0.8, 0.2);
+    tradius = zoomwidth*MU/width;
+    draw_circle(shiftx, shifty, tradius, NSEG);
+    
 }
 
 
@@ -483,6 +529,11 @@ void draw_config_showtrails(int color[NPARTMAX], double *configs[NPARTMAX], int 
         case (P_TOKA_NONSELF):
         {
             draw_zoom(color, configs, active, 0.0, 0.0, 0.1, 1.65, 0.75, 0.3, 0);
+            break;
+        }
+        case (P_ISOCELES_TRIANGLE):
+        {
+            draw_zoom(color, configs, active, 1.0, -1.0, 0.2, 0.6, 0.6, 0.4, 0);
             break;
         }
     }
@@ -1096,7 +1147,7 @@ void animation()
 //     alphamax = 2.50949;
 //     init_drop_config(x_shooter, y_shooter, alphamax, alphamax + DPI, configs);
     
-    init_drop_config(0.05, 0.05, 0.0, DPI, configs);   
+    init_drop_config(1.0, -1.0, 1.5*PID, PI, configs);
 //     init_drop_config(-0.95, 0.95, 0.0, DPI, configs);   
     
 //     init_sym_drop_config(-1.0, 0.5, -PID, PID, configs);

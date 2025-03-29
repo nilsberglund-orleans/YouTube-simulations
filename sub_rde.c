@@ -2362,6 +2362,26 @@ void compute_theta(double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY
         else rde[i*NY+j].theta = 0.0;
 }
 
+void compute_theta_kuramoto(double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY])
+/* compute angle for rock-paper-scissors equation */
+{
+    int i, j;
+    double angle;
+        
+    #pragma omp parallel for private(i,j,angle)
+    for (i=0; i<NX; i++) for (j=0; j<NY; j++)
+    {
+        if (xy_in[i*NY+j])
+        {
+            angle = phi[0][i*NY+j];
+            if (angle < -PI) angle += DPI;
+            else if (angle >= PI) angle -= DPI;
+            rde[i*NY+j].theta = angle;
+        }
+        else rde[i*NY+j].theta = 0.0;
+    }
+}
+
 double colors_rps(int type)
 {
     switch (type) {
@@ -4888,7 +4908,7 @@ void compute_kuramoto_int_planar(double phi_in[NX*NY], double phi_out[NX*NY], sh
         for (j=1; j<NY-1; j++){
             if (xy_in[i*NY+j]){
                 phi = phi_in[i*NY+j];
-                phi_out[i*NY+j] = sin(phi_in[(i+1)*NY+j] - phi) + sin(phi_in[(i-1)*NY+j] - phi) + sin(phi_in[i*NY+j+1] - phi) + sin(phi_in[i*NY+j-1] - phi);
+                phi_out[i*NY+j] = -sin(phi_in[(i+1)*NY+j] - phi) - sin(phi_in[(i-1)*NY+j] - phi) - sin(phi_in[i*NY+j+1] - phi) - sin(phi_in[i*NY+j-1] - phi);
             }
         }
     }
@@ -4905,7 +4925,7 @@ void compute_kuramoto_int_planar(double phi_in[NX*NY], double phi_out[NX*NY], sh
                 jminus = j-1; if (jminus == -1) jminus = NY-1;
                 
                 phi = phi_in[j];
-                phi_out[j] = sin(phi_in[jminus] - phi) + sin(phi_in[jplus] - phi) + sin(phi_in[(NX-1)*NY+j] - phi) + sin(phi_in[NY+j] - phi);
+                phi_out[j] = -sin(phi_in[jminus] - phi) - sin(phi_in[jplus] - phi) - sin(phi_in[(NX-1)*NY+j] - phi) - sin(phi_in[NY+j] - phi);
             }
             break;
         }
@@ -4921,7 +4941,7 @@ void compute_kuramoto_int_planar(double phi_in[NX*NY], double phi_out[NX*NY], sh
                 jminus = j-1; if (jminus == -1) jminus = NY-1;
                 
                 phi = phi_in[(NX-1)*NY+j];
-                phi_out[(NX-1)*NY+j] = sin(phi_in[(NX-1)*NY+jminus] - phi) + sin(phi_in[(NX-1)*NY+jplus] - phi) + sin(phi_in[(NX-2)*NY+j] - phi) + sin(phi_in[j] - phi);
+                phi_out[(NX-1)*NY+j] = -sin(phi_in[(NX-1)*NY+jminus] - phi) - sin(phi_in[(NX-1)*NY+jplus] - phi) - sin(phi_in[(NX-2)*NY+j] - phi) - sin(phi_in[j] - phi);
             }
             break;
         }
@@ -4937,7 +4957,7 @@ void compute_kuramoto_int_planar(double phi_in[NX*NY], double phi_out[NX*NY], sh
                 iminus = i-1; /*if (iminus == -1) iminus = NX-1;*/
                 
                 phi = phi_in[i*NY];
-                phi_out[i*NY] = sin(phi_in[iminus*NY] - phi) + sin(phi_in[iplus*NY] - phi) + sin(phi_in[i*NY+1] - phi) + sin(phi_in[i*NY+NY-1] -phi);
+                phi_out[i*NY] = -sin(phi_in[iminus*NY] - phi) - sin(phi_in[iplus*NY] - phi) - sin(phi_in[i*NY+1] - phi) - sin(phi_in[i*NY+NY-1] -phi);
             }
             break;
         }
@@ -4953,7 +4973,7 @@ void compute_kuramoto_int_planar(double phi_in[NX*NY], double phi_out[NX*NY], sh
                 iminus = i-1; /*if (iminus == -1) iminus = NX-1;*/
                 
                 phi = phi_in[i*NY+NY-1];
-                phi_out[i*NY+NY-1] = sin(phi_in[iminus*NY+NY-1] - phi) + sin(phi_in[iplus*NY+NY-1] - phi) + sin(phi_in[i*NY] - phi) + sin(phi_in[i*NY+NY-2] - phi);
+                phi_out[i*NY+NY-1] = -sin(phi_in[iminus*NY+NY-1] - phi) - sin(phi_in[iplus*NY+NY-1] - phi) - sin(phi_in[i*NY] - phi) - sin(phi_in[i*NY+NY-2] - phi);
             }
             break;
         }
@@ -4961,11 +4981,106 @@ void compute_kuramoto_int_planar(double phi_in[NX*NY], double phi_out[NX*NY], sh
 
 }
 
+void compute_kuramoto_int_sphere(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY])
+/* computes Kuramoto interaction of phi_in and stores it in phi_out - case with whole rectangular domain */
+{
+    int i, j, iplus, iminus, jplus, jminus;
+    double phi;
+    
+//     #pragma omp parallel for private(i,j)
+//     for (i=1; i<NX-1; i++){
+//         for (j=1; j<NY-1; j++){
+//             phi_out[i*NY+j] = 0.0;
+//         }
+//     }
+    
+    #pragma omp parallel for private(i,j)
+    for (i=1; i<NX-1; i++){
+        for (j=1; j<NY-1; j++){
+            if (xy_in[i*NY+j]){
+                phi = phi_in[i*NY+j];
+                phi_out[i*NY+j] = -sin(phi_in[(i+1)*NY+j] - phi) - sin(phi_in[(i-1)*NY+j] - phi) - sin(phi_in[i*NY+j+1] - phi) - sin(phi_in[i*NY+j-1] - phi);
+            }
+        }
+    }
+    
+    /* TODO */
+    
+    /* boundary conditions - left side */
+    switch (B_COND_LEFT) {
+        case (BC_PERIODIC):
+        {
+            for (j = 1; j < NY-1; j++) 
+            {
+                jplus = j+1;  if (jplus == NY) jplus = 0;
+                jminus = j-1; if (jminus == -1) jminus = NY-1;
+                
+                phi = phi_in[j];
+                phi_out[j] = -sin(phi_in[jminus] - phi) - sin(phi_in[jplus] - phi) - sin(phi_in[(NX-1)*NY+j] - phi) - sin(phi_in[NY+j] - phi);
+            }
+            break;
+        }
+    }
+
+    /* boundary conditions - right side */
+    switch (B_COND_RIGHT) {
+        case (BC_PERIODIC):
+        {
+            for (j = 1; j < NY-1; j++) 
+            {
+                jplus = j+1;  if (jplus == NY) jplus = 0;
+                jminus = j-1; if (jminus == -1) jminus = NY-1;
+                
+                phi = phi_in[(NX-1)*NY+j];
+                phi_out[(NX-1)*NY+j] = -sin(phi_in[(NX-1)*NY+jminus] - phi) - sin(phi_in[(NX-1)*NY+jplus] - phi) - sin(phi_in[(NX-2)*NY+j] - phi) - sin(phi_in[j] - phi);
+            }
+            break;
+        }
+    }
+
+    /* boundary conditions - bottom side */
+    switch (B_COND_BOTTOM) {
+        case (BC_PERIODIC):
+        {
+            for (i = 1; i < NX-1; i++) 
+            {
+                iplus = i+1;  /*if (iplus == NX) iplus = 0;*/
+                iminus = i-1; /*if (iminus == -1) iminus = NX-1;*/
+                
+                phi_out[i*NY] = 0.0;
+                phi_out[i*NY+1] = 0.0;
+//                 phi = phi_in[i*NY];
+//                 phi_out[i*NY] = sin(phi_in[iminus*NY] - phi) + sin(phi_in[iplus*NY] - phi) + sin(phi_in[i*NY+1] - phi);
+            }
+            break;
+        }
+    }
+    
+        /* boundary conditions - top side */
+    switch (B_COND_TOP) {
+        case (BC_PERIODIC):
+        {
+            for (i = 1; i < NX-1; i++) 
+            {
+                iplus = i+1;  /*if (iplus == NX) iplus = 0;*/
+                iminus = i-1; /*if (iminus == -1) iminus = NX-1;*/
+                
+                phi_out[i*NY+NY-1] = 0.0;
+                phi_out[i*NY+NY-2] = 0.0;
+//                 phi = phi_in[i*NY+NY-1];
+//                 phi_out[i*NY+NY-1] = sin(phi_in[iminus*NY+NY-1] - phi) + sin(phi_in[iplus*NY+NY-1] - phi) + sin(phi_in[i*NY] - phi);
+            }
+            break;
+        }
+    }
+
+}
 
 void compute_kuramoto_interaction(double phi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* computes interaction for Kuramoto model */
 {
-    
+    if (SPHERE) compute_kuramoto_int_sphere(phi_in, phi_out, xy_in);
+    else 
     compute_kuramoto_int_planar(phi_in, phi_out, xy_in);
 }
 
@@ -5225,7 +5340,7 @@ void compute_light_angle_sphere_rde_2d(short int xy_in[NX*NY], t_rde rde[NX*NY],
         first = 0;
     }
     
-    printf("computing gradient\n");
+    printf("[compute_light_angle_sphere_rde_2d] computing gradient\n");
     
     #pragma omp parallel for private(i,j,gradx, grady, norm, pscal)
     for (i=1; i<NX-1; i++)
@@ -5261,6 +5376,8 @@ void compute_light_angle_sphere_rde_2d(short int xy_in[NX*NY], t_rde rde[NX*NY],
             else rde[i*NY+j].cos_angle = wsphere[i*NY+j].cos_angle;
         }
     
+//     printf("[compute_light_angle_sphere_rde_2d] computing gradient 2\n");
+    
     /* i=0 */
     for (j=1; j<NY-1; j++)
     {
@@ -5292,6 +5409,8 @@ void compute_light_angle_sphere_rde_2d(short int xy_in[NX*NY], t_rde rde[NX*NY],
         else rde[j].cos_angle = wsphere[j].cos_angle;
     }
     
+//     printf("[compute_light_angle_sphere_rde_2d] computing gradient 3\n");
+    
     /* i=NX-1 */
     for (j=1; j<NY-1; j++)
     {
@@ -5322,6 +5441,8 @@ void compute_light_angle_sphere_rde_2d(short int xy_in[NX*NY], t_rde rde[NX*NY],
         }
         else rde[(NX-1)*NY+j].cos_angle = wsphere[(NX-1)*NY+j].cos_angle;
     }
+    
+    printf("[compute_light_angle_sphere_rde_2d] computing gradient done\n");
 }
 
 
@@ -5434,6 +5555,21 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
         case (Z_AMPLITUDE): 
         {
             color_scheme_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+            break;
+        }
+        case (Z_ANGLE): 
+        {
+            if (PHASE_SHIFT != 0.0)
+            {
+                value += PHASE_SHIFT*PI;
+                if (value > PI) value -= DPI;
+            }
+//             if (vabs(value) > PI) printf("Warning, color out of range\n");
+            color_scheme_palette(C_BASIC_LINEAR, palette, value/PI, 1.0, 1, rgb);
+//             color_scheme_palette(C_ONEDIM_LINEAR, palette, value/PI, 1.0, 1, rgb);
+//             if (value > PI) value -= PI;
+//             if (value < 0.0) value += PI,
+//             amp_to_rgb_palette(value/PI, rgb, palette);
             break;
         }
         case (Z_RGB): 
@@ -5757,6 +5893,18 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
     
 //     printf("[compute_rde_fields] zplot = %i\n", zplot); 
     switch (RDE_EQUATION) {
+        case (E_KURAMOTO):
+        {
+            compute_theta_kuramoto(phi, xy_in, rde);
+            
+            /* experimental */
+            if ((zplot == Z_VORTICITY)||(cplot == Z_VORTICITY)||(zplot == Z_VORTICITY_ABS)||(cplot == Z_VORTICITY_ABS))
+            {
+                compute_gradient_theta(rde);
+                compute_curl(rde);
+            }
+            break;
+        }
         case (E_RPS):
         {
             if ((COMPUTE_THETA)||(COMPUTE_THETAZ))
@@ -5848,6 +5996,12 @@ void init_zfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, t_
         {
             #pragma omp parallel for private(i,j)
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &phi[0][i*NY+j];
+            break;
+        }
+        case (Z_ANGLE):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].theta;
             break;
         }
         case (Z_POLAR):
@@ -6040,6 +6194,12 @@ void init_cfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int cplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &phi[0][i*NY+j];
             break;
         }
+        case (Z_ANGLE):
+        {
+            #pragma omp parallel for private(i,j)
+            for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].theta;
+            break;
+        }
         case (Z_POLAR):
         {
             #pragma omp parallel for private(i,j)
@@ -6225,9 +6385,12 @@ void compute_cfield_rde(short int xy_in[NX*NY], int cplot, int palette, t_rde rd
     double ca, lum;
        
     #pragma omp parallel for private(i,j,k,ca,lum)
-    for (i=0; i<NX; i++) for (j=0; j<NY; j++)
+//     for (i=0; i<NX; i++) for (j=0; j<NY; j++)
+    for (i=0; i<NX-1; i++) for (j=0; j<NY; j++)
     {
+//         printf("Computing field color %i, %i\n", i, j);
         compute_field_color_rde(*rde[i*NY+j].p_cfield[movie], cplot, palette, rde[i*NY+j].rgb);
+//         printf("Computed field color %i, %i\n", i, j);
         
 //         if ((cplot == Z_ARGUMENT)||(cplot == Z_REALPART))
 //         if ((cplot == Z_ARGUMENT)||(cplot == Z_EULER_DIRECTION_SPEED))
@@ -6346,33 +6509,40 @@ void draw_wave_2d_rde_ij(int i, int j, int movie, short int xy_in[NX*NY], t_rde 
         
     if (FLOODING) 
         draw = ((wsphere[i*NY+j].indomain)||((*rde[i*NY+j].p_zfield[movie] >= wsphere[i*NY+j].altitude + FLOODING_VSHIFT_2D)));
-    else draw = wsphere[i*NY+j].indomain;
+//     else draw = wsphere[i*NY+j].indomain;
+    else draw = 1;
     
-    for (p=0; p<HRES; p++)
-        for (q=0; q<HRES; q++)
-            draw_hr[p*HRES+q] = (draw)||(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
+    if (RDE_PLANET) 
+    {
+        for (p=0; p<HRES; p++)
+            for (q=0; q<HRES; q++)
+                draw_hr[p*HRES+q] = (draw)||(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
+    }
     
-    for (p=0; p<HRES; p++)
-        for (q=0; q<HRES; q++)
-        {
-            i1 = HRES*i + p;
-            j1 = HRES*j + q;
-            ca = wsphere_hr[i1*HRES*NY+j1].cos_angle;
-            ca = (ca + 1.0)*0.4 + 0.2;
-            if (fade) ca *= fade_value;
-            if (RDE_PLANET)
+    if (RDE_PLANET)
+    {
+        for (p=0; p<HRES; p++)
+            for (q=0; q<HRES; q++)
             {
-                r_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].r*ca;
-                g_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].g*ca;
-                b_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].b*ca;
+                i1 = HRES*i + p;
+                j1 = HRES*j + q;
+                ca = wsphere_hr[i1*HRES*NY+j1].cos_angle;
+                ca = (ca + 1.0)*0.4 + 0.2;
+                if (fade) ca *= fade_value;
+                if (RDE_PLANET)
+                {
+                    r_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].r*ca;
+                    g_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].g*ca;
+                    b_hr[p*HRES + q] = wsphere_hr[i1*HRES*NY+j1].b*ca;
+                }
+                else
+                {
+                    r_hr[p*HRES + q] = COLOR_OUT_R*ca;
+                    g_hr[p*HRES + q] = COLOR_OUT_G*ca;
+                    b_hr[p*HRES + q] = COLOR_OUT_B*ca;
+                }
             }
-            else
-            {
-                r_hr[p*HRES + q] = COLOR_OUT_R*ca;
-                g_hr[p*HRES + q] = COLOR_OUT_G*ca;
-                b_hr[p*HRES + q] = COLOR_OUT_B*ca;
-            }
-        }
+    }
     
     ii = NX-i-1+ishift;
     if (ii > NX) ii -= NX;
@@ -6419,7 +6589,7 @@ void draw_wave_2d_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere ws
         first = 0;
     }
     
-//     printf("Drawing wave\n"); 
+    printf("Drawing wave\n"); 
     /* draw the field */
     glBegin(GL_QUADS);
     for (i=0; i<NX; i++)
@@ -6455,16 +6625,22 @@ void draw_wave_sphere_rde_ij(int i, int iplus, int j, int jplus, int jcolor, int
 //     draw = wsphere[i*NY+j].indomain;
     if (FLOODING) 
         draw = ((wsphere[i*NY+j].indomain)||((*rde[i*NY+j].p_zfield[movie] >= wsphere[i*NY+j].altitude + FLOODING_VSHIFT)));
-    else draw = wsphere[i*NY+j].indomain;
-//     draw = 1;
-    for (p=0; p<HRES; p++)
-        for (q=0; q<HRES; q++)
-            draw_hr[p*HRES+q] = (draw)||(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
+//     else draw = wsphere[i*NY+j].indomain;
+    else draw = 1;
+    if (RDE_PLANET)
+    {
+        for (p=0; p<HRES; p++)
+            for (q=0; q<HRES; q++)
+                draw_hr[p*HRES+q] = (draw)||(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
 //             draw_hr[p*HRES+q] = (draw)&&(wsphere_hr[(HRES*i+p)*HRES*NY+HRES*j+q].indomain);
+    }
+    
     for (k=0; k<3; k++) rgb[k] = rde[i*NY+jcolor].rgb[k];
         glColor3f(rgb[0], rgb[1], rgb[2]);
     
-    for (p=0; p<HRES; p++)
+    if (RDE_PLANET) 
+    {
+        for (p=0; p<HRES; p++)
         for (q=0; q<HRES; q++)
         {
             i1 = HRES*i + p;
@@ -6485,6 +6661,7 @@ void draw_wave_sphere_rde_ij(int i, int iplus, int j, int jplus, int jcolor, int
                 b_hr[p*HRES + q] = COLOR_OUT_B*ca;
             }
         }
+    }
 
     if (draw_bc)
     {
@@ -7117,7 +7294,9 @@ void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rd
         else if (SHADE_2D) 
             compute_light_angle_sphere_rde_2d(xy_in, rde, wsphere, potential, movie, 0);
     }
+    printf("Computing cfield\n"); 
     compute_cfield_rde(xy_in, cplot, palette, rde, fade, fade_value, movie);
+    printf("Computed cfield\n"); 
     
     if (PLOT_3D) 
     {

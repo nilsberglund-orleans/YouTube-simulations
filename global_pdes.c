@@ -115,6 +115,11 @@
 #define D_CARDIOID 90           /* cardioid */
 #define D_NEPHROID 91           /* nephroid */
 #define D_EPICYCLOID 92         /* epicycloid */
+#define D_CIRCLE_LATTICE 93     /* lattice of connected circles */
+#define D_CIRCLE_LATTICE_RANDOM 931 /* lattice of connected circles with random channel widths */
+#define D_CIRCLE_LATTICE_HEX 94 /* hex lattice of connected circles */
+#define D_CIRCLE_LATTICE_HONEY 95   /* honeycomb lattice of connected circles */
+#define D_CIRCLE_LATTICE_POISSON 96 /* Poisson disc process of connected circles */
 
 /* for wave_sphere.c */
 
@@ -144,6 +149,7 @@
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
+#define NMAXLINES 1000      /* maximal number of lines (for bounadries) */
 #define NMAXSOURCES 30      /* maximal number of sources */
 
 #define C_SQUARE 0          /* square grid of circles */
@@ -304,7 +310,9 @@
 #define C_HUE 1          /* color scheme modifies hue */
 #define C_PHASE 2        /* color scheme shows phase */
 #define C_ONEDIM 3       /* use preset 1d color scheme (for Turbo, Viridis, Magma, Inferno, Plasma) */
-#define C_ONEDIM_LINEAR 4   /* use preset 1d color scheme with linear scale */
+#define C_ONEDIM_LINEAR 4  /* use preset 1d color scheme with linear scale */
+#define C_BASIC_LINEAR 5   /* use preset 1d color scheme with linear scale and slope 1, range is assumed to be [0,1] */
+
 
 /* Color palettes */
 
@@ -330,6 +338,7 @@
 /* plot types used by rde */
 
 #define Z_AMPLITUDE 0   /* amplitude of first field */
+#define Z_ANGLE 10      /* angle, for Kuramoto model */
 #define Z_RGB 20        /* RGB plot */
 #define Z_POLAR 21      /* polar angle associated with RBG plot */
 #define Z_NORM_GRADIENT 22      /* gradient of polar angle */
@@ -403,6 +412,11 @@ typedef struct
     double posi, posj;     /* (i,j) coordinates of vertex */
 } t_vertex;
 
+// typedef struct
+// {
+//     t_vertex z1, z2;       /* extremities of line */
+// } t_line;
+
 typedef struct
 {
     double x1, y1, x2, y2;   /* (x,y) coordinates of vertices */
@@ -457,6 +471,7 @@ int npolyline = NMAXPOLY;           /* actual length of polyline */
 int npolyrect = NMAXPOLY;           /* actual number of polyrect */
 int npolyrect_rot = NMAXPOLY;       /* actual number of rotated polyrect */
 int npolyarc = NMAXPOLY;            /* actual number of arcs */
+// int nlines = NMAXLINES;             /* actual number of lines */
 
 short int input_signal[NSTEPS];     /* time-dependent source signal */
 
@@ -466,6 +481,7 @@ t_vertex polyline[NMAXPOLY];        /* vertices of polygonal line */
 t_rectangle polyrect[NMAXPOLY];     /* vertices of rectangles */
 t_rect_rotated polyrectrot[NMAXPOLY];  /* data of rotated rectangles */
 t_arc polyarc[NMAXPOLY];            /* data of arcs */
+// t_line line[NMAXLINES];             /* data of lines */
 
 /* the same for comparisons between different domains */
 int ncircles_b = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */

@@ -42,6 +42,7 @@
 #define C_PHASE 2        /* color scheme shows phase */
 #define C_ONEDIM 3       /* use preset 1d color scheme (for Turbo, Viridis, Magma, Inferno, Plasma) */
 #define C_ONEDIM_LINEAR 4   /* use preset 1d color scheme with linear scale */
+#define C_BASIC_LINEAR 5   /* use preset 1d color scheme with linear scale */
 
 /* Color palettes */
 

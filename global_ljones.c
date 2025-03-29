@@ -23,7 +23,7 @@
 #define NMAXBELTS 10        /* max number of conveyor belts */
 #define NMAXSHOVELS 50      /* max number of shovels */
 #define NMAX_TRIANGLES_PER_OBSTACLE 10  /* max number of triangles per obstacle */
-#define NMAX_TRIANGLES_PER_FACET 5  /* max number of triangles per facet between obstacles */
+#define NMAX_TRIANGLES_PER_FACET 4  /* max number of triangles per facet between obstacles */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -388,7 +388,8 @@
 #define C_HUE 1          /* color scheme modifies hue */
 #define C_PHASE 2        /* color scheme shows phase */
 #define C_ONEDIM 3       /* use preset 1d color scheme (for Turbo, Viridis, Magma, Inferno, Plasma, Twilight) */
-#define C_ONEDIM_LINEAR 4   /* use preset 1d color scheme with linear scale */
+#define C_ONEDIM_LINEAR 4  /* use preset 1d color scheme with linear scale */
+#define C_BASIC_LINEAR 5   /* use preset 1d color scheme with linear scale */
 
 /* Color palettes */
 

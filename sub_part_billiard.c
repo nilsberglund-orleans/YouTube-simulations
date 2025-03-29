@@ -191,6 +191,7 @@ void rgb_color_scheme_minmax(int i, double rgb[3])
     /* saturation = r, luminosity = 0.5 */ 
 }
 
+
 void rgb_color_scheme_density(int part_number, double rgb[3], double minprop) 
 /* color scheme with specified color interval */
 {
@@ -722,6 +723,13 @@ void draw_billiard()      /* draws the billiard boundary */
                 draw_circle(x0, 0.0, r, NSEG);
                 draw_circle(-x0, 0.0, r, NSEG);
             }
+            
+            if (ABSORBING_CIRCLES)
+            {
+                rgb[0] = 0.7;   rgb[1] = 0.7;   rgb[2] = 0.7;
+                for (k=0; k<ncircles; k++) draw_colored_circle(circles[k].xc, circles[k].yc, circles[k].radius, NSEG, rgb);
+            }
+            
             break; 
         }
         case (D_STADIUM):
@@ -1835,21 +1843,19 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
  /* determine position on boundary of ellipse */
  {
 	double theta;
-
+        
         pos[0] = LAMBDA*cos(conf[0]);
         pos[1] = sin(conf[0]);
         
         theta = argument(-LAMBDA*pos[1],pos[0]/LAMBDA);
-        *alpha = theta + conf[1]; 
-        
+        *alpha = theta + conf[1];
         return(1);
  }
- 
  
  int vellipse_xy(double config[8], double alpha, double pos[2])
  /* determine initial configuration for start at point pos = (x,y) */
  {
-	double c0, s0, lam2, a, b, c, x1, y1, t, theta;
+	double c0, s0, lam2, a, b, c, x1, y1, t, theta, margin = 1.0e-12, delta;
 	int i;
 
         c0 = cos(alpha);
@@ -1875,6 +1881,20 @@ void print_colors(int color[NPARTMAX])  /* for debugging purposes */
         config[1] = theta - alpha; 
         while (config[1] < 0.0) config[1] += DPI;
         while (config[1] > DPI) config[1] -= DPI;
+        
+        /* experimental */
+        if (ABSORBING_CIRCLES) for (i=0; i<ncircles; i++) 
+        {
+            b = (pos[0]-circles[i].xc)*c0 + (pos[1]-circles[i].yc)*s0;
+            c = (pos[0]-circles[i].xc)*(pos[0]-circles[i].xc) + (pos[1]-circles[i].yc)*(pos[1]-circles[i].yc) - circles[i].radius*circles[i].radius;
+        
+            delta = b*b - c;
+            if ((delta > margin)&&(t > 2.0*MU))  /* there is an intersection with circle i */
+            {
+                config[0] = DUMMY_ABSORBING;
+                config[1] = PI;
+            }
+        }
    
         config[2] = 0.0;	/* running time */ 
 	config[3] = module2(x1-pos[0], y1-pos[1]);     /* distance to collision */
@@ -6792,7 +6812,7 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], 
     int i, j, k, l, n, z, ii, jj, terni[SDEPTH], ternj[SDEPTH], quater[SDEPTH], cond, p, q, block, nblocks, ww;
     short int vkoch[NMAXCIRCLES], turnright; 
     double ratio, omega, angle, sw, length, dist, x, y, ta, tb, a, b, ra, rb, r, 
-    x1, y1, x2, y2, dx, dy, padding = 0.02, width = 0.01, xright, yright, xtop, ytop, rand_factor, rmin, rmax, dr, phi, dphi, rscat;
+    x1, y1, x2, y2, dx, dy, padding = 0.02, width = 0.01, xright, yright, xtop, ytop, rand_factor, rmin, rmax, dr, phi, dphi, rscat, omegab, swb;
     double *maze_coords;
     t_maze* maze;
     
@@ -6867,14 +6887,17 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], 
         }
         case (P_POLYRING):
         {
-            nsides = 2*NPOLY;
-            ncircles = 0;
+            nsides = NPOLY + NPOLY_B;
+            if (ABSORBING_CIRCLES) ncircles = NABSCIRCLES; 
+            else ncircles = 0;
             omega = DPI/(double)NPOLY;
+            omegab = DPI/(double)NPOLY_B;
             sw = sin(omega/2.0);
+            swb = sin(omegab/2.0);
             
             for (i=0; i<NPOLY; i++)
             {
-                angle = APOLY + (double)i*omega;
+                angle = APOLY*PID + (double)i*omega;
                 polyline[i].x1 = LAMBDA*cos(angle);
                 polyline[i].y1 = LAMBDA*sin(angle);
                 polyline[i].angle = angle + PID + 0.5*omega;
@@ -6886,22 +6909,75 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], 
                 polyline[i].y2 = polyline[(i+1)%NPOLY].y1;
             }
             
-            for (i=0; i<NPOLY; i++)
+            for (i=0; i<NPOLY_B; i++)
             {
-                angle = APOLY + ((double)i+0.5)*omega;
-                polyline[i+NPOLY].x1 = MU*cos(angle);
-                polyline[i+NPOLY].y1 = MU*sin(angle);
-                polyline[i+NPOLY].angle = angle + PID + 0.5*omega;
-                polyline[i+NPOLY].length = 2.0*MU*sw;
+                angle = APOLY_B*PID + (double)i*omegab;
+                polyline[i+NPOLY].x1 = LAMBDA_B*cos(angle);
+                polyline[i+NPOLY].y1 = LAMBDA_B*sin(angle);
+                polyline[i+NPOLY].angle = angle + PID + 0.5*omegab;
+                polyline[i+NPOLY].length = 2.0*LAMBDA_B*swb;
             }
-            for (i=0; i<NPOLY; i++)
+            for (i=0; i<NPOLY_B; i++)
             {
-                polyline[i+NPOLY].x2 = polyline[(i+1)%NPOLY+NPOLY].x1;
-                polyline[i+NPOLY].y2 = polyline[(i+1)%NPOLY+NPOLY].y1;
+                polyline[i+NPOLY].x2 = polyline[(i+1)%NPOLY_B+NPOLY].x1;
+                polyline[i+NPOLY].y2 = polyline[(i+1)%NPOLY_B+NPOLY].y1;
             }
             
             for (i=0; i<nsides; i++) polyline[i].color = 0;
                             
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].xc = polyline[i].x1;
+                circles[i].yc = polyline[i].y1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
+            }
+            
+            break;
+        }
+        case (P_STAR):
+        {
+            nsides = 2*NPOLY;
+            if (ABSORBING_CIRCLES) ncircles = NABSCIRCLES; 
+            else ncircles = 0;
+            omega = PI/(double)NPOLY;
+            
+            for (i=0; i<2*NPOLY; i++)
+            {
+                angle = APOLY*PID + (double)i*omega;
+                if (i%2 == 0)
+                {
+                    polyline[i].x1 = LAMBDA*cos(angle);
+                    polyline[i].y1 = LAMBDA*sin(angle);
+                }
+                else
+                {
+                    polyline[i].x1 = LAMBDA_B*cos(angle);
+                    polyline[i].y1 = LAMBDA_B*sin(angle);
+                }
+            }
+            for (i=0; i<2*NPOLY; i++)
+            {
+                polyline[i].x2 = polyline[(i+1)%(2*NPOLY)].x1;
+                polyline[i].y2 = polyline[(i+1)%(2*NPOLY)].y1;
+            }
+            
+            length = module2(polyline[0].x2 - polyline[0].x1, polyline[0].y2 - polyline[0].y1);
+            for (i=0; i<nsides; i++) 
+            {
+                polyline[i].color = 0;
+                polyline[i].length = length;
+                polyline[i].angle = argument(polyline[i].x2 - polyline[i].x1, polyline[i].y2 - polyline[i].y1);
+            }
+                            
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].xc = polyline[i].x1;
+                circles[i].yc = polyline[i].y1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
+            }
+            
             break;
         }
         case (P_SIERPINSKI):
@@ -7047,13 +7123,14 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], 
         case (P_POLYGON):
         {
             nsides = NPOLY;
-            ncircles = 0;
+            if (ABSORBING_CIRCLES) ncircles = NABSCIRCLES; 
+            else ncircles = 0;
             omega = DPI/(double)NPOLY;
             sw = sin(omega/2.0);
             
             for (i=0; i<NPOLY; i++)
             {
-                angle = APOLY + (double)i*omega;
+                angle = APOLY*PID + (double)i*omega;
                 polyline[i].x1 = LAMBDA*cos(angle);
                 polyline[i].y1 = LAMBDA*sin(angle);
                 polyline[i].angle = angle + PID + 0.5*omega;
@@ -7066,7 +7143,14 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], 
             }
                 
             for (i=0; i<nsides; i++) polyline[i].color = 0;
-                            
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].xc = polyline[i].x1;
+                circles[i].yc = polyline[i].y1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
+            }
             break;
         }
         case (P_TOKA_PRIME):
@@ -7200,6 +7284,43 @@ void init_polyline(t_segment polyline[NMAXPOLY], t_circle circles[NMAXCIRCLES], 
                 polyline[i].x1 = ratio*(polyline[i].x1);
                 polyline[i].y1 = ratio*(polyline[i].y1);
             }
+                
+            for (i=0; i<nsides; i++) if (i < nsides-1) 
+            {   
+                polyline[i].x2 = polyline[i+1].x1;
+                polyline[i].y2 = polyline[i+1].y1;
+            }
+            
+            polyline[nsides-1].x2 = polyline[0].x1;
+            polyline[nsides-1].y2 = polyline[0].y1;
+            
+            for (i=0; i<nsides; i++) 
+                polyline[i].length = module2(polyline[i].x2 - polyline[i].x1, polyline[i].y2 - polyline[i].y1);
+            
+            for (i=0; i<ncircles; i++)
+            {
+                circles[i].xc = polyline[i].x1;
+                circles[i].yc = polyline[i].y1;
+                circles[i].radius = MU;
+                circles[i].active = 1;
+            }
+            break;
+        }
+        case (P_ISOCELES_TRIANGLE):
+        {
+            nsides = 3;
+            ncircles = 3;
+            
+            polyline[0].x1 = -1.0;    polyline[0].y1 = -1.0;       polyline[0].angle = 0.0;
+            polyline[1].x1 = 1.0;    polyline[1].y1 = -1.0;       polyline[1].angle = 1.5*PID;
+            polyline[2].x1 = -1.0;    polyline[2].y1 = 1.0;       polyline[2].angle = 3.0*PID;
+            
+//             ratio = (YMAX - YMIN)/4.5;
+//             for (i=0; i<nsides; i++)
+//             {
+//                 polyline[i].x1 = ratio*(polyline[i].x1);
+//                 polyline[i].y1 = ratio*(polyline[i].y1);
+//             }
                 
             for (i=0; i<nsides; i++) if (i < nsides-1) 
             {   

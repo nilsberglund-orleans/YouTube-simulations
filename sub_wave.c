@@ -712,11 +712,11 @@ double michelson_schedule(int i)
 }   
 
 
-int generate_poisson_discs(t_circle circles[NMAXCIRCLES], double xmin, double xmax, double ymin, double ymax, double dpoisson)
+int generate_poisson_discs(t_circle circles[NMAXCIRCLES], double xmin, double xmax, double ymin, double ymax, double dpoisson, int periodic_bc)
 /* generate a Poisson disc sample in a given rectangle */
 {
-    int i, j, k, n_p_active, ncandidates=5000, naccepted; 
-    double r, phi, x, y;
+    int i, j, k, n_p_active, ncandidates=5000, naccepted, p, q; 
+    double r, phi, x, y, x1, y1;
     short int active_poisson[NMAXCIRCLES], far;
     
     printf("Generating Poisson disc sample\n");
@@ -745,7 +745,19 @@ int generate_poisson_discs(t_circle circles[NMAXCIRCLES], double xmin, double xm
             {
                 /* new circle is far away from circle k */
                 far = far*((x - circles[k].xc)*(x - circles[k].xc) + (y - circles[k].yc)*(y - circles[k].yc) >= dpoisson*dpoisson);
-                /* new circle is in domain */
+                
+                /* take care of periodic boundary conditions */
+                if (periodic_bc) for (p=-1; p<2; p++) for (q=-1; q<2; q++)
+                {
+                    x1 = circles[k].xc + (double)p*(xmax - xmin);
+                    y1 = circles[k].yc + (double)q*(ymax - ymin);
+                    far = far*((x - x1)*(x - x1) + (y - y1)*(y - y1) >= dpoisson*dpoisson);
+                }
+//                 else
+//                 {
+                    /* new circle is in domain */
+//                     far = far*(x < xmax)*(x > xmin)*(y < ymax)*(y > ymin);
+//                 }
                 far = far*(x < xmax)*(x > xmin)*(y < ymax)*(y > ymin);
             }
             if (far)    /* accept new circle */
@@ -1168,7 +1180,7 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
         }
         case (C_RINGS_POISSONDISC):
         {
-            ncircles = generate_poisson_discs(circles, YMIN, YMAX, YMIN, YMAX, PDISC_FACTOR*MU);
+            ncircles = generate_poisson_discs(circles, YMIN, YMAX, YMIN, YMAX, PDISC_FACTOR*MU, 0);
             for (i=0; i<ncircles; i++)
             {
                 circles[i].radius = MU;
@@ -1447,8 +1459,7 @@ int compute_tokarsky_coordinates(double xshift, double yshift, double scaling,
     return(26);        
 }
 
-void compute_isospectral_coordinates(int type, int ishift, double xshift, double yshift, double scaling, 
-                                     t_vertex polyline[NMAXPOLY])
+void compute_isospectral_coordinates(int type, int ishift, double xshift, double yshift, double scaling, t_vertex polyline[NMAXPOLY])
 /* compute positions of vertices of isospectral billiards */
 /* central triangle has coordinates (0,0), (1,0) and (LAMBDA,MU) fed into affine transformation */
 /* defined by (xshift - 0.5), (yshift - 0.25) and scaling*/
@@ -2340,8 +2351,613 @@ int compute_interior_maze_coordinates(t_rectangle polyrect[NMAXPOLY], int type)
     return(nsides);
 }
 
+int compute_disc_lattice_coordinates(t_vertex polyline[NMAXPOLY], t_arc polyarc[NMAXPOLY], int *npolyarc)
+/* initialise lines for D_CIRCLE_LATTICE domain */
+{
+    double dx, dy, alpha, alpha2, ca, sa, x1, y1, pos[2];
+    int i, j, k, nlines, narcs;
+    
+    nlines = 0;
+    narcs = 0;
+    dx = (XMAX - XMIN)/(double)NGRIDX;
+    dy = (YMAX - YMIN)/(double)NGRIDY;
+    alpha = asin(WALL_WIDTH/MU);
+    alpha2 = PID - 2.0*alpha;
+    ca = cos(alpha);
+    sa = sin(alpha);
+    for (i=-1; i<NGRIDX; i++)
+    {
+        x1 = XMIN + ((double)i + 0.5)*dx;
+        for (j=-1; j<NGRIDY; j++)
+        {
+            y1 = YMIN + ((double)j + 0.5)*dy;
+            for (k=0; k<4; k++)
+            {
+                polyarc[narcs].xc = x1;
+                polyarc[narcs].yc = y1;
+                polyarc[narcs].r  = MU;
+                polyarc[narcs].angle1 = alpha + (double)k*PID;
+                polyarc[narcs].dangle = alpha2;
+                narcs++;
+            }
+            
+            polyline[nlines].x = x1 + MU*ca;
+            polyline[nlines].y = y1 + MU*sa;
+            nlines++;
+            polyline[nlines].x = x1 + dx - MU*ca;
+            polyline[nlines].y = y1 + MU*sa;
+            nlines++;
+            
+            polyline[nlines].x = x1 + MU*ca;
+            polyline[nlines].y = y1 - MU*sa;
+            nlines++;
+            polyline[nlines].x = x1 + dx - MU*ca;
+            polyline[nlines].y = y1 - MU*sa;
+            nlines++;
+            
+            polyline[nlines].x = x1 + MU*sa;
+            polyline[nlines].y = y1 + MU*ca;
+            nlines++;
+            polyline[nlines].x = x1 + MU*sa;
+            polyline[nlines].y = y1 + dy - MU*ca;
+            nlines++;
+            
+            polyline[nlines].x = x1 - MU*sa;
+            polyline[nlines].y = y1 + MU*ca;
+            nlines++;
+            polyline[nlines].x = x1 - MU*sa;
+            polyline[nlines].y = y1 + dy - MU*ca;
+            nlines++;
+        }
+    }
+    
+    for (i=0; i<nlines; i++)
+    {
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+    
+    *npolyarc = narcs;
+    return(nlines);
+}
+
+int compute_disc_lattice_random(t_vertex polyline[NMAXPOLY], t_rectangle polyrect[NMAXPOLY], t_arc polyarc[NMAXPOLY], int *npolyrect, int *npolyarc)
+/* initialise lines for D_CIRCLE_LATTICE_RANDOM domain */
+{
+    double dx, dy, alpha1, alpha2, alpha3, alpha4, ca, sa, x1, y1, pos[2];
+    double hwidths[(NGRIDX+2)*(NGRIDY+2)], vwidths[(NGRIDX+2)*(NGRIDY+2)];
+    int i, j, k, nlines, narcs, nrect;
+    
+    nlines = 0;
+    narcs = 0;
+    nrect = 0;
+    dx = (XMAX - XMIN)/(double)NGRIDX;
+    dy = (YMAX - YMIN)/(double)NGRIDY;
+    
+    /* initialize random channel widths */
+    for (i=0; i<(NGRIDX+2)*(NGRIDY+2); i++)
+    {
+        vwidths[i] = WALL_WIDTH*(1.0 + WALL_WIDTH_RND*(2.0*(double)rand()/RAND_MAX - 1.0));
+        hwidths[i] = WALL_WIDTH*(1.0 + WALL_WIDTH_RND*(2.0*(double)rand()/RAND_MAX - 1.0));
+        if (vwidths[i] < 0.0) vwidths[i] = 0.0;
+        if (hwidths[i] < 0.0) hwidths[i] = 0.0;
+    }
+    /* take care of periodic b.c. */
+    for (i=0; i<NGRIDX+1; i++)
+    {
+        vwidths[i*(NGRIDY+2) + NGRIDY] = vwidths[i*(NGRIDY+2)];
+        vwidths[i*(NGRIDY+2) + NGRIDY + 1] = vwidths[i*(NGRIDY+2) + 1];
+    }
+    for (j=0; j<NGRIDY+1; j++)
+    {
+        hwidths[NGRIDX*(NGRIDY+2) + j] = hwidths[j];
+        hwidths[(NGRIDX+1)*(NGRIDY+2) + j] = hwidths[(NGRIDY + 2) + j];
+    }
+    
+    for (i=-1; i<NGRIDX; i++)
+    {
+        x1 = XMIN + ((double)i + 0.5)*dx;
+        for (j=-1; j<NGRIDY; j++)
+        {
+            y1 = YMIN + ((double)j + 0.5)*dy;
+            alpha1 = asin(hwidths[(i+2)*(NGRIDY+2) + j+1]/MU);
+            alpha2 = asin(vwidths[(i+1)*(NGRIDY+2) + j+2]/MU);
+            alpha3 = asin(hwidths[(i+1)*(NGRIDY+2) + j+1]/MU);
+            alpha4 = asin(vwidths[(i+1)*(NGRIDY+2) + j+1]/MU);
+            for (k=0; k<4; k++)
+            {
+                polyarc[narcs+k].xc = x1;
+                polyarc[narcs+k].yc = y1;
+                polyarc[narcs+k].r  = MU;
+            }
+            polyarc[narcs].angle1 = alpha1;
+            polyarc[narcs].dangle = PID - alpha1 - alpha2;
+            polyarc[narcs+1].angle1 = PID + alpha2;
+            polyarc[narcs+1].dangle = PID - alpha2 - alpha3;
+            polyarc[narcs+2].angle1 = PI + alpha3;
+            polyarc[narcs+2].dangle = PID - alpha3 - alpha4;
+            polyarc[narcs+3].angle1 = 3.0*PID + alpha4;
+            polyarc[narcs+3].dangle = PID - alpha4 - alpha1;
+            narcs += 4;
+            
+            if (alpha1 > 0.0)
+            {
+                polyline[nlines].x = x1 + MU*cos(alpha1);
+                polyline[nlines].y = y1 + MU*sin(alpha1);
+                nlines++;
+                polyline[nlines].x = x1 + dx - MU*cos(alpha1);
+                polyline[nlines].y = y1 + MU*sin(alpha1);
+                nlines++;
+            
+                polyline[nlines].x = x1 + MU*cos(alpha1);
+                polyline[nlines].y = y1 - MU*sin(alpha1);
+                nlines++;
+                polyline[nlines].x = x1 + dx - MU*cos(alpha1);
+                polyline[nlines].y = y1 - MU*sin(alpha1);
+                nlines++;
+            
+                polyrect[nrect].x1 = x1 + MU*cos(alpha1);
+                polyrect[nrect].y1 = y1 - MU*sin(alpha1);
+                polyrect[nrect].x2 = x1 + dx - MU*cos(alpha1);
+                polyrect[nrect].y2 = y1 + MU*sin(alpha1);
+                nrect++;
+            }
+            
+            if (alpha2 > 0.0)
+            {
+                polyline[nlines].x = x1 + MU*sin(alpha2);
+                polyline[nlines].y = y1 + MU*cos(alpha2);
+                nlines++;
+                polyline[nlines].x = x1 + MU*sin(alpha2);
+                polyline[nlines].y = y1 + dy - MU*cos(alpha2);
+                nlines++;
+            
+                polyline[nlines].x = x1 - MU*sin(alpha2);
+                polyline[nlines].y = y1 + MU*cos(alpha2);
+                nlines++;
+                polyline[nlines].x = x1 - MU*sin(alpha2);
+                polyline[nlines].y = y1 + dy - MU*cos(alpha2);
+                nlines++;
+             
+                polyrect[nrect].x1 = x1 - MU*sin(alpha2);
+                polyrect[nrect].y1 = y1 + MU*cos(alpha2);
+                polyrect[nrect].x2 = x1 + MU*sin(alpha2);
+                polyrect[nrect].y2 = y1 + dy - MU*cos(alpha2);
+                nrect++;
+            }
+        }
+    }
+    
+    for (i=0; i<nlines; i++)
+    {
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+    
+    *npolyarc = narcs;
+    *npolyrect = nrect;
+    return(nlines);
+}
+
+
+int compute_disc_hex_lattice_coordinates(t_vertex polyline[NMAXPOLY], t_arc polyarc[NMAXPOLY], int *npolyarc)
+/* initialise lines for D_CIRCLE_LATTICE_HEX domain */
+{
+    double dx, dy, alpha, alpha2, ca, sa, ca2, sa2, ca3, sa3, x1, y1, pos[2];
+    int i, j, k, nlines, narcs;
+    
+    nlines = 0;
+    narcs = 0;
+    dx = (XMAX - XMIN)/(double)NGRIDX;
+    dy = (YMAX - YMIN)/(double)NGRIDY;
+    alpha = asin(WALL_WIDTH/MU);
+    alpha2 = atan(2.0*dy/dx) - 2.0*alpha;
+    ca = cos(alpha);
+    sa = sin(alpha);
+    ca2 = cos(alpha + alpha2);
+    sa2 = sin(alpha + alpha2);
+    ca3 = cos(PID - 0.5*alpha2);
+    sa3 = sin(PID - 0.5*alpha2);
+    
+    for (j=-1; j<NGRIDY+1; j++)
+    {
+        y1 = YMIN + ((double)j)*dy;
+        for (i=-1; i<NGRIDX; i++)
+        {
+            x1 = XMIN + ((double)i + 0.5)*dx;
+            if ((j+2)%2 == 0) x1 += 0.5*dx;
+        
+            for (k=0; k<2; k++)
+            {
+                polyarc[narcs].xc = x1;
+                polyarc[narcs].yc = y1;
+                polyarc[narcs].r  = MU;
+                polyarc[narcs].angle1 = alpha + (double)k*PI;
+                polyarc[narcs].dangle = alpha2;
+                narcs++;
+                
+                polyarc[narcs].xc = x1;
+                polyarc[narcs].yc = y1;
+                polyarc[narcs].r  = MU;
+                polyarc[narcs].angle1 = -alpha + (double)k*PI;
+                polyarc[narcs].dangle = -alpha2;
+                narcs++;
+                
+                polyarc[narcs].xc = x1;
+                polyarc[narcs].yc = y1;
+                polyarc[narcs].r  = MU;
+                polyarc[narcs].angle1 = PID - 0.5*alpha2 + (double)k*PI;
+                polyarc[narcs].dangle = alpha2;
+                narcs++;
+            }
+                    
+            polyline[nlines].x = x1 + MU*ca;
+            polyline[nlines].y = y1 + MU*sa;
+            nlines++;
+            polyline[nlines].x = x1 + dx - MU*ca;
+            polyline[nlines].y = y1 + MU*sa;
+            nlines++;
+            
+            polyline[nlines].x = x1 + MU*ca;
+            polyline[nlines].y = y1 - MU*sa;
+            nlines++;
+            polyline[nlines].x = x1 + dx - MU*ca;
+            polyline[nlines].y = y1 - MU*sa;
+            nlines++;
+            
+            polyline[nlines].x = x1 + MU*ca2;
+            polyline[nlines].y = y1 + MU*sa2;
+            nlines++;
+            polyline[nlines].x = x1 + 0.5*dx - MU*ca3;
+            polyline[nlines].y = y1 + dy - MU*sa3;
+            nlines++;
+            
+            polyline[nlines].x = x1 + MU*ca3;
+            polyline[nlines].y = y1 + MU*sa3;
+            nlines++;
+            polyline[nlines].x = x1 + 0.5*dx - MU*ca2;
+            polyline[nlines].y = y1 + dy - MU*sa2;
+            nlines++;
+            
+            polyline[nlines].x = x1 - MU*ca2;
+            polyline[nlines].y = y1 + MU*sa2;
+            nlines++;
+            polyline[nlines].x = x1 - 0.5*dx + MU*ca3;
+            polyline[nlines].y = y1 + dy - MU*sa3;
+            nlines++;
+            
+            polyline[nlines].x = x1 - MU*ca3;
+            polyline[nlines].y = y1 + MU*sa3;
+            nlines++;
+            polyline[nlines].x = x1 - 0.5*dx + MU*ca2;
+            polyline[nlines].y = y1 + dy - MU*sa2;
+            nlines++;
+        }
+    }
+    
+    for (i=0; i<nlines; i++)
+    {
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+    
+    *npolyarc = narcs;
+    return(nlines);
+}
+
+int compute_disc_honeycomb_lattice_coordinates(t_vertex polyline[NMAXPOLY], t_rect_rotated polyrect[NMAXPOLY], t_arc polyarc[NMAXPOLY], int *npolyrect_rot, int *npolyarc)
+/* initialise lines for D_CIRCLE_LATTICE_HEX domain */
+{
+    double dx, dy, alpha, alpha2, dalpha, ca, sa, ca2, sa2, ca3, sa3, x1, y1, pos[2];
+    int i, j, k, nlines, narcs, nrects, k1;
+    
+    nlines = 0;
+    narcs = 0;
+    nrects = 0;
+    dx = (XMAX - XMIN)/(double)NGRIDX;
+    dy = (YMAX - YMIN)/(double)NGRIDY;
+    alpha = asin(WALL_WIDTH/MU);
+    alpha2 = atan(2.0*dy/dx);
+    dalpha = PI - alpha2 - 2.0*alpha;
+    ca = cos(alpha);
+    sa = sin(alpha);
+    ca2 = cos(PI - alpha2 - alpha);
+    sa2 = sin(PI - alpha2 - alpha);
+    ca3 = cos(PI - alpha2 + alpha);
+    sa3 = sin(PI - alpha2 + alpha);
+    
+    printf("Honeycomb lattice angle = %.3lg\n", alpha2*180.0/PI);
+    
+//     if (i%3 != 2*((j+1)%2))
+    
+    for (j=-1; j<NGRIDY+1; j++)
+    {
+        y1 = YMIN + ((double)j)*dy;
+        for (i=-1; i<NGRIDX+1; i++)
+        {
+            x1 = XMIN + ((double)i)*dx;
+            if ((j+2)%2 == 1) x1 += 0.5*dx;
+            
+            if ((j+1)%2 == 0) k1 = i%3;
+            else k1 = i%3 + 1;
+            
+            /* circles with neighbours to the east, NW and SW */
+            if (k1 == 1) 
+            {
+                polyarc[narcs].xc = x1;
+                polyarc[narcs].yc = y1;
+                polyarc[narcs].r  = MU;
+                polyarc[narcs].angle1 = alpha;
+                polyarc[narcs].dangle = dalpha;
+                narcs++;
+                
+                polyarc[narcs].xc = x1;
+                polyarc[narcs].yc = y1;
+                polyarc[narcs].r  = MU;
+                polyarc[narcs].angle1 = PI - alpha2 + alpha;
+                polyarc[narcs].dangle = dalpha;
+                narcs++;
+                
+                polyarc[narcs].xc = x1;
+                polyarc[narcs].yc = y1;
+                polyarc[narcs].r  = MU;
+                polyarc[narcs].angle1 = alpha2 - PI + alpha;
+                polyarc[narcs].dangle = dalpha;
+                narcs++;
+                
+                polyline[nlines].x = x1 + MU*ca;
+                polyline[nlines].y = y1 + MU*sa;
+                nlines++;
+                polyline[nlines].x = x1 + dx - MU*ca;
+                polyline[nlines].y = y1 + MU*sa;
+                nlines++;
+                
+                polyline[nlines].x = x1 + MU*ca;
+                polyline[nlines].y = y1 - MU*sa;
+                nlines++;
+                polyline[nlines].x = x1 + dx - MU*ca;
+                polyline[nlines].y = y1 - MU*sa;
+                nlines++;
+                
+                polyline[nlines].x = x1 + MU*ca2;
+                polyline[nlines].y = y1 + MU*sa2;
+                nlines++;
+                polyline[nlines].x = x1 - MU*ca3 - 0.5*dx;
+                polyline[nlines].y = y1 - MU*sa3 + dy;
+                nlines++;
+                
+                polyline[nlines].x = x1 + MU*ca3;
+                polyline[nlines].y = y1 + MU*sa3;
+                nlines++;
+                polyline[nlines].x = x1 - MU*ca2 - 0.5*dx;
+                polyline[nlines].y = y1 - MU*sa2 + dy;
+                nlines++;
+                
+                polyline[nlines].x = x1 + MU*ca2;
+                polyline[nlines].y = y1 - MU*sa2;
+                nlines++;
+                polyline[nlines].x = x1 - MU*ca3 - 0.5*dx;
+                polyline[nlines].y = y1 + MU*sa3 - dy;
+                nlines++;
+                
+                polyline[nlines].x = x1 + MU*ca3;
+                polyline[nlines].y = y1 - MU*sa3;
+                nlines++;
+                polyline[nlines].x = x1 - MU*ca2 - 0.5*dx;
+                polyline[nlines].y = y1 + MU*sa2 - dy;
+                nlines++;
+                
+                polyrectrot[nrects].x1 = x1;
+                polyrectrot[nrects].y1 = y1;
+                polyrectrot[nrects].x2 = x1 + dx;
+                polyrectrot[nrects].y2 = y1;
+                polyrectrot[nrects].width = 2.0*WALL_WIDTH;
+                nrects++;
+                
+                polyrectrot[nrects].x1 = x1;
+                polyrectrot[nrects].y1 = y1;
+                polyrectrot[nrects].x2 = x1 - 0.5*dx;
+                polyrectrot[nrects].y2 = y1 + dy;
+                polyrectrot[nrects].width = 2.0*WALL_WIDTH;
+                nrects++;
+                
+                polyrectrot[nrects].x1 = x1;
+                polyrectrot[nrects].y1 = y1;
+                polyrectrot[nrects].x2 = x1 - 0.5*dx;
+                polyrectrot[nrects].y2 = y1 - dy;
+                polyrectrot[nrects].width = 2.0*WALL_WIDTH;
+                nrects++;
+            }
+            /* circles with neighbours to the West, NE and SE */
+            else if (k1 == 2)
+            {
+                polyarc[narcs].xc = x1;
+                polyarc[narcs].yc = y1;
+                polyarc[narcs].r  = MU;
+                polyarc[narcs].angle1 = PI - alpha;
+                polyarc[narcs].dangle = -dalpha;
+                narcs++;
+                
+                polyarc[narcs].xc = x1;
+                polyarc[narcs].yc = y1;
+                polyarc[narcs].r  = MU;
+                polyarc[narcs].angle1 = alpha2 - alpha;
+                polyarc[narcs].dangle = -dalpha;
+                narcs++;
+                
+                polyarc[narcs].xc = x1;
+                polyarc[narcs].yc = y1;
+                polyarc[narcs].r  = MU;
+                polyarc[narcs].angle1 = PI + alpha;
+                polyarc[narcs].dangle = dalpha;
+                narcs++;
+            }
+        }
+    }
+    
+    for (i=0; i<nlines; i++)
+    {
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+    
+    *npolyarc = narcs;
+    *npolyrect_rot = nrects;
+    return(nlines);
+}
+
+int compute_disc_poisson_lattice_coordinates(t_vertex polyline[NMAXPOLY], t_rect_rotated polyrect[NMAXPOLY], t_arc polyarc[NMAXPOLY], t_circle[NMAXCIRCLES], int *npolyrect_rot, int *npolyarc, int *ncircles)
+/* initialise lines for D_CIRCLE_LATTICE_HEX domain */
+{
+    int i, j, k, n, ncirc0, ncirc, nlines, narcs, nrects, k1, maxneigh = 10;
+    int *n_neighbours;
+    double dist, alpha, beta, cam, sam, cap, sap, pos[2], temp;
+    double *neighbour_angles;
+    
+    nlines = 0;
+    narcs = 0;
+    nrects = 0;
+    ncirc0 = generate_poisson_discs(circles, XMIN, XMAX, YMIN, YMAX, PDISC_FACTOR*MU, 1);
+    ncirc = ncirc0;
+    
+    alpha = asin(WALL_WIDTH/MU);
+    
+    /* duplicate circles near boundary */
+    for (i=0; i<ncirc0; i++)
+    {
+        if (circles[i].xc < XMIN + MU)
+        {
+            circles[ncirc].xc = circles[i].xc + XMAX - XMIN;
+            circles[ncirc].yc = circles[i].yc;
+            ncirc++;
+            printf("%i circles\n", ncirc); 
+        }
+        if (circles[i].xc > XMAX - MU)
+        {
+            circles[ncirc].xc = circles[i].xc - XMAX + XMIN;
+            circles[ncirc].yc = circles[i].yc;
+            ncirc++;
+            printf("%i circles\n", ncirc); 
+        }
+        if (circles[i].yc < YMIN + MU)
+        {
+            circles[ncirc].xc = circles[i].xc;
+            circles[ncirc].yc = circles[i].yc + YMAX - YMIN;
+            ncirc++;
+            printf("%i circles\n", ncirc); 
+        }
+        if (circles[i].yc > YMAX - MU)
+        {
+            circles[ncirc].xc = circles[i].xc;
+            circles[ncirc].yc = circles[i].yc - YMAX + YMIN;
+            ncirc++;
+            printf("%i circles\n", ncirc);
+        }
+    }
+    
+    n_neighbours = (int *)malloc(ncirc*sizeof(int));
+    neighbour_angles = (double *)malloc(ncirc*maxneigh*sizeof(double));
+    
+    for (i=0; i<ncirc; i++) n_neighbours[i] = 0;
+    
+    for (i=0; i<ncirc; i++)
+        for (j=i+1; j<ncirc; j++)
+        {
+            dist = module2(circles[i].xc - circles[j].xc, circles[i].yc - circles[j].yc);
+            if (dist < PDISC_CONNECT_FACTOR*PDISC_FACTOR*MU)
+            {
+                polyrectrot[nrects].x1 = circles[i].xc;
+                polyrectrot[nrects].y1 = circles[i].yc;
+                polyrectrot[nrects].x2 = circles[j].xc;
+                polyrectrot[nrects].y2 = circles[j].yc;
+                polyrectrot[nrects].width = 2.0*WALL_WIDTH;
+                nrects++;
+                
+                beta = argument(circles[j].xc - circles[i].xc, circles[j].yc - circles[i].yc);
+                cam = cos(beta - alpha);
+                cap = cos(beta + alpha);
+                sam = sin(beta - alpha);
+                sap = sin(beta + alpha);
+                
+                polyline[nlines].x = circles[i].xc + MU*cam;
+                polyline[nlines].y = circles[i].yc + MU*sam;
+                nlines++;
+                polyline[nlines].x = circles[j].xc - MU*cap;
+                polyline[nlines].y = circles[j].yc - MU*sap;
+                nlines++;
+                polyline[nlines].x = circles[i].xc + MU*cap;
+                polyline[nlines].y = circles[i].yc + MU*sap;
+                nlines++;
+                polyline[nlines].x = circles[j].xc - MU*cam;
+                polyline[nlines].y = circles[j].yc - MU*sam;
+                nlines++;
+                
+                if (beta < 0.0) beta += DPI;
+                neighbour_angles[i*maxneigh + n_neighbours[i]] = beta;
+                beta -= PI;
+                if (beta < 0.0) beta += DPI;
+                neighbour_angles[j*maxneigh + n_neighbours[j]] = beta;
+                n_neighbours[i]++;
+                n_neighbours[j]++;
+            }
+        }
+        
+    /* TODO: sort angles and init polyarcs */
+    for (i=0; i<ncirc; i++)
+    {
+        /* bubble sort angles */
+        n = n_neighbours[i];
+        for (j = 0; j < n - 1; j++) 
+        {
+            for (k = 0; k < n - j - 1; k++) 
+            {
+                if (neighbour_angles[i*maxneigh + k] > neighbour_angles[i*maxneigh + k + 1]) 
+                {
+                    temp = neighbour_angles[i*maxneigh + k];
+                    neighbour_angles[i*maxneigh + k] = neighbour_angles[i*maxneigh + k + 1];
+                    neighbour_angles[i*maxneigh + k + 1] = temp;
+                }
+            }
+        }
+        
+        /* initialize arcs */
+        for (j = 0; j < n; j++)
+        {
+            polyarc[narcs].xc = circles[i].xc;
+            polyarc[narcs].yc = circles[i].yc;
+            polyarc[narcs].r  = MU;
+            polyarc[narcs].angle1 = neighbour_angles[i*maxneigh+j] + alpha;
+            if (j < n-1) 
+                polyarc[narcs].dangle = neighbour_angles[i*maxneigh+j+1] - neighbour_angles[i*maxneigh+j] - 2.0*alpha;
+            else
+                polyarc[narcs].dangle = neighbour_angles[i*maxneigh] - neighbour_angles[i*maxneigh+j] + DPI - 2.0*alpha;
+            narcs++;
+        }
+    }
+    
+    for (i=0; i<nlines; i++)
+    {
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+    
+    free(n_neighbours);
+    free(neighbour_angles);
+    
+    *ncircles = ncirc;
+    *npolyrect_rot = nrects;
+    *npolyarc = narcs;
+    return(nlines);
+}
+
 int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
 /* initialise variable polyline, for certain polygonal domain shapes */
+/* DEPRECATED - replaced by init_poly, kept for backwards compatibility */
 {
     switch (B_DOMAIN) {
         case (D_TOKARSKY):
@@ -2405,6 +3021,7 @@ int init_polyline(int depth, t_vertex polyline[NMAXPOLY])
 
 int init_polyrect(t_rectangle polyrect[NMAXPOLY])
 /* initialise variable polyrect, for certain polygonal domain shapes */
+/* DEPRECATED - replaced by init_poly, kept for backwards compatibility */
 {
     switch (B_DOMAIN) {
         case (D_MAZE):
@@ -2453,12 +3070,124 @@ int init_polyrect_euler(t_rectangle polyrect[NMAXPOLY], int domain)
 
 void init_polyrect_arc(t_rect_rotated polyrectrot[NMAXPOLY], t_arc polyarc[NMAXPOLY], int *npolyrect, int *npolyarc)
 /* initialise variables polyrectrot and polyarc, for certain domain shapes */
+/* DEPRECATED - replaced by init_poly, kept for backwards compatibility */
 {
     switch (B_DOMAIN) {
         case (D_MAZE_CIRCULAR):
         {
             compute_circular_maze_coordinates(polyrectrot, polyarc, npolyrect, npolyarc);
             break;
+        }
+    }
+}
+
+
+int init_poly(int depth, t_vertex polyline[NMAXPOLY], t_rectangle polyrect[NMAXPOLY], t_rect_rotated polyrectrot[NMAXPOLY], t_arc polyarc[NMAXPOLY], t_circle circles[NMAXCIRCLES], int *npolyrect, int *npolyrect_rot, int *npolyarc, int *ncircles)
+/* initialise variables polyline, polyrect, polyrectrot, polyarc, for certain domains */
+/* returns the number of polyline vertices */
+{
+    *npolyrect = 0;
+    *npolyrect_rot = 0;
+    *npolyarc = 0;
+    switch (B_DOMAIN) {
+        case (D_TOKARSKY):
+        {
+            return(compute_tokarsky_coordinates(-4.0, -2.0, (XMAX - XMIN)/8.4, polyline));
+        }
+        case (D_TOKA_PRIME):
+        {
+            return(compute_tokaprime_coordinates(-MU, polyline));
+        }
+        case (D_ISOSPECTRAL):
+        {
+            compute_isospectral_coordinates(0, 0, ISO_XSHIFT_LEFT, ISO_YSHIFT_LEFT, ISO_SCALE, polyline);
+            compute_isospectral_coordinates(1, 9, ISO_XSHIFT_RIGHT, ISO_YSHIFT_RIGHT, ISO_SCALE, polyline);
+            return(18);
+        }
+        case (D_HOMOPHONIC):
+        {
+            compute_homophonic_coordinates(0, 0, ISO_XSHIFT_LEFT, ISO_YSHIFT_LEFT, ISO_SCALE, polyline);
+            compute_homophonic_coordinates(1, 22, ISO_XSHIFT_RIGHT, ISO_YSHIFT_RIGHT, ISO_SCALE, polyline);
+            return(44);
+        }
+        case (D_VONKOCH):
+        {
+            return(compute_vonkoch_coordinates(depth, polyline));
+        }
+        case (D_VONKOCH_HEATED):
+        {
+            return(compute_vonkoch_coordinates(depth, polyline));
+        }
+        case (D_STAR):
+        {
+            return(compute_star_coordinates(polyline));
+        }
+        case (D_FRESNEL):
+        {
+            return(compute_fresnel_coordinates(polyline));
+        }
+        case (D_DOUBLE_FRESNEL):
+        {
+            return(compute_double_fresnel_coordinates(polyline, LAMBDA));
+        }
+        case (D_NOISEPANEL):
+        {
+            return(compute_noisepanel_coordinates(polyline));
+        }
+        case (D_NOISEPANEL_RECT):
+        {
+            return(compute_noisepanel_rect_coordinates(polyline));
+        }
+        case (D_QRD):
+        {
+            return(compute_qrd_coordinates(polyline));
+        }
+        case (D_MAZE):
+        {
+            *npolyrect = compute_maze_coordinates(polyrect, 0);
+            return(0);
+        }
+        case (D_MAZE_CLOSED):
+        {
+            *npolyrect = compute_maze_coordinates(polyrect, 1);
+            return(0);
+        }
+        case (D_MAZE_CHANNELS):
+        {
+            *npolyrect = compute_maze_coordinates(polyrect, 2);
+            return(0);
+        }
+        case (D_MAZE_CIRCULAR):
+        {
+            compute_circular_maze_coordinates(polyrectrot, polyarc, npolyrect, npolyarc);
+            return(0);
+        }
+        case (D_CIRCLE_LATTICE): 
+        {
+            return(compute_disc_lattice_coordinates(polyline, polyarc, npolyarc));
+        }
+        case (D_CIRCLE_LATTICE_HEX):
+        {
+            return(compute_disc_hex_lattice_coordinates(polyline, polyarc, npolyarc));
+        }
+        case (D_CIRCLE_LATTICE_RANDOM): 
+        {
+            return(compute_disc_lattice_random(polyline, polyrect, polyarc, npolyrect, npolyarc));
+        }
+        case (D_CIRCLE_LATTICE_HONEY):
+        {
+            return(compute_disc_honeycomb_lattice_coordinates(polyline, polyrectrot, polyarc, npolyrect_rot, npolyarc));
+        }
+        case (D_CIRCLE_LATTICE_POISSON):
+        {
+            return(compute_disc_poisson_lattice_coordinates(polyline, polyrectrot, polyarc, circles,  npolyrect_rot, npolyarc, ncircles));
+        }
+        default:
+        {
+            if ((ADD_POTENTIAL)&&(POTENTIAL == POT_MAZE)) 
+                *npolyrect = compute_maze_coordinates(polyrect, 1);
+            else *npolyrect = 0;
+            return(0);
         }
     }
 }
@@ -2957,7 +3686,7 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
         {
             condition = 1;
             omega = DPI/((double)NPOLY);
-            c = cos(omega*0.5);
+            c = LAMBDA*cos(omega*0.5);
             for (k=0; k<NPOLY; k++)  
             {
                 angle = APOLY*PID + (k+0.5)*omega;
@@ -4018,6 +4747,92 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             k = (int)(phi*(double)NEPICYCLOID/a);
             return(module2(x,y) < epicycloid_phi_to_r[k]*LAMBDA/(double)(NPOLY));
         }
+        case (D_CIRCLE_LATTICE):
+        {
+            dx = (XMAX - XMIN)/(double)NGRIDX;
+            dy = (YMAX - YMIN)/(double)NGRIDY;
+            for (i=0; i<NGRIDX; i++)
+            {
+                x1 = XMIN + ((double)i + 0.5)*dx;
+                if (vabs(x - x1) < WALL_WIDTH) return(1);
+                for (j=0; j<NGRIDY; j++)
+                {
+                    y1 = YMIN + ((double)j + 0.5)*dy;
+                    r = module2(x-x1, y-y1);
+                    if (r < MU) return(1);
+                    if (vabs(y - y1) < WALL_WIDTH) return(1);
+                }
+            }
+            return(0);
+        }
+        case (D_CIRCLE_LATTICE_RANDOM):
+        {
+            dx = (XMAX - XMIN)/(double)NGRIDX;
+            dy = (YMAX - YMIN)/(double)NGRIDY;
+            for (i=0; i<NGRIDX; i++)
+            {
+                x1 = XMIN + ((double)i + 0.5)*dx;
+                for (j=0; j<NGRIDY; j++)
+                {
+                    y1 = YMIN + ((double)j + 0.5)*dy;
+                    r = module2(x-x1, y-y1);
+                    if (r < MU) return(1);
+                }
+            }
+            for (i=0; i<npolyrect; i++)
+                if (xy_in_polyrect(x, y, polyrect[i])) return(1);
+            return(0);
+        }
+        case (D_CIRCLE_LATTICE_HEX):
+        {
+            dx = (XMAX - XMIN)/(double)NGRIDX;
+            dy = (YMAX - YMIN)/(double)NGRIDY;
+            r = module2(0.5*dx, dy);
+            nx = -dy/r;
+            ny = dx/(2.0*r);
+            for (j=0; j<NGRIDY+1; j++)
+            {
+                y1 = YMIN + ((double)j)*dy;
+                if (vabs(y - y1) < WALL_WIDTH) return(1);
+                for (i=-1; i<NGRIDX; i++)
+                {
+                    x1 = XMIN + ((double)i + 0.5)*dx;
+                    if (j%2 == 0) x1 += 0.5*dx;
+                    r = module2(x-x1, y-y1);
+                    if (r < MU) return(1);
+                    if (vabs(nx*(x - x1) + ny*(y - y1)) < WALL_WIDTH) return(1);
+                    if (vabs(-nx*(x - x1) + ny*(y - y1)) < WALL_WIDTH) return(1);
+                }
+            }
+            return(0);
+        }
+        case (D_CIRCLE_LATTICE_HONEY):
+        {
+            dx = (XMAX - XMIN)/(double)NGRIDX;
+            dy = (YMAX - YMIN)/(double)NGRIDY;
+            for (j=0; j<NGRIDY+1; j++) 
+            {
+                y1 = YMIN + ((double)j)*dy;
+                for (i=0; i<NGRIDX+1; i++) if (i%3 != 2*((j+1)%2))
+                {
+                    x1 = XMIN + ((double)i)*dx;
+                    if (j%2 == 1) x1 += 0.5*dx;
+                    r = module2(x-x1, y-y1);
+                    if (r < MU) return(1);
+                }
+            }
+            for (i=0; i<npolyrect_rot; i++)
+                if (xy_in_rectrotated(x, y, polyrectrot[i])) return(1);
+            return(0);
+        }
+        case (D_CIRCLE_LATTICE_POISSON):
+        {
+            for (i=0; i<ncircles; i++)
+                if (module2(x-circles[i].xc, y-circles[i].yc) < MU) return(1);
+            for (i=0; i<npolyrect_rot; i++)
+                if (xy_in_rectrotated(x, y, polyrectrot[i])) return(1);
+            return(0);
+        }
         case (D_MENGER):       
         {
             x1 = 0.5*(x+1.0);
@@ -4207,6 +5022,11 @@ void tvertex_lineto(t_vertex z)
     glVertex2d(z.posi, z.posj);
 }
 
+// void tvertex_line(t_vertex z1, t_vertex z2)
+// /* draws boundary segments of isospectral billiard */
+// {
+//     draw_line(z1.posi, z1.posj, z2.posi, z2.posj);
+// }
 
 void hex_transfo(double u, double v, double *x, double *y)
 /* linear transformation of plane used for hex tiles */
@@ -4302,7 +5122,7 @@ void draw_rc_hyp()
 
 void draw_billiard(int fade, double fade_value)      /* draws the billiard boundary */
 {
-    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, alpha2, dphi, omega, z, l, width, a, b, c, d, r1, r2, ymax, height, xmin, xmax, ca, sa, xshift, x5, x6, f, fp, xratio, w, nx, ny, x3, y3, psi, psi0, psi2;
+    double x0, y0, x, y, x1, y1, x2, y2, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, alpha2, dphi, omega, z, l, width, a, b, c, d, r1, r2, ymax, height, xmin, xmax, ca, sa, xshift, x5, x6, f, fp, xratio, w, nx, ny, x3, y3, psi, psi0, psi2, ca2, sa2, ca3, sa3;
     int i, j, k, k1, k2, mr2, ntiles;
     static int first = 1, nsides;
     static double h, hh, sqr3, ll, salpha, arcangle;
@@ -4528,8 +5348,8 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             glBegin(GL_LINE_LOOP);
             for (i=0; i<=NPOLY; i++)
             {
-                x = cos(i*omega + APOLY*PID);
-                y = sin(i*omega + APOLY*PID);
+                x = LAMBDA*cos(i*omega + APOLY*PID);
+                y = LAMBDA*sin(i*omega + APOLY*PID);
                 xy_to_pos(x, y, pos);
                 glVertex2d(pos[0], pos[1]);
             }
@@ -6260,6 +7080,87 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             glEnd();  
             break;
         }
+        case (D_CIRCLE_LATTICE):
+        {
+            glBegin(GL_LINES);
+            for (i=0; i<npolyline; i++) 
+            {
+                glVertex2d(polyline[i].posi, polyline[i].posj);
+            }
+            glEnd();
+            
+            for (i=0; i<npolyarc; i++)
+            {
+                draw_circle_arc(polyarc[i].xc, polyarc[i].yc, polyarc[i].r, polyarc[i].angle1, polyarc[i].dangle, NSEG);
+            }
+            break;
+        }
+        case (D_CIRCLE_LATTICE_RANDOM):
+        {
+            glBegin(GL_LINES);
+            for (i=0; i<npolyline; i++) 
+            {
+                glVertex2d(polyline[i].posi, polyline[i].posj);
+            }
+            glEnd();
+            
+            for (i=0; i<npolyarc; i++)
+            {
+                draw_circle_arc(polyarc[i].xc, polyarc[i].yc, polyarc[i].r, polyarc[i].angle1, polyarc[i].dangle, NSEG);
+            }
+            break;
+        }
+        case (D_CIRCLE_LATTICE_HEX):
+        {
+            glBegin(GL_LINES);
+            for (i=0; i<npolyline; i++) 
+            {
+                glVertex2d(polyline[i].posi, polyline[i].posj);
+            }
+            glEnd();
+            
+            for (i=0; i<npolyarc; i++)
+            {
+                draw_circle_arc(polyarc[i].xc, polyarc[i].yc, polyarc[i].r, polyarc[i].angle1, polyarc[i].dangle, NSEG);
+            }
+            break;
+        }
+        case (D_CIRCLE_LATTICE_HONEY):
+        {
+            glBegin(GL_LINES);
+            for (i=0; i<npolyline; i++) 
+            {
+                glVertex2d(polyline[i].posi, polyline[i].posj);
+            }
+            glEnd();
+            
+            for (i=0; i<npolyarc; i++)
+            {
+                draw_circle_arc(polyarc[i].xc, polyarc[i].yc, polyarc[i].r, polyarc[i].angle1, polyarc[i].dangle, NSEG);
+            }
+            break;
+        }
+        case (D_CIRCLE_LATTICE_POISSON):
+        {
+//             for (i=0; i<ncircles; i++)
+//             {
+//                 draw_circle(circles[i].xc, circles[i].yc, MU, NSEG);
+//             }
+            
+            glBegin(GL_LINES);
+            for (i=0; i<npolyline; i++) 
+            {
+                glVertex2d(polyline[i].posi, polyline[i].posj);
+            }
+            glEnd();
+            
+            /* TODO */
+            for (i=0; i<npolyarc; i++)
+            {
+                draw_circle_arc(polyarc[i].xc, polyarc[i].yc, polyarc[i].r, polyarc[i].angle1, polyarc[i].dangle, NSEG);
+            }
+            break;
+        }
         case (D_POLYCIRCLES_ANGLED):
         {
             alpha = atan(WALL_WIDTH/LAMBDA);
@@ -6992,6 +7893,8 @@ void draw_circular_color_scheme_palette_fade(double x1, double y1, double radius
     int j, k;
     double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2], zscale = 0.85;
     
+    zscale = 1.0; 
+    
 //     glBegin(GL_TRIANGLE_FAN);
     xy_to_pos(x1, y1, xy);
     glVertex2d(xy[0], xy[1]);
@@ -7065,6 +7968,15 @@ void draw_circular_color_scheme_palette_fade(double x1, double y1, double radius
             {
                 value = min + 1.0*dy*(double)(j);
                 amp = 0.5*color_amplitude_linear(value, 1.0, 1);
+                while (amp > 1.0) amp -= 2.0;
+                while (amp < -1.0) amp += 2.0;
+                amp_to_rgb(0.5*(1.0 + amp), rgb);
+                break;
+            }
+            case (Z_ANGLE):
+            {
+                value = min + 1.0*dy*(double)(j);
+                amp = color_amplitude_linear(value, 1.0, 1)/PI;
                 while (amp > 1.0) amp -= 2.0;
                 while (amp < -1.0) amp += 2.0;
                 amp_to_rgb(0.5*(1.0 + amp), rgb);

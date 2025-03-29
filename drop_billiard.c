@@ -49,6 +49,7 @@
 #define POLYLINE_PATTERN 1  /* pattern of polyline */
 
 #define ABSORBING_CIRCLES 0 /* set to 1 for circular scatterers to be absorbing */
+#define NABSCIRCLES 10       /* number of absorbing circles */
 
 #define NMAXCIRCLES 1000        /* total number of circles (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 1000        /* total number of sides of polygonal line */   
@@ -70,6 +71,9 @@
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 4             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define LAMBDA_B 1.0  /* parameter controlling shape of domain (for P_POLYRING) */
+#define NPOLY_B 100000           /* number of sides of second polygon */
+#define APOLY_B 1.0         /* angle by which to turn second polygon, in units of Pi/2 */ 
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
 #define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
 #define PERIODIC_BC 0       /* set to 1 to enforce periodic boundary conditions when drawing particles */

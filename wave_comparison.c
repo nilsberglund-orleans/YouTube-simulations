@@ -97,6 +97,7 @@
 #define PDISC_FACTOR 3.25   /* controls density of Poisson disc process (default: 3.25) */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 #define RANDOM_POLY_ANGLE_B 0 /* set to 1 to randomize angle of polygons */
+#define PDISC_CONNECT_FACTOR 1.5    /* controls which discs are connected for D_CIRCLE_LATTICE_POISSON domain */
 
 #define XDEP_POLY_ANGLE 0   /* set to 1 to rotate polygons depending on x coordinate */
 #define XDEP_POLY_ANGLE_B 0   /* set to 1 to rotate polygons depending on x coordinate */
@@ -259,6 +260,7 @@
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
 #define WALL_WIDTH 0.1      /* width of wall separating lenses */
+#define WALL_WIDTH_RND 0.0  /* proportion of width of width for random arrangements */
 #define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
 #define OSCIL_YMAX 0.35      /* defines oscillation range */
 #define MESSAGE_LDASH 14         /* length of dash for Morse code message */

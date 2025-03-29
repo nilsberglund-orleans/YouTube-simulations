@@ -63,6 +63,14 @@ void color_scheme(int scheme, double value, double scale, int time, double rgb[3
             amp_to_rgb(amplitude, rgb);
             break;
         }
+        case (C_BASIC_LINEAR):
+        {
+            amplitude = color_amplitude_linear(value, scale, time);
+            if (amplitude > 1.0) amplitude -= 1.0;
+            else if (amplitude < 0.0) amplitude += 1.0;
+            amp_to_rgb(amplitude, rgb);
+            break;
+        }
     }
 }
 
@@ -185,6 +193,17 @@ void color_scheme_palette(int scheme, int palette, double value, double scale, i
             else if (amplitude < 0.0) amplitude += 1.0;
             amp_to_rgb_palette(amplitude, rgb, palette);
             break;
+        }
+        case (C_BASIC_LINEAR):
+        {
+            if (value > 1.0) value -= 1.0;
+            else if (value < 0.0) value += 1.0;
+            amp_to_rgb_palette(value, rgb, palette);
+            break;
+//             if (value > 2.0) value -= 2.0;
+//             else if (value < 0.0) value += 2.0;
+//             amp_to_rgb_palette(value, rgb, palette);
+//             break;
         }
     }
 }

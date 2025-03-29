@@ -87,6 +87,7 @@
 #define NPOISSON 1000        /* number of points for Poisson C_RAND_POISSON arrangement */
 #define PDISC_FACTOR 3.25   /* controls density of Poisson disc process (default: 3.25) */
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
+#define PDISC_CONNECT_FACTOR 1.5    /* controls which discs are connected for D_CIRCLE_LATTICE_POISSON domain */
 
 #define LAMBDA 0.75	    /* parameter controlling the dimensions of domain */
 #define MU 0.1              /* parameter controlling the dimensions of domain */
@@ -101,6 +102,7 @@
 #define NGRIDX 30            /* number of grid point for grid of disks */
 #define NGRIDY 18            /* number of grid point for grid of disks */
 #define WALL_WIDTH 0.6      /* width of wall separating lenses */
+#define WALL_WIDTH_RND 0.0  /* proportion of width of width for random arrangements */
 #define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
 
 #define X_SHOOTER -0.2

@@ -1899,7 +1899,7 @@ void init_wave_flat_mod(double phi[NX*NY], double psi[NX*NY], short int xy_in[NX
     {
         #pragma omp parallel for private(i,j,xy)
         for (i=0; i<NX; i++) {
-            if (i%100 == 0) printf("Wave and table xy_in - Initialising column %i of %i\n", i, NX);
+            if (i%100 == 0) printf("[init_wave_flat_mod] Wave and table xy_in - Initialising column %i of %i\n", i, NX);
             for (j=0; j<NY; j++)
             {
                 ij_to_xy(i, j, xy);

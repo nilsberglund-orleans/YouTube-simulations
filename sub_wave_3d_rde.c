@@ -921,6 +921,7 @@ int ij_to_sphere(int i, int j, double r, t_wave_sphere wsphere[NX*NY], double xy
     if (use_wave_radius)
     {
         newr = wsphere[i*NY+j].radius;
+        newr += (RSCALE_B-1.0)*r;
         xyz[0] *= newr;
         xyz[1] *= newr;
         xyz[2] *= newr;
@@ -958,6 +959,7 @@ int ij_to_sphere_hres(int i, int j, double r, t_wave_sphere wsphere[HRES*HRES*NX
     if (use_wave_radius)
     {
         newr = wsphere[i*HRES*NY+j].radius;
+        newr += (RSCALE_B-1.0)*r;
         xyz[0] *= newr;
         xyz[1] *= newr;
         xyz[2] *= newr;
@@ -2744,6 +2746,12 @@ void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, 
             {
                 value = dy_phase*(double)(j);
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
+             case (Z_AMPLITUDE):
+            {
+                value = min + 1.0*dy*(double)(j);
+                color_scheme_palette(COLOR_SCHEME, palette, 0.7*value, 1.0, 0, rgb);
                 break;
             }
             case (Z_POLAR):

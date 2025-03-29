@@ -2018,8 +2018,8 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES], t_otriangle otrian
         }
         case (O_SQUARE_TWOMASSES):
         {
-            dx = (XMAX - XMIN)/(double)NOBSX;
-            dy = (YMAX - YMIN)/(double)NOBSY;
+            dx = (OBSXMAX - OBSXMIN)/(double)NOBSX;
+            dy = (OBSYMAX - OBSYMIN)/(double)NOBSY;
             n = 0;
             
             if ((ADD_FIXED_SEGMENTS)&&(SEGMENT_PATTERN == S_CYLINDER))
@@ -2037,9 +2037,9 @@ void init_obstacle_config(t_obstacle obstacle[NMAXOBSTACLES], t_otriangle otrian
             for (i=0; i<NOBSX; i++)
                 for (j=jmin; j<jmax; j++)
                 {
-                    obstacle[n].xc = XMIN + ((double)i + 0.25)*dx;
-                    obstacle[n].yc = YMIN + ((double)j + 0.5)*dy;
-                    if (obstacle[n].xc > XMAX) obstacle[n].xc += (XMAX - XMIN);
+                    obstacle[n].xc = OBSXMIN + ((double)i + 0.25)*dx;
+                    obstacle[n].yc = OBSYMIN + ((double)j + 0.5)*dy;
+                    if (obstacle[n].xc > OBSXMAX) obstacle[n].xc += (OBSXMAX - OBSXMIN);
                     obstacle[n].radius = OBSTACLE_RADIUS;
                     if ((i+j)%2 == 0) 
                     {
@@ -7241,13 +7241,14 @@ int add_particle(double x, double y, double vx, double vy, double mass, short in
         
         particle[i].xc = x;
         particle[i].yc = y;
-        particle[i].radius = MU;
+        particle[i].radius = MU_ADD;
 //         particle[i].radius = MU*sqrt(mass);
         particle[i].active = 1;
         particle[i].neighb = 0;
         particle[i].diff_neighb = 0;
         particle[i].thermostat = 1;
-        particle[i].charge = CHARGE;
+        particle[i].charge = CHARGE_ADD;
+        if ((ADD_ALTERNATE_CHARGE)&&(rand()%2 == 1)) particle[i].charge *= -1.0;
 
         particle[i].energy = 0.0;
         particle[i].emean = 0.0;
@@ -8357,7 +8358,7 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     }
     
     /* draw crosses/bars on charged particles */
-    if (TWO_TYPES)
+//     if (TWO_TYPES)
     {
         if ((DRAW_CROSS)&&(particle.charge > 0.0))
         {
@@ -8468,7 +8469,7 @@ void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
 /* draw tracer particle trajectory */
 {
     int i, j, time, p, width;
-    double x1, x2, y1, y2, rgb[3], rgbx[3], rgby[3], radius, lum;
+    double x1, x2, y1, y2, rgb[3], rgbx[3], rgby[3], radius, lum, lum1;
     
 //     blank();
     glLineWidth(TRAJECTORY_WIDTH);
@@ -8493,7 +8494,12 @@ void draw_trajectory(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], 
                 time = traj_length - i;
                 lum = 0.9 - TRACER_LUM_FACTOR*(double)time/(double)(TRAJECTORY_LENGTH*TRACER_STEPS);
                 if (lum < 0.0) lum = 0.0;
-                glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
+                if (FILL_OBSTACLE_TRIANGLES)
+                {
+                    lum1 = 0.5*(1.0-lum);
+                    glColor3f(lum1 + lum*rgb[0], lum1 + lum*rgb[1], lum1 + lum*rgb[2]);
+                }
+                else glColor3f(lum*rgb[0], lum*rgb[1], lum*rgb[2]);
         
                 if ((lum > 0.1)&&(module2(x2 - x1, y2 - y1) < 0.25*(YMAX - YMIN))) 
                     draw_line(x1, y1, x2, y2);
@@ -12022,7 +12028,7 @@ int tracer_n[N_TRACER_PARTICLES])
     printf("Added a particle at (%.5lg, %.5lg)\n\n\n", x, y);
     fprintf(lj_log, "Added a particle at (%.5lg, %.5lg)\n\n\n", x, y);
     
-    add_particle(x, y, V_INITIAL, 0.05*V_INITIAL*(double)rand()/RAND_MAX, PARTICLE_MASS, type, particle);
+    add_particle(x, y, V_INITIAL_ADD, 0.05*V_INITIAL_ADD*(double)rand()/RAND_MAX, PARTICLE_ADD_MASS, type, particle);
     
     printf("Particle number %i\n", ncircles-1);
     
