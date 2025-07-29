@@ -44,11 +44,11 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
-#define VARIABLE_IOR 1      /* set to 1 for a variable index of refraction */
+#define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
 #define IOR 10               /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.5 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
@@ -58,9 +58,6 @@
 
 #define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1150  /* window height */
-// #define NX 1920          /* number of grid points on x axis */
-// #define NY 1000          /* number of grid points on y axis */
-// #define YMID 500        /* mid point of display */
 #define NX 3840          /* number of grid points on x axis */
 #define NY 2300          /* number of grid points on y axis */
 #define YMID 1150        /* mid point of display */
@@ -69,24 +66,14 @@
 #define YMIN -1.197916667
 #define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
 
-// #define WINWIDTH 	1280  /* window width */
-// #define WINHEIGHT 	720   /* window height */
-// #define NX 1280          /* number of grid points on x axis */
-// #define NY 720          /* number of grid points on y axis */
-// #define YMID 360        /* mid point of display */
-// #define XMIN -2.0
-// #define XMAX 2.0	/* x interval */
-// #define YMIN -1.125
-// #define YMAX 1.125	/* y interval for 9/16 aspect ratio */
-
 #define HIGHRES 1       /* set to 1 if resolution of grid is double that of displayed image */
 
 #define JULIA_SCALE 1.0 /* scaling for Julia sets */
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 63      /* choice of domain shape, see list in global_pdes.c */
-#define B_DOMAIN_B 63    /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 94      /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN_B 94    /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 13      /* pattern of circles, see list in global_pdes.c */
 #define CIRCLE_PATTERN_B 13     /* pattern of circles, see list in global_pdes.c */
@@ -106,8 +93,9 @@
 #define HEX_NONUNIF_COMPRESSSION_B -0.15 /* compression factor for HEX_NONUNIF pattern */
 
 #define LAMBDA 1.5	    /* parameter controlling the dimensions of domain */
-#define MU 0.7             /* parameter controlling the dimensions of domain */
-#define MUB 0.2 	    /* parameter controlling the dimensions of domain */
+#define MU 0.06             /* parameter controlling the dimensions of domain */
+#define MU_B 0.06           /* parameter controlling the dimensions of domain */
+#define MUB 0.06 	    /* parameter controlling the dimensions of domain */
 #define NPOLY 3             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define APOLY_B 2.0         /* angle by which to turn polygon, in units of Pi/2 */ 
@@ -116,8 +104,14 @@
 #define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0     /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-#define NGRIDX 20            /* number of grid point for grid of disks */
-#define NGRIDY 20           /* number of grid point for grid of disks */
+#define NGRIDX 17           /* number of grid point for grid of disks */
+#define NGRIDY 12           /* number of grid point for grid of disks */
+#define WALL_WIDTH 0.012    /* width of channels/wall separating lenses */
+#define WALL_WIDTH_B 0.012  /* width of channels/wall separating lenses */
+#define WALL_WIDTH_RND 0.0  /* proportion of width of width for random arrangements */
+#define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
+#define WALL_WIDTH_ASYM 0.75      /* asymmetry of wall width (D_CIRCLE_LATTICE_NONISO) */
+#define WALL_WIDTH_ASYM_B 0.75    /* asymmetry of wall width (D_CIRCLE_LATTICE_HEX_NONISO) */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
@@ -135,7 +129,7 @@
 
 /* Physical parameters of wave equation */
 
-#define TWOSPEEDS 1         /* set to 1 to replace hardcore boundary by medium with different speed */
+#define TWOSPEEDS 0         /* set to 1 to replace hardcore boundary by medium with different speed */
 #define OSCILLATE_LEFT 0    /* set to 1 to add oscilating boundary condition on the left */
 #define OSCILLATE_TOPBOT 0  /* set to 1 to enforce a planar wave on top and bottom boundary */
 
@@ -157,21 +151,23 @@
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
 #define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
-#define OSCILLATING_SOURCE_PERIOD 20    /* period of oscillating source */
+#define OSCILLATING_SOURCE_PERIOD 15.625  /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
+#define N_SOURCES 2                     /* number of sources, for option draw_sources */
+#define ALTERNATE_SOURCE_PHASES 0       /* set to 1 to alternate initial phases of sources */
 #define NSOURCES 48         /* number of sources */
+#define MAX_PULSING_TIME 10000           /* max time for adding pulses */
 
 /* Boundary conditions, see list in global_pdes.c  */
 
-#define B_COND 4
+#define B_COND 1
 
 /* Parameters for length and speed of simulation */
 
-// #define NSTEPS 500      /* number of frames of movie */
-#define NSTEPS 2600      /* number of frames of movie */
-#define NVID 7            /* number of iterations between images displayed on screen */
+#define NSTEPS 3900      /* number of frames of movie */
+#define NVID 7           /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
-#define INITIAL_TIME 100    /* time after which to start saving frames */
+#define INITIAL_TIME 0    /* time after which to start saving frames */
 #define COMPUTE_ENERGIES 0  /* set to 1 to compute and print energies */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
 
@@ -185,9 +181,9 @@
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 1.0            /* amplitude of initial condition */
-#define INITIAL_VARIANCE 0.00001    /* variance of initial condition */
-#define INITIAL_WAVELENGTH  0.025  /* wavelength of initial condition */
+#define INITIAL_AMP 0.75             /* amplitude of initial condition */
+#define INITIAL_VARIANCE 0.0005    /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.025   /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 
@@ -197,8 +193,8 @@
 
 /* Color schemes */
 
-#define COLOR_PALETTE 17     /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 13    /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 14      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 14    /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 #define BLACK_TEXT 1     /* set to 1 to write text in black instead of white */
@@ -207,12 +203,13 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
 #define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-#define VSHIFT_AMPLITUDE 0.0   /* additional shift for wave amplitude */
-#define VSCALE_AMPLITUDE 0.5   /* additional scaling factor for wave amplitude */
-#define E_SCALE 100.0     /* scaling factor for energy representation */
+#define VSHIFT_AMPLITUDE -0.2   /* additional shift for wave amplitude */
+#define VSCALE_AMPLITUDE 0.4    /* additional scaling factor for wave amplitude */
+#define E_SCALE 10.0      /* scaling factor for energy representation */
 #define LOG_SCALE 1.0     /* scaling factor for energy log representation */
 #define LOG_SHIFT 2.0     /* shift of colors on log scale */
 #define FLUX_SCALE 5.0e3    /* scaling factor for enegy flux represtnation */
@@ -245,7 +242,7 @@
 /* for compatibility with sub_wave and sub_maze */
 #define NXMAZE 7      /* width of maze */
 #define NYMAZE 7      /* height of maze */
-#define MAZE_MAX_NGBH 4     /* max number of neighbours of maze cell */
+#define MAZE_MAX_NGBH 6     /* max number of neighbours of maze cell */
 #define RAND_SHIFT 24        /* seed of random number generator */
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define ADD_POTENTIAL 0
@@ -256,11 +253,8 @@
 #define N_WAVE_PACKETS 15               /* number of wave packets */
 #define OSCIL_LEFT_YSHIFT 0.0   /* y-dependence of left oscillation (for non-horizontal waves) */
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
-#define MU_B 1.0           /* parameter controlling the dimensions of domain */
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
-#define WALL_WIDTH 0.1      /* width of wall separating lenses */
-#define WALL_WIDTH_RND 0.0  /* proportion of width of width for random arrangements */
 #define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
 #define OSCIL_YMAX 0.35      /* defines oscillation range */
 #define MESSAGE_LDASH 14         /* length of dash for Morse code message */
@@ -281,9 +275,10 @@
 #define INITIAL_SHIFT 20.0          /* time shift of initial wave packet (in oscillation periods) */
 #define WAVE_PACKET_SHIFT 200.0     /* time shift between wave packets (in oscillation periods) */
 #define FADE_IN_OBSTACLE 0      /* set to 1 to fade color inside obstacles */
-#define SHADE_2D 0       /* set to 1 to add pseudo-3d shading effect */ 
+#define SHADE_2D 1       /* set to 1 to add pseudo-3d shading effect */ 
 #define SHADE_SCALE_2D 0.05  /* lower value increases sensitivity of shading */
-#define N_SOURCES 1                     /* number of sources, for option draw_sources */
+
+#define MEAN_FLUX (PLOT == P_TOTAL_ENERGY_FLUX)||(PLOT_B == P_TOTAL_ENERGY_FLUX)
 #define XYIN_INITIALISED (B_DOMAIN == D_IMAGE)
 double light[2] = {0.40824829, 0.816496581};   /* location of light source for SHADE_2D option*/
 /* end of constants only used by sub_wave and sub_maze */
@@ -734,10 +729,10 @@ void draw_color_bar_palette(int plot, double range, int palette, int fade, doubl
 
 void animation()
 {
-    double time, scale, energies[6], top_energy, bottom_energy, omega, angle, fade_value, sign = 1.0, ior_angle = 0.0;
-    double *phi[NX], *psi[NX], *tmp[NX], *total_energy[NX], *tcc_table[NX];
+    double time, scale = 1.0, energies[6], top_energy, bottom_energy, omega, angle, fade_value, sign[N_SOURCES], ior_angle = 0.0, source_amp[N_SOURCES], source_periods[N_SOURCES], dperiod;
+    double *phi[NX], *psi[NX], *tmp[NX], *total_energy[NX], *tcc_table[NX], *color_scale[NX], *total_flux, *fade_table, *average_energy[NX];
     short int *xy_in[NX];
-    int i, j, s, counter = 0, k, first_source = 1, fade, resol = HIGHRES + 1;
+    int i, j, s, counter = 0, k, first_source = 1, fade, source, resol = HIGHRES + 1, phase, add_counter[N_SOURCES];
     t_wave_source wave_source[NSOURCES];
     
     monitor_sources = fopen("monitor_sources.dat", "w");
@@ -749,9 +744,17 @@ void animation()
         psi[i] = (double *)malloc(NY*sizeof(double));
         tmp[i] = (double *)malloc(NY*sizeof(double));
         total_energy[i] = (double *)malloc(NY*sizeof(double));
+        average_energy[i] = (double *)malloc(NY*sizeof(double));
         xy_in[i] = (short int *)malloc(NY*sizeof(short int));
         tcc_table[i] = (double *)malloc(NX*sizeof(double));
     }
+    
+    if (FADE_IN_OBSTACLE) fade_table = (double *)malloc(NX*NY*sizeof(double));
+    
+    if (MEAN_FLUX) total_flux = (double *)malloc(4*NX*NY*sizeof(double));
+    
+    if (ALTERNATE_SOURCE_PHASES) for (i=0; i<N_SOURCES; i++) sign[i] = pow(-1.0,(double)i);
+    else for (i=0; i<N_SOURCES; i++) sign[i] = 1.0;
     
     /* initialise positions and radii of circles */
     printf("initializing circle configuration\n");
@@ -760,8 +763,18 @@ void animation()
 //     for (i=0; i<ncircles; i++) printf("polygon %i at (%.3f, %.3f) radius %.3f\n", i, polygons[i].xc, polygons[i].yc, polygons[i].radius);
     
     /* initialise polyline for von Koch and similar domains */
-    npolyline = init_polyline(MDEPTH, polyline);
-    for (i=0; i<npolyline; i++) printf("vertex %i: (%.3f, %.3f)\n", i, polyline[i].x, polyline[i].y);
+//     npolyline = init_polyline(MDEPTH, polyline);
+//     for (i=0; i<npolyline; i++) printf("vertex %i: (%.3f, %.3f)\n", i, polyline[i].x, polyline[i].y);
+    
+    /* initialise polyline and similar for drawing some domains */
+    npolyline = init_poly(MDEPTH, polyline, polyrect, polyrectrot, polyarc, circles, &npolyrect, &npolyrect_rot, &npolyarc, &ncircles, 1);
+    npolyline_b = init_poly(MDEPTH, polyline_b, polyrect_b, polyrectrot_b, polyarc_b, circles_b, &npolyrect_b, &npolyrect_rot_b, &npolyarc_b, &ncircles_b, 0);
+    
+//     for (i=0; i<npolyarc; i++) printf("polyarc %i: center (%.3f, %.3f) angles (%.3f, %.3f)\n", i, polyarc[i].xc, polyarc[i].yc, polyarc[i].angle1*180.0/PI, (polyarc[i].angle1 + polyarc[i].dangle)*180.0/PI);
+//     for (i=0; i<npolyarc_b; i++) printf("polyarc_b %i: center (%.3f, %.3f) angles (%.3f, %.3f)\n", i, polyarc_b[i].xc, polyarc_b[i].yc, polyarc_b[i].angle1*180.0/PI, (polyarc_b[i].angle1 + polyarc_b[i].dangle)*180.0/PI);
+    
+    for (i=0; i<ncircles; i++) printf("circle %i: (%.3f, %.3f) radius %.3f\n", i, circles[i].xc, circles[i].yc, circles[i].radius);
+    for (i=0; i<ncircles_b; i++) printf("circle %i: (%.3f, %.3f) radius %.3f\n", i, circles_b[i].xc, circles_b[i].yc, circles_b[i].radius);
 
     /* initialize total energy table */
     if ((PLOT == P_MEAN_ENERGY)||(PLOT_B == P_MEAN_ENERGY)||(PLOT == P_LOG_MEAN_ENERGY)||(PLOT_B == P_LOG_MEAN_ENERGY))
@@ -802,7 +815,8 @@ void animation()
     blank();
     glColor3f(0.0, 0.0, 0.0);
     printf("drawing wave\n");
-    draw_wave_comp(phi, psi, xy_in, 1.0, 0, PLOT);
+//     draw_wave_comp(phi, psi, xy_in, 1.0, 0, PLOT);
+    draw_wave_comp_highres_palette(2, phi, psi, total_energy, average_energy, total_flux, color_scale, xy_in, 1.0, 0, PLOT, COLOR_PALETTE, 0, 1.0);
 
     printf("drawing billiard\n");
     draw_billiard_comp(0, 1.0);
@@ -828,7 +842,7 @@ void animation()
         else scale = 1.0;
 
 //         draw_wave_comp(phi, psi, xy_in, scale, i, PLOT);
-        draw_wave_comp_highres_palette(resol, phi, psi, total_energy, xy_in, scale, i, PLOT, COLOR_PALETTE, 0, 1.0);
+        draw_wave_comp_highres_palette(2, phi, psi, total_energy, average_energy, total_flux, color_scale, xy_in, 1.0, i, PLOT, COLOR_PALETTE, 0, 1.0);
         
        for (j=0; j<NVID; j++) 
         {
@@ -837,11 +851,33 @@ void animation()
         }
         
         /* add oscillating waves */
-        if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == 1))
+        wave_source_x[0] = circles[81].xc;
+        wave_source_y[0] = circles[81].yc;
+        source_periods[0] = OSCILLATING_SOURCE_PERIOD;
+        source_amp[0] = INITIAL_AMP;
+        wave_source_x[1] = circles[189].xc;
+        wave_source_y[1] = circles[189].yc;
+        source_periods[1] = OSCILLATING_SOURCE_PERIOD/1.5;
+        source_amp[1] = INITIAL_AMP;
+        for (source = 0; source < N_SOURCES; source++)
         {
-            if (ALTERNATE_OSCILLATING_SOURCE) sign = -sign;
-            add_circular_wave(sign, -1.75, 0.16, phi, psi, xy_in);
-            add_circular_wave(sign, -1.75, -0.16, phi, psi, xy_in);
+            dperiod = source_periods[source];
+            phase = i - (int)(dperiod*(double)((int)((double)i/dperiod)));
+            if ((ADD_OSCILLATING_SOURCE)&&(phase == 1)&&(i<MAX_PULSING_TIME))
+            {
+                printf("Source %i: Adding pulse %i at (%.3lg, %.3lg)\n", source, add_counter[source], wave_source_x[source], wave_source_y[source]);
+                add_counter[source]++;
+                if (ALTERNATE_OSCILLATING_SOURCE) sign[source] = -sign[source];
+                add_circular_wave(-sign[source]*source_amp[source], wave_source_x[source], wave_source_y[source], phi, psi, xy_in);
+            }
+        }
+        
+        /* add oscillating waves */
+//         if ((ADD_OSCILLATING_SOURCE)&&(i%OSCILLATING_SOURCE_PERIOD == 1))
+//         {
+//             if (ALTERNATE_OSCILLATING_SOURCE) sign = -sign;
+//             add_circular_wave(sign, -1.75, 0.16, phi, psi, xy_in);
+//             add_circular_wave(sign, -1.75, -0.16, phi, psi, xy_in);
             
 //             if (first_source) for (k=0; k<NSOURCES; k++)
 //             {
@@ -882,7 +918,7 @@ void animation()
 //                     wave_source[k].sign *= -1;
 //                 }
 //             }
-        }
+//         }
 
         draw_billiard_comp(0, 1.0);
         
@@ -919,7 +955,7 @@ void animation()
                 else /*if (DOUBLE_MOVIE)*/
                 {
 //                     draw_wave_comp(phi, psi, xy_in, scale, i, PLOT_B);
-                    draw_wave_comp_highres_palette(resol, phi, psi, total_energy, xy_in, scale, i, PLOT_B, COLOR_PALETTE_B, 0, 1.0);
+                    draw_wave_comp_highres_palette(2, phi, psi, total_energy, average_energy, total_flux, color_scale, xy_in, 1.0, i, PLOT_B, COLOR_PALETTE_B, 0, 1.0);
                     draw_billiard_comp(0, 1.0);
                     if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 0, 1.0);
                     glutSwapBuffers();
@@ -950,7 +986,7 @@ void animation()
         if (DOUBLE_MOVIE) 
         {
 //             draw_wave_comp(phi, psi, xy_in, scale, i, PLOT);
-            draw_wave_comp_highres_palette(resol, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE, 0, 1.0);
+            draw_wave_comp_highres_palette(2, phi, psi, total_energy, average_energy, total_flux, color_scale, xy_in, 1.0, NSTEPS, PLOT, COLOR_PALETTE, 0, 1.0);
             draw_billiard_comp(0, 1.0);
             if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, 0, 1.0);   
             glutSwapBuffers();
@@ -959,7 +995,7 @@ void animation()
         else for (i=0; i<MID_FRAMES; i++) 
         {
             fade_value = 1.0 - (double)i/(double)MID_FRAMES;
-            draw_wave_comp_highres_palette(resol, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT, COLOR_PALETTE, 1, fade_value);
+            draw_wave_comp_highres_palette(2, phi, psi, total_energy, average_energy, total_flux, color_scale, xy_in, 1.0, NSTEPS, PLOT, COLOR_PALETTE, 1, fade_value);
             draw_billiard_comp(1, fade_value);
             if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, 1, fade_value); 
             if (!NO_EXTRA_BUFFER_SWAP) glutSwapBuffers();
@@ -968,7 +1004,7 @@ void animation()
         if (DOUBLE_MOVIE) 
         {
 //             draw_wave_comp(phi, psi, xy_in, scale, i, PLOT_B);
-            draw_wave_comp_highres_palette(resol, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B, 0, 1.0);
+            draw_wave_comp_highres_palette(2, phi, psi, total_energy, average_energy, total_flux, color_scale, xy_in, 1.0, NSTEPS, PLOT_B, COLOR_PALETTE_B, 0, 1.0);
             draw_billiard_comp(0, 1.0);
             if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 0, 1.0); 
             glutSwapBuffers();
@@ -977,7 +1013,7 @@ void animation()
             else for (i=0; i<END_FRAMES; i++) 
             {
                 fade_value = 1.0 - (double)i/(double)END_FRAMES;
-                draw_wave_comp_highres_palette(resol, phi, psi, total_energy, xy_in, scale, NSTEPS, PLOT_B, COLOR_PALETTE_B, 1, fade_value);
+                draw_wave_comp_highres_palette(2, phi, psi, total_energy, average_energy, total_flux, color_scale, xy_in, 1.0, NSTEPS, PLOT_B, COLOR_PALETTE_B, 1, fade_value);
                 draw_billiard_comp(1, fade_value);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, 1, fade_value); 
                 glutSwapBuffers();
@@ -995,9 +1031,17 @@ void animation()
         free(psi[i]);
         free(tmp[i]);
         free(total_energy[i]);
+        free(average_energy[i]);
         free(xy_in[i]);
+        free(color_scale[i]);
         free(tcc_table[i]);
     }
+    
+    if (FADE_IN_OBSTACLE) free(fade_table); 
+    
+    if (MEAN_FLUX) free(total_flux);
+    
+    
 
 }
 

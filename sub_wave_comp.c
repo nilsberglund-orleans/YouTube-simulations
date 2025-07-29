@@ -3,6 +3,7 @@
 short int circletop[NMAXCIRCLES];  /* set to 1 if circle is in top half */
 
 
+
 void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES])
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
@@ -479,7 +480,7 @@ void init_polygon_config_comp(t_polygon polygons[NMAXCIRCLES])
 int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
 /* returns 1 if (x,y) represents a point in the billiard */
 {
-    double l2, r2, r2mu, omega, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, a, b;
+    double l2, r2, r2mu, omega, c, angle, z, x1, y1, x2, y2, u, v, u1, v1, dx, dy, width, a, b, r, nx, ny;
     int i, j, k, k1, k2, condition, type;
 
     switch (domain) {
@@ -591,6 +592,133 @@ int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
             if (module2(x1 - b, y) > LAMBDA) return(1);
             return(0);
         }
+        case (D_CIRCLE_LATTICE):
+        {
+            dx = (XMAX - XMIN)/(double)NGRIDX;
+            dy = (YMAX - YMIN)/(double)NGRIDY;
+            if (top) 
+            {
+                for (i=0; i<NGRIDX; i++)
+                {
+                    x1 = XMIN + ((double)i + 0.5)*dx;
+                    if (vabs(x - x1) < WALL_WIDTH) return(1);
+                    for (j=NGRIDY/2; j<NGRIDY; j++)
+                    {
+                        y1 = YMIN + ((double)j + 0.5)*dy;
+                        r = module2(x-x1, y-y1);
+                        if (r < MU) return(1);
+                        if (vabs(y - y1) < WALL_WIDTH) return(1);
+                    }
+                }
+                return(0);
+            }
+            else 
+            {
+                for (i=0; i<NGRIDX; i++)
+                {
+                    x1 = XMIN + ((double)i + 0.5)*dx;
+                    if (vabs(x - x1) < WALL_WIDTH_B) return(1);
+                    for (j=0; j<NGRIDY/2; j++)
+                    {
+                        y1 = YMIN + ((double)j + 0.5)*dy;
+                        r = module2(x-x1, y-y1);
+                        if (r < MU_B) return(1);
+                        if (vabs(y - y1) < WALL_WIDTH_B) return(1);
+                    }
+                }
+                return(0); 
+            }
+            return(0);
+        }
+        case (D_CIRCLE_LATTICE_HEX):
+        {
+            dx = (XMAX - XMIN)/(double)NGRIDX;
+            dy = (YMAX - YMIN)/(double)NGRIDY;
+            r = module2(0.5*dx, dy);
+            nx = -dy/r;
+            ny = dx/(2.0*r);
+            if (top)
+            {
+//                 printf("xy_in_billiard_half\n"); 
+                for (j=0; j<NGRIDY+1; j++)
+                {
+                    y1 = YMIN + ((double)j)*dy;
+                    if (vabs(y - y1) < WALL_WIDTH) return(1);
+                    for (i=-1; i<NGRIDX; i++)
+                    {
+                        x1 = XMIN + ((double)i + 0.5)*dx;
+                        if (j%2 == 0) x1 += 0.5*dx;
+                        r = module2(x-x1, y-y1);
+//                         printf("r = %.3lg\n", r); 
+                        if (r < MU) return(1);
+                        if (vabs(nx*(x - x1) + ny*(y - y1)) < WALL_WIDTH) return(1);
+                        if (vabs(-nx*(x - x1) + ny*(y - y1)) < WALL_WIDTH) return(1);
+                    }
+                }
+            }
+            else
+            {
+                for (j=0; j<NGRIDY+1; j++)
+                {
+                    y1 = YMIN + ((double)j)*dy;
+                    if (vabs(y - y1) < WALL_WIDTH_B) return(1);
+                    for (i=-1; i<NGRIDX; i++)
+                    {
+                        x1 = XMIN + ((double)i + 0.5)*dx;
+                        if (j%2 == 0) x1 += 0.5*dx;
+                        r = module2(x-x1, y-y1);
+                        if (r < MU_B) return(1);
+                        if (vabs(nx*(x - x1) + ny*(y - y1)) < WALL_WIDTH_B) return(1);
+                        if (vabs(-nx*(x - x1) + ny*(y - y1)) < WALL_WIDTH_B) return(1);
+                    }
+                }
+            }
+            return(0);
+        }
+        case (D_CIRCLE_LATTICE_STRIP):
+        {
+            if (x > LAMBDA) return(1);
+            if (x < -LAMBDA) return(1);
+            dx = 2.0*LAMBDA/(double)NGRIDX;
+            dy = (YMAX - YMIN)/(double)NGRIDY;
+            for (i=0; i<NGRIDX + 1; i++)
+            {
+                x1 = -LAMBDA + ((double)i)*dx;
+                if (vabs(x - x1) < WALL_WIDTH*WALL_WIDTH_ASYM) return(1);
+                for (j=0; j<NGRIDY; j++)
+                {
+                    y1 = YMIN + ((double)j + 0.5)*dy;
+                    r = module2(x-x1, y-y1);
+                    if (r < MU) return(1);
+                    if (vabs(y - y1) < WALL_WIDTH) return(1);
+                }
+            }
+            return(0);
+        }
+        case (D_CIRCLE_LATTICE_HEX_STRIP):
+        {
+            if (vabs(x) > LAMBDA) return(1);
+            dx = 2.0*LAMBDA/(double)NGRIDX;
+            dy = (YMAX - YMIN)/(double)NGRIDY;
+            r = module2(0.5*dx, dy);
+            nx = -dy/r;
+            ny = dx/(2.0*r);
+            for (j=0; j<NGRIDY+1; j++)
+            {
+                y1 = YMIN + ((double)j)*dy;
+                if (vabs(y - y1) < WALL_WIDTH) return(1);
+                for (i=-1; i<NGRIDX; i++)
+                {
+                    x1 = -LAMBDA + ((double)i + 0.5)*dx;
+                    if (j%2 == 0) x1 += 0.5*dx;
+                    r = module2(x-x1, y-y1);
+                    if (r < MU) return(1);
+                    if (vabs(nx*(x - x1) + ny*(y - y1)) < WALL_WIDTH*WALL_WIDTH_ASYM) return(1);
+                    if (vabs(-nx*(x - x1) + ny*(y - y1)) < WALL_WIDTH*WALL_WIDTH_ASYM_B) return(1);
+                }
+            }
+            return(0);
+        }
         default:
         {
             printf("Function ij_in_billiard not defined for this billiard \n");
@@ -628,9 +756,13 @@ void draw_billiard_half(int domain, int pattern, int top, int fade, double fade_
     static int first = 1;
     
     glEnable(GL_SCISSOR_TEST);
-    if (top) glScissor(0.0, YMID, NX, YMID);
+//     if (top) glScissor(0.0, YMID, NX, YMID);
 //     if (top) glScissor(0.0, YMID, NX, YMAX);
-    else glScissor(0.0, 0.0, NX, YMID);
+//     else glScissor(0.0, 0.0, NX, YMID);
+    
+    if (top) glScissor(0.0, YMID/(HIGHRES+1), NX, YMID/(HIGHRES+1));
+//     if (top) glScissor(0.0, YMID, NX, YMAX);
+    else glScissor(0.0, 0.0, NX, YMID/(HIGHRES+1));
 
     if (fade)
     {
@@ -642,7 +774,7 @@ void draw_billiard_half(int domain, int pattern, int top, int fade, double fade_
         if (BLACK) glColor3f(1.0, 1.0, 1.0);
         else glColor3f(0.0, 0.0, 0.0);
     }
-    glLineWidth(5);
+    glLineWidth(BOUNDARY_WIDTH);
     
     if (top) signtop = 1.0;
     else signtop = -1.0;
@@ -818,6 +950,100 @@ void draw_billiard_half(int domain, int pattern, int top, int fade, double fade_
             /* Do nothing */
             break;
         }
+        case (D_CIRCLE_LATTICE):
+        {
+            if (top)
+            {
+                glBegin(GL_LINES);
+                for (i=0; i<npolyline; i++) 
+                {
+                    glVertex2d(polyline[i].posi, polyline[i].posj);
+                }
+                glEnd();
+            
+                for (i=0; i<npolyarc; i++)
+                {
+                    draw_circle_arc(polyarc[i].xc, polyarc[i].yc, polyarc[i].r, polyarc[i].angle1, polyarc[i].dangle, NSEG);
+                }
+            }
+            else 
+            {
+                glBegin(GL_LINES);
+                for (i=0; i<npolyline_b; i++) 
+                {
+                    glVertex2d(polyline_b[i].posi, polyline_b[i].posj);
+                }
+                glEnd();
+            
+                for (i=0; i<npolyarc_b; i++)
+                {
+                    draw_circle_arc(polyarc_b[i].xc, polyarc_b[i].yc, polyarc_b[i].r, polyarc_b[i].angle1, polyarc_b[i].dangle, NSEG);
+                }
+            }
+            break;
+        }
+        case (D_CIRCLE_LATTICE_HEX):
+        {
+            if (top)
+            {
+                glBegin(GL_LINES);
+                for (i=0; i<npolyline; i++) 
+                {
+                    glVertex2d(polyline[i].posi, polyline[i].posj);
+                }
+                glEnd();
+            
+                for (i=0; i<npolyarc; i++)
+                {
+                    draw_circle_arc(polyarc[i].xc, polyarc[i].yc, polyarc[i].r, polyarc[i].angle1, polyarc[i].dangle, NSEG);
+                }
+            }
+            else 
+            {
+                glBegin(GL_LINES);
+                for (i=0; i<npolyline_b; i++) 
+                {
+                    glVertex2d(polyline_b[i].posi, polyline_b[i].posj);
+                }
+                glEnd();
+            
+                for (i=0; i<npolyarc_b; i++)
+                {
+                    draw_circle_arc(polyarc_b[i].xc, polyarc_b[i].yc, polyarc_b[i].r, polyarc_b[i].angle1, polyarc_b[i].dangle, NSEG);
+                }
+            }
+            break;
+        }
+        case (D_CIRCLE_LATTICE_STRIP):
+        {
+            glBegin(GL_LINES);
+            for (i=0; i<npolyline; i++) 
+            {
+                glVertex2d(polyline[i].posi, polyline[i].posj);
+            }
+            glEnd();
+            
+            for (i=0; i<npolyarc; i++)
+            {
+                draw_circle_arc(polyarc[i].xc, polyarc[i].yc, polyarc[i].r, polyarc[i].angle1, polyarc[i].dangle, NSEG);
+            }
+            break;
+        }
+        case (D_CIRCLE_LATTICE_HEX_STRIP):
+        {
+            glBegin(GL_LINES);
+            for (i=0; i<npolyline; i++) 
+            {
+                glVertex2d(polyline[i].posi, polyline[i].posj);
+            }
+            glEnd();
+            
+            for (i=0; i<npolyarc; i++)
+            {
+                draw_circle_arc(polyarc[i].xc, polyarc[i].yc, polyarc[i].r, polyarc[i].angle1, polyarc[i].dangle, NSEG);
+            }
+            break;
+        }
         case (D_NOTHING):
         {
             /* Do nothing */
@@ -854,7 +1080,8 @@ void int_planar_wave_comp(double x, double y, double *phi[NX], double *psi[NX], 
             dist2 = (xy[0]-x)*(xy[0]-x);
 	    xy_in[i][j] = xy_in_billiard_comp(xy[0],xy[1]);
             
-	    if ((xy_in[i][j])||(TWOSPEEDS)) phi[i][j] = 0.01*exp(-dist2/0.0005)*cos(-sqrt(dist2)/0.01);
+            
+	    if ((xy_in[i][j])||(TWOSPEEDS)) phi[i][j] = INITIAL_AMP*exp(-dist2/INITIAL_VARIANCE)*cos(-sqrt(dist2)/INITIAL_WAVELENGTH);
             else phi[i][j] = 0.0;
             psi[i][j] = 0.0;
         }
@@ -903,7 +1130,7 @@ void add_circular_wave_comp(double factor, double x, double y, double *phi[NX], 
     }
 }
 
-void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], double scale, int time, int plot)
+void old_draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], double scale, int time, int plot)
 /* draw the field */
 {
     int i, j, iplus, iminus, jplus, jminus;
@@ -997,82 +1224,191 @@ void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], doub
     glEnd();
 }
 
-void draw_wave_comp_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], short int *xy_in[NX], double scale, int time, int plot, int palette, int fade, double fade_value)
+
+void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], double scale, int time, int plot)
 /* draw the field */
 {
-    int i, j, iplus, iminus, jplus, jminus, k;
-    double rgb[3], xy[2], x1, y1, x2, y2, velocity, energy, gradientx2, gradienty2, pos[2];
-    static double dtinverse = ((double)NX)/(COURANT*(XMAX-XMIN)), dx = (XMAX-XMIN)/((double)NX);
+    int i, j, k, iplus, iminus, jplus, jminus, size = 1;
+    double rgb[3], xy[2], x1, y1, x2, y2, velocity, energy, gradientx, gradienty, gradientx2, gradienty2, pos[2], norm, pscal, ca, vscale2;
+    double *values, *shade, *rgbvals;
 
-    glBegin(GL_QUADS);
-    
-//     printf("dtinverse = %.5lg\n", dtinverse);
-
-    for (i=0; i<NX; i++)
-        for (j=0; j<NY; j++)
+    values = (double *)malloc(NX*NY*sizeof(double));
+    rgbvals = (double *)malloc(3*NX*NY*sizeof(double));
+    #pragma omp parallel for private(i,j,rgb)
+    for (i=0; i<NX; i+=size)
+        for (j=0; j<NY; j+=size)
         {
+//             values[i*NY+j] = wave_value(i, j, phi, psi, total_energy, average_energy, total_flux, color_scale, xy_in, scale, time, plot, palette, rgb);
+        
             if (((TWOSPEEDS)&&(xy_in[i][j] != 2))||(xy_in[i][j] == 1))
             {
                 switch (plot) {
                     case (P_AMPLITUDE):
                     {
-                        color_scheme_palette(COLOR_SCHEME, palette, phi[i][j], scale, time, rgb);
+                        values[i*NY+j] = phi[i][j];
+                        color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
                         break;
                     }
                     case (P_ENERGY):
                     {
                         energy = compute_energy(phi, psi, xy_in, i, j);
-                        if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym_palette(COLOR_SCHEME, palette, energy, scale, time, rgb);
-                        else color_scheme_palette(COLOR_SCHEME, palette, energy, scale, time, rgb);
+                        values[i*NY+j] = energy;
+                        if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, energy, scale, time, rgb);
+                        else color_scheme(COLOR_SCHEME, energy, scale, time, rgb);
                         break;
                     }
                     case (P_MIXED):
                     {
-                        if (j > NY/2) color_scheme_palette(COLOR_SCHEME, palette, phi[i][j], scale, time, rgb);
-                        else color_scheme_palette(COLOR_SCHEME, palette, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
-                        break;
-                    }
-                    case (P_MEAN_ENERGY):
-                    {
-                        energy = compute_energy(phi, psi, xy_in, i, j);
-                        total_energy[i][j] += energy;
-                        if (COLOR_PALETTE >= COL_TURBO) 
-                            color_scheme_asym_palette(COLOR_SCHEME, palette, total_energy[i][j]/(double)(time+1), scale, time, rgb);
-                        else color_scheme_palette(COLOR_SCHEME, palette, total_energy[i][j]/(double)(time+1), scale, time, rgb);
+                        if (j > NY/2) 
+                        {
+                            values[i*NY+j] = phi[i][j];
+                            color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
+                        }
+                        else 
+                        {
+                            energy = compute_energy(phi, psi, xy_in, i, j);
+                            values[i*NY+j] = energy;
+                            color_scheme(COLOR_SCHEME, energy, scale, time, rgb);
+                        }
                         break;
                     }
                     case (P_LOG_ENERGY):
                     {
                         energy = compute_energy(phi, psi, xy_in, i, j);
+                        values[i*NY+j] = LOG_SHIFT + LOG_SCALE*log(energy);
                         color_scheme(COLOR_SCHEME, LOG_SHIFT + LOG_SCALE*log(energy), scale, time, rgb);
                         break;
                     }
-                    case (P_LOG_MEAN_ENERGY):
-                    {
-                        energy = compute_energy(phi, psi, xy_in, i, j);
-                        if (energy == 0.0) energy = 1.0e-20;
-                        total_energy[i][j] += energy;
-                        energy = LOG_SHIFT + LOG_SCALE*log(total_energy[i][j]/(double)(time+1));
-                        color_scheme_palette(COLOR_SCHEME, palette, energy, scale, time, rgb);
-                        break;
-                    }
                 }
-                    
-//                 if (PLOT == P_AMPLITUDE)
-//                     color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
-//                 else if (PLOT == P_ENERGY)
-//                 {
-//                     energy = compute_energy(phi, psi, xy_in, i, j);
-//                     if (COLOR_PALETTE >= COL_TURBO) color_scheme_asym(COLOR_SCHEME, energy, scale, time, rgb);
-//                     else color_scheme(COLOR_SCHEME, energy, scale, time, rgb);
-//                 }
-//                 else if (PLOT == P_MIXED)
-//                 {
-//                     if (j > NY/2) color_scheme(COLOR_SCHEME, phi[i][j], scale, time, rgb);
-//                     else color_scheme(COLOR_SCHEME, compute_energy(phi, psi, xy_in, i, j), scale, time, rgb);
-//                 }
-                if (fade) for (k=0; k<3; k++) rgb[k] *= fade_value;
-                glColor3f(rgb[0], rgb[1], rgb[2]);
+            }
+            rgbvals[i*NY+j] = rgb[0];
+            rgbvals[NX*NY+i*NY+j] = rgb[1];
+            rgbvals[2*NX*NY+i*NY+j] = rgb[2];
+        }
+
+
+//     glBegin(GL_QUADS);
+    
+    if (SHADE_2D)
+    {
+        vscale2 = SHADE_SCALE_2D*SHADE_SCALE_2D;
+        shade = (double *)malloc(NX*NY*sizeof(double));
+        #pragma omp parallel for private(i,j,gradientx,gradienty,norm,pscal,ca)
+        for (i=0; i<NX-size; i+=size)
+        {
+            for (j=0; j<NY-size; j+=size)
+            {
+                gradientx = values[(i+1)*NY+j] - values[i*NY+j];
+                gradienty = values[i*NY+j+1] - values[i*NY+j];
+                norm = sqrt(vscale2 + gradientx*gradientx + gradienty*gradienty);
+                pscal = -gradientx*light[0] - gradienty*light[1] + SHADE_SCALE_2D;
+                ca = pscal/norm;
+                ca = (ca + 1.0)*0.4 + 0.2;
+                for (k=0; k<3; k++) rgbvals[k*NX*NY+i*NY+j] *= ca;
+                printf("ca = %.3lg\n", ca);
+            }
+        }
+    }
+    
+    glBegin(GL_QUADS);
+    
+    for (i=0; i<NX; i+=size)
+        for (j=0; j<NY; j+=size)
+        {
+            if ((TWOSPEEDS)||(xy_in[i][j]))
+            {
+                
+                glColor3f(rgbvals[i*NY+j], rgbvals[NX*NY+i*NY+j], rgbvals[2*NX*NY+i*NY+j]);
+                
+                glVertex2i(i, j);
+                glVertex2i(i+size, j);
+                glVertex2i(i+size, j+size);
+                glVertex2i(i, j+size);
+            }
+        }
+
+    glEnd ();
+    
+    if (SHADE_2D) free(shade);
+    
+    /* draw horizontal mid line */
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINE_STRIP);
+    xy_to_pos(XMIN, 0.5*(YMIN+YMAX), pos);
+    glVertex2d(pos[0], pos[1]);
+    xy_to_pos(XMAX, 0.5*(YMIN+YMAX), pos);
+    glVertex2d(pos[0], pos[1]);
+    glEnd();
+    
+    free(values);
+    free(rgbvals);
+}
+
+
+void draw_wave_comp_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], double *average_energy[NX], double *total_flux, double *color_scale[NX], short int *xy_in[NX], double scale, int time, int plot, int palette, int fade, double fade_value)
+/* draw the field */
+{
+    int i, j, iplus, iminus, jplus, jminus, k;
+    double rgb[3], xy[2], x1, y1, x2, y2, velocity, energy, gradientx2, gradienty2, pos[2], gradientx, gradienty, norm, pscal, ca, vscale2, val;
+    static double dtinverse = ((double)NX)/(COURANT*(XMAX-XMIN)), dx = (XMAX-XMIN)/((double)NX), col_ratio;
+    double *values, *shade, *rgbvals;
+    static int first = 1;
+    
+    if (first)
+    {
+        col_ratio = 1.0/1.01;
+        first = 0;
+    }
+    
+    values = (double *)malloc(NX*NY*sizeof(double));
+    rgbvals = (double *)malloc(3*NX*NY*sizeof(double));
+    #pragma omp parallel for private(i,j,rgb)
+    for (i=0; i<NX; i+=size)
+        for (j=0; j<NY; j+=size)
+        {
+            values[i*NY+j] = wave_value(i, j, phi, psi, total_energy, average_energy, total_flux, color_scale, xy_in, scale, time, plot, palette, rgb);
+            rgbvals[i*NY+j] = rgb[0];
+            rgbvals[NX*NY+i*NY+j] = rgb[1];
+            rgbvals[2*NX*NY+i*NY+j] = rgb[2];
+        }
+        
+    
+    
+    if (SHADE_2D)
+    {
+        vscale2 = SHADE_SCALE_2D*SHADE_SCALE_2D;
+        shade = (double *)malloc(NX*NY*sizeof(double));
+        #pragma omp parallel for private(i,j,gradientx,gradienty,norm,pscal,ca)
+        for (i=0; i<NX-size; i+=size)
+        {
+            for (j=0; j<NY-size; j+=size)
+            {
+                gradientx = values[(i+1)*NY+j] - values[i*NY+j];
+                gradienty = values[i*NY+j+1] - values[i*NY+j];
+                norm = sqrt(vscale2 + gradientx*gradientx + gradienty*gradienty);
+                pscal = -gradientx*light[0] - gradienty*light[1] + SHADE_SCALE_2D;
+                ca = pscal/norm;
+                ca = (ca + 1.0)*0.4 + 0.2;
+                if (RESCALE_COLOR_IN_CENTER) for (k=0; k<3; k++) 
+                    rgbvals[k*NX*NY+i*NY+j] = 1.0 + (ca*rgbvals[k*NX*NY+i*NY+j] - 1.0)*(color_scale[i][j]+0.01)*col_ratio;
+//                     rgbvals[k*NX*NY+i*NY+j] = 0.5 + (ca*rgbvals[k*NX*NY+i*NY+j] - 0.5)*(color_scale[i][j]+0.01)*col_ratio;
+                else for (k=0; k<3; k++) rgbvals[k*NX*NY+i*NY+j] *= ca;
+            }
+        }
+    }
+    
+//   D_CIRCLE_LATTICE_HEX  printf("3\n");
+    glBegin(GL_QUADS);
+    
+//     printf("dtinverse = %.5lg\n", dtinverse);
+
+    for (i=0; i<NX; i+=size)
+        for (j=0; j<NY; j+=size)
+        {
+            if (((TWOSPEEDS)&&(xy_in[i][j] != 2))||(xy_in[i][j] == 1))
+            {       
+                if (fade) for (k=0; k<3; k++) rgbvals[k*NX*NY+i*NY+j] *= fade_value;
+                glColor3f(rgbvals[i*NY+j], rgbvals[NX*NY+i*NY+j], rgbvals[2*NX*NY+i*NY+j]);
                 
                 glVertex2i(i, j);
                 glVertex2i(i+size, j);
@@ -1086,12 +1422,18 @@ void draw_wave_comp_highres_palette(int size, double *phi[NX], double *psi[NX], 
     /* draw horizontal mid line */
     if (fade) glColor3f(fade_value, fade_value, fade_value);
     else glColor3f(1.0, 1.0, 1.0);
+    
+    glLineWidth(BOUNDARY_WIDTH);
+    
     glBegin(GL_LINE_STRIP);
     xy_to_pos(XMIN, 0.5*(YMIN+YMAX), pos);
     glVertex2d(pos[0], pos[1]);
     xy_to_pos(XMAX, 0.5*(YMIN+YMAX), pos);
     glVertex2d(pos[0], pos[1]);
     glEnd();
+    
+    free(values);
+    free(rgbvals);
 }
 
 void compute_energy_tblr(double *phi[NX], double *psi[NX], short int *xy_in[NX], double energies[6])

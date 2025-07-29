@@ -73,6 +73,7 @@
 #define D_WAVEGUIDES_COUPLED_N 525    /* two coupled wave guides, narrow variant */
 #define D_WAVEGUIDE_BADSPLICE 526     /* badly spliced fibers, to use with IOR_WAVE_GUIDE_COATED */
 #define D_MAZE 53               /* maze */
+#define D_MAZE_SMALL 531        /* maze */
 #define D_MAZE_CLOSED 54        /* closed maze */
 #define D_MAZE_CHANNELS 541     /* maze with two channels attached */
 #define D_MAZE_CHANNELS_INT 542 /* maze with two channels attached, distance defined from interior of cells */
@@ -117,9 +118,19 @@
 #define D_EPICYCLOID 92         /* epicycloid */
 #define D_CIRCLE_LATTICE 93     /* lattice of connected circles */
 #define D_CIRCLE_LATTICE_RANDOM 931 /* lattice of connected circles with random channel widths */
+#define D_CIRCLE_LATTICE_SQUARE_CROSS 932   /* square lattice with next-nearest-neighbours */
+#define D_CIRCLE_LATTICE_MAZE 933    /* maze of connected circles */
+#define D_CIRCLE_LATTICE_NONISO 934  /* lattice of connected circle with anisotropic channel widths */
+#define D_CIRCLE_LATTICE_HALF 935    /* same as D_CIRCLE_LATTICE_NONISO, but empty upper half */
+#define D_CIRCLE_LATTICE_HALF_V 936    /* same as D_CIRCLE_LATTICE_NONISO, but empty left half */
+#define D_CIRCLE_LATTICE_STRIP 937     /* vertical strip of lattice of circles */
 #define D_CIRCLE_LATTICE_HEX 94 /* hex lattice of connected circles */
+#define D_CIRCLE_LATTICE_HEX_MAZE 941   /* maze of connected circles based on hex lattice */
+#define D_CIRCLE_LATTICE_HEX_NONISO 942 /* hex lattice with anisotropic channel widths */
+#define D_CIRCLE_LATTICE_HEX_STRIP 947  /* vertical strip of hex lattice of circles */
 #define D_CIRCLE_LATTICE_HONEY 95   /* honeycomb lattice of connected circles */
 #define D_CIRCLE_LATTICE_POISSON 96 /* Poisson disc process of connected circles */
+#define D_CIRCLE_LATTICE_RHOMBUS 97 /* rhombus-based lattice of connected circles */
 
 /* for wave_sphere.c */
 
@@ -338,6 +349,7 @@
 /* plot types used by rde */
 
 #define Z_AMPLITUDE 0   /* amplitude of first field */
+#define Z_AMPLITUDE_B 1 /* amplitude of second field */
 #define Z_ANGLE 10      /* angle, for Kuramoto model */
 #define Z_RGB 20        /* RGB plot */
 #define Z_POLAR 21      /* polar angle associated with RBG plot */
@@ -349,6 +361,7 @@
 #define Z_VORTICITY 25  /* curl of polar angle */
 #define Z_VORTICITY_ABS 251  /* absolute value of curl of polar angle */
 #define Z_MAXTYPE_RPS 26    /* color or type with maximal density */
+#define Z_DIVERGENCE 27     /* divergence in Keller-Segel model */
 // #define Z_ZERO 99       /* return zero */
 
 /* for Schrodinger equation */
@@ -486,9 +499,15 @@ t_arc polyarc[NMAXPOLY];            /* data of arcs */
 /* the same for comparisons between different domains */
 int ncircles_b = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */
 int npolyline_b = NMAXPOLY;           /* actual length of polyline */
+int npolyrect_b = NMAXPOLY;           /* actual number of polyrect */
+int npolyrect_rot_b = NMAXPOLY;       /* actual number of rotated polyrect */
+int npolyarc_b = NMAXPOLY;            /* actual number of arcs */
 t_circle circles_b[NMAXCIRCLES];      /* circular scatterers */
 t_polygon polygons_b[NMAXCIRCLES];    /* polygonal scatterers */
 t_vertex polyline_b[NMAXPOLY];        /* vertices of polygonal line */
+t_rectangle polyrect_b[NMAXPOLY];     /* vertices of rectangles */
+t_rect_rotated polyrectrot_b[NMAXPOLY];  /* data of rotated rectangles */
+t_arc polyarc_b[NMAXPOLY];            /* data of arcs */
 
 double courant2, courantb2;  /* Courant parameters squared */
 

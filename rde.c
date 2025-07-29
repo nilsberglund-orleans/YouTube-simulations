@@ -32,7 +32,7 @@
 #include <math.h>
 #include <string.h>
 #include <GL/glut.h>
-#include <GL/glu.h>
+#include <GL/glu.h> 
 #include <unistd.h>
 #include <sys/types.h>
 #include <tiffio.h>     /* Sam Leffler's libtiff library. */
@@ -49,9 +49,9 @@
 // #define WINWIDTH 	1920  /* window width */
 #define WINWIDTH 	1150  /* window width */
 #define WINHEIGHT 	1150  /* window height */
-// #define NX 960          /* number of grid points on x axis */
-#define NX 574          /* number of grid points on x axis */
-#define NY 574           /* number of grid points on y axis */
+// #define NX 720           /* number of grid points on x axis */
+#define NX 432           /* number of grid points on x axis */
+#define NY 432           /* number of grid points on y axis */
 #define HRES 1           /* factor for high resolution plots */
 
 // #define XMIN -2.0
@@ -63,20 +63,20 @@
 
 /* Choice of simulated equation */
 
-#define RDE_EQUATION 9  /* choice of reaction term, see list in global_3d.c */
-#define NFIELDS 1       /* number of fields in reaction-diffusion equation */
-#define NLAPLACIANS 0   /* number of fields for which to compute Laplacian */
+#define RDE_EQUATION 10  /* choice of reaction term, see list in global_3d.c */
+#define NFIELDS 2       /* number of fields in reaction-diffusion equation */
+#define NLAPLACIANS 2   /* number of fields for which to compute Laplacian */
 
 #define SPHERE 0        /* set to 1 to simulate equation on sphere */
-#define DPOLE 0         /* safety distance to poles */
+#define DPOLE 1         /* safety distance to poles */
 #define DSMOOTH 1       /* size of neighbourhood of poles that are smoothed */
-#define SMOOTHPOLE 0.01 /* smoothing coefficient at poles */
+#define SMOOTHPOLE 0.00 /* smoothing coefficient at poles */
 #define SMOOTHCOTPOLE 0.05  /* smoothing coefficient of cotangent at poles */
 #define PHISHIFT 0.0    /* shift of phi in 2D plot (in degrees) */
 #define SMOOTHBLOCKS 0  /* set to 1 to use blocks of points near the poles */
-#define BLOCKDIST 0     /* distance to poles where points are blocked */ 
+#define BLOCKDIST 16     /* distance to poles where points are blocked */ 
 #define ZERO_MERIDIAN 0.0     /* choice of zero meridian (will be at left/right boundary of 2d plot) */
-#define POLE_NODRAW 2  /* distance around poles where wave is not drawn */
+#define POLE_NODRAW 3   /* distance around poles where wave is not drawn */
 
 #define ADD_POTENTIAL 0 /* set to 1 to add a potential (for Schrodinger equation) */
 #define ADD_MAGNETIC_FIELD 0    /* set to 1 to add a magnetic field (for Schrodinger equation) - then set POTENTIAL 1 */
@@ -123,7 +123,10 @@
 #define NGRIDY 8            /* number of grid point for grid of disks */
 #define REVERSE_TESLA_VALVE 1   /* set to 1 to orient Tesla valve in blocking configuration */
 #define WALL_WIDTH 0.05      /* width of wall separating lenses */
-#define WALL_WIDTH_RND 0.0  /* proportion of width of width for some random arrangements */
+#define WALL_WIDTH_B 0.05    /* width of wall separating lenses */
+#define WALL_WIDTH_RND 0.0   /* proportion of width of width for some random arrangements */
+#define WALL_WIDTH_ASYM 0.5  /* proportion of width of width for some arrangements */
+#define WALL_WIDTH_ASYM_B 1.5    /* asymmetry of wall width (D_CIRCLE_LATTICE_HEX_NONISO) */
 #define RADIUS_FACTOR 0.3    /* controls inner radius for C_RING arrangements */
 
 #define X_SHOOTER -0.2
@@ -142,7 +145,8 @@
 
 /* Physical parameters of wave equation */
 
-#define DT 0.00000025
+#define DT 0.000003
+// #define DT 0.00000025
 
 #define VISCOSITY 0.02
 #define POISSON_STIFFNESS 1.0   /* stiffness of Poisson equation solver for incompressible Euler */
@@ -159,9 +163,15 @@
 #define FHNC -0.01      /* parameter in FHN equation */
 #define K_HARMONIC 1.0  /* spring constant of harmonic potential */
 #define K_COULOMB 0.5   /* constant in Coulomb potential */
-#define K_KURAMOTO 12.0 /* constant in Kuramoto model */
+#define K_KURAMOTO 20.0 /* constant in Kuramoto model */
 #define NU_KURAMOTO 0.0 /* viscosity in Kuramoto model */
 #define OMEGA_KURAMOTO 0.02  /* frequency in Kuramoto model */
+#define A_KS 0.15        /* coupling constant in Keller-Segel model */
+#define C_KS 3.0         /* coupling constant in Keller-Segel model */
+#define D_KSU 1.2        /* diffusion in Keller-Segel model */
+#define D_KSV 0.75       /* diffusion in Keller-Segel model */
+#define KS_RSCALE 0.001  /* scaling factor for reaction term of Keller-Segel model */
+#define KS_UMAX 10.0    /* max value for u component of Keller-Segel model */
 #define V_MAZE 0.4      /* potential in walls of maze */
 #define BZQ 0.0008      /* parameter in BZ equation */
 #define BZF 1.2         /* parameter in BZ equation */
@@ -195,7 +205,7 @@
 #define SPEED 0.0       /* speed of drift to the right */
 
 #define ADD_NOISE 0     /* set to 1 to add noise, set to 2 to add noise in right half */
-#define NOISE_INTENSITY 0.5      /* noise intensity */
+#define NOISE_INTENSITY 0.025      /* noise intensity */
 #define CHANGE_NOISE 0      /* set to 1 to increase noise intensity */
 #define NOISE_FACTOR 40.0   /* factor by which to increase noise intensity */
 #define NOISE_INITIAL_TIME 100  /* initial time during which noise remains constant */
@@ -244,8 +254,8 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 2300       /* number of frames of movie */
-#define NVID 40           /* number of iterations between images displayed on screen */
+#define NSTEPS 1800       /* number of frames of movie */
+#define NVID 100           /* number of iterations between images displayed on screen */
 #define ACCELERATION_FACTOR 1.0 /* factor by which to increase NVID in course of simulation */
 #define DT_ACCELERATION_FACTOR 1.0 /* factor by which to increase time step in course of simulation  */
 #define MAX_DT 0.024     /* maximal value of integration step */
@@ -263,14 +273,15 @@
 
 /* Visualisation */
 
-#define PLOT_3D 0    /* controls whether plot is 2D or 3D */
+#define PLOT_3D 1    /* controls whether plot is 2D or 3D */
 #define PLOT_SPHERE 0   /* draws fields on a sphere */
+#define SIMULATION_GRID 1   /* type of simulation grid, for certain equations */
 
 #define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
 #define ROTATE_ANGLE 360.0   /* total angle of rotation during simulation */
-#define SHADE_3D 0              /* set to 1 to change luminosity according to normal vector */
+#define SHADE_3D 1             /* set to 1 to change luminosity according to normal vector */
 #define SHADE_2D 0              /* set to 1 to change luminosity according to normal vector */
-#define VIEWPOINT_TRAJ 1    /* type of viewpoint trajectory */
+#define VIEWPOINT_TRAJ 0    /* type of viewpoint trajectory */
 #define MAX_LATITUDE 45.0   /* maximal latitude for viewpoint trajectory VP_ORBIT2 */
 
 #define DRAW_PERIODICISED 0     /* set to 1 to repeat wave periodically in x and y directions */
@@ -278,13 +289,13 @@
 
 /* Plot type - color scheme */
 
-#define CPLOT 10
-#define CPLOT_B 251
+#define CPLOT 0
+#define CPLOT_B 0
 
 /* Plot type - height of 3D plot */
 
-#define ZPLOT 10     /* z coordinate in 3D plot */
-#define ZPLOT_B 71    /* z coordinate in second 3D plot */
+#define ZPLOT 0    /* z coordinate in 3D plot */
+#define ZPLOT_B 0    /* z coordinate in second 3D plot */
 
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of P_3D_AMPLITUDE plot */
 #define NON_DIRICHLET_BC 0      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
@@ -329,7 +340,7 @@
 
 /* Color schemes, see list in global_pdes.c  */
 
-#define COLOR_PALETTE 10        /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 11        /* Color palette, see list in global_pdes.c  */
 #define COLOR_PALETTE_B 11      /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
@@ -339,14 +350,15 @@
 
 #define COLOR_SCHEME 3   /* choice of color scheme */
 
-#define PHASE_SHIFT 0.0   /* phase shift of color scheme, in units of Pi (formerly COLOR_PHASE_SHIFT) */
+#define PHASE_SHIFT 0.0  /* phase shift of color scheme, in units of Pi (formerly COLOR_PHASE_SHIFT) */
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
-#define VSHIFT_AMPLITUDE 0.0   /* additional shift for wave amplitude */
-#define VSCALE_AMPLITUDE 0.01      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
+#define VSHIFT_AMPLITUDE -2.7   /* additional shift for wave amplitude */
+#define VSCALE_AMPLITUDE 3.0      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-#define CURL_SCALE 0.000005   /* scaling factor for curl representation */
+#define CURL_SCALE 1.25   /* scaling factor for curl representation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 #define SLOPE_SCHROD_LUM 10.0      /* sensitivity of luminosity on module, for color scheme Z_ARGUMENT */
 #define MIN_SCHROD_LUM 0.1       /* minimal luminosity in color scheme Z_ARGUMENT*/
@@ -355,7 +367,7 @@
 #define PRESSURE_LOG_SHIFT -2.5     /* shift for color scheme Z_EULER_PRESSURE */
 #define VSCALE_WATER_HEIGHT 15.0     /* vertical scaling of water height */
 #define ADD_HEIGHT_CONSTANT -0.016    /* constant added to wave height */
-#define SHADE_SCALE_2D 0.25     /* controls "depth" of 2D shading */
+#define SHADE_SCALE_2D 0.1           /* controls "depth" of 2D shading (lower values increase depth) */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
@@ -373,10 +385,10 @@
 #define SHIFT_DENSITY 1.0        /* shift for color scheme Z_EULER_DENSITY */
 #define VSCALE_DENSITY 30.0      /* additional scaling factor for color scheme Z_EULER_DENSITY */
 #define VSCALE_VORTICITY 0.1     /* additional scaling factor for color scheme Z_EULERC_VORTICITY */
-#define VORTICITY_SHIFT 0.0     /* vertical shift of vorticity */
+#define VORTICITY_SHIFT 0.25     /* vertical shift of vorticity */
 #define ZSCALE_SPEED 300.0        /* additional scaling factor for z-coord Z_EULER_SPEED and Z_SWATER_SPEED */
 #define ZSHIFT_SPEED 0.0        /* additional shift of z-coord Z_EULER_SPEED and Z_SWATER_SPEED */
-#define ZSCALE_NORMGRADIENT -0.0001  /* vertical scaling for Z_NORM_GRADIENT */
+#define ZSCALE_NORMGRADIENT 1.25  /* vertical scaling for Z_NORM_GRADIENT */
 #define VSCALE_SWATER 100.0        /* additional scaling factor for color scheme Z_EULER_DENSITY */
 
 #define NXMAZE 7      /* width of maze */
@@ -387,10 +399,10 @@
 #define MAZE_WIDTH 0.04     /* half width of maze walls */
 
 #define DRAW_COLOR_SCHEME 0     /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 3.0      /* scale of color scheme bar */
+#define COLORBAR_RANGE 2.5      /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 2.5    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
-#define CIRC_COLORBAR 1         /* set to 1 to draw circular color scheme */
+#define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
 #define CIRC_COLORBAR_B 0       /* set to 1 to draw circular color scheme */
 
 /* only for compatibility with wave_common.c */
@@ -452,7 +464,7 @@ double u_3d[2] = {0.75, -0.45};     /* projections of basis vectors for REP_AXO_
 double v_3d[2] = {-0.75, -0.45};
 double w_3d[2] = {0.0, 0.015};
 double light[3] = {0.40824829, -0.816496581, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
-double observer[3] = {0.0, -6.0, 2.5};    /* location of observer for REP_PROJ_3D representation */ 
+double observer[3] = {-3.0, -3.0, 2.5};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
 /* constants for simulations on planets */
@@ -467,19 +479,21 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 #define PLANET_SEALEVEL 0.0      /* sea level for flooded planet */
 #define VENUS_NODATA_FACTOR 0.5     /* altitude to assign to DEM points without data (fraction of mean altitude) */
 
-#define Z_SCALING_FACTOR 0.8   /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define XY_SCALING_FACTOR 2.1  /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define Z_SCALING_FACTOR 0.75   /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define XY_SCALING_FACTOR 1.5  /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0        /* max value of z coordinate for REP_PROJ_3D representation */
-#define XSHIFT_3D 0.0          /* overall x shift for REP_PROJ_3D representation */
-#define YSHIFT_3D 0.0          /* overall y shift for REP_PROJ_3D representation */
+#define XSHIFT_3D -0.0          /* overall x shift for REP_PROJ_3D representation */
+#define YSHIFT_3D -0.5          /* overall y shift for REP_PROJ_3D representation */
 #define BORDER_PADDING 0       /* distance from boundary at which to plot points, to avoid boundary effects due to gradient */
 #define DRAW_ARROW 0           /* set to 1 to draw arrow above sphere */
+#define ZMAX 3.0             /* maximal value of z coordinate */
+#define ZMIN -3.0            /* maximal value of z coordinate */
 
-#define RSCALE 0.005            /* scaling factor of radial component */
+#define RSCALE 0.02             /* scaling factor of radial component */
 #define RSCALE_B 1.00           /* experimental, additional radial scaling factor in ij_to_sphere */
 #define RSHIFT 0.0              /* shift in radial component */
-#define RMAX 10.0               /* max value of radial component */
-#define RMIN 0.0                /* min value of radial component */
+#define RMAX 4.0                /* max value of radial component */
+#define RMIN 0.5                /* min value of radial component */
 #define COS_VISIBLE -0.35       /* limit on cosine of normal to shown facets */
 
 /* For debugging purposes only */
@@ -489,7 +503,7 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 
 
 #define REFRESH_B (ZPLOT_B != ZPLOT)||(CPLOT_B != CPLOT)    /* to save computing time, to be improved */
-#define COMPUTE_WRAP_ANGLE ((WRAP_ANGLE)&&((cplot == Z_ANGLE_GRADIENT)||(cplot == Z_ANGLE_GRADIENTX)||(cplot == Z_ARGUMENT)||(cplot == Z_ANGLE_GRADIENTX)||(cplot == Z_EULER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED)))
+#define COMPUTE_WRAP_ANGLE ((WRAP_ANGLE)&&((cplot == Z_ANGLE_GRADIENT)||(cplot == Z_ANGLE_GRADIENTX)||(cplot == Z_ARGUMENT)||(cplot == Z_ANGLE_GRADIENTX)||(cplot == Z_EULER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED)||(cplot == Z_ANGLE)))
 #define PRINT_PARAMETERS ((PRINT_TIME)||(PRINT_VISCOSITY)||(PRINT_RPSLZB)||(PRINT_PROBABILITIES)||(PRINT_NOISE)||(PRINT_FLOW_SPEED)||(PRINT_AVERAGE_SPEED))
 #define COMPUTE_PRESSURE ((ZPLOT == Z_EULER_PRESSURE)||(CPLOT == Z_EULER_PRESSURE)||(ZPLOT_B == Z_EULER_PRESSURE)||(CPLOT_B == Z_EULER_PRESSURE))
 
@@ -1235,9 +1249,9 @@ void evolve_wave_half(double *phi_in[NFIELDS], double *phi_out[NFIELDS], short i
 double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* time step of field evolution */
 {
-    int i, j, k, iplus, iminus, jplus, jminus, ropening, w;
-    double x, y, z, deltax, deltay, deltaz, rho, rhox, rhoy, pot, u, v, ux, uy, vx, vy, test = 0.0, dx, dy, xy[2], padding, a, eta, etax, etay, sum;
-    double *delta_phi[NLAPLACIANS], *nabla_phi, *nabla_psi, *nabla_omega, *delta_vorticity, *delta_pressure, *delta_p, *delta_u, *delta_v, *nabla_rho, *nabla_u, *nabla_v, *nabla_eta, *kuramoto_int;
+    int i, j, k, iplus, iminus, jplus, jminus, ropening, w, n;
+    double x, y, z, deltax, deltay, deltaz, rho, rhox, rhoy, pot, u, v, ux, uy, vx, vy, test = 0.0, dx, dy, xy[2], padding, a, eta, etax, etay, sum, phi0, chi;
+    double *delta_phi[NLAPLACIANS], *nabla_phi, *nabla_psi, *nabla_omega, *delta_vorticity, *delta_pressure, *delta_p, *delta_u, *delta_v, *nabla_rho, *nabla_u, *nabla_v, *nabla_eta, *kuramoto_int, *keller_segel_drift, *keller_segel_div;
 //     double u_bc[NY], v_bc[NY]; 
     static double invsqr3 = 0.577350269;    /* 1/sqrt(3) */
     static int smooth = 0, y_channels, y_channels1, imin, imax, first = 1;
@@ -1287,13 +1301,19 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
         }
         first = 0;
     }
-    
+        
     /* smooth vector fields at poles */
-    if ((SPHERE)&&(!SMOOTHBLOCKS)) for (k=0; k<NFIELDS; k++) smooth_poles(phi_in[k]);
-    else for (k=0; k<NFIELDS; k++) block_poles(phi_in[k]);
+//     if ((SPHERE)&&(!SMOOTHBLOCKS)) for (k=0; k<NFIELDS; k++) smooth_poles(phi_in[k]);
+//     else for (k=0; k<NFIELDS; k++) block_poles(phi_in[k]);
+    if (SPHERE)
+    {
+        if (!SMOOTHBLOCKS) for (k=0; k<NFIELDS; k++) smooth_poles(phi_in[k]);
+        else for (k=0; k<NFIELDS; k++) block_poles(phi_in[k]);
+    }
         
     for (i=0; i<NLAPLACIANS; i++) delta_phi[i] = (double *)malloc(NX*NY*sizeof(double));
     
+
     if (COMPUTE_PRESSURE) 
     {
         delta_pressure = (double *)malloc(NX*NY*sizeof(double));
@@ -1320,8 +1340,8 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
         {
             nabla_psi = (double *)malloc(2*NX*NY*sizeof(double));
             nabla_omega = (double *)malloc(2*NX*NY*sizeof(double));
-            compute_gradient_euler(phi_in[0], nabla_psi, wsphere, EULER_GRADIENT_YSHIFT);
-            compute_gradient_euler(phi_in[1], nabla_omega, wsphere, 0.0);
+            compute_gradient_euler(phi_in[0], nabla_psi, rde, wsphere, EULER_GRADIENT_YSHIFT);
+            compute_gradient_euler(phi_in[1], nabla_omega, rde, wsphere, 0.0);
         
             if (COMPUTE_PRESSURE) compute_pressure_laplacian(phi_in, delta_p);
         
@@ -1392,8 +1412,38 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
         {
             kuramoto_int = (double *)malloc(NX*NY*sizeof(double));
             compute_kuramoto_interaction(phi_in[0], kuramoto_int, xy_in, wsphere);
+            break;
         }
         
+        case (E_KURAMOTO_SPHERE):
+        {
+            kuramoto_int = (double *)malloc(NX*NY*sizeof(double));
+            compute_kuramoto_interaction_grid(phi_in[1], kuramoto_int, wsphere, ngridpoints);
+            break;
+        }
+        
+        case (E_KELLER_SEGEL):
+        {
+//             keller_segel_drift = (double *)malloc(NX*NY*sizeof(double));
+//             keller_segel_div = (double *)malloc(NX*NY*sizeof(double));
+            nabla_psi = (double *)malloc(2*NX*NY*sizeof(double));
+//             compute_gradient_euler_test(phi_in[1], nabla_psi, xy_in, wsphere);
+            compute_gradient_euler_plane(phi_in[1], nabla_psi, rde, 0.0);
+            /* multiply gradient by chi */
+            #pragma omp parallel for private(i)
+            for (i=0; i<NX*NY; i++)
+            {
+                x = phi_in[0][i];
+                chi = C_KS*x*(1.0+x*x);
+                nabla_psi[i] *= chi;
+                nabla_psi[NX*NY + i] *= chi;
+            }
+            /* compute divergence */
+//             compute_divergence(nabla_psi, keller_segel_div, xy_in, wsphere);
+            
+            compute_divergence_rde(nabla_psi, rde, xy_in, wsphere);
+            break;
+        }
         default: 
         {
             /* do nothing */
@@ -1411,9 +1461,10 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
     }
     
     
-    
-    #pragma omp parallel for private(i,j,k,x,y,z,deltax,deltay,deltaz,rho)
-    for (i=imin; i<imax; i++){
+    if (RDE_EQUATION != E_KURAMOTO_SPHERE) 
+    {
+        #pragma omp parallel for private(i,j,k,x,y,z,deltax,deltay,deltaz,rho)
+        for (i=imin; i<imax; i++){
         for (j=0; j<NY; j++){
             if (xy_in[i*NY+j]) switch (RDE_EQUATION){
                 case (E_HEAT):
@@ -1449,20 +1500,39 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
                     }
                     else phi_out[0][i*NY+j] = x;
                     break;
-//                     x = phi_in[0][i*NY+j];
-//                     phi_out[0][i*NY+j] = phi_in[0][i*NY+j] + intstep*(K_KURAMOTO*kuramoto_int[i*NY+j] + OMEGA_KURAMOTO);
-//                     if (phi_out[0][i*NY+j] > PI) 
-//                     {
-//                         x = (phi_out[0][i*NY+j] + PI)/DPI;
-//                         phi_out[0][i*NY+j] -= DPI*(double)((int)x);
-//                     }
-//                     else if (phi_out[0][i*NY+j] < -PI) 
-//                     {
-//                         x = (-phi_out[0][i*NY+j] + PI)/DPI;
-//                         phi_out[0][i*NY+j] += DPI*(double)((int)x);
-//                     }
-//                     break;
                 }
+                case (E_KELLER_SEGEL):
+                {
+                    x = phi_in[0][i*NY+j];
+                    y = phi_in[1][i*NY+j];
+                    deltax = D_KSU*delta_phi[0][i*NY+j];
+                    deltay = D_KSV*delta_phi[1][i*NY+j];
+//                     phi_out[0][i*NY+j] = x + intstep*(deltax - keller_segel_div[i*NY+j] + KS_RSCALE*x*(1.0-x));
+                    phi_out[0][i*NY+j] = x + intstep*(deltax - rde[i*NY+j].divergence + KS_RSCALE*x*(1.0-x));
+                    if (phi_out[0][i*NY+j] > KS_UMAX) phi_out[0][i*NY+j] = KS_UMAX;
+//                     if (phi_out[0][i*NY+j] < -1.0) phi_out[0][i*NY+j] = -1.0;
+                    
+                    phi_out[1][i*NY+j] = y + intstep*(deltay + KS_RSCALE*(x - A_KS*y));
+                    break;
+                }
+//                 case (E_KURAMOTO_SPHERE):
+//                 {
+//                     x = K_KURAMOTO*kuramoto_int[i*NY+j] + OMEGA_KURAMOTO;
+//                     
+//                     x = phi_in[1][i*NY+j] + intstep*x;
+//                     if (x > PI) 
+//                     {
+//                         y = (x + PI)/DPI;
+//                         phi_out[1][i*NY+j] = x - DPI*(double)((int)y);
+//                     }
+//                     else if (x < -PI) 
+//                     {
+//                         y = (-x + PI)/DPI;
+//                         phi_out[1][i*NY+j] = x + DPI*(double)((int)y);
+//                     }
+//                     else phi_out[1][i*NY+j] = x;
+//                     break;
+//                 }
                 case (E_CAHN_HILLIARD):
                 {
                     /* TO DO */
@@ -1680,6 +1750,37 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
             }
         }
     }
+    }
+    
+    if (RDE_EQUATION == E_KURAMOTO_SPHERE)
+    {
+        #pragma omp parallel for private(i,x)
+        for (i=0; i<ngridpoints; i++)
+        {
+            x = K_KURAMOTO*kuramoto_int[i] + OMEGA_KURAMOTO;
+            /* add an optional diffusion term */
+            if ((NU_KURAMOTO != 0.0)&&(NLAPLACIANS > 0)) 
+                x += NU_KURAMOTO*delta_phi[0][i*NY+j];
+                           
+            x = phi_in[1][i] + intstep*x;
+            if (x > PI) 
+            {
+                y = (x + PI)/DPI;
+                phi_out[1][i] = x - DPI*(double)((int)y);
+            }
+            else if (x < -PI) 
+            {
+                y = (-x + PI)/DPI;
+                phi_out[1][i] = x + DPI*(double)((int)y);
+            }
+            else phi_out[1][i] = x;
+        }
+        /* convert field 1 on simulation grid to field 0 on longitude_latitude grid */
+        convert_fields_from_grids(phi_out[1], phi_out[0], wsphere);
+        
+        /* TEST */
+//         for (i=0; i<NX*NY; i++) rde[i].theta = phi_out[0][i];
+    }
     
     /* in-flow/out-flow b.c. for incompressible Euler equation */
     if (((RDE_EQUATION == E_EULER_INCOMP)||(RDE_EQUATION == E_EULER_COMP))&&(IN_OUT_FLOW_BC > 0))
@@ -1711,27 +1812,45 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
         free(nabla_psi);
     }
     
-    if (RDE_EQUATION == E_EULER_INCOMP) 
-    {
-        free(nabla_psi);
-        free(nabla_omega);
-    }
-    else if (RDE_EQUATION == E_EULER_COMP)
-    {
-        free(nabla_rho);
-    }
-    else if (RDE_EQUATION == E_SHALLOW_WATER)
-    {
-        free(nabla_eta);
-        if (VISCOSITY > 0.0)
+    switch (RDE_EQUATION) {
+        case (E_EULER_INCOMP):
         {
-            free(delta_u);
-            free(delta_v);
+            free(nabla_psi);
+            free(nabla_omega);
+            break;
         }
-    }
-    else if (RDE_EQUATION == E_KURAMOTO)
-    {
-        free(kuramoto_int);
+        case (E_EULER_COMP):
+        {
+            free(nabla_rho);
+            break;
+        }
+        case (E_SHALLOW_WATER):
+        {   
+            free(nabla_eta);
+            if (VISCOSITY > 0.0)
+            {
+                free(delta_u);
+                free(delta_v);
+            }
+            break;
+        }
+        case (E_KURAMOTO):
+        {
+            free(kuramoto_int);
+            break;
+        }
+        case (E_KURAMOTO_SPHERE):
+        {
+            free(kuramoto_int);
+            break;
+        }
+        case (E_KELLER_SEGEL):
+        {
+//             free(keller_segel_drift);
+//             free(keller_segel_div);
+            free(nabla_psi); 
+            break;
+        }
     }
     
     if (COMPUTE_PRESSURE) 
@@ -2219,6 +2338,9 @@ void animation()
     
 //     if (ADD_TRACERS) tracers = (double *)malloc(2*NSTEPS*N_TRACERS*sizeof(double));
     if (ADD_TRACERS) tracers = (double *)malloc(4*NSTEPS*N_TRACERS*sizeof(double));
+    
+    if (RDE_EQUATION == E_KURAMOTO_SPHERE)
+        ngridpoints = initialize_simulation_grid_sphere(wsphere);
 
     dx = (XMAX-XMIN)/((double)NX);
     intstep = DT/(dx*dx);
@@ -2296,7 +2418,8 @@ void animation()
 
 //     init_linear_blob_sphere(0, 1.3*PI, 0.65*PI, 0.0, 0.0, 0.3, 0.1, 0.1, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
 
-    init_random(0.0, 0.4, phi, xy_in, wsphere);
+    init_random(0.4, 0.4, phi, xy_in, wsphere);
+//     init_onefield_random(1, 0.2, 0.1, phi, xy_in, wsphere);
 //     init_random_smoothed(0.0, 0.4, phi, xy_in, wsphere);
     
 //     init_expanding_blob_sphere(0, (279.0/180.0)*PI, (115.0/180.0)*PI, 0.75, 0.04, 0.06, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
@@ -2322,6 +2445,9 @@ void animation()
     }
     
     if (ADD_MOON_FORCING) compute_forcing_schedule(0, wsphere);
+    
+    if (RDE_EQUATION == E_KURAMOTO_SPHERE)
+        convert_fields_from_grids(phi[1], phi[0], wsphere);
     
     blank();
     glColor3f(0.0, 0.0, 0.0);

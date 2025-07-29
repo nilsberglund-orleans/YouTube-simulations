@@ -44,7 +44,7 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
@@ -66,7 +66,7 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 96        /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 97        /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 2   /* pattern of circles or polygons, see list in global_pdes.c */
 
@@ -86,20 +86,24 @@
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 #define PDISC_CONNECT_FACTOR 1.5    /* controls which discs are connected for D_CIRCLE_LATTICE_POISSON domain */
 
-#define LAMBDA 1.25	    /* parameter controlling the dimensions of domain */
-#define MU 0.065            /* parameter controlling the dimensions of domain */
-#define NPOLY 4             /* number of sides of polygon */
+#define LAMBDA 0.6	    /* parameter controlling the dimensions of domain */
+#define MU 0.11             /* parameter controlling the dimensions of domain */
+#define MU_B 1.0            /* parameter controlling the dimensions of domain */
+#define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
-#define MDEPTH 7            /* depth of computation of Menger gasket */
+#define MDEPTH 6            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
-#define MANDELLEVEL 2000    /* iteration level for Mandelbrot set */
-#define MANDELLIMIT 20.0    /* limit value for approximation of Mandelbrot set */
+#define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
+#define MANDELLIMIT 10.0    /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-#define NGRIDX 15           /* number of grid point for grid of disks */
-#define NGRIDY 10           /* number of grid point for grid of disks */
+#define NGRIDX 12           /* number of grid point for grid of disks */
+#define NGRIDY 8            /* number of grid point for grid of disks */
 #define WALL_WIDTH 0.022    /* width of wall separating lenses */
-#define WALL_WIDTH_RND 0.5  /* proportion of width of width for random arrangements */
+#define WALL_WIDTH_B 0.01   /* width of wall separating lenses */
+#define WALL_WIDTH_RND 0.0  /* proportion of width of width for random arrangements */
 #define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
+#define WALL_WIDTH_ASYM 0.75      /* asymmetry of wall width (D_CIRCLE_LATTICE_NONISO) */
+#define WALL_WIDTH_ASYM_B 0.75    /* asymmetry of wall width (D_CIRCLE_LATTICE_HEX_NONISO) */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
@@ -146,7 +150,7 @@
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
 #define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
-#define OSCILLATING_SOURCE_PERIOD 8     /* period of oscillating source */
+#define OSCILLATING_SOURCE_PERIOD 18    /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
 #define MAX_PULSING_TIME 1500           /* max time for adding pulses */
 
@@ -163,7 +167,7 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 3200        /* number of frames of movie */
+#define NSTEPS 2800        /* number of frames of movie */
 #define NVID 3             /* number of iterations between images displayed on screen */
 #define NSEG 1000          /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
@@ -220,8 +224,8 @@
 
 /* Color schemes */
 
-#define COLOR_PALETTE 11       /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 10     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 10       /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 17     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
@@ -229,6 +233,7 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 0.75       /* sensitivity of color on wave amplitude */
+#define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
 #define VSCALE_AMPLITUDE 0.5   /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define VSHIFT_AMPLITUDE 0.0   /* additional shift for wave amplitude */
 #define VSCALE_ENERGY 1.0      /* additional scaling factor for color scheme P_3D_ENERGY */
@@ -268,7 +273,7 @@
 
 #define DRAW_COLOR_SCHEME 1       /* set to 1 to plot the color scheme */
 #define COLORBAR_RANGE 2.5      /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 0.6    /* scale of color scheme bar for 2nd part */
+#define COLORBAR_RANGE_B 1.0    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0     /* set to 1 to draw color scheme horizontally */
 
 #define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
@@ -290,7 +295,7 @@
 #define HRES 1          /* dummy, only used by rde.c */
 #define SHADE_2D 0       /* set to 1 to add pseudo-3d shading effect */ 
 #define SHADE_SCALE_2D 0.05  /* lower value increases sensitivity of shading */
-#define N_SOURCES 2                     /* number of sources, for option draw_sources */
+#define N_SOURCES 1                     /* number of sources, for option draw_sources */
 #define XYIN_INITIALISED (B_DOMAIN == D_IMAGE)
 /* end of constants only used by sub_wave and sub_maze */
 
@@ -1014,7 +1019,7 @@ void animation()
 //     init_polyrect_arc(polyrectrot, polyarc, &npolyrect_rot, &npolyarc);
     
     /* initialise polyline and similar for drawing some domains */
-    npolyline = init_poly(MDEPTH, polyline, polyrect, polyrectrot, polyarc, circles, &npolyrect, &npolyrect_rot, &npolyarc, &ncircles);
+    npolyline = init_poly(MDEPTH, polyline, polyrect, polyrectrot, polyarc, circles, &npolyrect, &npolyrect_rot, &npolyarc, &ncircles, 1);
     if (COMPARISON) npolyline_b = init_polyline(MDEPTH, polyline);
     
     for (i=0; i<npolyline; i++) printf("vertex %i: (%.3f, %.3f)\n", i, polyline[i].x, polyline[i].y);
@@ -1162,14 +1167,10 @@ void animation()
         if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, fade, fade_value); 
         
         /* add oscillating waves */
-        wave_source_x[0] = circles[10].xc;
-        wave_source_y[0] = circles[10].yc;
-        wave_source_x[1] = circles[214].xc;
-        wave_source_y[1] = circles[214].yc;
+        wave_source_x[0] = 0.0;
+        wave_source_y[0] = 0.0;
         source_periods[0] = OSCILLATING_SOURCE_PERIOD;
-        source_periods[1] = OSCILLATING_SOURCE_PERIOD/2;
         source_amp[0] = INITIAL_AMP;
-        source_amp[1] = INITIAL_AMP*2.0;
         for (source = 0; source < N_SOURCES; source++)
         {
             if ((ADD_OSCILLATING_SOURCE)&&(i%(OSCILLATING_SOURCE_PERIOD) == 1)&&(i<MAX_PULSING_TIME))

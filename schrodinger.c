@@ -142,6 +142,7 @@
 
 #define SCALE 1          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define E_SCALE 150.0     /* scaling factor for energy representation */
@@ -202,6 +203,9 @@
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define WALL_WIDTH 0.1      /* width of wall separating lenses */
+#define WALL_WIDTH_B 0.01   /* width of wall separating lenses */
+#define WALL_WIDTH_ASYM 0.75      /* asymmetry of wall width (D_CIRCLE_LATTICE_NONISO) */
+#define WALL_WIDTH_ASYM_B 0.75    /* asymmetry of wall width (D_CIRCLE_LATTICE_HEX_NONISO) */
 #define PDISC_CONNECT_FACTOR 1.5    /* controls which discs are connected for D_CIRCLE_LATTICE_POISSON domain */
 #define WALL_WIDTH_RND 0.0  /* proportion of width of width for random arrangements */
 #define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */

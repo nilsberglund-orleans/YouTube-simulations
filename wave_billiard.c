@@ -44,7 +44,7 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
@@ -60,8 +60,8 @@
 #define NX 3840          /* number of grid points on x axis */
 #define NY 2300          /* number of grid points on y axis */
 
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
+#define XMIN -1.5
+#define XMAX 2.5	/* x interval */
 #define YMIN -1.197916667
 #define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
 
@@ -72,7 +72,7 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 96         /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 947        /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 202  /* pattern of circles or polygons, see list in global_pdes.c */
 #define IMAGE_FILE 5        /* for option D_IMAGE */
@@ -87,8 +87,8 @@
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 #define PDISC_CONNECT_FACTOR 1.5    /* controls which discs are connected for D_CIRCLE_LATTICE_POISSON domain */
 
-#define LAMBDA 1.25	    /* parameter controlling the dimensions of domain */
-#define MU 0.065            /* parameter controlling the dimensions of domain */
+#define LAMBDA 0.6	    /* parameter controlling the dimensions of domain */
+#define MU 0.075            /* parameter controlling the dimensions of domain */
 #define MU_B 1.0            /* parameter controlling the dimensions of domain */
 #define NPOLY 6             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
@@ -97,11 +97,14 @@
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0    /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-#define NGRIDX 15           /* number of grid point for grid of disks */
-#define NGRIDY 10            /* number of grid point for grid of disks */
-#define WALL_WIDTH 0.017    /* width of wall separating lenses */
+#define NGRIDX 6           /* number of grid point for grid of disks */
+#define NGRIDY 14           /* number of grid point for grid of disks */
+#define WALL_WIDTH 0.013    /* width of wall separating lenses */
+#define WALL_WIDTH_B 0.01   /* width of wall separating lenses */
 #define WALL_WIDTH_RND 0.0  /* proportion of width of width for random arrangements */
 #define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
+#define WALL_WIDTH_ASYM 0.75      /* asymmetry of wall width (D_CIRCLE_LATTICE_NONISO) */
+#define WALL_WIDTH_ASYM_B 0.75    /* asymmetry of wall width (D_CIRCLE_LATTICE_HEX_NONISO) */
 
 #define X_SHOOTER -0.2
 #define Y_SHOOTER -0.6
@@ -118,20 +121,20 @@
 /* xy_in_billiard and draw_billiard below */
 /* Physical parameters of wave equation */
 
-#define TWOSPEEDS 0         /* set to 1 to replace hardcore boundary by medium with different speed */
-#define OSCILLATE_LEFT 0     /* set to 1 to add oscilating boundary condition on the left */
+#define TWOSPEEDS 1         /* set to 1 to replace hardcore boundary by medium with different speed */
+#define OSCILLATE_LEFT 0    /* set to 1 to add oscilating boundary condition on the left */
 #define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
-#define OSCILLATION_SCHEDULE 61  /* oscillation schedule, see list in global_pdes.c */
+#define OSCILLATION_SCHEDULE 0  /* oscillation schedule, see list in global_pdes.c */
 #define OSCIL_YMAX 0.35      /* defines oscillation range */
 #define INITIAL_SHIFT 20.0          /* time shift of initial wave packet (in oscillation periods) */
 #define WAVE_PACKET_SHIFT 200.0     /* time shift between wave packets (in oscillation periods) */
 
-#define OMEGA 0.025         /* frequency of periodic excitation */
-#define AMPLITUDE 0.5      /* amplitude of periodic excitation */ 
+#define OMEGA 0.0125       /* frequency of periodic excitation */
+#define AMPLITUDE 1.0      /* amplitude of periodic excitation */ 
 #define ACHIRP 0.25        /* acceleration coefficient in chirp */
 #define DAMPING 0.0        /* damping of periodic excitation */
 #define COURANT 0.1        /* Courant number */
-#define COURANTB 0.025       /* Courant number in medium B */
+#define COURANTB 0.035    /* Courant number in medium B */
 #define GAMMA 0.0          /* damping factor in wave equation */
 #define GAMMAB 0.0         /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
@@ -146,11 +149,11 @@
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
 #define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
-#define OSCILLATING_SOURCE_PERIOD 8     /* period of oscillating source */
+#define OSCILLATING_SOURCE_PERIOD 12.5  /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
-#define N_SOURCES 2                     /* number of sources, for option draw_sources */
+#define N_SOURCES 1                     /* number of sources, for option draw_sources */
 #define ALTERNATE_SOURCE_PHASES 0       /* set to 1 to alternate initial phases of sources */
-#define MAX_PULSING_TIME 1500            /* max time for adding pulses */
+#define MAX_PULSING_TIME 500            /* max time for adding pulses */
 
 #define ADD_WAVE_PACKET_SOURCES 0       /* set to 1 to add several sources emitting wave packets */
 #define WAVE_PACKET_SOURCE_TYPE 3       /* type of wave packet sources */
@@ -161,12 +164,12 @@
 
 /* Boundary conditions, see list in global_pdes.c  */
 
-#define B_COND 1
+#define B_COND 2
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 3200         /* number of frames of movie */
-#define NVID 7              /* number of iterations between images displayed on screen */
+#define NSTEPS 4800         /* number of frames of movie */
+#define NVID 8              /* number of iterations between images displayed on screen */
 #define NSEG 1000           /* number of segments of boundary */
 #define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
@@ -183,7 +186,7 @@
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 0.75             /* amplitude of initial condition */
+#define INITIAL_AMP 0.75            /* amplitude of initial condition */
 #define INITIAL_VARIANCE 0.0005    /* variance of initial condition */
 #define INITIAL_WAVELENGTH  0.025   /* wavelength of initial condition */
 
@@ -195,8 +198,8 @@
 
 /* Color schemes */
 
-#define COLOR_PALETTE 15     /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 10   /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 11     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 16   /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
@@ -204,20 +207,21 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
+#define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
 #define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0   /* exponential attenuation coefficient of contrast with time */
-#define VSHIFT_AMPLITUDE 0.0    /* additional shift for wave amplitude */
-#define VSCALE_AMPLITUDE 0.2    /* additional scaling factor for wave amplitude */
-#define E_SCALE 30.0       /* scaling factor for energy representation */
+#define VSHIFT_AMPLITUDE -0.1    /* additional shift for wave amplitude */
+#define VSCALE_AMPLITUDE 1.0     /* additional scaling factor for wave amplitude */
+#define E_SCALE 750.0      /* scaling factor for energy representation */
 #define LOG_SCALE 0.75     /* scaling factor for energy log representation */
 #define LOG_SHIFT 0.75     /* shift of colors on log scale */
 #define FLUX_SCALE 250.0    /* scaling factor for energy flux represtnation */
-#define AVRG_E_FACTOR 0.85   /* controls time window size in P_AVERAGE_ENERGY scheme */
+#define AVRG_E_FACTOR 0.75   /* controls time window size in P_AVERAGE_ENERGY scheme */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 #define FADE_IN_OBSTACLE 1      /* set to 1 to fade color inside obstacles */
 #define SHADE_2D 1       /* set to 1 to add pseudo-3d shading effect */ 
-#define SHADE_SCALE_2D 0.05  /* lower value increases sensitivity of shading */
+#define SHADE_SCALE_2D 0.01  /* lower value increases sensitivity of shading */
 
 #define COLORHUE 260     /* initial hue of water color for scheme C_LUM */
 #define COLORDRIFT 0.0   /* how much the color hue drifts during the whole simulation */
@@ -233,7 +237,7 @@
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
 #define CIRC_COLORBAR_B 0       /* set to 1 to draw circular color scheme */
 
-#define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
+#define DRAW_WAVE_PROFILE 1     /* set to 1 to draw a profile of the wave */
 #define HORIZONTAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define VERTICAL_WAVE_PROFILE 1 /* set to 1 to draw wave profile vertically */
 #define WAVE_PROFILE_X 1.9      /* value of x to sample wave profile */
@@ -252,9 +256,9 @@
 #define MESSAGE_LSPACE 48        /* length of space for Morse code message */
 #define MESSAGE_INITIAL_TIME 100 /* initial time before starting message for Morse code message */    
 
-#define NXMAZE 8      /* width of maze */
-#define NYMAZE 32      /* height of maze */
-#define MAZE_MAX_NGBH 5     /* max number of neighbours of maze cell */
+#define NXMAZE 18      /* width of maze */
+#define NYMAZE 9       /* height of maze */
+#define MAZE_MAX_NGBH 6     /* max number of neighbours of maze cell */
 #define RAND_SHIFT 0        /* seed of random number generator */
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_WIDTH 0.02     /* half width of maze walls */
@@ -595,12 +599,12 @@ void draw_color_bar_palette(int plot, double range, int palette, int circular, i
 
 void animation()
 {
-    double time, scale, ratio, startleft[2], startright[2], sign[N_SOURCES], r2, xy[2], fade_value, yshift, speed = 0.0, a, b, c, x, y, angle = 0.0, x1, ior_angle = 0.0, omega, phase_shift, vshift, dsource, finv, source_amp[N_SOURCES], nx, ny, r; 
+    double time, scale, ratio, startleft[2], startright[2], sign[N_SOURCES], r2, xy[2], fade_value, yshift, speed = 0.0, a, b, c, x, y, angle = 0.0, x1, ior_angle = 0.0, omega, phase_shift, vshift, dsource, finv, source_amp[N_SOURCES], nx, ny, r, source_periods[N_SOURCES], dperiod; 
     double *phi[NX], *psi[NX], *tmp[NX], *total_energy[NX], *average_energy[NX], *color_scale[NX], *total_flux, *tcc_table[NX], *tgamma_table[NX], *fade_table;
     short int *xy_in[NX];
-    int i, j, k, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, p, q, first_source = 1, imin, imax, ij[2], source, source_period, source_shift[N_SOURCES], source_periods[N_SOURCES];
+    int i, j, k, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, p, q, first_source = 1, imin, imax, ij[2], source, source_period, source_shift[N_SOURCES], phase;
 //     static int image_counter = 0;
-    int image_counter = 0;
+    int image_counter = 0, add_counter[N_SOURCES];
     long int wave_value;
     t_wave_packet *packet;
     t_wave_source wave_source[25];
@@ -654,7 +658,7 @@ void animation()
 //     init_polyrect_arc(polyrectrot, polyarc, &npolyrect_rot, &npolyarc);
     
     /* initialise polyline and similar for drawing some domains */
-    npolyline = init_poly(MDEPTH, polyline, polyrect, polyrectrot, polyarc, circles, &npolyrect, &npolyrect_rot, &npolyarc, &ncircles);
+    npolyline = init_poly(MDEPTH, polyline, polyrect, polyrectrot, polyarc, circles, &npolyrect, &npolyrect_rot, &npolyarc, &ncircles, 1);
     
     for (i=0; i<ncircles; i++) printf("circle %i: (%.3f, %.3f)\n", i, circles[i].xc, circles[i].yc);
     
@@ -719,6 +723,8 @@ void animation()
     }
     
     if (XYIN_INITIALISED) init_xyin_from_image(xy_in);
+    
+    for (i=0; i<N_SOURCES; i++) add_counter[i] = 0; 
     
 //     isospectral_initial_point(0.1, 0.0, startleft, startright);    /* for isospectral billiards */
 //     homophonic_initial_point(0.5, -0.25, 1.5, -0.25, startleft, startright);
@@ -798,7 +804,7 @@ void animation()
         b = 0.00015;
 //         speed = a/((double)(NVID)*c);
 //         speed = 0.55*a/((double)(NVID*OSCILLATING_SOURCE_PERIOD)*c);
-        speed = a/((double)(3*NVID*OSCILLATING_SOURCE_PERIOD)*c);
+        speed = a/((double)(3*NVID)*OSCILLATING_SOURCE_PERIOD*c);
         /* the factor 3 is due to evolve_wave calling evolve_wave_half 3 times */
         print_speed(speed, 0, 1.0);
     }
@@ -841,19 +847,18 @@ void animation()
         if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, CIRC_COLORBAR, fade, fade_value);
         
         /* add oscillating waves */
-        wave_source_x[0] = circles[10].xc;
-        wave_source_y[0] = circles[10].yc;
-        wave_source_x[1] = circles[214].xc;
-        wave_source_y[1] = circles[214].yc;
+        wave_source_x[0] = -1.0;
+        wave_source_y[0] = 0.0;
         source_periods[0] = OSCILLATING_SOURCE_PERIOD;
-        source_periods[1] = OSCILLATING_SOURCE_PERIOD/2;
         source_amp[0] = INITIAL_AMP;
-        source_amp[1] = INITIAL_AMP*2.0;
         for (source = 0; source < N_SOURCES; source++)
         {
-//             source_shift[source] = 0;
-            if ((ADD_OSCILLATING_SOURCE)&&(i%(source_periods[source]) == 1)&&(i<MAX_PULSING_TIME))
+            dperiod = source_periods[source];
+            phase = i - (int)(dperiod*(double)((int)((double)i/dperiod)));
+            if ((ADD_OSCILLATING_SOURCE)&&(phase == 1)&&(i<MAX_PULSING_TIME))
             {
+                printf("Source %i: Adding pulse %i\n", source, add_counter[source]);
+                add_counter[source]++;
                 if (ALTERNATE_OSCILLATING_SOURCE) sign[source] = -sign[source];
                 add_circular_wave(-sign[source]*source_amp[source], wave_source_x[source], wave_source_y[source], phi, psi, xy_in);
             }

@@ -52,12 +52,13 @@
 
 /* Choice of the billiard table, see global_particles.c */
 
-#define B_DOMAIN 1      /* choice of domain shape */
+#define B_DOMAIN 11      /* choice of domain shape */
 
 #define CIRCLE_PATTERN 6   /* pattern of circles */
 #define POLYLINE_PATTERN 4  /* pattern of polyline */
 
 #define ABSORBING_CIRCLES 1 /* set to 1 for circular scatterers to be absorbing */
+#define NABSCIRCLES 10       /* number of absorbing circles */
 
 #define NMAXCIRCLES 50000        /* total number of circles (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000        /* total number of sides of polygonal line */   
@@ -67,13 +68,16 @@
 #define NGOLDENSPIRAL 2000  /* max number of points for C_GOLDEN_SPIRAL arrandement */
 #define SDEPTH 2            /* Sierpinski gastket depth */
 
-#define LAMBDAMIN 0.0	/* parameter controlling shape of domain */
-#define LAMBDA 1.5	/* parameter controlling shape of domain */
+#define LAMBDAMIN 6.0	/* parameter controlling shape of domain */
+#define LAMBDA 20.0	/* parameter controlling shape of domain */
 #define MU 1.0          /* second parameter controlling shape of billiard */
 #define FOCI 1          /* set to 1 to draw focal points of ellipse */
 #define NPOLY 6             /* number of sides of polygon */
 // #define NPOLY 3             /* number of sides of polygon */
 #define APOLY -1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define LAMBDA_B 1.0  /* parameter controlling shape of domain (for P_POLYRING) */
+#define NPOLY_B 100000           /* number of sides of second polygon */
+#define APOLY_B 1.0         /* angle by which to turn second polygon, in units of Pi/2 */ 
 #define DRAW_BILLIARD 1     /* set to 1 to draw billiard */
 #define DRAW_CONSTRUCTION_LINES 1   /* set to 1 to draw additional construction lines for billiard */
 #define PERIODIC_BC 0       /* set to 1 to enforce periodic boundary conditions when drawing particles */
@@ -96,7 +100,7 @@
 #define PRINT_TRAJECTORY_LENGTH 0   /* set to 1 to print length of trajectory 0 */
 #define PRINT_TRAJECTORY_PERIOD 0   /* set to 1 to print period of trajectory 0 */
 #define DRAW_LENGTHS_PLOT 0         /* set to 1 to plot trajectory lengths */
-#define LENGTHS_LOG_SCALE 0         /* set to 1 to use log scale for plot of lengths */
+#define LENGTHS_LOG_SCALE 1         /* set to 1 to use log scale for plot of lengths */
 #define MAX_ANGLE 90.0         /* range of angles of trajectory */
 
 #define NSTEPS 4000      /* number of frames of movie */
@@ -141,7 +145,7 @@
 #define PLOT_LYAPUNOV 1     /* set to 1 to add plot of Lyapunov exponents */
 #define LOGSCALEX_LYAP 0    /* set to 1 to use log scale on parameter axis of Lyapunov exponents */
 #define LYAP_MAX 1.0        /* maximal Lyapunov exponent */
-#define ADAPT_TO_SYMMETRY 0 /* set to 1 to show only one symmetric part of phase space */
+#define ADAPT_TO_SYMMETRY 1 /* set to 1 to show only one symmetric part of phase space */
 #define SYMMETRY_FACTOR 3   /* proportion of phase space to be shown */
 
 #define PAUSE 1000       /* number of frames after which to pause */

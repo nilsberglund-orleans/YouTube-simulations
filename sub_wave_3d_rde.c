@@ -24,7 +24,8 @@ void init_wave_sphere_rde(t_wave_sphere *wsphere, int res)
     
     printf("Initializing wsphere\n");
     
-    dphi = DPI/(double)(res*NX);
+//     dphi = DPI/(double)(res*NX);
+    dphi = DPI/(double)(res*NX-1);
     dtheta = PI/(double)(res*NY);
 //     dtheta = PI/(double)(NY-2*(DPOLE));
 //     theta0 = (double)(DPOLE)*dtheta;
@@ -2645,7 +2646,7 @@ void draw_color_scheme_palette_3d(double x1, double y1, double x2, double y2, in
 void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, int plot, double min, double max, int palette, int fade, double fade_value)
 {
     int j, k, ij_center[2], ij_right[2], ic, jc, ir;
-    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2], zscale = 0.95;
+    double x, y, dy, dy_e, dy_phase, rgb[3], value, lum, amp, dphi, pos[2], phi, xy[2], zscale = 1.0;
     
 //     printf("Drawing color bar\n");
     
@@ -2682,6 +2683,15 @@ void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, 
             {
                 value = 1.0*dy*(double)(j);
                 color_scheme_asym_palette(COLOR_SCHEME, palette, value, 1.0, 0, rgb);
+                break;
+            }
+            case (Z_ANGLE):
+            {
+                value = min + 1.0*dy*(double)(j);
+                amp = color_amplitude_linear(value, 1.0, 1)/PI;
+                while (amp > 1.0) amp -= 2.0;
+                while (amp < -1.0) amp += 2.0;
+                amp_to_rgb(0.5*(1.0 + amp), rgb);
                 break;
             }
             case (P_3D_AMP_ANGLE):
@@ -2761,6 +2771,12 @@ void draw_circular_color_scheme_palette_3d(double x1, double y1, double radius, 
                 break;
             }
             case (Z_ARGUMENT):
+            {
+                value = dy_phase*(double)(j);
+                color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);
+                break;
+            }
+            case (Z_ANGLE_GRADIENT):
             {
                 value = dy_phase*(double)(j);
                 color_scheme_palette(C_ONEDIM_LINEAR, palette, value, 1.0, 1, rgb);

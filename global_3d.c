@@ -13,6 +13,8 @@
 #define E_EULER_COMP 7      /* compressible Euler equation */
 #define E_SHALLOW_WATER 8   /* shallow water equation */
 #define E_KURAMOTO 9        /* Kuramoto-type equation (nearest neighbor coupling) */
+#define E_KURAMOTO_SPHERE 91    /* Kuramoto on the sphere, with Poisson grid */
+#define E_KELLER_SEGEL 10   /* Keller-Segel model */
 
 /* Choice of potential */
 
@@ -69,6 +71,11 @@
 #define DEM_VENUS 3         /* DEM of Venus */
 #define DEM_MERCURY 4       /* DEM of Mercury */
 
+/* Type of simulation grid on the sphere */
+
+#define GRID_EQUILONGITUDE 0    /* equally spaced latitudes an longitudes */
+#define GRID_CUBIC 1            /* projection of regular grid on cube */
+
 /* macros to avoid unnecessary computations in 3D plots */
 
 #define COMPUTE_THETA ((cplot == Z_POLAR)||(cplot == Z_NORM_GRADIENT)||(cplot == Z_ANGLE_GRADIENT)||(cplot == Z_NORM_GRADIENT_INTENSITY)||(cplot == Z_VORTICITY)||(cplot == Z_VORTICITY_ABS))
@@ -95,11 +102,13 @@
 // #define RDE_PLANET (((ADAPT_STATE_TO_BC)&&((OBSTACLE_GEOMETRY == D_SPHERE_EARTH)||(OBSTACLE_GEOMETRY == D_SPHERE_MARS)||(OBSTACLE_GEOMETRY == D_SPHERE_VENUS)))||((RDE_EQUATION == E_SHALLOW_WATER)&&(SWATER_DEPTH == SH_EARTH)))
 
 #define NMAXCIRC_SPHERE 100     /* max number of circles on sphere */
-#define NMAX_TRACER_PTS 20       /* max number of tracer points recorded per cell */
+#define NMAX_TRACER_PTS 20      /* max number of tracer points recorded per cell */
+#define NMAX_SPHERE_NEIGHB 10    /* max number of neighbours in Poisson simulation grid */
 
 int global_time = 0;
 double max_depth = 1.0;
 int moon_position;
+int ngridpoints;
 
 /* structure used for color and height representations */
 /* possible extra fields: zfield, cfield, interpolated coordinates */
@@ -134,6 +143,7 @@ typedef struct
     double field_norm;          /* norm of field or gradient */
     double field_arg;           /* argument of field or gradient */
     double curl;                /* curl of field */
+    double divergence;          /* divergence of field */
     double cos_angle;           /* cos of angle between normal vector and direction of light */
     double log_vorticity;       /* logarithm of vorticity (for Euler equation) */
     double Lpressure;           /* Laplacian of pressure (for Euler equation) */
@@ -176,7 +186,13 @@ typedef struct
     double altitude;            /* altitude in case of Earth with digital elevation model */
     double cos_angle;           /* cosine of light angle */
     double cos_angle_sphere;    /* cosing of light angle for perfect sphere */
-    double force;             /* external forcing */
+    double force;               /* external forcing */
+    double phigrid, thetagrid;  /* phi, theta angles for alt simulation grid on sphere */
+    short int nneighb;          /* number of neighbours, for Kuramoto model on sphere */
+    int neighbor[NMAX_SPHERE_NEIGHB];   /* list of neighbours */
+    int convert_grid;           /* convert field from simulation grid to longitude-latitude */
+    short int edge;             /* has value 1 on edges of cubic simulation grid */
+//     short int jcoord;           /* j coordinate of grid */
 } t_wave_sphere;
 
 

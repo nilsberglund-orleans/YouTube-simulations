@@ -247,6 +247,7 @@
 #define CHEM_2H2O_H3O_OH 21 /* 2 H2O <-> H3O+ + OH- */
 #define CHEM_AGGREGATION 22 /* agregation of molecules coming close */
 #define CHEM_AGGREGATION_CHARGE 23 /* agregation of charged molecules coming close */
+#define CHEM_AGGREGATION_CHARGE_NOTRIANGLE 231 /* agregation of charged molecules coming close, no multiple pairings */
 #define CHEM_AGGREGATION_NNEIGH 24 /* agregation of molecules with limitation on neighbours */
 #define CHEM_DNA 25         /* aggregation of DNA molecules */
 #define CHEM_DNA_ALT 251    /* aggregation of DNA molecules with constraints on connections */
@@ -269,8 +270,11 @@
 #define IC_CIRCLE 3        /* type 1 in a disc */
 #define IC_CATALYSIS 4     /* mix of 1 and 2 in left half, only 1 in right half */
 #define IC_LAYERS 5        /* layer of 2 below 1 */
+#define IC_STRIPES 51      /* alternating layers of 1 and 2 */
 #define IC_BZ 6            /* initial state for BZ reaction */
 #define IC_SIGNX 7         /* type 1 or 2 depending on sign of x */
+#define IC_SIGNY 71        /* type 1 or 2 depending on sign of y */
+#define IC_SIGNY_LAYER 72  /* type 1 or 2 depending on sign of y with safety layer */
 #define IC_TWOROCKETS 8    /* type 1 or 2 depending on rocket position */
 #define IC_TWOROCKETS_TWOFUELS 9    /* type 1 and 2 or 1 and 3 depending on rocket */
 #define IC_DNA_POLYMERASE 10    /* initial condition for DNA polymerase */
@@ -315,6 +319,7 @@
 #define P_CLUSTER_SELECTED 21   /* colors show which clusters are slected for growth */
 #define P_COLLISION 22    /* colors depend on number of collision/reaction */
 #define P_RADIUS 23       /* colors depend on particle radius */
+#define P_MOL_ANG_MOMENTUM 24 /* colors depend on angular momentum of cluster */
 
 /* Rotation schedules */
 
@@ -358,6 +363,7 @@
 #define POLY_KITE 8         /* kite for kites and darts quasicrystal */
 #define POLY_DART 81        /* dart for kites and darts quasicrystal */
 #define POLY_SEG_POLYGON 9  /* polygon of segments */
+#define POLY_NONE 99        /* no pairing */
 
 /* Background color schemes */
 
@@ -370,6 +376,7 @@
 #define BG_EKIN_OBSTACLES 6 /* background color depends on kinetic energy plus obstacle energy */
 #define BG_DIR_OBSTACLES 7  /* background color depends on direction of velocity of obstacles */
 #define BG_POS_OBSTACLES 8  /* background color depends on displacement of obstacles */
+#define BG_CURRENTX 9       /* background color depends on x-component of current */
 
 /* Obstacle color schemes */
 
@@ -479,6 +486,7 @@ typedef struct
     double fx, fy, torque;      /* force and torque */
     double energy, emean;       /* energy and averaged energy */
     double dirmean;             /* time-averaged direction */
+    double lmean;               /* time-averaged angular momentum */
     int nparticles;             /* number of particles in cluster */
     int particle[NMAXPARTINCLUSTER];    /* list of particles in cluster */
 //     int angle_ref;              /* reference particle for orientation */
@@ -533,7 +541,10 @@ typedef struct
     int nneighb;                /* number of neighbours, for option OSCILLATING_OBSTACLES */
     int neighb[NMAX_OBSTACLE_NEIGHBOURS];    /* list of neighour numbers */
     double eqdist[NMAX_OBSTACLE_NEIGHBOURS]; /* equilibrium distance to neighbours */
+    short int shiftx[NMAX_OBSTACLE_NEIGHBOURS]; /* x shift for periodic boundary conditions */
+    short int shifty[NMAX_OBSTACLE_NEIGHBOURS]; /* y shift for periodic boundary conditions */
     short int pinned;           /* has value 1 if particle is pinned to a fixed position */
+    short int damped;           /* obstacle is damped */
     short int chessboard;       /* has value 1 on a chessboard, for some arrangements */
 } t_obstacle;
 
@@ -544,6 +555,7 @@ typedef struct
     short int acute;            /* value depends on central angle */
     short int infacet;          /* has value 1 if triangle belongs to a facet */ 
     double area0;               /* initial area */
+    short int shiftx[3], shifty[3];   /* shifts for periodic b.c. */
 } t_otriangle;
 
 typedef struct 
@@ -656,6 +668,7 @@ typedef struct
     double efield, bfield;      /* electric and magnetic field */
     double prop;                /* proportion of types */
     double thermo_radius;       /* radius of thermostat region */
+    double current;             /* electrical current */
 } t_lj_parameters;
 
 
