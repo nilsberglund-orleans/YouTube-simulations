@@ -63,14 +63,14 @@ in the shell before running the program
 6. *mangrove.c*:         a version of `wave_billiard` with additional features to animate mangroves
 7. *heat.c*:             simulation of the heat equation, with optional drawing of gradient field lines
 8. *rde.c*:              simulation of reaction-diffusion equations, plots in 2d and 3d (including Schrödinger equation, 
-                         Euler equation, and shallow water equation)
+                         Euler equation, shallow water equation, Kuramoto and Keller-Segel models)
 9. *schrodinger.c*:      simulation of the Schrodinger equation in 2d (old version)
 10. *global_pdes.c*:      global variables and parameters
 11. *global_3d.c*:        additional global variables for 3d version
 12. *sub_wave.c*:         drawing/computation routines common to `wave_billiard`, `heat` and `schrodinger`
 13. *sub_wave_comp.c*:    some modified functions needed by `wave_comparison`
 14. *sub_wave_3d.c*:      additional functions for 3d version
-15. *common_wave.c*:      common functions of `wave_billiard` and `wave_comparison`
+15. *wave_common.c*:      common functions of `wave_billiard` and `wave_comparison`
 16. *colors_waves.c*:     colormaps used by wave simulations
 17. *sub_rde.c*:          additional routines for rde.c
 18. *sub_wave_rde_3d.c*:  additional 3d drawing routines for rde.c
