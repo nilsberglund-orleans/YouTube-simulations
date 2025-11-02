@@ -196,6 +196,7 @@
 #define WAVE_PACKET_SOURCE_TYPE 1       /* type of wave packet sources */
 #define N_WAVE_PACKETS 15               /* number of wave packets */
 #define OSCIL_LEFT_YSHIFT 0.0   /* y-dependence of left oscillation (for non-horizontal waves) */
+#define OSCIL_YMID -0.9        /* defines oscilling beam midpoint */
 #define OSCILLATING_SOURCE_PERIOD 20    /* period of oscillating source */
 #define MU_B 1.0           /* parameter controlling the dimensions of domain */
 #define GAMMA 0.0          /* damping factor in wave equation */

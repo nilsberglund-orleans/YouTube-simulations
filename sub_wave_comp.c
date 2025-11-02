@@ -489,6 +489,18 @@ int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
             return(1);
             break;
         }
+        case (D_ELLIPSE):
+        {
+            if (x*x/(LAMBDA*LAMBDA) + y*y < 1.0) return(1);
+            else return(0);
+            break;
+        }
+        case (D_CIRCLE_LAYERS):
+        {
+            if (x*x + y*y < LAMBDA*LAMBDA) return(1);
+            else return(0);
+            break;
+        }
         case (D_MENGER):       
         {
             x1 = 0.5*(x+1.0);
@@ -752,7 +764,7 @@ void draw_billiard_half(int domain, int pattern, int top, int fade, double fade_
 /* two domain version implemented for D_CIRCLES */
 {
     double x0, x, y, x1, y1, dx, dy, phi, r = 0.01, pos[2], pos1[2], alpha, dphi, omega, z, l, signtop, width, a, b, arcangle;
-    int i, j, k, k1, k2, mr2;
+    int i, j, k, k1, k2, mr2, mdepth;
     static int first = 1;
     
     glEnable(GL_SCISSOR_TEST);
@@ -776,12 +788,68 @@ void draw_billiard_half(int domain, int pattern, int top, int fade, double fade_
     }
     glLineWidth(BOUNDARY_WIDTH);
     
-    if (top) signtop = 1.0;
-    else signtop = -1.0;
+    if (top) 
+    {
+        signtop = 1.0;
+        mdepth = MDEPTH;
+    }
+    else 
+    {
+        signtop = -1.0;
+        mdepth = MDEPTH_B;
+    }
 
     glEnable(GL_LINE_SMOOTH);
 
     switch (domain) {
+        case (D_ELLIPSE):
+        {
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NSEG; i++)
+            {
+                phi = (double)i*DPI/(double)NSEG;
+                x = LAMBDA*cos(phi);
+                y = sin(phi);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+
+            /* draw foci */
+            if (FOCI)
+            {
+                if (fade) glColor3f(0.3*fade_value, 0.3*fade_value, 0.3*fade_value);
+                else glColor3f(0.3, 0.3, 0.3);
+                x0 = sqrt(LAMBDA*LAMBDA-1.0);
+
+                glLineWidth(2);
+                glEnable(GL_LINE_SMOOTH);
+                
+                draw_circle(x0, 0.0, r, NSEG);
+                draw_circle(-x0, 0.0, r, NSEG);
+            }
+            break;
+        }
+        case (D_CIRCLE_LAYERS):
+        {
+            for (j=1; j<=mdepth; j++)
+            {
+                r = (double)j*LAMBDA/(double)mdepth;
+                glBegin(GL_LINE_LOOP);
+                if (j<mdepth) glLineWidth(BOUNDARY_WIDTH/2);
+                else glLineWidth(BOUNDARY_WIDTH);
+                for (i=0; i<=NSEG; i++)
+                {
+                    phi = (double)i*DPI/(double)NSEG;
+                    x = r*cos(phi);
+                    y = r*sin(phi);
+                    xy_to_pos(x, y, pos);
+                    glVertex2d(pos[0], pos[1]);
+                }
+                glEnd ();
+            }
+            break;
+        }
         case (D_MENGER):
         {
             glLineWidth(3);
@@ -1615,13 +1683,13 @@ void print_energies(double energies[6], double top_energy, double bottom_energy)
     
 }
 
-void init_ior_2d_comp(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
+void init_ior_2d_comp_half(short int *xy_in[NX], double *tcc_table[NX], double ior_angle, int ior, int mdepth, int top)
 /* compute variable index of refraction */
 /* should be at some point merged with 3D version in suv_wave_3d.c */
 {
-    int i, j, k, n, inlens, ncircles;
-    double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
-    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
+    int i, j, k, n, inlens, ncircles, jmin, jmax;
+    double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu, mu1;
+    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, r, rgb[3];
     double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
     static double xc_stat[NGRIDX*NGRIDY], yc_stat[NGRIDX*NGRIDY], sigma_stat;
     static int first = 1;
@@ -1631,29 +1699,31 @@ void init_ior_2d_comp(short int *xy_in[NX], double *tcc_table[NX], double ior_an
     rgb[1] = 1.0;
     rgb[2] = 1.0;
     
+    if (top)
+    {
+        jmin = NY/2;
+        jmax = NY;
+        mu = MU;
+    }
+    else
+    {
+        jmin = 0;
+        jmax = NY/2;
+        mu = MUB;
+    }
+    
     if (VARIABLE_IOR)
     {
-        switch (IOR) {
+        switch (ior) {
             case (IOR_LENS_WALL):
             {
                 printf("Initializing IOR_LENS_WALL\n");
                 for (i=0; i<NX; i++){
-                    for (j=0; j<NY/2; j++){
+                    for (j=jmin; j<jmax; j++){
                         ij_to_xy(i, j, xy);
                         x = xy[0];
                         y = xy[1];
-                        if ((vabs(x) < 0.05)&&(vabs(y) > MUB)) tcc_table[i][j] = 0.0;
-                        else 
-                        {
-                            if (xy_in[i][j] != 0) tcc_table[i][j] = courant2;
-                            else tcc_table[i][j] = courantb2;
-                        }
-                    }
-                    for (j=NY/2; j<NY; j++){
-                        ij_to_xy(i, j, xy);
-                        x = xy[0];
-                        y = xy[1];
-                        if ((vabs(x) < 0.05)&&(vabs(y) > MU)) tcc_table[i][j] = 0.0;
+                        if ((vabs(x) < 0.05)&&(vabs(y) > mu)) tcc_table[i][j] = 0.0;
                         else 
                         {
                             if (xy_in[i][j] != 0) tcc_table[i][j] = courant2;
@@ -1664,26 +1734,63 @@ void init_ior_2d_comp(short int *xy_in[NX], double *tcc_table[NX], double ior_an
                 
                 break;
             }
+            case (IOR_LUNEBURG_LENS):   
+            {
+                /* n = sqrt(2-r/R) */
+                printf("Initialising Luneburg lens IOR");
+                for (i=0; i<NX; i++){
+                    for (j=jmin; j<jmax; j++){
+                        ij_to_xy(i, j, xy);
+                        r = module2(xy[0], xy[1]);
+                        if (r > 1.0) 
+                        {
+                            tcc_table[i][j] = courant2;
+//                             tgamma_table[i][j] = GAMMA;
+                        }
+                        else
+                        {
+                            tcc_table[i][j] = courant2/(2.0 - r/LAMBDA);
+//                             tgamma_table[i][j] = GAMMAB;
+//                             printf("tcc[%i][%i] = %.3lg\n", i, j, tcc_table[i][j]); 
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_LUNEBURG_LAYERS):
+            {
+                /* n = sqrt(2-r/R) discretized in layers */
+                printf("Initialising Luneburg lens IOR");
+                for (i=0; i<NX; i++){
+                    for (j=jmin; j<jmax; j++){
+                        ij_to_xy(i, j, xy);
+                        r = module2(xy[0], xy[1])/LAMBDA;
+                        r2 = r*(double)mdepth;
+                        r2 = (double)((int)r2)/(double)mdepth;
+                        if (r > 1.0) 
+                        {
+                            tcc_table[i][j] = courant2;
+//                             tgamma_table[i][j] = GAMMA;
+                        }
+                        else
+                        {
+                            tcc_table[i][j] = courant2/(2.0 - r2);
+//                             tgamma_table[i][j] = GAMMAB;
+//                             printf("tcc[%i][%i] = %.3lg\n", i, j, tcc_table[i][j]); 
+                        }
+                    }
+                }
+                break;
+            }
             case (IOR_LENS_OBSTACLE):
             {
                 printf("Initializing IOR_LENS_OBSTACLE\n");
                 for (i=0; i<NX; i++){
-                    for (j=0; j<NY/2; j++){
+                    for (j=jmin; j<jmax; j++){
                         ij_to_xy(i, j, xy);
                         x = xy[0];
                         y = xy[1];
-                        if ((vabs(x) < 0.05)&&(vabs(y) < MUB)) tcc_table[i][j] = 0.0;
-                        else 
-                        {
-                            if (xy_in[i][j] != 0) tcc_table[i][j] = courant2;
-                            else tcc_table[i][j] = courantb2;
-                        }
-                    }
-                    for (j=NY/2; j<NY; j++){
-                        ij_to_xy(i, j, xy);
-                        x = xy[0];
-                        y = xy[1];
-                        if ((vabs(x) < 0.05)&&(vabs(y) < MU)) tcc_table[i][j] = 0.0;
+                        if ((vabs(x) < 0.05)&&(vabs(y) < mu)) tcc_table[i][j] = 0.0;
                         else 
                         {
                             if (xy_in[i][j] != 0) tcc_table[i][j] = courant2;
@@ -1720,4 +1827,11 @@ void init_ior_2d_comp(short int *xy_in[NX], double *tcc_table[NX], double ior_an
             }
         }
     }
+}
+
+void init_ior_2d_comp(short int *xy_in[NX], double *tcc_table[NX], double ior_angle)
+/* compute variable index of refraction */
+{
+    init_ior_2d_comp_half(xy_in, tcc_table, ior_angle, IOR, MDEPTH, 1);
+    init_ior_2d_comp_half(xy_in, tcc_table, ior_angle, IOR_B, MDEPTH_B, 0);
 }

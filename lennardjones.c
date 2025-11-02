@@ -53,15 +53,15 @@
 #define WINWIDTH 	1760  /* window width */
 #define WINHEIGHT 	990   /* window height */
 
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
-#define YMIN -1.125
-#define YMAX 1.125	/* y interval for 9/16 aspect ratio */
+#define XMIN 0.0
+#define XMAX 6.283185307	/* x interval */
+#define YMIN 0.0
+#define YMAX 3.141592654	/* y interval for 9/16 aspect ratio */
 
-#define INITXMIN -0.1
-#define INITXMAX 0.1	/* x interval for initial condition */
-#define INITYMIN -0.1
-#define INITYMAX 0.1	/* y interval for initial condition */
+#define INITXMIN 0.025
+#define INITXMAX 6.255	/* x interval for initial condition */
+#define INITYMIN 0.4
+#define INITYMAX 2.74	/* y interval for initial condition */
 
 #define THERMOXMIN -1.25
 #define THERMOXMAX 1.25	/* x interval for initial condition */
@@ -72,13 +72,13 @@
 #define ADDXMAX 1.9	/* x interval for adding particles */
 #define ADDYMIN 1.2
 #define ADDYMAX 1.3	/* y interval for adding particles */
-#define ADDRMIN 4.75 
-#define ADDRMAX 6.0     /* r interval for adding particles */
+#define ADDRMIN 2.0 
+#define ADDRMAX 2.1     /* r interval for adding particles */
 
-#define BCXMIN -2.0
-#define BCXMAX 2.0	/* x interval for boundary condition */
-#define BCYMIN -1.125
-#define BCYMAX 1.325	/* y interval for boundary condition */
+#define BCXMIN 0.0
+#define BCXMAX 6.283185307	/* x interval for boundary condition */
+#define BCYMIN 0.05
+#define BCYMAX 3.091592654	/* y interval for boundary condition */
 
 #define OBSXMIN -2.0
 #define OBSXMAX 2.0     /* x interval for motion of obstacle */
@@ -108,7 +108,7 @@
 #define COUPLE_MINLENGTH 0.5        /* length at which bonds decouple */
 
 #define ADD_FIXED_SEGMENTS 0    /* set to 1 to add fixed segments as obstacles */
-#define SEGMENT_PATTERN 15     /* pattern of repelling segments, see list in global_ljones.c */
+#define SEGMENT_PATTERN 100     /* pattern of repelling segments, see list in global_ljones.c */
 #define ROCKET_SHAPE 3        /* shape of rocket combustion chamber, see list in global_ljones.c */
 #define ROCKET_SHAPE_B 3      /* shape of second rocket */
 #define NOZZLE_SHAPE 6        /* shape of nozzle, see list in global_ljones.c */
@@ -119,14 +119,14 @@
 #define OBSTACLE_OMEGA 300.0  /* obstacle rotation speed */
 
 #define TWO_TYPES 0         /* set to 1 to have two types of particles */
-#define TYPE_PROPORTION 0.5 /* proportion of particles of first type */
+#define TYPE_PROPORTION 0.75 /* proportion of particles of first type */
 #define TWOTYPE_CONFIG 0    /* choice of types, see TTC_ list in global_ljones.c */
-#define SYMMETRIZE_FORCE 1  /* set to 1 to symmetrize two-particle interaction, only needed if particles are not all the same */
+#define SYMMETRIZE_FORCE 0  /* set to 1 to symmetrize two-particle interaction, only needed if particles are not all the same */
 #define CENTER_PX 0         /* set to 1 to center horizontal momentum */
 #define CENTER_PY 0         /* set to 1 to center vertical momentum */
 #define CENTER_PANGLE 0     /* set to 1 to center angular momentum */
 
-#define INTERACTION 12       /* particle interaction, see list in global_ljones.c */
+#define INTERACTION 1       /* particle interaction, see list in global_ljones.c */
 #define INTERACTION_B 1     /* particle interaction for second type of particle, see list in global_ljones.c */
 #define SPIN_INTER_FREQUENCY 4.0 /* angular frequency of spin-spin interaction */
 #define SPIN_INTER_FREQUENCY_B 4.0 /* angular frequency of spin-spin interaction for second particle type */
@@ -139,9 +139,10 @@
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 
 #define LAMBDA 0.2	    /* parameter controlling the dimensions of domain */
-#define MU 0.016 	    /* parameter controlling radius of particles */
-#define MU_B 0.012          /* parameter controlling radius of particles of second type */
-#define MU_ADD 0.016         /* parameter controlling radius of added particles */
+#define MU 0.022 	    /* parameter controlling radius of particles */
+#define MU_B 0.022          /* parameter controlling radius of particles of second type */
+#define MU_ADD 0.022         /* parameter controlling radius of added particles */
+#define MU_ADD_B 0.022       /* parameter controlling radius of added particles */
 #define NPOLY 3             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define AWEDGE 0.5          /* opening angle of wedge, in units of Pi/2 */ 
@@ -150,8 +151,8 @@
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0    /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-#define NGRIDX 1           /* number of grid point for grid of disks */
-#define NGRIDY 1           /* number of grid point for grid of disks */
+#define NGRIDX 40           /* number of grid point for grid of disks */
+#define NGRIDY 20           /* number of grid point for grid of disks */
 #define EHRENFEST_RADIUS 0.9    /* radius of container for Ehrenfest urn configuration */
 #define EHRENFEST_WIDTH 0.035     /* width of tube for Ehrenfest urn configuration */
 #define TWO_CIRCLES_RADIUS_RATIO 0.8    /* ratio of radii for S_TWO_CIRCLES_EXT segment configuration */
@@ -167,8 +168,8 @@
 
 /* Parameters for length and speed of simulation */
  
-#define NSTEPS 4800      /* number of frames of movie */
-#define NVID 100          /* number of iterations between images displayed on screen */
+#define NSTEPS 2300      /* number of frames of movie */
+#define NVID 100         /* number of iterations between images displayed on screen */
 #define NSEG 25          /* number of segments of boundary of circles */
 #define INITIAL_TIME 0     /* time after which to start saving frames */
 #define OBSTACLE_INITIAL_TIME 0     /* time after which to start moving obstacle */
@@ -181,22 +182,22 @@
 #define SLEEP1  1        /* initial sleeping time */
 #define SLEEP2  1   /* final sleeping time */
 #define MID_FRAMES 100    /* number of still frames between parts of two-part movie */
-#define END_FRAMES 100   /* number of still frames at end of movie */
+#define END_FRAMES 200   /* number of still frames at end of movie */
 
 /* Boundary conditions, see list in global_ljones.c */
 
-#define BOUNDARY_COND 1
+#define BOUNDARY_COND 30
 
 /* Plot type, see list in global_ljones.c  */
 
-#define PLOT 13
-#define PLOT_B 17        /* plot type for second movie */
+#define PLOT 5
+#define PLOT_B 13        /* plot type for second movie */
 
 /* Background color depending on particle properties */
 
 #define COLOR_BACKGROUND 0  /* set to 1 to color background */
-#define BG_COLOR 6          /* type of background coloring, see list in global_ljones.c */
-#define BG_COLOR_B 9        /* type of background coloring, see list in global_ljones.c */
+#define BG_COLOR 10         /* type of background coloring, see list in global_ljones.c */
+#define BG_COLOR_B 3        /* type of background coloring, see list in global_ljones.c */
 #define OBSTACLE_COLOR 0    /* type of obstacle, see OC_ in global_ljones.c */
 
 #define DRAW_BONDS 0    /* set to 1 to draw bonds between neighbours */
@@ -249,8 +250,8 @@
 #define HUEAMP -50.0      /* amplitude of variation of hue for color scheme C_HUE */
 #define COLOR_HUESHIFT 1.0     /* shift in color hue (for some cyclic palettes) */
 
-#define PRINT_PARAMETERS 1  /* set to 1 to print certain parameters */
-#define PRINT_TEMPERATURE 0 /* set to 1 to print current temperature */
+#define PRINT_PARAMETERS 0  /* set to 1 to print certain parameters */
+#define PRINT_TEMPERATURE 1 /* set to 1 to print current temperature */
 #define PRINT_ANGLE 0               /* set to 1 to print obstacle orientation */
 #define PRINT_OMEGA 0               /* set to 1 to print angular speed */
 #define PRINT_PARTICLE_SPEEDS 0     /* set to 1 to print average speeds/momenta of particles */
@@ -267,7 +268,9 @@
 #define PARTICLE_HUE_MIN 359.0      /* color of original particle */
 #define PARTICLE_HUE_MAX 0.0        /* color of saturated particle */
 #define PARTICLE_EMIN 0.0           /* energy of particle with coolest color */
-#define PARTICLE_EMAX 50000.0      /* energy of particle with hottest color */
+#define PARTICLE_EMAX 2000.0        /* energy of particle with hottest color */
+#define PARTICLE_DMIN 200.0         /* energy of particle with largest local density */
+#define PARTICLE_DMAX 500.0         /* energy of particle with largest local density */
 #define SEGMENT_HUE_MIN 275.0       /* color of original segment */
 #define SEGMENT_HUE_MAX 30.0        /* color of saturated segment */
 #define OBSTACLE_EMAX 1000000.0         /* energy of obstacle with hottest color */
@@ -275,12 +278,14 @@
 #define HUE_TYPE0 320.0      /* hue of particles of type 0 */
 #define HUE_TYPE1 60.0       /* hue of particles of type 1 */
 #define HUE_TYPE2 320.0      /* hue of particles of type 2 */
-#define HUE_TYPE3 260.0      /* hue of particles of type 3 */
-#define HUE_TYPE4 200.0      /* hue of particles of type 4 */
+#define HUE_TYPE3 140.0      /* hue of particles of type 3 */
+#define HUE_TYPE4 200.0       /* hue of particles of type 4 */
 #define HUE_TYPE5 60.0       /* hue of particles of type 5 */
 #define HUE_TYPE6 130.0      /* hue of particles of type 6 */
-#define HUE_TYPE7 150.0      /* hue of particles of type 7 */
-#define BG_FORCE_SLOPE 1.0e-6   /* contant in BG_FORCE backgound color scheme*/
+#define HUE_TYPE7 200.0      /* hue of particles of type 7 */
+#define BG_LOG_EKIN_SHIFT 1.0    /* constant in BG_LOG_EKIN background color scheme */
+#define BG_FORCE_SLOPE 1.0e-6    /* constant in BG_FORCE backgound color scheme */
+#define BG_CHARGE_SLOPE 0.75     /* constant in BG_CHARGE backgound color scheme (default: 0.5) */
 #define PARTICLE_LMAX 1.5e4     /* angular momentum particle with brightest color */
 
 #define RANDOM_RADIUS 0          /* set to 1 for random particle radius */
@@ -290,39 +295,42 @@
 #define ADAPT_DAMPING_TO_RADIUS 0.0   /* set to positive value to for friction prop to power of radius */
 #define ADAPT_DAMPING_FACTOR 0.0    /* factor by which damping is adapted to radius */
 #define DT_PARTICLE 1.0e-6    /* time step for particle displacement */
-#define KREPEL 20.0           /* constant in repelling force between particles */
-#define EQUILIBRIUM_DIST 4.0    /* Lennard-Jones equilibrium distance */
-#define EQUILIBRIUM_DIST_B 4.0  /* Lennard-Jones equilibrium distance for second type of particle */
+#define KREPEL 50.0           /* constant in repelling force between particles */
+#define EQUILIBRIUM_DIST 3.5    /* Lennard-Jones equilibrium distance */
+#define EQUILIBRIUM_DIST_B 3.5  /* Lennard-Jones equilibrium distance for second type of particle */
 #define SEGMENT_FORCE_EQR 1.0   /* equilibrium distance factor for force from segments (default 1.5) */
 #define REPEL_RADIUS 25.0    /* radius in which repelling force acts (in units of particle radius) */
-#define DAMPING 50.0         /* damping coefficient of particles */
+#define DAMPING 0.0          /* damping coefficient of particles */
 #define INITIAL_DAMPING 1000.0  /* damping coefficient of particles during initial phase */
-#define DAMPING_ROT 5.0      /* damping coefficient for rotation of particles */
+#define DAMPING_ROT 0.0      /* damping coefficient for rotation of particles */
 #define DAMPING_PAIRS 0.0    /* damping between paired particles */
-#define PARTICLE_MASS 2.0    /* mass of particle of radius MU */
+#define PARTICLE_MASS 1.0    /* mass of particle of radius MU */
 #define PARTICLE_MASS_B 1.0     /* mass of particle of radius MU_B */
-#define PARTICLE_ADD_MASS 2.0   /* mass of added particles */
+#define PARTICLE_ADD_MASS 1.0   /* mass of added particles */
+#define PARTICLE_ADD_MASS_B 1.0   /* mass of added particles */
 #define PARTICLE_INERTIA_MOMENT 0.1     /* moment of inertia of particle */
 #define PARTICLE_INERTIA_MOMENT_B 0.1     /* moment of inertia of second type of particle */
-#define V_INITIAL 100.0        /* initial velocity range */
-#define V_INITIAL_ADD 100.0        /* initial velocity range for added particles */
+#define V_INITIAL 25.0        /* initial velocity range */
+#define V_INITIAL_ADD 0.0        /* initial velocity range for added particles */
 #define OMEGA_INITIAL 100.0        /* initial angular velocity range */
 #define VICSEK_VMIN 1.0    /* minimal speed of particles in Vicsek model */
 #define VICSEK_VMAX 40.0    /* minimal speed of particles in Vicsek model */
 #define COULOMB_LJ_FACTOR 1.0   /* relative intensity of LJ interaction in I_COULOMB_LJ interaction (default: 0.01) */
+#define KCOULOMB_FACTOR 50.0  /* relative intensity of Coulomb interaction in I_COULOMB_LJ (default: 100.0) */
 #define OBSTACLE_DAMPING 0.0   /* damping of oscillating obstacles */
 
 #define V_INITIAL_TYPE 0    /* type of initial speed distribution (see VI_ in global_ljones.c) */
 
-#define THERMOSTAT 0        /* set to 1 to switch on thermostat */
+#define THERMOSTAT 1        /* set to 1 to switch on thermostat */
 #define VARY_THERMOSTAT 0   /* set to 1 for time-dependent thermostat schedule */
 #define SIGMA 5.0           /* noise intensity in thermostat */
-#define BETA 0.004          /* initial inverse temperature */
+#define BETA 0.0002           /* initial inverse temperature */
 #define MU_XI 0.005           /* friction constant in thermostat */
 #define KSPRING_BOUNDARY 2.0e11    /* confining harmonic potential outside simulation region */
 #define KSPRING_OBSTACLE 5.0e11    /* harmonic potential of obstacles */
-#define NBH_DIST_FACTOR 4.0       /* radius in which to count neighbours */
-#define GRAVITY 10000.0            /* gravity acting on all particles */
+#define NBH_DIST_FACTOR 6.0       /* radius in which to count neighbours */
+#define BOND_DIST_FACTOR 6.0       /* radius in which to draw bonds */
+#define GRAVITY 0.0            /* gravity acting on all particles */
 #define GRAVITY_X 0.0          /* horizontal gravity acting on all particles */
 #define CIRCULAR_GRAVITY 0     /* set to 1 to have gravity directed to center */
 #define INCREASE_GRAVITY 0     /* set to 1 to increase gravity during the simulation */
@@ -338,9 +346,10 @@
 #define EFIELD_Y 0.0      /* value of electric field */
 #define ADD_BFIELD 0      /* set to 1 to add a magnetic field */
 #define BFIELD 20000.0       /* value of magnetic field */
-#define CHARGE 1.0        /* charge of particles of first type */
-#define CHARGE_B -1.0     /* charge of particles of second type */
-#define CHARGE_ADD 1.0   /* charge of added particles */
+#define CHARGE 0.0        /* charge of particles of first type */
+#define CHARGE_B 0.0     /* charge of particles of second type */
+#define CHARGE_ADD 0.0   /* charge of added particles */
+#define CHARGE_ADD_B 0.0   /* charge of added particles */
 #define INCREASE_E 0      /* set to 1 to increase electric field */
 #define OSCILLATE_E 0     /* set to 1 for oscillating electric field */
 #define E_PERIOD 1000      /* period of oscillating electric field */
@@ -367,10 +376,10 @@
 #define WIND_FORCE 1.35e6    /* force of wind */
 #define WIND_YMIN -0.6      /* min altitude of region with wind */
 
-#define ROTATION 0          /* set to 1 to include rotation of particles */
+#define ROTATION 1          /* set to 1 to include rotation of particles */
 #define COUPLE_ANGLE_TO_THERMOSTAT 0    /* set to 1 to couple angular degrees of freedom to thermostat */
-#define DIMENSION_FACTOR 1.0  /* scaling factor taking into account number of degrees of freedom */  
-#define KTORQUE 1.0e5         /* force constant in angular dynamics */
+#define DIMENSION_FACTOR 0.25  /* scaling factor taking into account number of degrees of freedom */  
+#define KTORQUE 2.0e3         /* force constant in angular dynamics */
 #define KTORQUE_BOUNDARY 1.0e5  /* constant in torque from the boundary */
 #define KTORQUE_B 10.0        /* force constant in angular dynamics */
 #define KTORQUE_DIFF 500.0    /* force constant in angular dynamics for different particles */
@@ -378,19 +387,20 @@
 #define DRAW_SPIN_B 0         /* set to 1 to draw spin vectors of particles */
 #define DRAW_CROSS 1          /* set to 1 to draw cross on particles of second type */
 #define DRAW_MINUS 1          /* set to 1 to draw cross on particles of negative charge */
-#define SPIN_RANGE 10.0       /* range of spin-spin interaction */
-#define SPIN_RANGE_B 10.0     /* range of spin-spin interaction for second type of particle */
+#define SPIN_RANGE 5.0       /* range of spin-spin interaction */
+#define SPIN_RANGE_B 5.0     /* range of spin-spin interaction for second type of particle */
 #define QUADRUPOLE_RATIO 0.6  /* anisotropy in quadrupole potential */ 
 
 #define INCREASE_BETA 0  /* set to 1 to increase BETA during simulation */
-#define BETA_SCHEDULE 3    /* type of temperature schedule, see TS_* in global_ljones */
-#define BETA_FACTOR 0.06    /* factor by which to change BETA during simulation */
+#define BETA_SCHEDULE 5    /* type of temperature schedule, see TS_* in global_ljones */
+#define BETA_FACTOR 50.0    /* factor by which to change BETA during simulation */
 #define TS_SLOPE 8.5          /* controls speed of change of BETA for TS_TANH schedule (default 1.0) */
-#define N_TOSCILLATIONS 1.0   /* number of temperature oscillations in BETA schedule */
+#define N_TOSCILLATIONS 1.5   /* number of temperature oscillations in BETA schedule */
 #define NO_OSCILLATION 0        /* set to 1 to have exponential BETA change only */
-#define MIDDLE_CONSTANT_PHASE 0   /* final phase in which temperature is constant */
-#define FINAL_DECREASE_PHASE 0    /* final phase in which temperature decreases */ 
-#define FINAL_CONSTANT_PHASE -1     /* final phase in which temperature is constant */
+#define INITIAL_CONSTANT_PHASE 500 /* initial phase in which temperature is constant */
+#define MIDDLE_CONSTANT_PHASE 0   /* middle phase in which temperature is constant */
+#define FINAL_DECREASE_PHASE 1    /* final phase in which temperature decreases */ 
+#define FINAL_CONSTANT_PHASE 200     /* final phase in which temperature is constant */
 
 #define DECREASE_CONTAINER_SIZE 0   /* set to 1 to decrease size of container */
 #define SMOOTH_CONTAINER_DECREASE 1 /* set to 1 to decrease size smoothly at each simulation step */
@@ -427,23 +437,25 @@
 #define MASS_PART_BOTTOM 10000.0 /* mass of particles at bottom */
 #define NPART_BOTTOM 100     /* number of particles at the bottom */
 
-#define ADD_PARTICLES 1   /* set to 1 to add particles */
-#define ADD_REGION 0      /* shape of add regions, cf ADD_* in global_ljones */
+#define ADD_PARTICLES 0   /* set to 1 to add particles */
+#define ADD_REGION 1      /* shape of add regions, cf ADD_* in global_ljones */
 #define ADD_TIME 0        /* time at which to add first particle */
-#define ADD_PERIOD 25      /* time interval between adding further particles */
+#define ADD_PERIOD 6      /* time interval between adding further particles */
+#define ADD_TYPE 1         /* type of added particles */
 #define N_ADD_PARTICLES 1  /* number of particles to add */
-#define FINAL_NOADD_PERIOD 1000  /* final period where no particles are added */
-#define SAFETY_FACTOR 4.0  /* no particles are added at distance less than MU*SAFETY_FACTOR of other particles */
+#define FINAL_NOADD_PERIOD 1800  /* final period where no particles are added */
+#define SAFETY_FACTOR 10.0  /* no particles are added at distance less than MU*SAFETY_FACTOR of other particles */
 #define ADD_ALTERNATE_CHARGE 1   /* set to 1 to randomly select sign of added charge */
+#define TIME_DEPENDENT_ADD_CHARGE 0     /* set to 1 to have added charge depend on time */
 #define ALTERNATE_CHARGE_PROPORTION 0.5    /* proportion of particles of opposite charge */
 
 #define TRACER_PARTICLE 1   /* set to 1 to have a tracer particle */
-#define N_TRACER_PARTICLES 500    /* number of tracer particles */
+#define N_TRACER_PARTICLES 3000    /* number of tracer particles */
 #define TRACER_STEPS 5           /* number of tracer steps recorded between images */
-#define TRAJECTORY_LENGTH 5200    /* length of recorded trajectory */
-#define TRAJECTORY_DRAW_LENGTH 1000 /* length of drawn trajectory */
-#define TRACER_LUM_FACTOR 25.0    /* controls luminosity decrease of trajectories with time */
-#define TRACER_PARTICLE_MASS 2.0  /* relative mass of tracer particle */
+#define TRAJECTORY_LENGTH 7000    /* length of recorded trajectory */
+#define TRAJECTORY_DRAW_LENGTH 250 /* length of drawn trajectory */
+#define TRACER_LUM_FACTOR 100.0    /* controls luminosity decrease of trajectories with time */
+#define TRACER_PARTICLE_MASS 1.0  /* relative mass of tracer particle */
 #define TRAJECTORY_WIDTH 2        /* width of tracer particle trajectory */
 
 #define TRACK_PARTICLE 0          /* set to 1 to track a given particle */
@@ -494,26 +506,28 @@
 #define POSITION_DEP_X -0.625         /* threshold value for position-dependent type */
 #define PRINT_ENTROPY 0     /* set to 1 to compute entropy */
 
-#define SPECIAL_IC 0              /* set to 1 for choosing specaial initial condition RD_INITIAL_COND */
-#define REACTION_DIFFUSION 0      /* set to 1 to simulate a chemical reaction (particles may change type) */
-#define REACTION_MAX_TIME 100     /* time after which no reactions take place */  
-#define RD_REACTION 231           /* type of reaction, see list in global_ljones.c */
-#define RD_TYPES 2                /* number of types in reaction-diffusion equation */
-#define RD_INITIAL_COND 51        /* initial condition of particles */
-#define REACTION_DIST 1.8         /* maximal distance for reaction to occur */
-#define REACTION_PROB 1.0         /* probability controlling reaction term */ 
+#define SPECIAL_IC 1              /* set to 1 for choosing specaial initial condition RD_INITIAL_COND */
+#define REACTION_DIFFUSION 1      /* set to 1 to simulate a chemical reaction (particles may change type) */
+#define REACTION_MAX_TIME 100000     /* time after which no reactions take place */  
+#define RD_REACTION 11             /* type of reaction, see list in global_ljones.c */
+#define RD_TYPES 5                /* number of types in reaction-diffusion equation */
+#define RD_PLOT_TYPES 4           /* number of types shown in graph */
+#define RD_INITIAL_COND 5         /* initial condition of particles */
+#define REACTION_DIST 2.0         /* maximal distance for reaction to occur */
+#define REACTION_PROB 0.5         /* probability controlling reaction term */ 
 #define DISSOCIATION_PROB 0.0     /* probability controlling dissociation reaction */ 
 #define KILLING_PROB 0.0015       /* probability of enzymes being killed */
 #define DELTAMAX 0.1              /* max orientation difference for pairing polygons */
 #define CENTER_COLLIDED_PARTICLES 1  /* set to 1 to recenter particles upon reaction (may interfere with thermostat) */
 #define EXOTHERMIC 1            /* set to 1 to make reaction exo/endothermic */
-#define DELTA_EKIN -2.0e10      /* change of kinetic energy in reaction */
+#define DELTA_EKIN -2.0e3       /* change of kinetic energy in reaction */
 #define CORRECT_EQUILIBRIUM_POSITION 1  /* set to 1 to nudge particle dist towards eq dist */
 #define COLLISION_TIME 25       /* time during which collisions are shown */
 #define COLLISION_RADIUS 2.0    /* radius of discs showing collisions, in units of MU */
 #define DELTAVMAX 200.0         /* maximal deltav allowed for pairing molecules */
-#define AGREGMAX 1              /* maximal number of partners for CHEM_AGGREGATION reaction */
+#define AGREGMAX 4              /* maximal number of partners for CHEM_AGGREGATION reaction */
 #define AGREG_DECOUPLE 12       /* minimal number of partners to decouple from thermostat */
+#define NEUTRALIZE_REACTING_PARTICLES 0     /* set to 1 for reacting particles to become neutral */
 #define CLUSTER_PARTICLES 0     /* set to 1 for particles to form rigid clusters */
 #define CLUSTER_MAXSIZE 2      /* max size of clusters */
 #define SMALL_CLUSTER_MAXSIZE 2 /* size limitation on smaller cluster */
@@ -526,7 +540,7 @@
 #define MU_RATIO 0.666666667    /* ratio by which to increase radius */
 
 #define PRINT_PARTICLE_NUMBER 0     /* set to 1 to print total number of particles */
-#define PLOT_PARTICLE_NUMBER 0      /* set to 1 to make of plot of particle number over time */
+#define PLOT_PARTICLE_NUMBER 1      /* set to 1 to make of plot of particle number over time */
 #define PARTICLE_NB_PLOT_FACTOR 1.0 /* expected final number of particles over initial number */
 #define PRINT_LEFT 0        /* set to 1 to print certain parameters at the top left instead of right */
 #define PLOT_SPEEDS 0       /* set to 1 to add a plot of obstacle speeds (e.g. for rockets) */
@@ -545,10 +559,12 @@
 #define WALL_TIME 0         /* time during which to keep wall */
 
 #define CHANGE_TYPES 0      /* set to 1 to change type proportion in course of simulation */
-#define PROP_MIN 0.1        /* min proportion of type 1 particles */
-#define PROP_MAX 0.9        /* max proportion of type 1 particles */
+#define PROP_MIN 0.0        /* min proportion of type 1 particles */
+#define PROP_MAX 1.0        /* max proportion of type 1 particles */
+#define PROP_TINITIAL 250   /* initial time without change */
+#define PROP_TFINAL 250     /* final time without change */
 
-#define PAIR_PARTICLES 1    /* set to 1 to form particles pairs */
+#define PAIR_PARTICLES 0    /* set to 1 to form particles pairs */
 #define RANDOMIZE_ANGLE 0   /* set to 1 for random orientation */
 #define DEACIVATE_CLOSE_PAIRS 0 /* set to 1 to test for closeness to other particles */
 #define PAIR_SAFETY_FACTOR 1.2  /* distance to deactivate divided by sum of radii */
@@ -564,7 +580,7 @@
 #define PARTNER_ANGLE 104.45    /* angle (in degrees) between ions for POLY_WATER case */
 #define PAIR_DRATIO 1.0      /* ratio between equilibrium distance and radius (default: 1.0) */
 #define MU_C 0.035            /* radius of partner particle */
-#define PARTICLE_MASS_C 2.0  /* mass or partner particle */
+#define PARTICLE_MASS_C 1.0  /* mass or partner particle */
 #define CHARGE_C 1.0         /* charge of partner particle */
 #define CLUSTER_COLOR_FACTOR 40  /* factor for initialization of cluster colors */
 #define ALTERNATE_POLY_CHARGE 1   /* set to 1 for alternating charges in molecule */
@@ -576,7 +592,7 @@
 #define NARMS_B 1               /* number of "arms" for certain paring types */ 
 #define PAIRING_TYPE_B 81     /* type of pairing, see POLY_ in global_ljones.c */
 #define MU_D 0.035            /* radius of partner particle */
-#define PARTICLE_MASS_D 2.0  /* mass or partner particle */
+#define PARTICLE_MASS_D 1.0  /* mass or partner particle */
 #define CHARGE_D 1.0         /* charge of partner particle */
 
 #define NXMAZE 16      /* width of maze */
@@ -587,12 +603,12 @@
 #define MAZE_WIDTH 0.015    /* width of maze walls */
 
 #define FLOOR_FORCE 1      /* set to 1 to limit force on particle to FMAX */
-#define FMAX 1.0e9         /* maximal force */
+#define FMAX 1.0e8         /* maximal force */
 #define FLOOR_OMEGA 0      /* set to 1 to limit particle momentum to PMAX */
 #define PMAX 1000.0        /* maximal force */
 
-#define HASHX 40      /* size of hashgrid in x direction */
-#define HASHY 20      /* size of hashgrid in y direction */
+#define HASHX 60      /* size of hashgrid in x direction */
+#define HASHY 30      /* size of hashgrid in y direction */
 #define HASHMAX 100   /* maximal number of particles per hashgrid cell */
 #define HASHGRID_PADDING 0.1    /* padding of hashgrid outside simulation window */
 
@@ -602,6 +618,29 @@
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 
 #define LIMIT_ENERGY 0      /* set to 1 to limit energy, when there is no thermostat */
+
+/* constants related to evolution on a sphere */
+#define SPHERE 1        /* set to 1 to compute evolution in spherical geometry */
+#define SIN_THETA_REG 0.05  /* regularization of sin(theta) for motion on sphere */
+#define POLAR_PADDING 0.1   /* region around poles that belong to the same hashcell */
+#define DRAW_SPHERE 1   /* set to 1 to draw 3D sphere */
+#define NX_SPHERE 3000
+#define NY_SPHERE 1500   /* number of points on sphere */
+#define Z_SCALING_FACTOR 0.75   /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define XY_SCALING_FACTOR 1.9  /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define ZMAX_FACTOR 1.0        /* max value of z coordinate for REP_PROJ_3D representation */
+#define XSHIFT_3D -0.0          /* overall x shift for REP_PROJ_3D representation */
+#define YSHIFT_3D -0.0          /* overall y shift for REP_PROJ_3D representation */
+#define COS_VISIBLE -0.35       /* limit on cosine of normal to shown facets */
+
+#define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
+#define ROTATE_ANGLE 360.0   /* total angle of rotation during simulation */
+#define VIEWPOINT_TRAJ 1    /* type of viewpoint trajectory */
+#define MAX_LATITUDE 45.0   /* maximal latitude for viewpoint trajectory VP_ORBIT2 */
+
+double light[3] = {0.40824829, -0.816496581, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
+double observer[3] = {3.0, -3.0, -2.5};    /* location of observer for REP_PROJ_3D representation */ 
+
 
 #define NO_WRAP_BC ((BOUNDARY_COND != BC_PERIODIC)&&(BOUNDARY_COND != BC_PERIODIC_CIRCLE)&&(BOUNDARY_COND != BC_PERIODIC_TRIANGLE)&&(BOUNDARY_COND != BC_KLEIN)&&(BOUNDARY_COND != BC_PERIODIC_FUNNEL)&&(BOUNDARY_COND != BC_BOY)&&(BOUNDARY_COND != BC_GENUS_TWO))
 #define PERIODIC_BC ((BOUNDARY_COND == BC_PERIODIC)||(BOUNDARY_COND == BC_PERIODIC_CIRCLE)||(BOUNDARY_COND == BC_PERIODIC_FUNNEL)||(BOUNDARY_COND == BC_PERIODIC_TRIANGLE))
@@ -633,12 +672,14 @@ double vysegments[2] = {SEGMENTS_VY0, SEGMENTS_VY0};       /* vy coordinate of s
 int thermostat_on = 1;    /* thermostat switch used when VARY_THERMOSTAT is on */
 double cosangle[NSEG+1];      
 double sinangle[NSEG+1];      /* precomputed trig functions of angles to draw circles faster */
+short int reset_view = 0;     /* for moving observer in 3D plot */  
 
 #define THERMOSTAT_ON ((THERMOSTAT)&&((!VARY_THERMOSTAT)||(thermostat_on)))
 
 #include "global_ljones.c"
 #include "sub_maze.c"
 #include "sub_hashgrid.c"
+#include "sub_lj_sphere.c"
 #include "sub_lj.c"
 
 FILE *lj_time_series, *lj_final_position;
@@ -688,16 +729,17 @@ double bfield_schedule(int i)
 double temperature_schedule(int i)
 {
     static double bexponent, omega, bexp2, factor2, logf, ac, bc;
-    static int first = 1, t1, t2, t3;
+    static int first = 1, t1, t2, t3, t4;
     double beta, t;
     
     if (first)
     {
-        t1 = NSTEPS - MIDDLE_CONSTANT_PHASE - FINAL_DECREASE_PHASE - FINAL_CONSTANT_PHASE;
-        t2 = NSTEPS - FINAL_DECREASE_PHASE - FINAL_CONSTANT_PHASE;
-        t3 = NSTEPS - FINAL_CONSTANT_PHASE;
-        bexponent = log(BETA_FACTOR)/(double)(t1);
-        omega = N_TOSCILLATIONS*DPI/(double)(t1);
+        t1 =INITIAL_CONSTANT_PHASE;
+        t2 = NSTEPS - MIDDLE_CONSTANT_PHASE - FINAL_DECREASE_PHASE - FINAL_CONSTANT_PHASE; 
+        t3 = NSTEPS - FINAL_DECREASE_PHASE - FINAL_CONSTANT_PHASE;
+        t4 = NSTEPS - FINAL_CONSTANT_PHASE;
+        bexponent = log(BETA_FACTOR)/(double)(t2-t1);
+        omega = N_TOSCILLATIONS*DPI/(double)(t2-t1);
         logf = log(BETA_FACTOR);
         
         switch (BETA_SCHEDULE)
@@ -709,7 +751,7 @@ double temperature_schedule(int i)
             }
             case (TS_CYCLING):
             {
-                factor2 = BETA_FACTOR*2.0/(1.0 + cos(N_TOSCILLATIONS*DPI));
+                factor2 = BETA_FACTOR*2.0/(1.0 + 1.0e-10 + cos(N_TOSCILLATIONS*DPI));
                 break;
             }
             case (TS_PERIODIC):
@@ -751,75 +793,78 @@ double temperature_schedule(int i)
                 factor2 = 1.0/BETA_FACTOR - 1.0;
                 break;
             }
-       }
+        }
         bexp2 = -log(factor2)/(double)(FINAL_DECREASE_PHASE);
         first = 0;
-        
+        printf("bexp2 = %.3lg\n", bexp2);
+        printf("factor2 = %.3lg\n", factor2);
+//         exit(0);
 //         printf("t1 = %i, factor2 = %.3lg\n", t1, factor2);
     }
-    if (i < INITIAL_TIME) beta = BETA;
-    else if (i < INITIAL_TIME + t1)
+    
+//     
+    if (i < INITIAL_TIME + t1) beta = BETA;
+    else if (i < INITIAL_TIME + t2)
     {
         switch (BETA_SCHEDULE)
         {
             case (TS_EXPONENTIAL):
             {
-                beta = BETA*exp(bexponent*(double)(i - INITIAL_TIME));
+                beta = BETA*exp(bexponent*(double)(i - INITIAL_TIME - t1));
                 break;
             }
             case (TS_CYCLING):
             {
-                beta = BETA*exp(bexponent*(double)(i - INITIAL_TIME));
-                beta = beta*2.0/(1.0 + cos(omega*(double)(i - INITIAL_TIME)));
+                beta = BETA*exp(bexponent*(double)(i - INITIAL_TIME - t1));
+                beta = beta*2.0/(1.0 + 1.0e-10 + cos(omega*(double)(i - INITIAL_TIME - t1)));
                 break;
             }
             case (TS_PERIODIC):
             {
-                beta = BETA*exp(logf*sin(omega*(double)(i - INITIAL_TIME)));
+                beta = BETA*exp(logf*sin(omega*(double)(i - INITIAL_TIME - t1)));
                 break;
             }
             case (TS_LINEAR):
             {
-                beta = BETA/(1.0 + (1.0/BETA_FACTOR - 1.0)*(double)(i - INITIAL_TIME)/(double)(t1));
+                beta = BETA/(1.0 + (1.0/BETA_FACTOR - 1.0)*(double)(i - INITIAL_TIME - t1)/(double)(t2-t1));
 //                 printf("i = %i, beta = %.3lg\n", i, beta); 
                 break;
             }
             case (TS_COSINE):
             {
-                beta = ac/(1.0 + bc*cos(omega*(double)(i - INITIAL_TIME)));
+                beta = ac/(1.0 + bc*cos(omega*(double)(i - INITIAL_TIME - t1)));
                 printf("i = %i, beta = %.3lg\n", i, beta); 
                 break;
             }
             case (TS_EXPCOS):
             {
-                beta = BETA*exp(bc*(-1.0 + cos(omega*(double)(i - INITIAL_TIME))));
+                beta = BETA*exp(bc*(-1.0 + cos(omega*(double)(i - INITIAL_TIME - t1))));
 //                 printf("i = %i, beta = %.3lg\n", i, beta); 
                 break;
             }
             case (TS_ASYM_EXPCOS):
             {
-                t = (double)(i - INITIAL_TIME)/(double)(t1);
+                t = (double)(i - INITIAL_TIME - t1)/(double)(t2 - t1);
                 beta = BETA*exp(bc*(-1.0 + cos(N_TOSCILLATIONS*DPI*(t - 0.5*t*(1.0-t)))));
                 break;
             }
             case (TS_ATAN):
             {
-                beta = BETA/(1.0 + factor2*atan(2.0*(double)(i - INITIAL_TIME)/(double)(t1)));
+                beta = BETA/(1.0 + factor2*atan(2.0*(double)(i - INITIAL_TIME - t1)/(double)(t2 - t1)));
                 break;
             }
             case (TS_TANH):
             {
-                beta = BETA/(1.0 + factor2*tanh(TS_SLOPE*(double)(i - INITIAL_TIME)/(double)(t1)));
+                beta = BETA/(1.0 + factor2*tanh(TS_SLOPE*(double)(i - INITIAL_TIME - t1)/(double)(t2 - t1)));
                 break;
             }
         }
     }
-    else if (i < INITIAL_TIME + t2) beta = BETA*factor2;
-    else if (i < INITIAL_TIME + t3)
-    {
-        beta = BETA*exp(bexp2*(double)(i - INITIAL_TIME - t3));
-    }
-    else beta = BETA;
+//     else if ((i < INITIAL_TIME + t3)&&(t3 > t2)) beta = BETA*factor2;
+//     else if ((i < INITIAL_TIME + t4)&&(t4 > t3))
+//         beta = BETA*exp(bexp2*(double)(i - INITIAL_TIME - t3) + 1.0e-10);
+    else beta = BETA*1.0e10;
+//     else beta = BETA;
     printf("beta = %.3lg\n", beta);
     return(beta);
 }
@@ -1035,6 +1080,7 @@ double evolve_particles(t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NM
                         double beta, int *nactive, int *nsuccess, int *nmove, int *ncoupled, int initial_phase)
 {
     double a, totalenergy = 0.0, damping, damping1, damping_rot1, direction, dmean, dratio;  
+    double ctheta, stheta, stheta_reg, ffx, ffy; 
     static double b = 0.25*SIGMA*SIGMA*DT_PARTICLE/MU_XI, xi = 0.0;
     int j, move, ncoup;
     
@@ -1047,15 +1093,40 @@ double evolve_particles(t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NM
     for (j=0; j<ncircles; j++) if (particle[j].active)
     {
 //         printf("Particle %i\n", j);
-        particle[j].vx = px[j] + 0.5*DT_PARTICLE*particle[j].fx;
-        particle[j].vy = py[j] + 0.5*DT_PARTICLE*particle[j].fy;
-        particle[j].omega = pangle[j] + 0.5*DT_PARTICLE*particle[j].torque;
+        if (SPHERE)     /* add inertial terms for equation on a sphere */
+        {
+            ctheta = cos(particle[j].yc);
+            stheta = sin(particle[j].yc);
+            stheta_reg = stheta + SIN_THETA_REG;
+            ffx = -2.0*ctheta*px[j]*py[j];
+            ffy = stheta*ctheta*px[j]*px[j];
+            particle[j].vx = px[j] + 0.5*DT_PARTICLE*(particle[j].fx + ffx)/stheta_reg;
+            particle[j].vy = py[j] + 0.5*DT_PARTICLE*(particle[j].fy + ffy);
+            particle[j].omega = pangle[j] + 0.5*DT_PARTICLE*particle[j].torque;
+//             particle[j].omega = pangle[j] + 0.5*DT_PARTICLE*particle[j].torque/stheta_reg;
+            /* TODO: check/fix angular evolution */
+            
+            ffx = -2.0*ctheta*particle[j].vx*particle[j].vy;
+            ffy = stheta*ctheta*particle[j].vx*particle[j].vx;
+            px[j] = particle[j].vx + 0.5*DT_PARTICLE*(particle[j].fx + ffx)/stheta_reg;
+            py[j] = particle[j].vy + 0.5*DT_PARTICLE*(particle[j].fy + ffy);
+            pangle[j] = particle[j].omega + 0.5*DT_PARTICLE*particle[j].torque;
+//             pangle[j] = particle[j].omega + 0.5*DT_PARTICLE*particle[j].torque/stheta_reg;
+            
+            particle[j].energy = (stheta*stheta*px[j]*px[j] + py[j]*py[j])*particle[j].mass_inv; 
+        }
+        else
+        {
+            particle[j].vx = px[j] + 0.5*DT_PARTICLE*particle[j].fx;
+            particle[j].vy = py[j] + 0.5*DT_PARTICLE*particle[j].fy;
+            particle[j].omega = pangle[j] + 0.5*DT_PARTICLE*particle[j].torque;
                 
-        px[j] = particle[j].vx + 0.5*DT_PARTICLE*particle[j].fx;
-        py[j] = particle[j].vy + 0.5*DT_PARTICLE*particle[j].fy;
-        pangle[j] = particle[j].omega + 0.5*DT_PARTICLE*particle[j].torque;
-        
-        particle[j].energy = (px[j]*px[j] + py[j]*py[j])*particle[j].mass_inv;
+            px[j] = particle[j].vx + 0.5*DT_PARTICLE*particle[j].fx;
+            py[j] = particle[j].vy + 0.5*DT_PARTICLE*particle[j].fy;
+            pangle[j] = particle[j].omega + 0.5*DT_PARTICLE*particle[j].torque;
+            
+            particle[j].energy = (px[j]*px[j] + py[j]*py[j])*particle[j].mass_inv;
+        }
         
         if (COMPUTE_EMEAN)
             particle[j].emean = ERATIO*particle[j].emean + (1.0-ERATIO)*particle[j].energy;
@@ -1170,7 +1241,7 @@ double evolve_particles(t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NM
             if (particle[j].yc > BCYMAX) particle[j].yc += BCYMIN - BCYMAX;
             else if (particle[j].yc < BCYMIN) particle[j].yc += BCYMAX - BCYMIN;
         }
-        else if (!NO_WRAP_BC)
+        else if ((!NO_WRAP_BC)||(BOUNDARY_COND == BC_SPHERE))
         {
             move += wrap_particle(&particle[j], &px[j], &py[j]);
         }
@@ -1757,6 +1828,7 @@ void animation()
     t_belt *conveyor_belt;
     t_otriangle *otriangle;
     t_ofacet *ofacet;
+    t_lj_sphere *wsphere;
     char message[100];
 
     ratioc = 1.0 - ratio;
@@ -1771,6 +1843,13 @@ void animation()
     params.radius = MU;
     
     particle = (t_particle *)malloc(NMAXCIRCLES*sizeof(t_particle));    /* particles */ 
+    
+    /* sphere data */
+    if (DRAW_SPHERE) 
+    {
+        wsphere = (t_lj_sphere *)malloc(NX_SPHERE*NY_SPHERE*sizeof(t_lj_sphere));    
+        init_lj_sphere(wsphere);
+    }
     
     if (CLUSTER_PARTICLES) 
         cluster = (t_cluster *)malloc(NMAXCIRCLES*sizeof(t_cluster));    /* particle clusters */ 
@@ -1918,6 +1997,12 @@ void animation()
         {
             thermostat_on = thermostat_schedule(i);
             printf("Termostat: %i\n", thermostat_on);
+        }
+        
+        if (ROTATE_VIEW) 
+        {
+            viewpoint_schedule(i - INITIAL_TIME);
+            reset_view = 1;
         }
         
          
@@ -2411,7 +2496,9 @@ void animation()
         /* case of varying type proportion */
         if (CHANGE_TYPES) 
         {
-            t = (double)i/(double)NSTEPS;
+            if (i < PROP_TINITIAL) t = 0.0;
+            else if (i > NSTEPS - PROP_TFINAL) t = 1.0;
+            else t = (double)(i - PROP_TINITIAL)/(double)(NSTEPS - PROP_TINITIAL - PROP_TFINAL);
             params.prop = PROP_MIN*(1.0-t) + PROP_MAX*t;
             change_type_proportion(particle, params.prop);
         }
@@ -2427,11 +2514,12 @@ void animation()
             if ((REACTION_DIFFUSION)&&((RD_REACTION == CHEM_DNA_ENZYME)||(RD_REACTION == CHEM_DNA_ENZYME_REPAIR)))
             {
                 for (k=0; k<N_ADD_PARTICLES; k++)
-                    nadd_particle = add_particles(particle, px, py, nadd_particle, 7, molecule, tracer_n);
+                    nadd_particle = add_particles(particle, px, py, nadd_particle, 7, molecule, tracer_n, i);
             }
             else for (k=0; k<N_ADD_PARTICLES; k++)
-                nadd_particle = add_particles(particle, px, py, nadd_particle, 3, molecule, tracer_n);
+                nadd_particle = add_particles(particle, px, py, nadd_particle, ADD_TYPE, molecule, tracer_n, i);
 //             params.nactive = nadd_particle;
+            if (PAIR_PARTICLES) init_molecule_data(particle, molecule);
             params.nactive = 0;
             for (j=0; j<ncircles; j++) if (particle[j].active) 
             {
@@ -2480,7 +2568,7 @@ void animation()
         
         draw_frame(i, PLOT, BG_COLOR, ncollisions, traj_position, traj_length, 
         wall, pressure, pleft, pright, currents, particle_numbers, 1, params, particle, cluster, 
-        collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet);
+        collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet, wsphere);
         
 	if (!((NO_EXTRA_BUFFER_SWAP)&&(MOVIE))) glutSwapBuffers();
 
@@ -2512,7 +2600,7 @@ void animation()
             {
                 draw_frame(i, PLOT_B, BG_COLOR_B, ncollisions, traj_position, traj_length, 
                 wall, pressure, pleft, pright, currents, particle_numbers, 0, params, particle, cluster, 
-                collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet);
+                collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet, wsphere);
                 glutSwapBuffers();
                 save_frame_lj_counter(NSTEPS + MID_FRAMES + 1 + counter);
                 counter++;
@@ -2553,7 +2641,7 @@ void animation()
             blank();
             draw_frame(NSTEPS, PLOT, BG_COLOR, ncollisions, traj_position, traj_length, 
             wall, pressure, pleft, pright, currents, particle_numbers, 0, params, particle, cluster, 
-            collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet);
+            collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet, wsphere);
         }
         if (DOUBLE_MOVIE) for (i=0; i<MID_FRAMES; i++) 
         {
@@ -2565,7 +2653,7 @@ void animation()
         {
             draw_frame(NSTEPS, PLOT_B, BG_COLOR_B, ncollisions, traj_position, traj_length, 
             wall, pressure, pleft, pright, currents, particle_numbers, 0, params, particle, cluster, 
-            collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet);
+            collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet, wsphere);
             if (!((NO_EXTRA_BUFFER_SWAP)&&(MOVIE))) glutSwapBuffers();
         }
         if ((TIME_LAPSE)&&(!DOUBLE_MOVIE)) 
@@ -2651,6 +2739,8 @@ void animation()
         fclose(lj_final_position);
     }
     
+    if (DRAW_SPHERE) free(wsphere); 
+    
     fclose(lj_log);
 }
 
@@ -2691,7 +2781,8 @@ int main(int argc, char** argv)
     glutInitWindowSize(WINWIDTH,WINHEIGHT);
     glutCreateWindow("Particles with Lennard-Jones interaction in a planar domain");
 
-    init();
+    if (DRAW_SPHERE) init_3d();
+    else init();
 
     glutDisplayFunc(display);
 

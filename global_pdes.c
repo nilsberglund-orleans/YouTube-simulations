@@ -14,6 +14,7 @@
 #define D_NOTHING 999   /* no boundaries */
 #define D_RECTANGLE 0   /* rectangular domain */
 #define D_ELLIPSE 1     /* elliptical domain */
+#define D_CIRCLE_LAYERS 196 /* concentric circles */
 #define D_EXT_ELLIPSE 199   /* exterior of elliptical domain */
 #define D_EXT_ELLIPSE_CURVED 198   /* exterior of curved elliptical domain */
 #define D_EXT_ELLIPSE_CURVED_BDRY 197   /* exterior of curved elliptical domain, with horizontal boundaries */
@@ -38,6 +39,8 @@
 #define D_MENGER_ROTATED 17  /* rotated Menger-Sierpinski carpet */
 #define D_PARABOLA 18   /* parabolic domain */
 #define D_TWO_PARABOLAS 19   /* two facing parabolic antennas */
+#define D_TWO_PARABOLAS_ASYM 191    /* confocal facing parabolas of different size */
+#define D_TWO_PARABOLAS_ASYM_GUIDE 192    /* confocal facing parabolas of different size  with a wave guide */
 
 #define D_CIRCLES 20    /* several circles */
 #define D_CIRCLES_IN_RECT 201   /* several circles in a rectangle */
@@ -131,6 +134,9 @@
 #define D_CIRCLE_LATTICE_HONEY 95   /* honeycomb lattice of connected circles */
 #define D_CIRCLE_LATTICE_POISSON 96 /* Poisson disc process of connected circles */
 #define D_CIRCLE_LATTICE_RHOMBUS 97 /* rhombus-based lattice of connected circles */
+#define D_DISC_WAVEGUIDE 98     /* a disc with an attached waveguide */
+#define D_DISC_WAVEGUIDE_SHIFTED 981     /* a disc with a shifted attached waveguide */
+#define D_DISC_WAVEGUIDE_ELLIPSE 982     /* a disc with a shifted attached waveguide */
 
 /* for wave_sphere.c */
 
@@ -231,7 +237,9 @@
 #define IOR_MICHELSON 17        /* Michelson interferometer, to use with D_MICHELSON */
 #define IOR_GRADIENT_INDEX_LENS 18  /* gradient index lens (parabolic c(r)^2) */
 #define IOR_GRADIENT_INDEX_LENS_B 181  /* gradient index lens (parabolic c(r)) */
-#define IOR_LINEAR_X_A 19         /* IoR depending linearly on x */
+#define IOR_LUNEBURG_LENS 182   /* Luneburg lens */  
+#define IOR_LUNEBURG_LAYERS 183 /* Luneburg lens with layers */  
+#define IOR_LINEAR_X_A 19       /* IoR depending linearly on x */
 #define IOR_LINEAR_X_B 191      /* IoR depending linearly on x, with correct boundary values */
 
 #define IOR_EARTH_DEM 20        /* digital elevation model (for waves on sphere) */
@@ -257,7 +265,10 @@
 #define OSC_BEAM 4      /* periodic oscillation modulated by y cut-off */
 #define OSC_BEAM_GAUSSIAN 41  /* periodic oscillation modulated by Gaussian in y */
 #define OSC_BEAM_SINE 42  /* periodic oscillation modulated by sine in y */
+#define OSC_BEAM_SINE_DECREASING 43 /* decreasing oscillation modulated by sine in y */
+#define OSC_BEAM_SINE_CHIRP 44 /* decreasing socillation modulated by sine in y */
 #define OSC_BEAM_TWOPERIODS 5 /* sum of two periodic oscillations modulated by y cut-off */
+#define OSC_BEAM_SINE_TWOPERIODS 51 /* sum of two periodic oscillations modulated by y cut-off */
 #define OSC_TWO_WAVES 6          /* two linear waves at an angle, separate */
 #define OSC_TWO_WAVES_ADDED 61   /* two linear waves at an angle, superimposed */
 

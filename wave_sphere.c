@@ -39,7 +39,7 @@
 #include <omp.h>
 #include <time.h>
 
-#define MOVIE 1         /* set to 1 to generate movie */
+#define MOVIE 0         /* set to 1 to generate movie */
 #define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
@@ -144,6 +144,7 @@
 #define KAPPA_SIDES 5.0e-4  /* "elasticity" term on absorbing boundary */
 #define KAPPA_TOPBOT 0.0    /* "elasticity" term on absorbing boundary */
 #define OSCIL_LEFT_YSHIFT 0.0   /* y-dependence of left oscillation (for non-horizontal waves) */
+#define OSCIL_YMID -0.9        /* defines oscilling beam midpoint */
 /* The Courant number is given by c*DT/DX, where DT is the time step and DX the lattice spacing */
 /* The physical damping coefficient is given by GAMMA/(DT)^2 */
 /* Increasing COURANT speeds up the simulation, but decreases accuracy */

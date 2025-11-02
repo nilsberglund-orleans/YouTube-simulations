@@ -90,6 +90,7 @@
 #define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define APOLY_B 0.335         /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 4            /* depth of computation of Menger gasket */
+#define MDEPTH_B 10         /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0     /* limit value for approximation of Mandelbrot set */
@@ -238,11 +239,13 @@
 #define MAZE_WIDTH 0.02     /* half width of maze walls */
 #define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
 #define IOR 7               /* choice of index of refraction, see list in global_pdes.c */
+#define IOR_B 183           /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.5 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
 #define WAVE_PACKET_SOURCE_TYPE 1       /* type of wave packet sources */
 #define N_WAVE_PACKETS 15               /* number of wave packets */
 #define OSCIL_LEFT_YSHIFT 40.0   /* y-dependence of left oscillation (for non-horizontal waves) */
+#define OSCIL_YMID -0.9        /* defines oscilling beam midpoint */
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
 #define MU_B 1.0           /* parameter controlling the dimensions of domain */
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */

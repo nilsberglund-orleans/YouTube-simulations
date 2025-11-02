@@ -1,5 +1,7 @@
 /* Global variables and parameters for lennardjones */
 
+#define HASHMAXNEIGH 15     /* max number of neighbouring hash grid cells */
+
 /* Basic math */
 
 #define PI 	3.141592654
@@ -80,6 +82,7 @@
 
 /* pattern of additional repelling segments */
 #define S_RECTANGLE 0       /* segments forming a rectangle */
+#define S_CYLINDRICAL 100   /* two lines at top and bottom */
 #define S_CUP 1             /* segments forming a cup (for increasing gravity) */
 #define S_HOURGLASS 2       /* segments forming an hour glass */
 #define S_PENTA 3           /* segments forming a pentagon with 3 angles of 120° and 2 right angles */
@@ -154,6 +157,8 @@
 #define I_SEGMENT_CHARGED 161  /* harmonic interaction between segments and Coulomb interaction between ends*/
 #define I_POLYGON 17           /* harmonic interaction between regular polygons */
 #define I_POLYGON_ALIGN 171    /* harmonic interaction between polygons with an aligning torque */
+#define I_LJ_SPHERE 20         /* Lennard-Jones interaction on a sphere, redundant with 1 */
+#define I_LJ_DIPOLE_SPHERE 25  /* Lennard-Jones with a dipolar angle dependence on a sphere */
 
 /* Boundary conditions */
 
@@ -175,6 +180,7 @@
 #define BC_REFLECT_ABS 21   /* reflecting on lower boundary, and "no-return" boundary conditions outside BC area */
 #define BC_REFLECT_ABS_BOTTOM 22    /* absorbing on lower boundary, and reflecting elsewhere */
 #define BC_REFLECT_ABS_RIGHT 23     /* absorbing on right boundary, and reflecting elsewhere */
+#define BC_SPHERE 30        /* particles on a sphere */
 
 /* Regions for partial thermostat couplings */
 
@@ -259,6 +265,9 @@
 #define CHEM_POLYGON_AGGREGATION 26 /* aggregation of polygons */
 #define CHEM_POLYGON_CLUSTER 261    /* clustering of polygons into new clusters */
 #define CHEM_POLYGON_ONECLUSTER 262 /* clustering of polygons, with only one cluster allowed */
+#define CHEM_FISSION 27     /* nuclear fission reaction, U235 + n -> Sr95 + Xe139 + 2n */
+#define CHEM_FISSION_CD 271   /* nuclear fission 27 and Cd112 + n -> Cd113 */
+#define CHEM_FISSION_ABS 272  /* nuclear fission 27 and some extra moderation */
 
 /* Initial conditions for chemical reactions */
 
@@ -320,6 +329,7 @@
 #define P_COLLISION 22    /* colors depend on number of collision/reaction */
 #define P_RADIUS 23       /* colors depend on particle radius */
 #define P_MOL_ANG_MOMENTUM 24 /* colors depend on angular momentum of cluster */
+#define P_DENSITY 25      /* colors represent local density (weighted average of neighbours */
 
 /* Rotation schedules */
 
@@ -369,14 +379,17 @@
 
 #define BG_NONE 0       /* no background color */
 #define BG_DENSITY 1    /* background color depends on number of particles */
+#define BG_NEIGHBOURS 11    /* background color depends on number of neighbours */
 #define BG_CHARGE 2     /* background color depends on charge density */
 #define BG_EKIN 3       /* background color depends on kinetic energy */
+#define BG_LOG_EKIN 31  /* background color depends on log of kinetic energy */
 #define BG_FORCE 4      /* background color depends on total force */
 #define BG_EOBSTACLES 5 /* background color depends on obstacle energy */
 #define BG_EKIN_OBSTACLES 6 /* background color depends on kinetic energy plus obstacle energy */
 #define BG_DIR_OBSTACLES 7  /* background color depends on direction of velocity of obstacles */
 #define BG_POS_OBSTACLES 8  /* background color depends on displacement of obstacles */
 #define BG_CURRENTX 9       /* background color depends on x-component of current */
+#define BG_DIRECTION 10     /* background color depends on particle orientation */
 
 /* Obstacle color schemes */
 
@@ -388,6 +401,13 @@
 
 #define ADD_RECTANGLE 0     /* rectangular region, defined by ADDXMIN, etc */
 #define ADD_RING 1          /* ring_shaped region, defined by ADDRMIN, ADDRMAX */
+
+/* Type of rotating viewpoint */
+
+#define VP_HORIZONTAL 0     /* rotate in a horizontal plane (constant latitude) */
+#define VP_ORBIT 1          /* rotate in a plane containing the origin */
+#define VP_ORBIT2 11        /* rotate in a plane specified by max latitude */
+#define VP_POLAR 2          /* polar orbit */
 
 /* Color schemes */
 
@@ -452,6 +472,7 @@ typedef struct
     double spin_freq;           /* angular frequency of spin-spin interaction */
     double color_hue;           /* color hue of particle, for P_INITIAL_POS plot type */
     int color_rgb[3];           /* RGB colors code of particle, for use in ljones_movie.c */
+    double rgb[3], rgbx[3], rgby[3];    /* particle colors */
     int partner[NMAXPARTNERS];  /* partner particles for option PAIR_PARTICLES */
     short int npartners;        /* number of partner particles */
     double partner_eqd[NMAXPARTNERS];   /* equilibrium distances between partners */
@@ -499,10 +520,12 @@ typedef struct
     int nobs;                   /* number of obstacles in cell */
     int obstacle;               /* obstacle number */
     int nneighb;                /* number of neighbouring cells */
-    int neighbour[9];           /* numbers of neighbouring cells */
+    int neighbour[HASHMAXNEIGH];  /* numbers of neighbouring cells */
     double x1, y1, x2, y2;      /* coordinates of hashcell corners */
     double hue1, hue2;          /* color hues */
+    double r, g, b;             /* backgroud color RGB code */
     double charge;              /* charge of fixed obstacles */
+    double area;                /* hash cell area (for sphere) */
 } t_hashgrid;
 
 typedef struct
@@ -599,6 +622,7 @@ typedef struct
 
 typedef struct
 {
+    int active;                 /* set to 1 for tracer to be active */
     double xc, yc;              /* center of circle */
 } t_tracer;
 
@@ -624,7 +648,7 @@ typedef struct
 {
     double x, y;                /* location of collision */
     int time;                   /* time since collision */
-    int color;                  /* color hue in case of different collisions */
+    double color;                  /* color hue in case of different collisions */
 } t_collision;
 
 typedef struct
@@ -672,6 +696,31 @@ typedef struct
 } t_lj_parameters;
 
 
+typedef struct
+{
+    double phi, theta;          /* phi, theta angles */
+    double cphi, sphi;          /* cos and sin of phi */
+    double ctheta, stheta, cottheta;   /* cos, sin and cotangent of theta */
+    double reg_cottheta;        /* regularized cotangent of theta */
+    double x, y, z;             /* x, y, z coordinates of point on sphere */
+    double radius;              /* radius with wave height */
+//     double radius_dem;          /* radius with digital elevation model */
+    double r, g, b;             /* RGB values for image */
+//     short int indomain;         /* has value 1 if lattice point is in domain */
+//     short int draw_wave;        /* has value 1 if wave instead of DEM is drawn */
+//     short int evolve_wave;      /* has value 1 where there is wave evolution */
+//     double x2d, y2d;            /* x and y coordinates for 2D representation */
+//     double altitude;            /* altitude in case of Earth with digital elevation model */
+    double cos_angle;           /* cosine of light angle */
+    double cos_angle_sphere;    /* cosine of light angle for perfect sphere */
+//     double force;               /* external forcing */
+//     double phigrid, thetagrid;  /* phi, theta angles for alt simulation grid on sphere */
+//     short int nneighb;          /* number of neighbours, for Kuramoto model on sphere */
+//     int neighbor[NMAX_SPHERE_NEIGHB];   /* list of neighbours */
+//     int convert_grid;           /* convert field from simulation grid to longitude-latitude */
+//     short int edge;             /* has value 1 on edges of cubic simulation grid */
+//     double cos_grid, sin_grid;  /* cosine and sine of grid angle */
+} t_lj_sphere;
 
 int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0, nbelts = 0, n_tracers = 0, n_otriangles = 0, n_ofacets = 0;
 FILE *lj_log;

@@ -5941,6 +5941,132 @@ void compute_kuramoto_interaction_grid(double phi_in[NX*NY], double phi_out[NX*N
     }
 }
 
+
+void compute_laplacian_grid(double phi_in[NX*NY], double phi_out[NX*NY], t_wave_sphere wsphere[NX*NY], int ngridpoints)
+/* computes laplacian on adapted grid */
+/* assumes each grid point has 4 neighbours, result is not divided by dx */
+{
+    int i, k, n;
+    
+    #pragma omp parallel for private(i,k)
+    for (i=0; i<ngridpoints; i++)
+    {
+        phi_out[i] = -4.0*phi_in[i];
+        for (k = 0; k < 4; k++)
+        {
+            n = wsphere[i].neighbor[k];
+            phi_out[i] += phi_in[n];
+        }
+    }
+}
+
+
+void compute_gradient_grid(double phi_in[NX*NY], double gradient[2*NX*NY], t_wave_sphere wsphere[NX*NY], int ngridpoints)
+/* computes gradient on adapted grid */
+/* assumes each grid point has 4 neighbours, result is not divided by dx */
+{
+    int i, n;
+    double gradx, grady;
+    
+    #pragma omp parallel for private(i)
+    for (i=0; i<ngridpoints; i++)
+    {
+        n = wsphere[i].neighbor[1];
+        gradx = phi_in[n];
+        n = wsphere[i].neighbor[0];
+        gradx -= phi_in[n];
+        
+        n = wsphere[i].neighbor[3];
+        grady = phi_in[n];
+        n = wsphere[i].neighbor[2];
+        grady -= phi_in[n];
+
+        gradient[i] = wsphere[i].cos_grid*gradx - wsphere[i].sin_grid*grady;
+        gradient[NX*NY+i] = wsphere[i].sin_grid*gradx + wsphere[i].cos_grid*grady;
+//         n = wsphere[i].neighbor[1];
+//         gradient[i] = phi_in[n];
+//         n = wsphere[i].neighbor[0];
+//         gradient[i] -= phi_in[n];
+//         
+//         
+//         n = wsphere[i].neighbor[3];
+//         gradient[NX*NY+i] = phi_in[n];
+//         n = wsphere[i].neighbor[2];
+//         gradient[NX*NY+i] -= phi_in[n];
+    }
+}
+
+void compute_divergence_grid(double phi_in[NX*NY], double psi_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], int ngridpoints)
+/* computes divergence on adapted grid */
+/* assumes each grid point has 4 neighbours, result is not divided by dx */
+{
+    int i, n;
+    double gradx, grady;
+    
+    #pragma omp parallel for private(i)
+    for (i=0; i<ngridpoints; i++)
+    {
+        n = wsphere[i].neighbor[1];
+        gradx = phi_in[n];
+        n = wsphere[i].neighbor[0];
+        gradx -= phi_in[n];
+        n = wsphere[i].neighbor[3];
+        grady = phi_in[n];
+        n = wsphere[i].neighbor[2];
+        grady -= phi_in[n];
+        
+        rde[i].divergence = wsphere[i].cos_grid*gradx - wsphere[i].sin_grid*grady;
+        
+        n = wsphere[i].neighbor[1];
+        gradx = psi_in[n];
+        n = wsphere[i].neighbor[0];
+        gradx -= psi_in[n];
+        n = wsphere[i].neighbor[3];
+        grady = psi_in[n];
+        n = wsphere[i].neighbor[2];
+        grady -= psi_in[n];
+        
+        rde[i].divergence += wsphere[i].sin_grid*gradx + wsphere[i].cos_grid*grady;
+
+//         n = wsphere[i].neighbor[1];        
+//         rde[i].divergence = phi_in[n];
+//         n = wsphere[i].neighbor[0];
+//         rde[i].divergence -= phi_in[n];
+//         n = wsphere[i].neighbor[3];
+//         rde[i].divergence += psi_in[n];
+//         n = wsphere[i].neighbor[2];
+//         rde[i].divergence -= psi_in[n];
+    }
+}
+
+void compute_grad_product_grid(double phi[NX*NY], double psi[NX*NY], double prod_gradient[NX*NY], t_wave_sphere wsphere[NX*NY], int ngridpoints)
+/* computes gradient on adapted grid */
+/* assumes each grid point has 4 neighbours, result is not divided by dx */
+{
+    int i, n;
+    double gradx1, grady1, gradx2, grady2;
+    
+    #pragma omp parallel for private(i)
+    for (i=0; i<ngridpoints; i++)
+    {
+        n = wsphere[i].neighbor[1];
+        gradx1 = phi[n];
+        gradx2 = psi[n];
+        n = wsphere[i].neighbor[0];
+        gradx1 -= phi[n];
+        gradx2 -= psi[n];
+        
+        n = wsphere[i].neighbor[3];
+        grady1 = phi[n];
+        grady2 = psi[n];
+        n = wsphere[i].neighbor[2];
+        grady1 -= phi[n];
+        grady2 -= psi[n];
+        
+        prod_gradient[i] = 0.25*(gradx1*gradx2 + grady1*grady2);
+    }
+}
+
 void compute_light_angle_sphere_rde(short int xy_in[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY], double potential[NX*NY], int movie, int transparent)
 /* computes cosine of angle between normal vector and vector light */
 {
@@ -6196,7 +6322,7 @@ void compute_light_angle_sphere_rde_2d(short int xy_in[NX*NY], t_rde rde[NX*NY],
         first = 0;
     }
     
-    printf("[compute_light_angle_sphere_rde_2d] computing gradient\n");
+//     printf("[compute_light_angle_sphere_rde_2d] computing gradient\n");
     
     #pragma omp parallel for private(i,j,gradx, grady, norm, pscal)
     for (i=1; i<NX-1; i++)
@@ -6300,7 +6426,7 @@ void compute_light_angle_sphere_rde_2d(short int xy_in[NX*NY], t_rde rde[NX*NY],
         else rde[(NX-1)*NY+j].cos_angle = wsphere[(NX-1)*NY+j].cos_angle;
     }
     
-    printf("[compute_light_angle_sphere_rde_2d] computing gradient done\n");
+//     printf("[compute_light_angle_sphere_rde_2d] computing gradient done\n");
 }
 
 
@@ -8964,7 +9090,7 @@ int sphere_to_cube(t_wave_sphere *wsphere, double coord[2])
     int max;
     
     theta = wsphere->theta;
-    phi = wsphere->phi + PI;
+    phi = wsphere->phi;
     x = sin(theta)*cos(phi); 
     y = sin(theta)*sin(phi); 
     z = cos(theta);
@@ -9017,7 +9143,7 @@ int generate_cubic_grid_sphere(t_wave_sphere wsphere[NX*NY])
 {
     int i, j, k, l, n, m, face, nerrors;
     double dx, dx2, x, y, z, coord[2];
-    double phi0, theta0, phi1, theta1;
+    double phi0, theta0, phi1, theta1, angle;
     
     /* number of sites per face is l */
     l = (int)(sqrt((double)(NX*NY/6)));
@@ -9172,7 +9298,8 @@ int generate_cubic_grid_sphere(t_wave_sphere wsphere[NX*NY])
     for (i=0; i<l; i++)
     {
         wsphere[3*l*l + i].neighbor[2] = 5*l*l + i*l;
-        wsphere[5*l*l + i*l].neighbor[3] = 3*l*l + i;
+//         wsphere[5*l*l + i*l].neighbor[3] = 3*l*l + i;
+        wsphere[5*l*l + i*l].neighbor[0] = 3*l*l + i;
         wsphere[3*l*l + i].edge = 1;
         wsphere[5*l*l + i*l].edge = 1;
     }
@@ -9251,24 +9378,132 @@ int generate_cubic_grid_sphere(t_wave_sphere wsphere[NX*NY])
     }
     
     /* test */
-//     nerrors = 0;
-//     for (n=0; n<NX*NY; n++)
-//     {
-//         phi0 = wsphere[n].phi;
-//         theta0 = wsphere[n].theta;
-//         m = wsphere[n].convert_grid;
-//         phi1 = wsphere[m].phigrid;
-//         theta1 = wsphere[m].thetagrid;
-//         if (dist_sphere(phi0, theta0, phi1, theta1) > 0.2)
-//         {
-//             printf("Warning: Face %i, grid points %i (%.0f, %.0f) and its grid image (%.0f, %.0f) seem too far apart\n", m/(l*l), n, phi0*180.0/PI, theta0*180.0/PI, phi1*180.0/PI, theta1*180.0/PI);
-//             nerrors++;
-//         }
-//     }
-//     printf("%i errors among %i grid points\n", nerrors, 6*l*l);
+    nerrors = 0;
+    for (n=0; n<NX*NY; n++)
+    {
+        phi0 = wsphere[n].phi;
+        theta0 = wsphere[n].theta;
+        m = wsphere[n].convert_grid;
+        phi1 = wsphere[m].phigrid;
+        theta1 = wsphere[m].thetagrid;
+        if (dist_sphere(phi0, theta0, phi1, theta1) > 0.01)
+        {
+            printf("Warning: Face %i, grid points %i (%.0f, %.0f) and its grid image (%.0f, %.0f) seem too far apart\n", m/(l*l), n, phi0*180.0/PI, theta0*180.0/PI, phi1*180.0/PI, theta1*180.0/PI);
+            nerrors++;
+        }
+    }
+    printf("%i errors among %i grid points\n", nerrors, 6*l*l);
     
+    /* compute orientation of grid wrt sphere */
+    
+//     for (i=0; i<6*l*l; i++)
+//     {
+//         phi0 = wsphere[i].phigrid;
+//         theta0 = wsphere[i].thetagrid;
+//         n = wsphere[i].neighbor[0];
+//         phi1 = wsphere[n].phigrid;
+//         theta1 = wsphere[n].thetagrid;
+//         angle = argument(phi1 - phi0, theta1 - theta0);
+// //         angle*= cos(PID*wsphere[i].z);
+//         wsphere[i].cos_grid = cos(angle);
+//         wsphere[i].sin_grid = sin(angle);
+// //         printf("Grid angle %i = %.3lg, edge = %i\n", i, angle*180.0/PI, wsphere[i].edge);
+//     }
     
     return(6*l*l);
+}
+
+void optimize_cubic_grid_sphere(t_wave_sphere wsphere[NX*NY], int npoints, int nsteps)
+/* optimize the cubic grid by evolving the grid points */
+{
+    int i, j, k, n, m, p, nmoved; 
+    double phi0, theta0, phi1, theta1, f, *fphi, *ftheta, dist, dist2, dt = 2.0e-6, dmin, dmax;
+    double phimax0, phimax1, thetamax0, thetamax1, dphi, sinthetamin = 0.05;
+    int imax, jmax, kmax, edge;
+    
+    printf("Optimizing cubic grid\n");
+    fphi = (double *)malloc(npoints*sizeof(double));
+    ftheta = (double *)malloc(npoints*sizeof(double));
+    for (n=0; n<nsteps; n++)
+    {
+        dmin = 10.0;
+        dmax = 0.0;
+        printf("Step %i of %i\n", n, nsteps);
+//         #pragma omp parallel for private(i)
+        for (i=0; i<npoints; i++) if (sin(wsphere[i].thetagrid) > sinthetamin)
+        {
+            fphi[i] = 0.0;
+            ftheta[i] = 0.0;
+            phi0 = wsphere[i].phigrid;
+            theta0 = wsphere[i].thetagrid;
+            for (j=0; j<4; j++)
+            {
+                k = wsphere[i].neighbor[j]; 
+                phi1 = wsphere[k].phigrid;
+                theta1 = wsphere[k].thetagrid;
+                dphi = phi1 - phi0;
+                if (dphi > PI) dphi -= DPI;
+                else if (dphi < -PI) dphi += DPI;
+//                 if (phi1 > phi0 + PI) phi1 -= DPI;
+//                 if (phi1 < phi0 - PI) phi1 += DPI;
+                dist = dist_sphere(phi0, theta0, phi1, theta1);
+                if (dist < dmin) dmin = dist;
+                if (dist > dmax) 
+                {
+                    dmax = dist;
+                    phimax0 = phi0;
+                    thetamax0 = theta0;
+                    phimax1 = phi1;
+                    thetamax1 = theta1;
+                    imax = i;
+                    jmax = j;
+                    kmax = k;
+                }
+//                 dist2 = module2(dphi, theta1 - theta0);
+                f = 1.0/(dist + 1.0);
+                fphi[i] -= dphi*f/dist;
+                ftheta[i] += (theta0 - theta1)*f/dist;
+            }
+            
+        }
+//         #pragma omp parallel for private(i)
+        for (i=0; i<npoints; i++) if (sin(wsphere[i].thetagrid) > sinthetamin)  
+        {
+            wsphere[i].phigrid += fphi[i]*dt;
+            if (wsphere[i].phigrid > DPI) wsphere[i].phigrid -= DPI;
+            if (wsphere[i].phigrid < 0.0) wsphere[i].phigrid += DPI;
+            wsphere[i].thetagrid += ftheta[i]*dt;
+//             printf("Moved point %i by (%.5lg, %.5lg)\n", i, fphi*dt, ftheta*dt);
+        }
+        printf("dmin = %.5lg, dmax = %.5lg\n", dmin, dmax);
+//         printf("dmax between pts %i (%.5lg,%.5lg) and %i (%.5lg,%.5lg) neighbor %i, edge = %i\n", imax, phimax0*180.0/PI, thetamax0*180.0/PI, kmax, phimax1*180.0/PI, thetamax1*180.0/PI, jmax, wsphere[imax].edge);
+        
+        if (n%10 == 0)
+        {
+            /* recompute corresponding points in latitude-longitude grid */
+            printf("Recomputing grid correspondence\n");
+            nmoved = 0;
+            for (i=0; i<NX*NY; i++)
+            {
+                m = wsphere[i].convert_grid;
+                dist = dist_sphere(wsphere[i].phi, wsphere[i].theta, wsphere[m].phigrid, wsphere[m].thetagrid);
+                for (k=0; k<4; k++)
+                {
+                    p = wsphere[m].neighbor[k];
+                    dist2 = dist_sphere(wsphere[i].phi, wsphere[i].theta, wsphere[p].phigrid, wsphere[p].thetagrid);
+                    if (dist2 < dist)
+                    {
+                        dist = dist2;
+                        wsphere[i].convert_grid = p;
+                        nmoved++;
+                    }
+                }
+            }
+            printf("Moved %i points, distance = %.5lg\n", nmoved, dist); 
+        }
+    }
+    free(fphi);
+    free(ftheta);
 }
 
 int initialize_simulation_grid_sphere(t_wave_sphere wsphere[NX*NY])
@@ -9291,6 +9526,7 @@ int initialize_simulation_grid_sphere(t_wave_sphere wsphere[NX*NY])
         case (GRID_CUBIC):
         {
             npoints = generate_cubic_grid_sphere(wsphere);
+            if (OPTIMIZE_GRID) optimize_cubic_grid_sphere(wsphere, npoints, 600);
             break;
         }
     }

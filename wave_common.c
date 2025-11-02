@@ -1734,14 +1734,17 @@ void draw_wave_timeseries_old(double *values, int size, int fade, double fade_va
 }
 
 
-void init_fade_table(double *tcc_table[NX], double *fade_table)
+void init_fade_table(double *tcc_table[NX], short int *xy_in[NX], double *fade_table)
 {
     int i, j;
     
     for (i=0; i<NX; i++)
         for (j=0; j<NY; j++)
-            fade_table[i*NY + j] = pow(tcc_table[i][j]/courant2, 0.25);
+        {
+            if (xy_in[i][j] == 2) fade_table[i*NY + j] = 0.0;
+            else fade_table[i*NY + j] = pow(tcc_table[i][j]/courant2, 0.1);
 //             fade_table[i*NY + j] = tcc_table[i][j]/courant2;
+        }
 }
 
 void draw_wave_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], double *average_energy[NX], double *fade_table, double *total_flux, double *color_scale[NX], short int *xy_in[NX], double scale, int time, int plot, int palette, int pnumber, int fade, double fade_value)

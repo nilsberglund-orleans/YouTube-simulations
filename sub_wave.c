@@ -4938,6 +4938,21 @@ int init_poly(int depth, t_vertex polyline[NMAXPOLY], t_rectangle polyrect[NMAXP
         {
             return(compute_disc_hex_lattice_strip_coordinates(polyline, polyarc, circles, npolyarc, ncircles, top));
         }
+        case (D_TWO_PARABOLAS_ASYM_GUIDE):
+        {
+            polyrect[0].x1 = XMIN - WALL_WIDTH;
+            polyrect[0].y1 = OSCIL_YMID - OSCIL_YMAX - WALL_WIDTH_B;
+            polyrect[0].x2 = -0.5*MU;
+            polyrect[0].y2 = OSCIL_YMID - OSCIL_YMAX;
+    
+            polyrect[1].x1 = XMIN - WALL_WIDTH;
+            polyrect[1].y1 = OSCIL_YMID + OSCIL_YMAX;
+            polyrect[1].x2 = -0.5*MU;
+            polyrect[1].y2 = OSCIL_YMID + OSCIL_YMAX + WALL_WIDTH_B;
+
+            *npolyrect = 2;
+            return(0);
+        }
         default:
         {
             if ((ADD_POTENTIAL)&&(POTENTIAL == POT_MAZE)) 
@@ -5372,6 +5387,12 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             else return(0);
             break;
         }
+        case (D_CIRCLE_LAYERS):
+        {
+            if (x*x + y*y < LAMBDA*LAMBDA) return(1);
+            else return(0);
+            break;
+        }
         case (D_EXT_ELLIPSE):
         {
             if (x*x/(LAMBDA*LAMBDA) + y*y/(MU*MU) > 1.0) return(1);
@@ -5514,6 +5535,40 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             else if ((x < x1 - width)||(x > x2 + width)) return(1);
             else if ((x > x1)&&(x < x2)) return(1);
             else return(0);
+        }
+        case (D_TWO_PARABOLAS_ASYM):
+        {
+            if (x > 0.0)
+            {
+                if (vabs(y) > 0.5*LAMBDA) return(1);
+                x1 = -y*y/LAMBDA + 0.25*LAMBDA;
+                return((x < x1)||(x > x1 + WALL_WIDTH)); 
+            }
+            else
+            {
+                if (vabs(y) > 0.5*MU) return(1);
+                x1 = y*y/MU - 0.25*MU;
+                return((x > x1)||(x < x1 - WALL_WIDTH)); 
+            }
+            
+        }
+        case (D_TWO_PARABOLAS_ASYM_GUIDE):
+        {
+            if (x > 0.0)
+            {
+                if (vabs(y) > 0.5*LAMBDA) return(1);
+                x1 = -y*y/LAMBDA + 0.25*LAMBDA;
+                return((x < x1)||(x > x1 + WALL_WIDTH)); 
+            }
+            else
+            {
+                for (i=0; i<npolyrect; i++)
+                    if ((x > polyrect[i].x1)&&(x < polyrect[i].x2)&&(y > polyrect[i].y1)&&(y < polyrect[i].y2)) return(0);
+                if (vabs(y) > 0.5*MU) return(1);
+                x1 = y*y/MU - 0.25*MU;
+                return((x > x1)||(x < x1 - WALL_WIDTH)); 
+            }
+            
         }
         case (D_FOUR_PARABOLAS):
         {
@@ -6767,6 +6822,34 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
             }
             return(0);
         }
+        case (D_DISC_WAVEGUIDE):
+        {
+            if (x > 0.0) return(x*x + y*y < LAMBDA*LAMBDA);
+            y1 = y - 0.5*WALL_WIDTH;
+            r = LAMBDA - 0.5*WALL_WIDTH;
+            if (x*x + y1*y1 < r*r) return(1);
+            if ((y > -LAMBDA)&&(y < -LAMBDA + WALL_WIDTH)) return(1);
+            if ((y > -LAMBDA - 0.5*WALL_WIDTH)&&(y < -LAMBDA + 1.5*WALL_WIDTH)) return(2);
+            return(0);
+        }
+        case (D_DISC_WAVEGUIDE_SHIFTED):
+        {
+            if (x*x + y*y < LAMBDA*LAMBDA) return(1);
+            if (x > 0.0) return(0.0);
+            y1 = y + LAMBDA - MU - 0.5*WALL_WIDTH;
+            if (vabs(y1) < 0.5*WALL_WIDTH) return(1);
+            if (vabs(y1) < 0.75*WALL_WIDTH) return(2);
+            return(0);
+        }
+        case (D_DISC_WAVEGUIDE_ELLIPSE):
+        {
+            if (x*x/(LAMBDA*LAMBDA) + y*y < 1.0) return(1);
+            if (x > 0.0) return(0.0);
+            y1 = y + 1.0 - MU - 0.5*WALL_WIDTH;
+            if (vabs(y1) < 0.5*WALL_WIDTH) return(1);
+            if (vabs(y1) < 0.75*WALL_WIDTH) return(2);
+            return(0);
+        }
         case (D_MENGER):       
         {
             x1 = 0.5*(x+1.0);
@@ -7119,6 +7202,26 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             }
             break;
         }
+        case (D_CIRCLE_LAYERS):
+        {
+            for (j=1; j<=MDEPTH; j++)
+            {
+                r = (double)j*LAMBDA/(double)MDEPTH;
+                glBegin(GL_LINE_LOOP);
+                if (j<MDEPTH) glLineWidth(BOUNDARY_WIDTH/2);
+                else glLineWidth(BOUNDARY_WIDTH);
+                for (i=0; i<=NSEG; i++)
+                {
+                    phi = (double)i*DPI/(double)NSEG;
+                    x = r*cos(phi);
+                    y = r*sin(phi);
+                    xy_to_pos(x, y, pos);
+                    glVertex2d(pos[0], pos[1]);
+                }
+                glEnd ();
+            }
+            break;
+        }
         case (D_EXT_ELLIPSE):
         {
             glBegin(GL_LINE_LOOP);
@@ -7457,6 +7560,99 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 draw_circle(LAMBDA, 0.0, r, NSEG);
             }
 
+            break;
+        }
+        case (D_TWO_PARABOLAS_ASYM):
+        {
+            dy = LAMBDA/(double)NSEG;
+            glBegin(GL_LINE_LOOP);
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = -0.5*LAMBDA + dy*(double)i;
+                x = 0.25*LAMBDA - y*y/LAMBDA;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = 0.5*LAMBDA - dy*(double)i;
+                x = 0.25*LAMBDA - y*y/LAMBDA + WALL_WIDTH;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            
+            dy = MU/(double)NSEG;
+            glBegin(GL_LINE_LOOP);
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = -0.5*MU + dy*(double)i;
+                x = -0.25*MU + y*y/MU;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = 0.5*MU - dy*(double)i;
+                x = -0.25*MU + y*y/MU - WALL_WIDTH;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            
+            if (FOCI)
+            {
+                glColor3f(0.3, 0.3, 0.3);
+                draw_circle(0.0, 0.0, r, NSEG);
+            }
+            break;
+        }
+        case (D_TWO_PARABOLAS_ASYM_GUIDE):
+        {
+            dy = LAMBDA/(double)NSEG;
+            glBegin(GL_LINE_LOOP);
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = -0.5*LAMBDA + dy*(double)i;
+                x = 0.25*LAMBDA - y*y/LAMBDA;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = 0.5*LAMBDA - dy*(double)i;
+                x = 0.25*LAMBDA - y*y/LAMBDA + WALL_WIDTH;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            
+            dy = MU/(double)NSEG;
+            glBegin(GL_LINE_LOOP);
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = -0.5*MU + dy*(double)i;
+                x = -0.25*MU + y*y/MU;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            for (i = 0; i < NSEG+1; i++) 
+            {
+                y = 0.5*MU - dy*(double)i;
+                x = -0.25*MU + y*y/MU - WALL_WIDTH;
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            
+            for (i=0; i<npolyrect; i++)
+                draw_rectangle(polyrect[i].x1, polyrect[i].y1, polyrect[i].x2, polyrect[i].y2);
+            
+            if (FOCI)
+            {
+                glColor3f(0.3, 0.3, 0.3);
+                draw_circle(0.0, 0.0, r, NSEG);
+            }
             break;
         }
         case (D_FOUR_PARABOLAS):
@@ -9271,6 +9467,46 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             
             break;
         }
+        case (D_DISC_WAVEGUIDE):
+        {
+            draw_circle_arc(0.0, 0.0, LAMBDA, -PID, PI, NSEG);
+            draw_circle_arc(0.0, 0.5*WALL_WIDTH, LAMBDA - 0.5*WALL_WIDTH, PID, PI, NSEG);
+            draw_line(XMIN, -LAMBDA, 0.0, -LAMBDA);
+            draw_line(XMIN, -LAMBDA+WALL_WIDTH, 0.0, -LAMBDA+WALL_WIDTH);
+            break;
+        }
+        case (D_DISC_WAVEGUIDE_SHIFTED):
+        {
+            alpha = acos((LAMBDA - MU)/LAMBDA);
+            alpha2 = acos((LAMBDA - MU - WALL_WIDTH)/LAMBDA);
+            draw_circle_arc(0.0, 0.0, LAMBDA, -PID - alpha, DPI - alpha2 + alpha, NSEG);
+            draw_line(XMIN, -LAMBDA + MU, -LAMBDA*sin(alpha), -LAMBDA + MU);
+            draw_line(XMIN, -LAMBDA + MU + WALL_WIDTH, -LAMBDA*sin(alpha2), -LAMBDA + MU + WALL_WIDTH);
+            break;
+        }
+        case (D_DISC_WAVEGUIDE_ELLIPSE):
+        {
+            alpha = acos(1.0 - MU);
+            alpha2 = acos(1.0 - MU - WALL_WIDTH);
+            draw_ellipse_arc(0.0, 0.0, LAMBDA, 1.0, -PID - alpha, DPI - alpha2 + alpha, NSEG);
+            draw_line(XMIN, -1.0 + MU, -LAMBDA*sin(alpha), -1.0 + MU);
+            draw_line(XMIN, -1.0 + MU + WALL_WIDTH, -LAMBDA*sin(alpha2), -1.0 + MU + WALL_WIDTH);
+            
+            /* draw foci */
+            if (FOCI)
+            {
+                if (fade) glColor3f(0.3*fade_value, 0.3*fade_value, 0.3*fade_value);
+                else glColor3f(0.3, 0.3, 0.3);
+                x0 = sqrt(LAMBDA*LAMBDA-1.0);
+
+                glLineWidth(2);
+                glEnable(GL_LINE_SMOOTH);
+                
+                draw_circle(x0, 0.0, r, NSEG);
+                draw_circle(-x0, 0.0, r, NSEG);
+            }
+            break;
+        }
         case (D_MENGER):
         {
             glLineWidth(3);
@@ -10621,7 +10857,7 @@ void compute_laplacian(double phi[NX*NY], t_laplacian laplace[NX*NY], double del
 
 double oscillating_bc(int time, int j)
 {
-    int ij[2], jmin, jmax;
+    int ij[2], jmin, jmax, jmid;
     double t, t1, phase, a, envelope, omega, amp, dist2;
     
     switch (OSCILLATION_SCHEDULE)
@@ -10692,14 +10928,32 @@ double oscillating_bc(int time, int j)
         }
         case (OSC_BEAM_SINE):
         {
-            xy_to_ij(0.0, OSCIL_YMAX, ij);
+            xy_to_ij(0.0, OSCIL_YMID + OSCIL_YMAX, ij);
             jmax = ij[1];
-            jmin = NY - jmax;
-            dist2 = (double)(j - NY/2)/(double)(jmax - NY/2); 
+            xy_to_ij(0.0, OSCIL_YMID - OSCIL_YMAX, ij);
+            jmin = ij[1];
+            jmid = (jmin + jmax)/2;
+            dist2 = (double)(j - jmid)/(double)(jmax - jmid); 
             if (j > jmax) return(0.0);
             if (j < jmin) return(0.0);
             t = (double)time*OMEGA;
             amp = AMPLITUDE*cos(t)*exp(-(double)t*DAMPING);
+            amp *= cos(PID*dist2);
+            return(amp);
+        }
+        case (OSC_BEAM_SINE_DECREASING):
+        {
+            xy_to_ij(0.0, OSCIL_YMID + OSCIL_YMAX, ij);
+            jmax = ij[1];
+            xy_to_ij(0.0, OSCIL_YMID - OSCIL_YMAX, ij);
+            jmin = ij[1];
+            jmid = (jmin + jmax)/2;
+            dist2 = (double)(j - jmid)/(double)(jmax - jmid); 
+            if (j > jmax) return(0.0);
+            if (j < jmin) return(0.0);
+            t = (double)time*OMEGA;
+            a = INITIAL_VARIANCE/(OMEGA*OMEGA);
+            amp = AMPLITUDE*cos(t)*exp(-(double)(t-INITIAL_SHIFT)*(t-INITIAL_SHIFT)/a);
             amp *= cos(PID*dist2);
             return(amp);
         }
@@ -10715,6 +10969,38 @@ double oscillating_bc(int time, int j)
             t = (double)time*OMEGA;
             amp = AMPLITUDE*(0.5*cos(t) + 0.5*cos(sqrt(7.0)*t))*exp(-(double)t*DAMPING);
             amp *= exp(-dist2/INITIAL_VARIANCE);
+            return(amp);
+        }
+        case (OSC_BEAM_SINE_TWOPERIODS):
+        {
+            xy_to_ij(0.0, OSCIL_YMID + OSCIL_YMAX, ij);
+            jmax = ij[1];
+            xy_to_ij(0.0, OSCIL_YMID - OSCIL_YMAX, ij);
+            jmin = ij[1];
+            jmid = (jmin + jmax)/2;
+            dist2 = (double)(j - jmid)/(double)(jmax - jmid); 
+            if (j > jmax) return(0.0);
+            if (j < jmin) return(0.0);
+            t = (double)time*OMEGA;
+            amp = AMPLITUDE*(0.5*cos(t) + 0.5*cos(sqrt(7.0)*t))*exp(-(double)t*DAMPING);
+            amp *= cos(PID*dist2);
+            return(amp);
+        }
+        case (OSC_BEAM_SINE_CHIRP):
+        {
+            xy_to_ij(0.0, OSCIL_YMID + OSCIL_YMAX, ij);
+            jmax = ij[1];
+            xy_to_ij(0.0, OSCIL_YMID - OSCIL_YMAX, ij);
+            jmin = ij[1];
+            jmid = (jmin + jmax)/2;
+            dist2 = (double)(j - jmid)/(double)(jmax - jmid); 
+            if (j > jmax) return(0.0);
+            if (j < jmin) return(0.0);
+            t = (double)time*OMEGA;
+            phase = t + ACHIRP*t*t;
+//             if (phase > DPI) phase = DPI; 
+            amp = AMPLITUDE*sin(phase)*exp(-phase*DAMPING);
+            amp *= cos(PID*dist2);
             return(amp);
         }
         case (OSC_TWO_WAVES):
@@ -10737,13 +11023,13 @@ double oscillating_bc(int time, int j)
     }
 }
 
-void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_table[NX], double ior_angle)
+void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tc_table[NX], double *tgamma_table[NX], double ior_angle)
 /* compute variable index of refraction */
 /* should be at some point merged with 3D version in suv_wave_3d.c */
 {
     int i, j, k, n, inlens, ncircles;
     double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1, courant_med, courant_med2;
-    double a, u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
+    double a, u, v, u1, x, y, xy[2], norm2, speed, r, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
     double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
     static double xc_stat[NGRIDX*NGRIDY], yc_stat[NGRIDX*NGRIDY], sigma_stat;
     static int first = 1;
@@ -11454,6 +11740,54 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_tab
                 }
                 break;
             }
+            case (IOR_LUNEBURG_LENS):
+            {
+                /* n = sqrt(2-r/R) */
+                printf("Initialising Luneburg lens IOR");
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        r = module2(xy[0], xy[1]);
+                        if (r > LAMBDA) 
+                        {
+                            tcc_table[i][j] = courant2;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else
+                        {
+                            tcc_table[i][j] = courant2/(2.0 - r/LAMBDA);
+                            tgamma_table[i][j] = GAMMAB;
+//                             printf("tcc[%i][%i] = %.3lg\n", i, j, tcc_table[i][j]); 
+                        }
+                    }
+                }
+                break;
+            }
+            case (IOR_LUNEBURG_LAYERS):
+            {
+                /* n = sqrt(2-r/R) discretized in layers */
+                printf("Initialising Luneburg lens IOR");
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        r = module2(xy[0], xy[1])/LAMBDA;
+                        r2 = r*(double)MDEPTH;
+                        r2 = (double)((int)r2)/(double)MDEPTH;
+                        if (r > 1.0) 
+                        {
+                            tcc_table[i][j] = courant2;
+                            tgamma_table[i][j] = GAMMA;
+                        }
+                        else
+                        {
+                            tcc_table[i][j] = courant2/(2.0 - r2);
+                            tgamma_table[i][j] = GAMMAB;
+//                             printf("tcc[%i][%i] = %.3lg\n", i, j, tcc_table[i][j]); 
+                        }
+                    }
+                }
+                break;
+            }
             case (IOR_LINEAR_X_A):
             {
                 /* Warning: Depending on COURANT and COURANTB */
@@ -11495,6 +11829,18 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_tab
                 }
             }
         }
+        for (i=0; i<NX; i++){
+            for (j=0; j<NY; j++){
+                if (xy_in[i][j] != 0)
+                {
+                    tc_table[i][j] = sqrt(tcc_table[i][j]);
+                }
+                else if (TWOSPEEDS)
+                {
+                    tc_table[i][j] = COURANTB;
+                }
+            }
+        }
     }
     else
     {
@@ -11503,14 +11849,14 @@ void init_ior_2d(short int *xy_in[NX], double *tcc_table[NX], double *tgamma_tab
             for (j=0; j<NY; j++){
                 if (xy_in[i][j] != 0)
                 {
-//                     tc[i*NY+j] = COURANT;
+                    tc_table[i][j] = COURANT;
                     tcc_table[i][j] = courant2;
                     if (xy_in[i][j] == 1) tgamma_table[i][j] = GAMMA;
                     else tgamma_table[i][j] = GAMMAB;
                 }
                 else if (TWOSPEEDS)
                 {
-//                     tc[i*NY+j] = COURANTB;
+                    tc_table[i][j] = COURANTB;
                     tcc_table[i][j] = courantb2;
                     tgamma_table[i][j] = GAMMAB;
                 }

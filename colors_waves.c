@@ -3,7 +3,16 @@
 double color_amplitude(double value, double scale, int time)
 /* transforms the wave amplitude into a double in [-1,1] to feed into color scheme */
 {
-    return(tanh(SLOPE*value/scale)*exp(-((double)time*ATTENUATION)));
+    if (ATTENUATION == 0.0)
+    {
+        if (COLOR_RANGE == 1.0) return(tanh(SLOPE*value/scale));
+        else return(COLOR_RANGE*tanh(SLOPE*value/scale));
+    }
+    else
+    {
+        if (COLOR_RANGE == 1.0) return(tanh(SLOPE*value/scale)*exp(-((double)time*ATTENUATION)));
+        else return(COLOR_RANGE*tanh(SLOPE*value/scale)*exp(-((double)time*ATTENUATION)));
+    }
 }
 
 double color_amplitude_asym(double value, double scale, int time)

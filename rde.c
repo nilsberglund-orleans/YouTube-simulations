@@ -46,31 +46,27 @@
 
 /* General geometrical parameters */
 
-// #define WINWIDTH 	1920  /* window width */
-#define WINWIDTH 	1150  /* window width */
+#define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1150  /* window height */
-// #define NX 720           /* number of grid points on x axis */
-#define NX 432           /* number of grid points on x axis */
-#define NY 432           /* number of grid points on y axis */
+#define NX 870           /* number of grid points on x axis */
+#define NY 520           /* number of grid points on y axis */
 #define HRES 1           /* factor for high resolution plots */
 
-// #define XMIN -2.0
-// #define XMAX 2.0	/* x interval */
-#define XMIN -1.041666667
-#define XMAX 1.041666667	/* x interval */
+#define XMIN -2.0
+#define XMAX 2.0	/* x interval */
 #define YMIN -1.041666667
 #define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
 
 /* Choice of simulated equation */
 
-#define RDE_EQUATION 10  /* choice of reaction term, see list in global_3d.c */
-#define NFIELDS 2       /* number of fields in reaction-diffusion equation */
-#define NLAPLACIANS 2   /* number of fields for which to compute Laplacian */
+#define RDE_EQUATION 11  /* choice of reaction term, see list in global_3d.c */
+#define NFIELDS 3       /* number of fields in reaction-diffusion equation */
+#define NLAPLACIANS 0   /* number of fields for which to compute Laplacian */
 
-#define SPHERE 0        /* set to 1 to simulate equation on sphere */
+#define SPHERE 1        /* set to 1 to simulate equation on sphere */
 #define DPOLE 1         /* safety distance to poles */
 #define DSMOOTH 1       /* size of neighbourhood of poles that are smoothed */
-#define SMOOTHPOLE 0.00 /* smoothing coefficient at poles */
+#define SMOOTHPOLE 0.01 /* smoothing coefficient at poles */
 #define SMOOTHCOTPOLE 0.05  /* smoothing coefficient of cotangent at poles */
 #define PHISHIFT 0.0    /* shift of phi in 2D plot (in degrees) */
 #define SMOOTHBLOCKS 0  /* set to 1 to use blocks of points near the poles */
@@ -145,8 +141,7 @@
 
 /* Physical parameters of wave equation */
 
-#define DT 0.000003
-// #define DT 0.00000025
+#define DT 0.000002
 
 #define VISCOSITY 0.02
 #define POISSON_STIFFNESS 1.0   /* stiffness of Poisson equation solver for incompressible Euler */
@@ -167,11 +162,12 @@
 #define NU_KURAMOTO 0.0 /* viscosity in Kuramoto model */
 #define OMEGA_KURAMOTO 0.02  /* frequency in Kuramoto model */
 #define A_KS 0.15        /* coupling constant in Keller-Segel model */
-#define C_KS 3.0         /* coupling constant in Keller-Segel model */
-#define D_KSU 1.2        /* diffusion in Keller-Segel model */
-#define D_KSV 0.75       /* diffusion in Keller-Segel model */
-#define KS_RSCALE 0.001  /* scaling factor for reaction term of Keller-Segel model */
-#define KS_UMAX 10.0    /* max value for u component of Keller-Segel model */
+#define C_KS 3.5         /* coupling constant in Keller-Segel model */
+#define D_KSU 1.0        /* organism diffusion in Keller-Segel model */
+#define D_KSV 1.2        /* nutrient diffusion in Keller-Segel model */
+#define KS_RSCALE 0.07   /* scaling factor for reaction term of Keller-Segel model */
+#define KS_UMAX 100.0    /* max value for u component of Keller-Segel model */
+#define KS_CHIMAX_FACTOR 30.0   /* limiter on the value of chi/D_KSU */
 #define V_MAZE 0.4      /* potential in walls of maze */
 #define BZQ 0.0008      /* parameter in BZ equation */
 #define BZF 1.2         /* parameter in BZ equation */
@@ -254,8 +250,8 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 1800       /* number of frames of movie */
-#define NVID 100           /* number of iterations between images displayed on screen */
+#define NSTEPS 1400       /* number of frames of movie */
+#define NVID 12           /* number of iterations between images displayed on screen */
 #define ACCELERATION_FACTOR 1.0 /* factor by which to increase NVID in course of simulation */
 #define DT_ACCELERATION_FACTOR 1.0 /* factor by which to increase time step in course of simulation  */
 #define MAX_DT 0.024     /* maximal value of integration step */
@@ -274,14 +270,15 @@
 /* Visualisation */
 
 #define PLOT_3D 1    /* controls whether plot is 2D or 3D */
-#define PLOT_SPHERE 0   /* draws fields on a sphere */
+#define PLOT_SPHERE 1   /* draws fields on a sphere */
 #define SIMULATION_GRID 1   /* type of simulation grid, for certain equations */
+#define OPTIMIZE_GRID 1     /* set to 1 to optimize grid by evolving grid points */
 
 #define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
 #define ROTATE_ANGLE 360.0   /* total angle of rotation during simulation */
 #define SHADE_3D 1             /* set to 1 to change luminosity according to normal vector */
-#define SHADE_2D 0              /* set to 1 to change luminosity according to normal vector */
-#define VIEWPOINT_TRAJ 0    /* type of viewpoint trajectory */
+#define SHADE_2D 0             /* set to 1 to change luminosity according to normal vector */
+#define VIEWPOINT_TRAJ 1    /* type of viewpoint trajectory */
 #define MAX_LATITUDE 45.0   /* maximal latitude for viewpoint trajectory VP_ORBIT2 */
 
 #define DRAW_PERIODICISED 0     /* set to 1 to repeat wave periodically in x and y directions */
@@ -340,7 +337,7 @@
 
 /* Color schemes, see list in global_pdes.c  */
 
-#define COLOR_PALETTE 11        /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 15        /* Color palette, see list in global_pdes.c  */
 #define COLOR_PALETTE_B 11      /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
@@ -355,8 +352,8 @@
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
-#define VSHIFT_AMPLITUDE -2.7   /* additional shift for wave amplitude */
-#define VSCALE_AMPLITUDE 3.0      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSHIFT_AMPLITUDE -0.75   /* additional shift for wave amplitude */
+#define VSCALE_AMPLITUDE 1.5      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define CURL_SCALE 1.25   /* scaling factor for curl representation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
@@ -398,7 +395,7 @@
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_WIDTH 0.04     /* half width of maze walls */
 
-#define DRAW_COLOR_SCHEME 0     /* set to 1 to plot the color scheme */
+#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
 #define COLORBAR_RANGE 2.5      /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 2.5    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
@@ -413,6 +410,7 @@
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
 #define OMEGA 0.005        /* frequency of periodic excitation */
 #define OSCIL_YMAX 0.2      /* defines oscillation range */
+#define OSCIL_YMID -0.75      /* defines oscilling beam midpoint */
 #define COURANT 0.08       /* Courant number */
 #define COURANTB 0.03      /* Courant number in medium B */
 #define INITIAL_AMP 0.5         /* amplitude of initial condition */
@@ -480,12 +478,12 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 #define VENUS_NODATA_FACTOR 0.5     /* altitude to assign to DEM points without data (fraction of mean altitude) */
 
 #define Z_SCALING_FACTOR 0.75   /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define XY_SCALING_FACTOR 1.5  /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define XY_SCALING_FACTOR 1.9  /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0        /* max value of z coordinate for REP_PROJ_3D representation */
 #define XSHIFT_3D -0.0          /* overall x shift for REP_PROJ_3D representation */
-#define YSHIFT_3D -0.5          /* overall y shift for REP_PROJ_3D representation */
+#define YSHIFT_3D -0.0          /* overall y shift for REP_PROJ_3D representation */
 #define BORDER_PADDING 0       /* distance from boundary at which to plot points, to avoid boundary effects due to gradient */
-#define DRAW_ARROW 0           /* set to 1 to draw arrow above sphere */
+#define DRAW_ARROW 1           /* set to 1 to draw arrow above sphere */
 #define ZMAX 3.0             /* maximal value of z coordinate */
 #define ZMIN -3.0            /* maximal value of z coordinate */
 
@@ -493,7 +491,7 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 #define RSCALE_B 1.00           /* experimental, additional radial scaling factor in ij_to_sphere */
 #define RSHIFT 0.0              /* shift in radial component */
 #define RMAX 4.0                /* max value of radial component */
-#define RMIN 0.5                /* min value of radial component */
+#define RMIN 0.0                /* min value of radial component */
 #define COS_VISIBLE -0.35       /* limit on cosine of normal to shown facets */
 
 /* For debugging purposes only */
@@ -1251,10 +1249,11 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
 {
     int i, j, k, iplus, iminus, jplus, jminus, ropening, w, n;
     double x, y, z, deltax, deltay, deltaz, rho, rhox, rhoy, pot, u, v, ux, uy, vx, vy, test = 0.0, dx, dy, xy[2], padding, a, eta, etax, etay, sum, phi0, chi;
-    double *delta_phi[NLAPLACIANS], *nabla_phi, *nabla_psi, *nabla_omega, *delta_vorticity, *delta_pressure, *delta_p, *delta_u, *delta_v, *nabla_rho, *nabla_u, *nabla_v, *nabla_eta, *kuramoto_int, *keller_segel_drift, *keller_segel_div;
+    double *delta_phi[NLAPLACIANS], *nabla_phi, *nabla_psi, *nabla_omega, *delta_vorticity, *delta_pressure, *delta_p, *delta_u, *delta_v, *nabla_rho, *nabla_u, *nabla_v, *nabla_eta, *kuramoto_int, *chi_u, *prod_gradients;
 //     double u_bc[NY], v_bc[NY]; 
     static double invsqr3 = 0.577350269;    /* 1/sqrt(3) */
     static int smooth = 0, y_channels, y_channels1, imin, imax, first = 1;
+    int floor_chi, floor_u;
     
     if (first)  /* for D_MAZE_CHANNELS boundary conditions in Euler equation */
     {
@@ -1424,10 +1423,7 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
         
         case (E_KELLER_SEGEL):
         {
-//             keller_segel_drift = (double *)malloc(NX*NY*sizeof(double));
-//             keller_segel_div = (double *)malloc(NX*NY*sizeof(double));
             nabla_psi = (double *)malloc(2*NX*NY*sizeof(double));
-//             compute_gradient_euler_test(phi_in[1], nabla_psi, xy_in, wsphere);
             compute_gradient_euler_plane(phi_in[1], nabla_psi, rde, 0.0);
             /* multiply gradient by chi */
             #pragma omp parallel for private(i)
@@ -1435,13 +1431,49 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
             {
                 x = phi_in[0][i];
                 chi = C_KS*x*(1.0+x*x);
+//                 chi = C_KS*x/(1.0+x*x);
                 nabla_psi[i] *= chi;
                 nabla_psi[NX*NY + i] *= chi;
             }
             /* compute divergence */
-//             compute_divergence(nabla_psi, keller_segel_div, xy_in, wsphere);
-            
             compute_divergence_rde(nabla_psi, rde, xy_in, wsphere);
+            break;
+        }
+        
+        case (E_KELLER_SEGEL_SPHERE):
+        {
+            delta_u = (double *)malloc(NX*NY*sizeof(double));
+            delta_v = (double *)malloc(NX*NY*sizeof(double));
+            chi_u = (double *)malloc(NX*NY*sizeof(double));
+            prod_gradients = (double *)malloc(NX*NY*sizeof(double));
+            
+            compute_laplacian_grid(phi_in[1], delta_u, wsphere, ngridpoints);
+            compute_laplacian_grid(phi_in[2], delta_v, wsphere, ngridpoints);
+            
+            /* multiply gradient by chi */
+            floor_chi = 0;
+            #pragma omp parallel for private(i)
+            for (i=0; i<ngridpoints; i++)
+            {
+                x = phi_in[1][i];
+                chi_u[i] = C_KS*x*(1.0+x*x);
+//                 chi_u[i] = C_KS*x/(1.0+x*x);
+                if (chi_u[i] > KS_CHIMAX_FACTOR*D_KSU)
+                {
+//                     printf("chi_i[%i] = %.5lg\n", i, chi_u[i]);
+                    chi_u[i] = KS_CHIMAX_FACTOR*D_KSU;
+                    floor_chi++;
+                }
+            }
+            if (floor_chi > 0) 
+            {
+                nfloorchi++;
+//                 printf("Floored chi at %i points\n", floor_chi);
+            }
+//             printf("Floored chi %i times\n", nfloorchi);
+
+            /* compute product of gradients */
+            compute_grad_product_grid(phi_in[2], chi_u, prod_gradients, wsphere, ngridpoints);            
             break;
         }
         default: 
@@ -1507,10 +1539,8 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
                     y = phi_in[1][i*NY+j];
                     deltax = D_KSU*delta_phi[0][i*NY+j];
                     deltay = D_KSV*delta_phi[1][i*NY+j];
-//                     phi_out[0][i*NY+j] = x + intstep*(deltax - keller_segel_div[i*NY+j] + KS_RSCALE*x*(1.0-x));
                     phi_out[0][i*NY+j] = x + intstep*(deltax - rde[i*NY+j].divergence + KS_RSCALE*x*(1.0-x));
                     if (phi_out[0][i*NY+j] > KS_UMAX) phi_out[0][i*NY+j] = KS_UMAX;
-//                     if (phi_out[0][i*NY+j] < -1.0) phi_out[0][i*NY+j] = -1.0;
                     
                     phi_out[1][i*NY+j] = y + intstep*(deltay + KS_RSCALE*(x - A_KS*y));
                     break;
@@ -1781,6 +1811,26 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
         /* TEST */
 //         for (i=0; i<NX*NY; i++) rde[i].theta = phi_out[0][i];
     }
+    else if (RDE_EQUATION == E_KELLER_SEGEL_SPHERE)
+    {
+        floor_u = 0;
+        #pragma omp parallel for private(i,x)
+        for (i=0; i<ngridpoints; i++)
+        {
+            x = phi_in[1][i];
+            phi_out[1][i] = x + intstep*(D_KSU*delta_u[i] - chi_u[i]*delta_v[i] - prod_gradients[i] + KS_RSCALE*x*(1.0-x));
+            if (phi_out[1][i] > KS_UMAX) 
+            {
+                phi_out[1][i] = KS_UMAX;
+                floor_u = 1;
+            }
+                    
+            phi_out[2][i] = phi_in[2][i] + intstep*(D_KSV*delta_v[i] + KS_RSCALE*(x - A_KS*y));
+        }
+        if (floor_u) printf("u floored to KS_UMAX\n");
+        /* convert field 1 on simulation grid to field 0 on longitude_latitude grid */
+        convert_fields_from_grids(phi_out[1], phi_out[0], wsphere);
+    }
     
     /* in-flow/out-flow b.c. for incompressible Euler equation */
     if (((RDE_EQUATION == E_EULER_INCOMP)||(RDE_EQUATION == E_EULER_COMP))&&(IN_OUT_FLOW_BC > 0))
@@ -1846,9 +1896,15 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
         }
         case (E_KELLER_SEGEL):
         {
-//             free(keller_segel_drift);
-//             free(keller_segel_div);
             free(nabla_psi); 
+            break;
+        }
+        case (E_KELLER_SEGEL_SPHERE):
+        {
+            free(delta_u);
+            free(delta_v);
+            free(chi_u);
+            free(prod_gradients);
             break;
         }
     }
@@ -2339,7 +2395,7 @@ void animation()
 //     if (ADD_TRACERS) tracers = (double *)malloc(2*NSTEPS*N_TRACERS*sizeof(double));
     if (ADD_TRACERS) tracers = (double *)malloc(4*NSTEPS*N_TRACERS*sizeof(double));
     
-    if (RDE_EQUATION == E_KURAMOTO_SPHERE)
+    if ((RDE_EQUATION == E_KURAMOTO_SPHERE)||(RDE_EQUATION == E_KELLER_SEGEL_SPHERE))
         ngridpoints = initialize_simulation_grid_sphere(wsphere);
 
     dx = (XMAX-XMIN)/((double)NX);
@@ -2418,7 +2474,7 @@ void animation()
 
 //     init_linear_blob_sphere(0, 1.3*PI, 0.65*PI, 0.0, 0.0, 0.3, 0.1, 0.1, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
 
-    init_random(0.4, 0.4, phi, xy_in, wsphere);
+    init_random(0.5, 0.4, phi, xy_in, wsphere);
 //     init_onefield_random(1, 0.2, 0.1, phi, xy_in, wsphere);
 //     init_random_smoothed(0.0, 0.4, phi, xy_in, wsphere);
     
@@ -2470,6 +2526,7 @@ void animation()
 
     for (i=0; i<=NSTEPS; i++)
     {
+        printf("floored chi %i times\n", nfloorchi);
         nvid = NVID;
         if (CHANGE_VISCOSITY) 
         {

@@ -44,12 +44,13 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
-#define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
-#define IOR 10               /* choice of index of refraction, see list in global_pdes.c */
+#define VARIABLE_IOR 1      /* set to 1 for a variable index of refraction */
+#define IOR 183             /* choice of index of refraction, see list in global_pdes.c */
+#define IOR_B 183           /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.5 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
 
@@ -61,10 +62,16 @@
 #define NX 3840          /* number of grid points on x axis */
 #define NY 2300          /* number of grid points on y axis */
 #define YMID 1150        /* mid point of display */
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
-#define YMIN -1.197916667
-#define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
+
+#define XMIN -2.2
+#define XMAX 3.8	/* x interval */
+#define YMIN -1.796875 
+#define YMAX 1.796875	/* y interval for 9/16 aspect ratio */
+
+// #define XMIN -2.0
+// #define XMAX 2.0	/* x interval */
+// #define YMIN -1.197916667
+// #define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
 
 #define HIGHRES 1       /* set to 1 if resolution of grid is double that of displayed image */
 
@@ -72,8 +79,8 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 94      /* choice of domain shape, see list in global_pdes.c */
-#define B_DOMAIN_B 94    /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 196      /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN_B 196    /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 13      /* pattern of circles, see list in global_pdes.c */
 #define CIRCLE_PATTERN_B 13     /* pattern of circles, see list in global_pdes.c */
@@ -92,14 +99,15 @@
 #define HEX_NONUNIF_COMPRESSSION 0.15 /* compression factor for HEX_NONUNIF pattern */
 #define HEX_NONUNIF_COMPRESSSION_B -0.15 /* compression factor for HEX_NONUNIF pattern */
 
-#define LAMBDA 1.5	    /* parameter controlling the dimensions of domain */
+#define LAMBDA 1.0	    /* parameter controlling the dimensions of domain */
 #define MU 0.06             /* parameter controlling the dimensions of domain */
 #define MU_B 0.06           /* parameter controlling the dimensions of domain */
 #define MUB 0.06 	    /* parameter controlling the dimensions of domain */
 #define NPOLY 3             /* number of sides of polygon */
 #define APOLY 0.0           /* angle by which to turn polygon, in units of Pi/2 */ 
 #define APOLY_B 2.0         /* angle by which to turn polygon, in units of Pi/2 */ 
-#define MDEPTH 4            /* depth of computation of Menger gasket */
+#define MDEPTH 5            /* depth of computation of Menger gasket */
+#define MDEPTH_B 10         /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000      /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0     /* limit value for approximation of Mandelbrot set */
@@ -129,15 +137,16 @@
 
 /* Physical parameters of wave equation */
 
-#define TWOSPEEDS 0         /* set to 1 to replace hardcore boundary by medium with different speed */
-#define OSCILLATE_LEFT 0    /* set to 1 to add oscilating boundary condition on the left */
-#define OSCILLATE_TOPBOT 0  /* set to 1 to enforce a planar wave on top and bottom boundary */
+#define TWOSPEEDS 1         /* set to 1 to replace hardcore boundary by medium with different speed */
+#define OSCILLATE_LEFT 1    /* set to 1 to add oscilating boundary condition on the left */
+#define OSCILLATE_TOPBOT 1  /* set to 1 to enforce a planar wave on top and bottom boundary */
+#define OSCIL_YMID -0.9        /* defines oscilling beam midpoint */
 
-#define OMEGA 0.024        /* frequency of periodic excitation */
+#define OMEGA 0.002        /* frequency of periodic excitation */
 #define AMPLITUDE 1.0      /* amplitude of periodic excitation */ 
 #define DAMPING 0.0        /* damping of periodic excitation */
 #define COURANT 0.1        /* Courant number */
-#define COURANTB 0.063      /* Courant number in medium B */
+#define COURANTB 0.1       /* Courant number in medium B */
 #define GAMMA 0.0          /* damping factor in wave equation */
 #define GAMMAB 0.0         /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
@@ -150,7 +159,7 @@
 /* Increasing COURANT speeds up the simulation, but decreases accuracy */
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
-#define ADD_OSCILLATING_SOURCE 1        /* set to 1 to add an oscillating wave source */
+#define ADD_OSCILLATING_SOURCE 0        /* set to 1 to add an oscillating wave source */
 #define OSCILLATING_SOURCE_PERIOD 15.625  /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
 #define N_SOURCES 2                     /* number of sources, for option draw_sources */
@@ -160,11 +169,11 @@
 
 /* Boundary conditions, see list in global_pdes.c  */
 
-#define B_COND 1
+#define B_COND 4
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 3900      /* number of frames of movie */
+#define NSTEPS 2300      /* number of frames of movie */
 #define NVID 7           /* number of iterations between images displayed on screen */
 #define NSEG 100         /* number of segments of boundary */
 #define INITIAL_TIME 0    /* time after which to start saving frames */
@@ -189,12 +198,12 @@
 
 #define PLOT 0
 
-#define PLOT_B 5
+#define PLOT_B 3
 
 /* Color schemes */
 
-#define COLOR_PALETTE 14      /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 14    /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 11      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 12    /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 #define BLACK_TEXT 1     /* set to 1 to write text in black instead of white */
@@ -207,9 +216,9 @@
 #define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
-#define VSHIFT_AMPLITUDE -0.2   /* additional shift for wave amplitude */
-#define VSCALE_AMPLITUDE 0.4    /* additional scaling factor for wave amplitude */
-#define E_SCALE 10.0      /* scaling factor for energy representation */
+#define VSHIFT_AMPLITUDE -0.1   /* additional shift for wave amplitude */
+#define VSCALE_AMPLITUDE 1.0    /* additional scaling factor for wave amplitude */
+#define E_SCALE 300.0       /* scaling factor for energy representation */
 #define LOG_SCALE 1.0     /* scaling factor for energy log representation */
 #define LOG_SHIFT 2.0     /* shift of colors on log scale */
 #define FLUX_SCALE 5.0e3    /* scaling factor for enegy flux represtnation */
@@ -222,9 +231,9 @@
 #define HUEMEAN 220.0    /* mean value of hue for color scheme C_HUE */
 #define HUEAMP -220.0      /* amplitude of variation of hue for color scheme C_HUE */
 
-#define DRAW_COLOR_SCHEME 0     /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 1.5    /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 12.5    /* scale of color scheme bar for 2nd part */
+#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 1.2    /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 5.0    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 
 
@@ -304,7 +313,7 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
 /* phi is value of field at time t, psi at time t-1 */
 {
     int i, j, iplus, iminus, jplus, jminus, jmid = NY/2;
-    double delta, x, y, c, cc, gamma;
+    double delta, x, y, c, cc, gamma, tb_shift;
     static long time = 0;
     static double tc[NX][NY], tgamma[NX][NY];
     static short int first = 1;
@@ -333,6 +342,8 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
         }
         first = 0;
     }
+    
+    if (OSCILLATE_TOPBOT) tb_shift = (int)((XMAX - XMIN)*(double)NX/(XMAX - XMIN));
 
     #pragma omp parallel for private(i,j,iplus,iminus,jplus,jminus,delta,x,y,c,cc,gamma)
     /* evolution in the bulk */
@@ -512,7 +523,15 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
             x = phi_in[i][0];
             y = psi_in[i][0];
                     
-            switch (B_COND) {
+            if ((OSCILLATE_TOPBOT)&&(i < tb_shift)&&(i<NX-1)&&(i>0))
+            {
+                iplus = i+1;
+                iminus = i-1;   if (iminus < 0) iminus = 0;
+                delta = phi_in[iplus][0] + phi_in[iminus][0] + - 2.0*x;
+                phi_out[i][0] = -y + 2*x + tcc[i][0]*delta - KAPPA*x - tgamma[i][0]*(x-y);
+            }
+            
+            else switch (B_COND) {
                 case (BC_DIRICHLET):
                 {
                     iplus = i+1;   if (iplus == NX) iplus = NX-1;
@@ -568,8 +587,16 @@ void evolve_wave_half(double *phi_in[NX], double *psi_in[NX], double *phi_out[NX
         if ((TWOSPEEDS)||(xy_in[i][NY-1] != 0)){
             x = phi_in[i][NY-1];
             y = psi_in[i][NY-1];
-                    
-            switch (B_COND) {
+            
+            if ((OSCILLATE_TOPBOT)&&(i < tb_shift)&&(i<NX-1)&&(i>0))
+            {
+                iplus = i+1;
+                iminus = i-1;   if (iminus < 0) iminus = 0;
+                delta = phi_in[iplus][NY-1] + phi_in[iminus][NY-1] + - 2.0*x;
+                phi_out[i][NY-1] = -y + 2*x + tcc[i][NY-1]*delta - KAPPA*x - tgamma[i][NY-1]*(x-y);
+            }
+            
+            else switch (B_COND) {
                 case (BC_DIRICHLET):
                 {
                     iplus = i+1;   if (iplus == NX) iplus = NX-1;

@@ -13,8 +13,9 @@
 #define E_EULER_COMP 7      /* compressible Euler equation */
 #define E_SHALLOW_WATER 8   /* shallow water equation */
 #define E_KURAMOTO 9        /* Kuramoto-type equation (nearest neighbor coupling) */
-#define E_KURAMOTO_SPHERE 91    /* Kuramoto on the sphere, with Poisson grid */
+#define E_KURAMOTO_SPHERE 91    /* Kuramoto on the sphere, with cubic grid */
 #define E_KELLER_SEGEL 10   /* Keller-Segel model */
+#define E_KELLER_SEGEL_SPHERE 11    /* Keller-Segel model on the sphere, cubic grid */
 
 /* Choice of potential */
 
@@ -109,6 +110,7 @@ int global_time = 0;
 double max_depth = 1.0;
 int moon_position;
 int ngridpoints;
+int nfloorchi = 0;
 
 /* structure used for color and height representations */
 /* possible extra fields: zfield, cfield, interpolated coordinates */
@@ -185,14 +187,14 @@ typedef struct
     double x2d, y2d;            /* x and y coordinates for 2D representation */
     double altitude;            /* altitude in case of Earth with digital elevation model */
     double cos_angle;           /* cosine of light angle */
-    double cos_angle_sphere;    /* cosing of light angle for perfect sphere */
+    double cos_angle_sphere;    /* cosine of light angle for perfect sphere */
     double force;               /* external forcing */
     double phigrid, thetagrid;  /* phi, theta angles for alt simulation grid on sphere */
     short int nneighb;          /* number of neighbours, for Kuramoto model on sphere */
     int neighbor[NMAX_SPHERE_NEIGHB];   /* list of neighbours */
     int convert_grid;           /* convert field from simulation grid to longitude-latitude */
     short int edge;             /* has value 1 on edges of cubic simulation grid */
-//     short int jcoord;           /* j coordinate of grid */
+    double cos_grid, sin_grid;  /* cosine and sine of grid angle */
 } t_wave_sphere;
 
 

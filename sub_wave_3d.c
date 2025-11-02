@@ -1242,7 +1242,8 @@ double compute_interpolated_colors_wave(int i, int j, short int xy_in[NX*NY], t_
         ca = wave[i*NY+j].cos_angle;
         ca = (ca + 1.0)*0.4 + 0.2;
 //         if ((FADE_IN_OBSTACLE)&&(!xy_in[i*NY+j])) ca *= 1.6;
-        if ((FADE_IN_OBSTACLE)&&(!xy_in[i*NY+j])) ca = (ca + 0.1)*1.6;
+        if ((FADE_IN_OBSTACLE == 1)&&(!xy_in[i*NY+j])) ca = (ca + 0.1)*1.6;
+        if ((FADE_IN_OBSTACLE == 2)&&(xy_in[i*NY+j])) ca = (ca + 0.1)*1.6;
         for (k=0; k<3; k++) 
         {
             rgb_e[k] *= ca;
@@ -1296,7 +1297,7 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
 {
     int i, j, k, n, inlens;
     double courant2 = COURANT*COURANT, courantb2 = COURANTB*COURANTB, lambda1, mu1;
-    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3];
+    double u, v, u1, x, y, xy[2], norm2, speed, r2, c, salpha, h, ll, ca, sa, x1, y1, dx, dy, sum, sigma, x0, y0, rgb[3], r;
     double xc[NGRIDX*NGRIDY], yc[NGRIDX*NGRIDY], height[NGRIDX*NGRIDY];
     t_circle circles[NMAXCIRCLES];
     
@@ -1728,6 +1729,30 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
                 }
                 break;
             }
+            case (IOR_LUNEBURG_LENS):
+            {
+                /* n = sqrt(2-r/R) */
+                printf("Initialising Luneburg lens IOR");
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        ij_to_xy(i, j, xy);
+                        r = module2(xy[0], xy[1]);
+                        tc[i*NY+j] = COURANT;
+                        if (r > LAMBDA) 
+                        {
+                            tcc[i*NY+j] = courant2;
+                            tgamma[i*NY+j] = GAMMA;
+                        }
+                        else
+                        {
+                            tcc[i*NY+j] = courant2/(2.0 - r/LAMBDA);
+                            tgamma[i*NY+j] = GAMMAB;
+//                             printf("tcc[%i][%i] = %.3lg\n", i, j, tcc_table[i][j]); 
+                        }
+                    }
+                }
+                break;
+            }
             default:
             {
                 for (i=0; i<NX; i++){
@@ -1930,7 +1955,8 @@ void compute_cfield(short int xy_in[NX*NY], int cplot, int palette, t_wave wave[
             ca = wave[i*NY+j].cos_angle;
             ca = (ca + 1.0)*0.4 + 0.2;
 //             if ((FADE_IN_OBSTACLE)&&(!xy_in[i*NY+j])) ca *= 1.6;
-            if ((FADE_IN_OBSTACLE)&&(!xy_in[i*NY+j])) ca = (ca + 0.1)*1.6;
+            if ((FADE_IN_OBSTACLE == 1)&&(!xy_in[i*NY+j])) ca = (ca + 0.1)*1.6;
+            else if ((FADE_IN_OBSTACLE == 2)&&(xy_in[i*NY+j])) ca = (ca + 0.1)*1.6;
             for (k=0; k<3; k++) wave[i*NY+j].rgb[k] *= ca;
         }
         if (fade) for (k=0; k<3; k++) wave[i*NY+j].rgb[k] *= fade_value;

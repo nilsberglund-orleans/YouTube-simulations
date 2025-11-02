@@ -2,6 +2,9 @@
 /* Note: a possible improvement would be to use pointers instead of integers */
 /* when referencing other hashgrid cells or particles */ 
 
+int hashx_sphere[HASHY];    /* number of hash cells in x direction for sphere bc */
+double dx_sphere[HASHY];    /* width of hash cells in x direction for sphere bc */
+
  double module2(double x, double y)   /* Euclidean norm */
  {
 	double m;
@@ -32,6 +35,7 @@ int bc_grouped(int bc)
         case (BC_REFLECT_ABS): return(0);
         case (BC_REFLECT_ABS_BOTTOM): return(0);
         case (BC_REFLECT_ABS_RIGHT): return(0);
+        case (BC_SPHERE): return(5);
         default: 
         {
             printf("Warning: Hashgrid will not be properly initialised, update bc_grouped()\n\n");
@@ -52,7 +56,7 @@ int hash_cell(double x, double y)
 /* returns number of hash cell */
 {
     static int first = 1;
-    static double lx, ly, padding;
+    static double lx, ly, padding, dy_inverse;
     int i, j;
     
     if (first)
@@ -61,19 +65,35 @@ int hash_cell(double x, double y)
         else padding = HASHGRID_PADDING;
         lx = BCXMAX - BCXMIN + 2.0*padding;
         ly = BCYMAX - (BCYMIN) + 2.0*padding;
+        dy_inverse = (double)HASHY/(PI - 2.0*POLAR_PADDING);
         first = 0;
     }
     
-    if (CENTER_VIEW_ON_OBSTACLE) x -= xshift;
+    if (bc_grouped(BOUNDARY_COND) == 5)     /* spherical bc */
+    {
+        j = (int)((y-POLAR_PADDING)*dy_inverse);
+        if (j<0) j = 0;
+        else if (j>=HASHY) j = HASHY-1;
+        
+        i = (int)(x/dx_sphere[j]);
+        if (i<0) i = 0;
+        else if (i>=hashx_sphere[j]) i = hashx_sphere[j]-1;
+        
+    }
+    else 
+    {
+        if (CENTER_VIEW_ON_OBSTACLE) x -= xshift;
     
-    i = (int)((double)HASHX*(x - BCXMIN + padding)/lx);
-    j = (int)((double)HASHY*(y - BCYMIN + padding)/ly);
+        i = (int)((double)HASHX*(x - BCXMIN + padding)/lx);
+        j = (int)((double)HASHY*(y - BCYMIN + padding)/ly);
     
-    if (i<0) i = 0;
-    else if (i>=HASHX) i = HASHX-1;
-    if (j<0) j = 0;
-    else if (j>=HASHY) j = HASHY-1;
+        if (i<0) i = 0;
+        else if (i>=HASHX) i = HASHX-1;
+        if (j<0) j = 0;
+        else if (j>=HASHY) j = HASHY-1;
+    }
     
+//     printf("Hash_cell (%.3lg, %.3lg): %i\n", x, y, mhash(i,j));
     return(mhash(i,j));
 //     printf("Mapped (%.3f,%.3f) to (%i, %i)\n", x, y, ij[0], ij[1]);
 }
@@ -85,7 +105,7 @@ void init_hashcell_coordinates(t_hashgrid hashgrid[HASHX*HASHY])
     static int first = 1;
     static double lx, ly, padding, dx, dy;
     int i, j, n;
-    double x, y;
+    double x, y, dummy = -100.0;
     
     if (first)
     {
@@ -94,11 +114,50 @@ void init_hashcell_coordinates(t_hashgrid hashgrid[HASHX*HASHY])
         lx = BCXMAX - BCXMIN + 2.0*padding;
         ly = BCYMAX - (BCYMIN) + 2.0*padding;
         dx = 1.0*lx/(double)HASHX;
-        dy = 1.0*ly/(double)HASHY;
+        if (bc_grouped(BOUNDARY_COND) == 5)
+        {
+            dy = (PI - 2.0*POLAR_PADDING)/(double)(HASHY);
+        }
+        else dy = 1.0*ly/(double)HASHY;
         first = 0;
     }
     
-    for (i=0; i<HASHX; i++)
+    if (bc_grouped(BOUNDARY_COND) == 5)     /* spherical bc */
+    {
+        for (j=0; j<HASHY; j++)
+        {
+            for (i=0; i<hashx_sphere[j]; i++)
+            {
+                n = mhash(i, j);
+                hashgrid[n].x1 = (double)i*dx_sphere[j];
+                hashgrid[n].x2 = (double)(i+1)*dx_sphere[j];
+                hashgrid[n].y1 = POLAR_PADDING + (double)j*dy;
+                hashgrid[n].y2 = POLAR_PADDING + (double)(j+1)*dy;
+                
+                /* TODO: correct area */
+                hashgrid[n].area = dx_sphere[j]*dy*sin(0.5*(hashgrid[n].y1 + hashgrid[n].y2));
+                
+                printf("Cell %i corners (%.3lg, %.3lg), (%.3lg, %.3lg)\n", n, hashgrid[n].x1, hashgrid[n].y1, hashgrid[n].x2, hashgrid[n].y2); 
+            }
+            for (i=hashx_sphere[j]; i<HASHX; i++)
+            {
+                n = mhash(i, j);
+                hashgrid[n].x1 = dummy;
+                hashgrid[n].x2 = dummy;
+                hashgrid[n].y1 = dummy;
+                hashgrid[n].y2 = dummy;
+                hashgrid[n].area = 1.0;
+            }
+        }
+        /* correction at poles */
+        n = mhash(0,0);
+        hashgrid[n].y1 = 0.0;
+        hashgrid[n].area = DPI*(POLAR_PADDING + dy)*sin(0.5*hashgrid[n].y2);
+        n = mhash(0, HASHY-1);
+        hashgrid[n].y2 = PI;
+        hashgrid[n].area = DPI*(POLAR_PADDING + dy)*sin(0.5*(PI + hashgrid[n].y1));
+    }
+    else for (i=0; i<HASHX; i++)
         for (j=0; j<HASHY; j++)
         {
             x = BCXMIN - padding + (double)i*dx;
@@ -110,19 +169,106 @@ void init_hashcell_coordinates(t_hashgrid hashgrid[HASHX*HASHY])
             hashgrid[n].y2 = y + dy;
             hashgrid[n].charge = 0.0;
         }
-    
 }
 
 
 void init_hashgrid(t_hashgrid hashgrid[HASHX*HASHY])
 /* initialise table of neighbouring cells for each hashgrid cell, depending on boundary condition */
 {
-    int i, j, k, p, q, m, i1, j1;
+    int i, j, k, p, q, m, i1, j1, m1, pmin, pmax;
+    double dy, x1, x2, xx1, xx2, padding;
+    short int sym;
     
     printf("Initializing hash grid\n");
     
+    /* initialize hashx_sphere[] and dx_sphere[] in case of spherical bc */
+    if (bc_grouped(BOUNDARY_COND) == 5) 
+    {
+        dy = PI/((double)HASHY);
+        for (j=0; j<HASHY/2 + 1; j++)
+        {
+            hashx_sphere[j] = (int)((double)HASHX*(sin(dy*(double)j)));
+            if (hashx_sphere[j] == 0) hashx_sphere[j] = 1;
+            if (hashx_sphere[j] > HASHX-1) hashx_sphere[j] = HASHX-1;
+            dx_sphere[j] = DPI/(double)hashx_sphere[j];
+            
+            printf("hashx_sphere[%i] = %i, dx_sphere[%i] = %.3lg\n", j, hashx_sphere[j], j, dx_sphere[j]);
+            fprintf(lj_log, "hashx_sphere[%i] = %i, dx_sphere[%i] = %.3lg\n", j, hashx_sphere[j], j, dx_sphere[j]);
+        }
+        for (j=HASHY/2 + 1; j<HASHY; j++)
+        {
+            hashx_sphere[j] = hashx_sphere[HASHY-1-j];
+            dx_sphere[j] = dx_sphere[HASHY-1-j];
+            
+            printf("hashx_sphere[%i] = %i, dx_sphere[%i] = %.3lg\n", j, hashx_sphere[j], j, dx_sphere[j]);
+        }
+    }
+    
+    if ((COLOR_BACKGROUND)||(bc_grouped(BOUNDARY_COND) == 5)) 
+        init_hashcell_coordinates(hashgrid);
+    
     /* bulk of the table */
-    for (i=0; i<HASHX-1; i++)
+    if (bc_grouped(BOUNDARY_COND) == 5)     /* spherical bc */
+    {
+        /* dummy values for safety */
+        for (i=0; i<HASHX*HASHY; i++) hashgrid[i].nneighb = 0;
+        
+        for (j=1; j<HASHY-1; j++)
+        {
+            padding = 1.0*dx_sphere[j];
+            for (i=1; i<hashx_sphere[j]-1; i++)
+            {
+                m = mhash(i, j);
+//                 printf("m = %i\n", m); 
+                hashgrid[m].nneighb = 3;
+                hashgrid[m].neighbour[0] = mhash(i-1,j);
+                hashgrid[m].neighbour[1] = mhash(i,j);
+                hashgrid[m].neighbour[2] = mhash(i+1,j);
+                
+                /* neighbours in layer above and below */
+                if (j==1) pmin = 1;
+                else pmin = -1;
+                if (j==HASHY-2) pmax = 0;
+                else pmax = 2;
+                for (p=pmin; p<pmax; p+=2)
+                    for (i1=0; i1<hashx_sphere[j+p]; i1++)
+                    {
+                        m1 = mhash(i1, j+p);
+                        x1 = hashgrid[m].x1 - padding;
+                        x2 = hashgrid[m].x2 + padding;
+                        xx1 = hashgrid[m1].x1;
+                        xx2 = hashgrid[m1].x2;
+                        if (((xx2 >= x1)&&(xx2 <= x2))||((xx1 >= x1)&&(xx1 <= x2)))
+                        {
+                            hashgrid[m].neighbour[hashgrid[m].nneighb] = m1;
+                            hashgrid[m].nneighb++;
+                        }
+                    }
+                    
+                /* extra treatment for pole neighbours */
+                if (j==1)
+                {
+                    hashgrid[m].neighbour[hashgrid[m].nneighb] = 0;
+                    hashgrid[m].nneighb++;
+                }
+                if (j==HASHY-2)
+                {
+                    hashgrid[m].neighbour[hashgrid[m].nneighb] = HASHY-1;
+                    hashgrid[m].nneighb++;
+                }
+                    
+//                 printf("hashgrid[%i].nneighb = %i\n", m, hashgrid[m].nneighb);
+                
+                /* check there are not too many neighbours */
+                if (hashgrid[m].nneighb >= HASHMAXNEIGH)
+                {
+                    printf("(i,j) = (%i,%i) Error: HASHMAXNEIGH should be at least %i\n", i, j, hashgrid[m].nneighb + 1);
+                    exit(1);
+                }
+            }
+        }
+    }
+    else for (i=0; i<HASHX-1; i++)
         for (j=0; j<HASHY-1; j++)
         {
             m = mhash(i, j);
@@ -392,6 +538,201 @@ void init_hashgrid(t_hashgrid hashgrid[HASHX*HASHY])
             /* TO DO : add more cells for "corners" ? */
             break;
         }
+        case (5):   /* spherical boundary conditions */
+        {
+            printf("Left border\n");
+            /* left border */
+            for (j=1; j<HASHY-1; j++)
+            {
+                padding = dx_sphere[j];
+                m = mhash(0, j);
+//                 printf("j = %i, m = %i\n", j, m);
+                if (j==1)
+                {
+                    hashgrid[m].nneighb = 4;
+                    hashgrid[m].neighbour[0] = mhash(hashx_sphere[j]-1,j);
+                    hashgrid[m].neighbour[1] = mhash(0,j);
+                    hashgrid[m].neighbour[2] = mhash(1,j);
+                    hashgrid[m].neighbour[3] = mhash(hashx_sphere[j+1]-1,j+1);
+                }
+                else if (j==HASHY-2)
+                {
+                    hashgrid[m].nneighb = 4;
+                    hashgrid[m].neighbour[0] = mhash(hashx_sphere[j]-1,j);
+                    hashgrid[m].neighbour[1] = mhash(0,j);
+                    hashgrid[m].neighbour[2] = mhash(1,j);
+                    hashgrid[m].neighbour[3] = mhash(hashx_sphere[j-1]-1,j-1);
+                }
+                else
+                {
+                    hashgrid[m].nneighb = 5;
+                    hashgrid[m].neighbour[0] = mhash(hashx_sphere[j]-1,j);
+                    hashgrid[m].neighbour[1] = mhash(0,j);
+                    hashgrid[m].neighbour[2] = mhash(1,j);
+                    hashgrid[m].neighbour[3] = mhash(hashx_sphere[j+1]-1,j+1);
+                    hashgrid[m].neighbour[4] = mhash(hashx_sphere[j-1]-1,j-1);
+                    
+//                     hashgrid[m].nneighb = 7;
+//                     hashgrid[m].neighbour[5] = mhash(2,j);
+//                     hashgrid[m].neighbour[6] = mhash(hashx_sphere[j]-2,j);                    
+                }
+                
+                
+                /* neighbours in layer above and below */
+                for (p=-1; p<2; p+=2)
+                    for (i1=0; i1<hashx_sphere[j+p]; i1++)
+                    {
+                        m1 = mhash(i1, j+p);
+                        x1 = hashgrid[m].x1 - padding;
+                        x2 = hashgrid[m].x2 + padding;
+                        xx1 = hashgrid[m1].x1;
+                        xx2 = hashgrid[m1].x2;
+                        if (((xx2 >= x1)&&(xx2 <= x2))||((xx1 >= x1)&&(xx1 <= x2)))
+                        {
+                            hashgrid[m].neighbour[hashgrid[m].nneighb] = m1;
+                            hashgrid[m].nneighb++;
+                        }
+                    }
+                    
+                /* check there are not too many neighbours */
+                if (hashgrid[m].nneighb >= HASHMAXNEIGH)
+                {
+                    printf("(i,j) = (0,%i) Error: HASHMAXNEIGH should be at least %i\n", j, hashgrid[m].nneighb + 1);
+                    exit(1);
+                }
+            }
+            
+            printf("Right border\n");
+            /* right border */
+            for (j=1; j<HASHY-1; j++)
+            {
+                padding = dx_sphere[j];
+                m = mhash(hashx_sphere[j]-1, j);
+                if (j==1)
+                {
+                    hashgrid[m].nneighb = 4;
+                    hashgrid[m].neighbour[0] = mhash(hashx_sphere[j]-2,j);
+                    hashgrid[m].neighbour[1] = mhash(hashx_sphere[j]-1,j);
+                    hashgrid[m].neighbour[2] = mhash(0,j);
+                    hashgrid[m].neighbour[3] = mhash(0,j+1);
+                }
+                else if (j==HASHY-2)
+                {
+                    hashgrid[m].nneighb = 4;
+                    hashgrid[m].neighbour[0] = mhash(hashx_sphere[j]-2,j);
+                    hashgrid[m].neighbour[1] = mhash(hashx_sphere[j]-1,j);
+                    hashgrid[m].neighbour[2] = mhash(0,j);
+                    hashgrid[m].neighbour[3] = mhash(0,j-1);
+                }
+                else
+                {
+                    hashgrid[m].nneighb = 5;
+                    hashgrid[m].neighbour[0] = mhash(hashx_sphere[j]-2,j);
+                    hashgrid[m].neighbour[1] = mhash(hashx_sphere[j]-1,j);
+                    hashgrid[m].neighbour[2] = mhash(0,j);
+                    hashgrid[m].neighbour[3] = mhash(0,j+1);
+                    hashgrid[m].neighbour[4] = mhash(0,j-1);
+                    
+//                     hashgrid[m].nneighb = 7;
+//                     hashgrid[m].neighbour[5] = mhash(1,j);
+//                     hashgrid[m].neighbour[6] = mhash(hashx_sphere[j]-3,j);
+                }
+                
+                /* neighbours in layer above and below */
+                for (p=-1; p<2; p+=2)
+                    for (i1=0; i1<hashx_sphere[j+p]; i1++)
+                    {
+                        m1 = mhash(i1, j+p);
+                        x1 = hashgrid[m].x1 - padding;
+                        x2 = hashgrid[m].x2 + padding;
+                        xx1 = hashgrid[m1].x1;
+                        xx2 = hashgrid[m1].x2;
+                        if (((xx2 >= x1)&&(xx2 <= x2))||((xx1 >= x1)&&(xx1 <= x2)))
+                        {
+                            hashgrid[m].neighbour[hashgrid[m].nneighb] = m1;
+                            hashgrid[m].nneighb++;
+                        }
+                    }
+                    
+                /* check there are not too many neighbours */
+                if (hashgrid[m].nneighb >= HASHMAXNEIGH)
+                {
+                    printf("(i,j) = (%i,%i) Error: HASHMAXNEIGH should be at least %i\n", hashx_sphere[j]-1, j, hashgrid[m].nneighb + 1);
+                    exit(1);
+                }
+            }
+            
+            printf("Top border\n");
+            /* top border/North pole */
+            m = mhash(0, HASHY-1);
+            hashgrid[m].nneighb = hashx_sphere[HASHY-2] + 1;
+            hashgrid[m].neighbour[0] = m;
+            fprintf(lj_log, "Top border: m = %i, %i neighbours\n", m, hashgrid[m].nneighb);
+            for (i1=0; i1<hashx_sphere[HASHY-2]; i1++)
+                hashgrid[m].neighbour[i1+1] = mhash(i1,HASHY-2);
+            
+            /* check there are not too many neighbours */
+            if (hashgrid[m].nneighb >= HASHMAXNEIGH)
+            {
+                printf("Error at North Pole: HASHMAXNEIGH should be at least %i\n", hashgrid[m].nneighb + 1);
+                exit(1);
+            }
+            
+            printf("Bottom border\n");
+            /* bottom border/South pole */
+            m = mhash(0, 0);
+            hashgrid[m].nneighb = hashx_sphere[1] + 1;
+            hashgrid[m].neighbour[0] = m;
+            for (i1=0; i1<hashx_sphere[1]; i1++)
+                hashgrid[m].neighbour[i1+1] = mhash(i1,1);
+            
+            /* check there are not too many neighbours */
+            if (hashgrid[m].nneighb >= HASHMAXNEIGH)
+            {
+                printf("Error at South Pole: HASHMAXNEIGH should be at least %i\n", hashgrid[m].nneighb + 1);
+                exit(1);
+            }
+            
+            /* symmetrize hashgrid */
+            for (i=0; i<HASHX*HASHY; i++) 
+            {
+                for (j=0; j<hashgrid[i].nneighb; j++)
+                {
+                    m = hashgrid[i].neighbour[j];
+                    sym = 0;
+                    for (k=0; k<hashgrid[m].nneighb; k++)
+                        if (hashgrid[m].neighbour[k] == i) sym = 1;
+                    if (!sym) 
+                    {
+                        fprintf(lj_log, "Symmetrising hashcells %i and %i\n", i, m);
+                        hashgrid[m].neighbour[hashgrid[m].nneighb] = i;
+                        hashgrid[m].nneighb++;
+                    }
+                }
+            }
+            
+            for (i=0; i<HASHX*HASHY; i++)
+            {
+                p = hashgrid[i].nneighb;
+                printf("Hash cell %i has %i neighbours: ", i, p);
+                fprintf(lj_log, "Hash cell %i has %i neighbours: ", i, p);
+                for (j=0; j<p; j++)
+                {
+                    printf("%i ", hashgrid[i].neighbour[j]);
+                    fprintf(lj_log, "%i ", hashgrid[i].neighbour[j]);
+                }
+                printf("\n");
+                fprintf(lj_log, "\n");
+            }
+            
+            
+            
+//             sleep(5);
+            
+            printf("Hashgrid initialised\n");
+            
+            break;
+        }
         
         default: /* do nothing */;
     }
@@ -413,14 +754,14 @@ void init_hashgrid(t_hashgrid hashgrid[HASHX*HASHY])
 // //         sleep(1);
 //     }
 
-    if (COLOR_BACKGROUND) init_hashcell_coordinates(hashgrid);
+//     if (COLOR_BACKGROUND) init_hashcell_coordinates(hashgrid);
     
 //     sleep(1);
 }
 
 void update_hashgrid(t_particle* particle, t_obstacle *obstacle, t_hashgrid* hashgrid, int verbose)
 {
-    int i, j, k, n, m, max = 0, hashcell;
+    int i, j, k, n, m, max = 0, hashcell, maxcell = -1;
     
 //     printf("Updating hashgrid_number\n");
     for (i=0; i<HASHX*HASHY; i++) hashgrid[i].number = 0;
@@ -438,7 +779,11 @@ void update_hashgrid(t_particle* particle, t_obstacle *obstacle, t_hashgrid* has
             hashgrid[hashcell].number++;
             particle[k].hashcell = hashcell;
             
-            if (n > max) max = n;
+            if (n > max) 
+            {
+                max = n;
+                maxcell = hashcell;
+            }
         }
         
     if (OSCILLATE_OBSTACLES) 
@@ -454,7 +799,7 @@ void update_hashgrid(t_particle* particle, t_obstacle *obstacle, t_hashgrid* has
             }
     }
     
-    if(verbose) printf("Maximal number of particles per hash cell: %i\n", max);
+    if(verbose) printf("Maximal number of particles per hash cell: %i, in cell %i\n", max, maxcell);
 }
 
 
@@ -669,6 +1014,43 @@ int wrap_particle(t_particle* particle, double *px, double *py)
             return(move);
             break;
         }
+        case (5):   /* spherical bc */
+        {
+            if (x < 0.0) 
+            {
+                x1 += DPI;
+//                 printf("Moving particle by 2Pi\n");
+                move++;
+            }
+            else if (x > DPI) 
+            {
+                x1 -= DPI;
+//                 printf("Moving particle by -2Pi\n");
+                move++;
+            }
+            if (y > PI) 
+            {
+                x1 += PI;
+                if (x1 > DPI) x1 -= DPI;
+                y1 = PI;
+                particle->vy *= -1.0;
+                *py *= -1.0;
+                move++;
+            }
+            else if (y < 0.0) 
+            {
+                x1 += PI;
+                if (x1 > DPI) x1 -= DPI;
+                y1 = 0.0;
+                particle->vy *= -1.0;
+                *py *= -1.0;
+                move++;
+            }
+            particle->xc = x1;
+            particle->yc = y1;
+            return(move);
+            break;
+        }
         default:
         {
             /* do nothing */
@@ -809,7 +1191,17 @@ int verbose = 0;
 //             printf("(x2,y2) = (%.3lg, %.3lg)\n", *x2, *y2);
             break;
         }
-    }
+       case (5): /* spherical b.c. */
+        {
+            if (dx > dxhalf) *x2 -= BCXMAX - BCXMIN;
+            else if (-dx > dxhalf) *x2 += BCXMAX - BCXMIN;
+//             if (dy > dyhalf) *y2 -= BCYMAX - BCYMIN;
+//             else if (-dy > dyhalf) *y2 += BCYMAX - BCYMIN;
+            /* TODO: poles? */
+//             printf("(x2,y2) = (%.3lg, %.3lg)\n", *x2, *y2);
+            break;
+        }
+     }
 }
 
 
