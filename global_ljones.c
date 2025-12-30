@@ -26,6 +26,7 @@
 #define NMAXSHOVELS 50      /* max number of shovels */
 #define NMAX_TRIANGLES_PER_OBSTACLE 10  /* max number of triangles per obstacle */
 #define NMAX_TRIANGLES_PER_FACET 4  /* max number of triangles per facet between obstacles */
+#define NMAX_ABSORBERS 10   /* max number of absorbing discs */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -36,12 +37,15 @@
 #define C_CLOAK_A 6         /* first optimized invisibility cloak */
 #define C_LASER 7           /* laser fight in a room of mirrors */
 #define C_POISSON_DISC 8    /* Poisson disc sampling */
+#define C_POISSON_DISC_SPHERE 81    /* Poisson disc sampling in spherical geometry */
 
 #define C_GOLDEN_MEAN 10    /* pattern based on vertical shifts by golden mean */
 #define C_GOLDEN_SPIRAL 11  /* spiral pattern based on golden mean */
 #define C_SQUARE_HEX 12     /* alternating between square and hexagonal/triangular */
 
 #define C_POOL_TABLE 20     /* pool table initial position */
+
+#define C_SQUARE_SPHERE 30  /* "square" grid of circles on a sphere */
 
 #define C_ONE 97            /* one single circle, as for Sinai */
 #define C_TWO 98            /* two concentric circles of different type */
@@ -83,6 +87,7 @@
 /* pattern of additional repelling segments */
 #define S_RECTANGLE 0       /* segments forming a rectangle */
 #define S_CYLINDRICAL 100   /* two lines at top and bottom */
+#define S_BOTTOM 110        /* one line at bottom */
 #define S_CUP 1             /* segments forming a cup (for increasing gravity) */
 #define S_HOURGLASS 2       /* segments forming an hour glass */
 #define S_PENTA 3           /* segments forming a pentagon with 3 angles of 120° and 2 right angles */
@@ -252,6 +257,7 @@
 #define CHEM_H2O_H_OH 20    /* H2O <-> H+ + OH- */
 #define CHEM_2H2O_H3O_OH 21 /* 2 H2O <-> H3O+ + OH- */
 #define CHEM_AGGREGATION 22 /* agregation of molecules coming close */
+#define CHEM_AGGREGATION_MAX 221 /* agregation of molecules coming close, with max total partner number */
 #define CHEM_AGGREGATION_CHARGE 23 /* agregation of charged molecules coming close */
 #define CHEM_AGGREGATION_CHARGE_NOTRIANGLE 231 /* agregation of charged molecules coming close, no multiple pairings */
 #define CHEM_AGGREGATION_NNEIGH 24 /* agregation of molecules with limitation on neighbours */
@@ -408,6 +414,14 @@
 #define VP_ORBIT 1          /* rotate in a plane containing the origin */
 #define VP_ORBIT2 11        /* rotate in a plane specified by max latitude */
 #define VP_POLAR 2          /* polar orbit */
+
+/* Absorber pattern */
+
+#define AP_ONE 0        /* one single absorber */
+#define AP_TWO 1        /* two absorbers, symmetric wrp x-axis */
+#define AP_CUBE 2       /* absorbers on the vertices of a cube */
+#define AP_DODECA 3     /* absorbers on the vertices of a dodecahedron */
+#define AP_ICOSA 4      /* absorbers on the vertices of an icosahedron */
 
 /* Color schemes */
 
@@ -571,6 +585,12 @@ typedef struct
     short int chessboard;       /* has value 1 on a chessboard, for some arrangements */
 } t_obstacle;
 
+typedef struct 
+{
+    double xc, yc;              /* center of absorber */
+    double radius;              /* radius of absorber */
+} t_absorber;
+
 typedef struct
 {
     int i[3];                   /* indices of obstacles forming triangle */
@@ -678,6 +698,7 @@ typedef struct
 typedef struct
 {
     int nactive;                /* number of active particles */
+    int nabsorbed;              /* number of absorbed particles */
     double beta;                /* inverse temperature */
     double mean_energy;         /* mean energy */
     double krepel;              /* force constant */
@@ -704,24 +725,12 @@ typedef struct
     double reg_cottheta;        /* regularized cotangent of theta */
     double x, y, z;             /* x, y, z coordinates of point on sphere */
     double radius;              /* radius with wave height */
-//     double radius_dem;          /* radius with digital elevation model */
     double r, g, b;             /* RGB values for image */
-//     short int indomain;         /* has value 1 if lattice point is in domain */
-//     short int draw_wave;        /* has value 1 if wave instead of DEM is drawn */
-//     short int evolve_wave;      /* has value 1 where there is wave evolution */
-//     double x2d, y2d;            /* x and y coordinates for 2D representation */
-//     double altitude;            /* altitude in case of Earth with digital elevation model */
     double cos_angle;           /* cosine of light angle */
     double cos_angle_sphere;    /* cosine of light angle for perfect sphere */
-//     double force;               /* external forcing */
-//     double phigrid, thetagrid;  /* phi, theta angles for alt simulation grid on sphere */
-//     short int nneighb;          /* number of neighbours, for Kuramoto model on sphere */
-//     int neighbor[NMAX_SPHERE_NEIGHB];   /* list of neighbours */
-//     int convert_grid;           /* convert field from simulation grid to longitude-latitude */
-//     short int edge;             /* has value 1 on edges of cubic simulation grid */
-//     double cos_grid, sin_grid;  /* cosine and sine of grid angle */
+    short int locked;           /* has value 1 if color of pixel is fixed */
 } t_lj_sphere;
 
-int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0, nbelts = 0, n_tracers = 0, n_otriangles = 0, n_ofacets = 0;
+int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0, nbelts = 0, n_tracers = 0, n_otriangles = 0, n_ofacets = 0, nabsorbers = 0;
 FILE *lj_log;
 

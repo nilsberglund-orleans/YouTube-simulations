@@ -92,6 +92,64 @@ double dist_sphere(double phi1, double theta1, double phi2, double theta2)
 }
 
 
+void compute_midpoint_sphere(double phi1, double theta1, double phi2, double theta2, double *phi, double *theta)
+/* compute midpoint between two points on the sphere */
+{
+    double x1, y1, z1, x2, y2, z2, x3, y3, z3, r;
+    
+    x1 = cos(phi1)*sin(theta1);
+    y1 = sin(phi1)*sin(theta1);
+    z1 = -cos(theta1);
+    
+    x2 = cos(phi2)*sin(theta2);
+    y2 = sin(phi2)*sin(theta2);
+    z2 = -cos(theta2);
+    
+    x3 = x1 + x2;
+    y3 = y1 + y2;
+    z3 = z1 + z2;
+    
+    r = sqrt(x3*x3 + y3*y3 + z3*z3);
+    *theta = acos(-z3/r);
+    *phi = argument(x3, y3);
+    if (*phi < 0.0) *phi += DPI;
+}
+
+
+void compute_convex_combination_sphere(double phi1, double theta1, double phi2, double theta2, double *phia, double *thetaa, double *phib, double *thetab, double lambda)
+/* compute convex combination of two points on the sphere */
+{
+    double x1, y1, z1, x2, y2, z2, x3, y3, z3, r, lam1;
+    
+    lam1 = 1.0 - lambda;
+    
+    x1 = cos(phi1)*sin(theta1);
+    y1 = sin(phi1)*sin(theta1);
+    z1 = -cos(theta1);
+    
+    x2 = cos(phi2)*sin(theta2);
+    y2 = sin(phi2)*sin(theta2);
+    z2 = -cos(theta2);
+    
+    x3 = lambda*x1 + lam1*x2;
+    y3 = lambda*y1 + lam1*y2;
+    z3 = lambda*z1 + lam1*z2;
+    
+    r = sqrt(x3*x3 + y3*y3 + z3*z3);
+    *thetaa = acos(-z3/r);
+    *phia = argument(x3, y3);
+    if (*phia < 0.0) *phia += DPI;
+    
+    x3 = lam1*x1 + lambda*x2;
+    y3 = lam1*y1 + lambda*y2;
+    z3 = lam1*z1 + lambda*z2;
+    
+    r = sqrt(x3*x3 + y3*y3 + z3*z3);
+    *thetab = acos(-z3/r);
+    *phib = argument(x3, y3);
+    if (*phib < 0.0) *phib += DPI;
+}
+
 int in_polygon(double x, double y, double r, int npoly, double apoly)
 /* test whether (x,y) is in regular polygon of npoly sides inscribed in circle of radius r, turned by apoly Pi/2 */
 {
@@ -176,6 +234,7 @@ double type_hue(int type)
             if (RD_REACTION == CHEM_BZ) return(HUE_TYPE2);
             else return(HUE_TYPE7);
         }
+        case (8): return(HUE_TYPE8);
         default:
         {
             if (RD_REACTION == CHEM_BZ)
@@ -350,7 +409,7 @@ void compute_particle_colors(t_particle particle, t_cluster cluster[NMAXCIRCLES]
         }
         case (P_CHARGE):
         {
-            hue = (-0.6*tanh(particle.charge)+1.0)*180.0;
+            hue = (-CHARGE_HUE_RANGE*tanh(BG_CHARGE_SLOPE*particle.charge)+1.0)*180.0;
             break;
         }
         case (P_MOL_ANGLE):
@@ -631,7 +690,7 @@ void compute_all_particle_colors(t_particle particle[NMAXCIRCLES], t_cluster clu
     
 }
 
-void compute_background_color(t_particle particle[NMAXCIRCLES], t_obstacle obstacle[NMAXOBSTACLES], int bg_color, t_hashgrid hashgrid[HASHX*HASHY])
+void compute_background_color(t_particle particle[NMAXCIRCLES], t_segment segment[NMAXSEGMENTS], t_obstacle obstacle[NMAXOBSTACLES], int bg_color, t_hashgrid hashgrid[HASHX*HASHY])
 /* color background according to particle properties */
 {
     int i, j, k, n, p, q, m, nnb, number, avrg_fact, obs;
@@ -1139,12 +1198,19 @@ double dist_point_to_particle_sphere(int i, double phi, double psi, t_particle* 
 
 void init_3d()		/* initialisation of window */
 {
+    double width, height;
+    
+    width = 2.0*(WINWIDTH/1760.0);
+    height = WINHEIGHT/990.0;
+    
     glLineWidth(3);
 
     glClearColor(0.0, 0.0, 0.0, 1.0);
     glClear(GL_COLOR_BUFFER_BIT);
 
-    glOrtho(-2.0, 2.0, -1.0, 1.0 , -1.0, 1.0);
+//     glOrtho(-2.0, 2.0, -1.0, 1.0 , -1.0, 1.0);
+    
+    glOrtho(-width, width, -height, height, -1.0, 1.0);
 }
 
 void xyz_to_xy(double x, double y, double z, double xy_out[2])
@@ -1177,7 +1243,7 @@ void xyz_to_xy(double x, double y, double z, double xy_out[2])
     xinter[1] = t*observer[1] + (1.0-t)*y;
     xinter[2] = t*observer[2] + (1.0-t)*z;
             
-    xy_out[0] = XSHIFT_3D + XY_SCALING_FACTOR*(xinter[0]*h[0] + xinter[1]*h[1]);
+    xy_out[0] = XSHIFT_3D + FLIPX*XY_SCALING_FACTOR*(xinter[0]*h[0] + xinter[1]*h[1]);
     xy_out[1] = YSHIFT_3D + XY_SCALING_FACTOR*(xinter[0]*v[0] + xinter[1]*v[1] + xinter[2]*v[2]);
 }
 
@@ -1222,6 +1288,8 @@ void init_lj_sphere(t_lj_sphere *wsphere)
             wsphere[i*NY_SPHERE+j].radius = 1.0;
             
             wsphere[i*NY_SPHERE+j].cos_angle_sphere = wsphere[i*NY_SPHERE+j].x*light[0] + wsphere[i*NY_SPHERE+j].y*light[1] + wsphere[i*NY_SPHERE+j].z*light[2];
+            
+            wsphere[i*NY_SPHERE+j].locked = 0;
         }
     }
 }
@@ -1296,8 +1364,8 @@ double test_distance(double phi, double psi, int i, t_particle* particle)
 void add_particle_to_sphere(int i, int j, int part, t_particle particle[NMAXCIRCLES], t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
 /* compute the effect at point (i,j) of adding a particle */
 {
-    int draw_normal_particle = 1;
-    double x, y, r, dist, ca, sa, x1, y1, x2, y2, d1, d2, r2;
+    int draw_normal_particle = 1, k;
+    double x, y, r, dist, ca, sa, x1, y1, x2, y2, d1, d2, r2, omega, h;
     static double dphi, dtheta;
     static int first = 1;
     
@@ -1335,7 +1403,7 @@ void add_particle_to_sphere(int i, int j, int part, t_particle particle[NMAXCIRC
                     
                     r2 = 0.49*r*r;
                     
-                    if (d1 < r2)
+                    if ((d1 < r2)&&(!wsphere[i*NY_SPHERE+j].locked))
                     {
                         wsphere[i*NY_SPHERE+j].r = particle[part].rgb[0];
                         wsphere[i*NY_SPHERE+j].g = particle[part].rgb[1];
@@ -1365,7 +1433,7 @@ void add_particle_to_sphere(int i, int j, int part, t_particle particle[NMAXCIRC
                     
                     r2 = 0.49*r*r;
                     
-                    if (d1 < r2)
+                    if ((d1 < r2)&&(!wsphere[i*NY_SPHERE+j].locked))
                     {
                         wsphere[i*NY_SPHERE+j].r = particle[part].rgb[0];
                         wsphere[i*NY_SPHERE+j].g = particle[part].rgb[1];
@@ -1395,7 +1463,7 @@ void add_particle_to_sphere(int i, int j, int part, t_particle particle[NMAXCIRC
                     
                     r2 = 0.9*r*r;
                     
-                    if (d1 < r2)
+                    if ((d1 < r2)&&(!wsphere[i*NY_SPHERE+j].locked))
                     {
                         wsphere[i*NY_SPHERE+j].r = particle[part].rgb[0];
                         wsphere[i*NY_SPHERE+j].g = particle[part].rgb[1];
@@ -1421,7 +1489,7 @@ void add_particle_to_sphere(int i, int j, int part, t_particle particle[NMAXCIRC
                     
                     r2 = 0.7*r*r;
                     
-                    if (d1 < r2)
+                    if ((d1 < r2)&&(!wsphere[i*NY_SPHERE+j].locked))
                     {
                         wsphere[i*NY_SPHERE+j].r = particle[part].rgb[0];
                         wsphere[i*NY_SPHERE+j].g = particle[part].rgb[1];
@@ -1433,6 +1501,50 @@ void add_particle_to_sphere(int i, int j, int part, t_particle particle[NMAXCIRC
                 }
                 break;
             }
+            case (CHEM_POLYMER):
+            {
+                dist = dist_point_to_particle_sphere(part, x, y, particle, &ca, &sa);
+                x2 = dist*ca;
+                y2 = dist*sa;
+                r = 1.2*MU;
+                
+                if ((dist < r)&&(!wsphere[i*NY_SPHERE+j].locked))
+                {
+                    wsphere[i*NY_SPHERE+j].r = particle[part].rgb[0];
+                    wsphere[i*NY_SPHERE+j].g = particle[part].rgb[1];
+                    wsphere[i*NY_SPHERE+j].b = particle[part].rgb[2];
+                    wsphere[i*NY_SPHERE+j].radius += 1.5*sqrt(r*r - dist*dist);
+                }
+                    
+                if (particle[part].type > 2)
+                {
+                    omega = DPI/(double)(particle[part].type - 2);
+                
+                    for (k=0; k<particle[part].type-2; k++)
+                    {
+                        x1 = 1.4*r*cos(particle[part].angle + (double)k*omega);
+                        y1 = 1.4*r*sin(particle[part].angle + (double)k*omega);
+                    
+                        d1 = (x1-x2)*(x1-x2) + (y1-y2)*(y1-y2);
+                        r2 = 0.9*r*r;
+                    
+                        if (d1 < r2)
+                        {
+                            h = 1.0 + 1.5*sqrt(r2 - d1);
+                            if ((h > wsphere[i*NY_SPHERE+j].radius)&&(!wsphere[i*NY_SPHERE+j].locked))
+                            {
+                                wsphere[i*NY_SPHERE+j].r = particle[part].rgb[0];
+                                wsphere[i*NY_SPHERE+j].g = particle[part].rgb[1];
+                                wsphere[i*NY_SPHERE+j].b = particle[part].rgb[2];
+                                wsphere[i*NY_SPHERE+j].radius = h;
+                            }
+                        }
+                    }
+                }
+                
+                draw_normal_particle = 0;
+                break;
+            }
         }
     }
     
@@ -1442,19 +1554,23 @@ void add_particle_to_sphere(int i, int j, int part, t_particle particle[NMAXCIRC
                 
         if (dist < r)
         {
-            wsphere[i*NY_SPHERE+j].r = particle[part].rgb[0];
-            wsphere[i*NY_SPHERE+j].g = particle[part].rgb[1];
-            wsphere[i*NY_SPHERE+j].b = particle[part].rgb[2];
-            wsphere[i*NY_SPHERE+j].radius += 1.5*sqrt(r*r - dist*dist);
+            h = 1.0 + 1.5*sqrt(r*r - dist*dist);
+            if ((h > wsphere[i*NY_SPHERE+j].radius)&&(!wsphere[i*NY_SPHERE+j].locked))
+            {
+                wsphere[i*NY_SPHERE+j].r = particle[part].rgb[0];
+                wsphere[i*NY_SPHERE+j].g = particle[part].rgb[1];
+                wsphere[i*NY_SPHERE+j].b = particle[part].rgb[2];
+                wsphere[i*NY_SPHERE+j].radius = h;
+            }
         }
     }
 }
 
-void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], int traj_position, int traj_length, t_particle *particle, t_cluster *cluster, t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], int *tracer_n, int plot)
+void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], t_hashgrid hashgrid[HASHX*HASHY], int traj_position, int traj_length, t_particle *particle, t_cluster *cluster, t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], int *tracer_n, int plot)
 /* draw tracer particle trajectory */
 {
     int i, j, i0, j0, time, p, q, width, imin, cell, i1, j1;
-    double x1, x2, y1, y2, rgb[3], rgbx[3], rgby[3], radius, lum, lum1;
+    double x1, x2, y1, y2, rgb[3], rgbx[3], rgby[3], radius, lum, lum1, rgb_bg[3];
     static double dphi, dtheta;
     static int first = 1;
     
@@ -1489,6 +1605,17 @@ void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTI
                 if (lum < 0.0) lum = 0.0;
                 lum1 = 1.0 - lum;
                 
+                if (COLOR_BACKGROUND)
+                {
+                    cell = hash_cell(x1, y1);
+                    if (!wsphere[cell].locked)
+                    {
+                        rgb_bg[0] = hashgrid[cell].r;
+                        rgb_bg[1] = hashgrid[cell].g;
+                        rgb_bg[2] = hashgrid[cell].b;
+                    }
+                }
+                
                 if ((x2 != x1)||(y2 != y1)) for (p=-1; p<2; p++)
                     for (q=-1; q<2; q++)
                     {
@@ -1499,9 +1626,21 @@ void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTI
                         if (j1 < 0) j1 = 0;
                         if (j1 >= NY_SPHERE) j1 = NY_SPHERE-1;
                         cell = i1*NY_SPHERE+j1;
-                        wsphere[cell].r = particle[tracer_n[j]].rgb[0]*lum + lum1;
-                        wsphere[cell].g = particle[tracer_n[j]].rgb[1]*lum + lum1;
-                        wsphere[cell].b = particle[tracer_n[j]].rgb[2]*lum + lum1;
+                        if (!wsphere[cell].locked)
+                        {
+                            if (COLOR_BACKGROUND)
+                            {
+                                wsphere[cell].r = particle[tracer_n[j]].rgb[0]*lum + lum1*rgb_bg[0];
+                                wsphere[cell].g = particle[tracer_n[j]].rgb[1]*lum + lum1*rgb_bg[1];
+                                wsphere[cell].b = particle[tracer_n[j]].rgb[2]*lum + lum1*rgb_bg[2];
+                            }
+                            else
+                            {
+                                wsphere[cell].r = particle[tracer_n[j]].rgb[0]*lum + lum1;
+                                wsphere[cell].g = particle[tracer_n[j]].rgb[1]*lum + lum1;
+                                wsphere[cell].b = particle[tracer_n[j]].rgb[2]*lum + lum1;
+                            }
+                        }
                     }
             }
     else 
@@ -1522,6 +1661,17 @@ void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTI
                 if (lum < 0.0) lum = 0.0;
                 lum1 = 1.0 - lum;
                 
+                if (COLOR_BACKGROUND)
+                {
+                    cell = hash_cell(x1, y1);
+                    if (!wsphere[cell].locked)
+                    {
+                        rgb_bg[0] = hashgrid[cell].r;
+                        rgb_bg[1] = hashgrid[cell].g;
+                        rgb_bg[2] = hashgrid[cell].b;
+                    }
+                }
+                
                 if ((x2 != x1)||(y2 != y1)) for (p=-1; p<2; p++)
                     for (q=-1; q<2; q++)
                     {
@@ -1532,9 +1682,21 @@ void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTI
                         if (j1 < 0) j1 = 0;
                         if (j1 >= NY_SPHERE) j1 = NY_SPHERE-1;
                         cell = i1*NY_SPHERE+j1;
-                        wsphere[cell].r = particle[tracer_n[j]].rgb[0]*lum + lum1;
-                        wsphere[cell].g = particle[tracer_n[j]].rgb[1]*lum + lum1;
-                        wsphere[cell].b = particle[tracer_n[j]].rgb[2]*lum + lum1;
+                        if (!wsphere[cell].locked)
+                        {
+                            if (COLOR_BACKGROUND)
+                            {
+                                wsphere[cell].r = particle[tracer_n[j]].rgb[0]*lum + lum1*rgb_bg[0];
+                                wsphere[cell].g = particle[tracer_n[j]].rgb[1]*lum + lum1*rgb_bg[1];
+                                wsphere[cell].b = particle[tracer_n[j]].rgb[2]*lum + lum1*rgb_bg[2];
+                            }
+                            else
+                            {
+                                wsphere[cell].r = particle[tracer_n[j]].rgb[0]*lum + lum1;
+                                wsphere[cell].g = particle[tracer_n[j]].rgb[1]*lum + lum1;
+                                wsphere[cell].b = particle[tracer_n[j]].rgb[2]*lum + lum1;
+                            }
+                        }
                     }
             }
         for (i=imin; i < traj_position-1; i++)
@@ -1550,6 +1712,17 @@ void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTI
                 if (lum < 0.0) lum = 0.0;
                  lum1 = 1.0 - lum;
                 
+                if (COLOR_BACKGROUND)
+                {
+                    cell = hash_cell(x1, y1);
+                    if (!wsphere[cell].locked)
+                    {
+                        rgb_bg[0] = hashgrid[cell].r;
+                        rgb_bg[1] = hashgrid[cell].g;
+                        rgb_bg[2] = hashgrid[cell].b;
+                    }
+                }
+                
                 if ((x2 != x1)||(y2 != y1)) for (p=-1; p<2; p++)
                     for (q=-1; q<2; q++)
                     {
@@ -1560,16 +1733,119 @@ void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTI
                         if (j1 < 0) j1 = 0;
                         if (j1 >= NY_SPHERE) j1 = NY_SPHERE-1;
                         cell = i1*NY_SPHERE+j1;
-                        wsphere[cell].r = particle[tracer_n[j]].rgb[0]*lum + lum1;
-                        wsphere[cell].g = particle[tracer_n[j]].rgb[1]*lum + lum1;
-                        wsphere[cell].b = particle[tracer_n[j]].rgb[2]*lum + lum1;
+                        if (!wsphere[cell].locked)
+                        {
+                            if (COLOR_BACKGROUND)
+                            {
+                                wsphere[cell].r = particle[tracer_n[j]].rgb[0]*lum + lum1*rgb_bg[0];
+                                wsphere[cell].g = particle[tracer_n[j]].rgb[1]*lum + lum1*rgb_bg[1];
+                                wsphere[cell].b = particle[tracer_n[j]].rgb[2]*lum + lum1*rgb_bg[2];
+                            }
+                            else
+                            {
+                                wsphere[cell].r = particle[tracer_n[j]].rgb[0]*lum + lum1;
+                                wsphere[cell].g = particle[tracer_n[j]].rgb[1]*lum + lum1;
+                                wsphere[cell].b = particle[tracer_n[j]].rgb[2]*lum + lum1;
+                            }
+                        }
                     }
             }
     }
 }
 
 
-void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY], t_cluster cluster[NMAXCIRCLES], t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], int traj_position, int traj_length, t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], int *tracer_n, int plot)
+void draw_segments_sphere(t_segment segment[NMAXSEGMENTS], t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
+/* draw the repelling segments on the sphere */
+{
+    int s, i, cell, npoints, i0, j0, i1, j1, p, q;
+    double x1, y1, x2, y2, x, y, dt, length;
+    static double dphi, dtheta;
+    static int first = 1;
+    
+    if (first)
+    {
+        dphi = DPI/(double)NX_SPHERE;
+        dtheta = PI/(double)NY_SPHERE;
+        first = 0;
+    }
+    
+    for (s=0; s<nsegments; s++)
+    {
+        x1 = segment[s].x1;
+        y1 = segment[s].y1;
+        x2 = segment[s].x2;
+        y2 = segment[s].y2;
+        
+        length = dist_sphere(x1, y1, x2, y2);
+        npoints = (int)(length*300.0);
+        dt = 1.0/(double)npoints;
+        
+        for (i=0; i<npoints; i++)
+        {
+            x = x1 + (x2 - x1)*(double)i*dt;
+            y = y1 + (y2 - y1)*(double)i*dt;
+            i0 = (int)(x/dphi);
+            j0 = (int)(y/dtheta);
+            for (p=-1; p<2; p++)
+                for (q=-1; q<2; q++)
+                {
+                    i1 = i0 + p;
+                    if (i1 < 0) i1 = NX_SPHERE-1;
+                    if (i1 >= NX_SPHERE) i1 = 0;
+                    j1 = j0 + q;
+                    if (j1 < 0) j1 = 0;
+                    if (j1 >= NY_SPHERE) j1 = NY_SPHERE-1;
+                    cell = i1*NY_SPHERE+j1;
+                    wsphere[cell].r = 0.0;
+                    wsphere[cell].g = 0.0;
+                    wsphere[cell].b = 0.0;
+                    
+                    wsphere[cell].radius += 0.005;
+                }
+        }
+    }
+}
+
+void draw_absorbers_sphere(t_absorber absorber[NMAX_ABSORBERS], t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
+/* draw the absorbing discs on the sphere */
+{
+    int i, j, n, cell;
+    double x, y, dist;
+    static double dphi, dtheta;
+    static int first = 1;
+    
+    if (first)
+    {
+        dphi = DPI/(double)NX_SPHERE;
+        dtheta = PI/(double)NY_SPHERE;
+        first = 0;
+    }
+    
+    for (i=0; i<NX_SPHERE; i++)
+        for (j=0; j<NY_SPHERE; j++)
+            for (n=0; n<nabsorbers; n++)
+            {
+                x = XMIN + (double)i*dphi;
+                y = YMIN + (double)j*dtheta;
+                dist = dist_sphere(x, y, absorber[n].xc, absorber[n].yc);
+                if (dist < absorber[n].radius)
+                {
+                    cell = i*NY_SPHERE+j;
+                    wsphere[cell].r = 0.0;
+                    wsphere[cell].g = 0.0;
+                    wsphere[cell].b = 0.0;
+                    
+                }
+                if (dist < absorber[n].radius*1.02)
+                {
+                    cell = i*NY_SPHERE+j;
+                    wsphere[cell].locked = 1;
+                    wsphere[cell].radius = 0.95;
+                }
+            }
+}
+
+void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY], t_cluster cluster[NMAXCIRCLES], t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], t_segment segment[NMAXSEGMENTS], int traj_position, int traj_length, t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], int *tracer_n, int plot, int bg_color, t_absorber absorber[NMAX_ABSORBERS])
 /* initialize sphere radius and colors from particles */
 {
     int i, j, n, m, i0, j0, i1, j1, p, q, part, width, deltai, imin, imax, deltaj, jmin, jmax, cell;
@@ -1586,11 +1862,11 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
     
     /* default radius and color */
     #pragma omp parallel for private(i)
-    for (i=0; i<NX_SPHERE*NY_SPHERE; i++)
+    for (i=0; i<NX_SPHERE*NY_SPHERE; i++) if (!wsphere[i].locked)
     {
         wsphere[i].radius = 1.0;
         
-        if (COLOR_BACKGROUND)
+        if ((COLOR_BACKGROUND)&&(bg_color > 0))
         {
             cell = hash_cell(wsphere[i].phi, wsphere[i].theta);
             wsphere[i].r = hashgrid[cell].r;
@@ -1607,7 +1883,13 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
     
     /* add tracer trajectories */
     if (TRACER_PARTICLE) 
-        draw_trajectory_sphere(trajectory, traj_position, traj_length, particle, cluster, wsphere, tracer_n, plot);
+        draw_trajectory_sphere(trajectory, hashgrid, traj_position, traj_length, particle, cluster, wsphere, tracer_n, plot);
+    
+    if (ADD_FIXED_SEGMENTS)
+        draw_segments_sphere(segment, wsphere);
+    
+//     if (ADD_ABSORBERS)
+//         draw_absorbers_sphere(absorber, wsphere); 
     
     /* draw zero meridian, for debugging */
 //     for (j=0; j<NY_SPHERE; j++)

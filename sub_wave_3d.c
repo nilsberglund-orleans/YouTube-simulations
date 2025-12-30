@@ -1665,8 +1665,26 @@ void init_speed_dissipation(short int xy_in[NX*NY], double tc[NX*NY], double tcc
             }
             case (IOR_MICHELSON):
             {
-                printf("Case IOR_MICHELSON in init_speed_dissipation of sub_wave_3d needs to be updated\n");
-                exit(1);
+                for (i=0; i<NX; i++){
+                    for (j=0; j<NY; j++){
+                        tc[i*NY+j] = COURANT;
+                        if (xy_in[i*NY+j] == 0) 
+                        {
+                            tcc[i*NY+j] = courant2;
+                            tgamma[i*NY+j] = GAMMA;
+                        }
+                        else if (xy_in[i*NY+j] == 2)
+                        {
+                            tcc[i*NY+j] = 0.0;
+                            tgamma[i*NY+j] = 1.0;                            
+                        }
+                        else
+                        {
+                            tcc[i*NY+j] = courantb2;
+                            tgamma[i*NY+j] = GAMMAB;
+                        }
+                    }
+                }
                 break;
             }
             case (IOR_GRADIENT_INDEX_LENS):
@@ -1975,7 +1993,12 @@ void draw_wave_3d_ij(int i, int j, int movie, double phi[NX*NY], double psi[NX*N
     
     if (NON_DIRICHLET_BC) 
         draw = (xy_in[i*NY+j])&&(xy_in[(i+1)*NY+j])&&(xy_in[i*NY+j+1])&&(xy_in[(i+1)*NY+j+1]);
-    else draw = (TWOSPEEDS)||(xy_in[i*NY+j]);
+//     else draw = (TWOSPEEDS)||(xy_in[i*NY+j]);
+    else
+    {
+        if (TWOSPEEDS) draw = (xy_in[i*NY+j] <= 1);
+        else draw = (xy_in[i*NY+j] == 1);
+    }
             
     if (FLOOR_ZCOORD) 
         draw = (draw)&&(*wave[i*NY+j].p_zfield[movie] > zfloor)&&(*wave[(i+1)*NY+j].p_zfield[movie] > zfloor)&&(*wave[i*NY+j+1].p_zfield[movie] > zfloor)&&(*wave[(i+1)*NY+j+1].p_zfield[movie] > zfloor);

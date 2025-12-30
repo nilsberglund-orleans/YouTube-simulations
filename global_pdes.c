@@ -41,6 +41,11 @@
 #define D_TWO_PARABOLAS 19   /* two facing parabolic antennas */
 #define D_TWO_PARABOLAS_ASYM 191    /* confocal facing parabolas of different size */
 #define D_TWO_PARABOLAS_ASYM_GUIDE 192    /* confocal facing parabolas of different size  with a wave guide */
+#define D_TWO_PARABOLAS_SEMITRANS 193     /* 192 with a semitransparent part */
+#define D_TWO_PARABOLAS_LENS 194          /* 193 with a lens */
+#define D_TWO_PARABOLAS_CLOSED_SEMITRANS 195    /* cavity with two parabolic sides and semitransparent part */
+#define D_TWO_PARABOLAS_CLOSED_LENS 1951   /* 105 with a lens as window */
+#define D_TWO_PARABOLAS_CLOSED_LENS_R 1952   /* 105 with a lens of adaptable radius as window */
 
 #define D_CIRCLES 20    /* several circles */
 #define D_CIRCLES_IN_RECT 201   /* several circles in a rectangle */
@@ -57,6 +62,7 @@
 #define D_POLYGONS 40           /* several polygons */
 #define D_VONKOCH 41            /* von Koch snowflake fractal */
 #define D_STAR 42               /* star shape */
+#define D_STAR_CHANNEL 421      /* star shape with an attached channel */
 #define D_FRESNEL 43            /* Fresnel lens */
 #define D_NOISEPANEL 44         /* zigzag noise insulating panel */
 #define D_NOISEPANEL_RECT 441   /* comparison between zigzag noise insulating panel and flat walls */
@@ -102,6 +108,7 @@
 #define D_TESLA_FOUR 72         /* four Tesla valves */
 
 #define D_TREE 73               /* Christmas tree, to use with IOR_TREE */
+#define D_TREE_BEAM 731         /* Christmas tree with an attached wave guide */
 #define D_MICHELSON 74          /* Michelson interferometer, to use with IOR_MICHELSON */
 #define D_MICHELSON_MOVING 741  /* moving Michelson interferometer, to use with IOR_MICHELSON */
 #define D_RITCHEY_CHRETIEN_SPHERICAL 75   /* Ritchey-Chrétien telescope with spherical mirrors */
@@ -136,7 +143,9 @@
 #define D_CIRCLE_LATTICE_RHOMBUS 97 /* rhombus-based lattice of connected circles */
 #define D_DISC_WAVEGUIDE 98     /* a disc with an attached waveguide */
 #define D_DISC_WAVEGUIDE_SHIFTED 981     /* a disc with a shifted attached waveguide */
-#define D_DISC_WAVEGUIDE_ELLIPSE 982     /* a disc with a shifted attached waveguide */
+#define D_DISC_WAVEGUIDE_ELLIPSE 982     /* an ellipse with a shifted attached waveguide */
+#define D_WAVEGUIDE_ELLIPSE_OBLIQUE 983     /* an ellipse with an angled attached waveguide */
+#define D_CIRCLE_PAIRS 99       /* pairs of circles connected by channels */
 
 /* for wave_sphere.c */
 
@@ -163,6 +172,7 @@
 #define IM_HAPPY_NEW_YEAR 3     /* "Happy New Year 2025" */
 #define IM_DICKSON 4            /* Dickson fjord and others nearbys in Greenland */
 #define IM_DICKSON_ZOOM 5       /* zoom on Dickson fjord in Greenland */
+#define IM_HAPPY_NEW_YEAR_TWOSIX 6     /* "Happy New Year 2026" */
 
 #define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */

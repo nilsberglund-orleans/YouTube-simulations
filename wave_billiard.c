@@ -48,7 +48,7 @@
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
-#define VARIABLE_IOR 1      /* set to 1 for a variable index of refraction */
+#define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
 #define IOR 17              /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.5 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
@@ -62,8 +62,8 @@
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
-#define YMIN -1.197916667
-#define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
+#define YMIN -1.297916667
+#define YMAX 1.097916667	/* y interval for 9/16 aspect ratio */
 
 #define HIGHRES 1       /* set to 1 if resolution of grid is double that of displayed image */
 #define HRES 1          /* dummy, only used by rde.c */
@@ -72,7 +72,7 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 982         /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 421         /* choice of domain shape, see list in global_pdes.c */
 
 #define CIRCLE_PATTERN 202  /* pattern of circles or polygons, see list in global_pdes.c */
 #define IMAGE_FILE 5        /* for option D_IMAGE */
@@ -87,11 +87,11 @@
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 #define PDISC_CONNECT_FACTOR 1.5    /* controls which discs are connected for D_CIRCLE_LATTICE_POISSON domain */
 
-#define LAMBDA 1.4	    /* parameter controlling the dimensions of domain */
-#define MU 0.05             /* parameter controlling the dimensions of domain */
-#define MU_B 1.0            /* parameter controlling the dimensions of domain */
-#define NPOLY 3             /* number of sides of polygon */
-#define APOLY 1.0           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define LAMBDA 0.9	    /* parameter controlling the dimensions of domain */
+#define MU -0.2124612       /* parameter controlling the dimensions of domain */
+#define MU_B 0.3            /* parameter controlling the dimensions of domain */
+#define NPOLY 10             /* number of sides of polygon */
+#define APOLY 0.0          /* angle by which to turn polygon, in units of Pi/2 */ 
 #define MDEPTH 6            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
@@ -99,8 +99,8 @@
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
 #define NGRIDX 6            /* number of grid point for grid of disks */
 #define NGRIDY 14           /* number of grid point for grid of disks */
-#define WALL_WIDTH 0.1      /* width of wall separating lenses */
-#define WALL_WIDTH_B 0.05   /* width of wall separating lenses */
+#define WALL_WIDTH 0.075    /* width of wall separating lenses */
+#define WALL_WIDTH_B 0.1    /* width of wall separating lenses */
 #define WALL_WIDTH_RND 0.0  /* proportion of width of width for random arrangements */
 #define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
 #define WALL_WIDTH_ASYM 0.75      /* asymmetry of wall width (D_CIRCLE_LATTICE_NONISO) */
@@ -121,22 +121,22 @@
 /* xy_in_billiard and draw_billiard below */
 /* Physical parameters of wave equation */
 
-#define TWOSPEEDS 1         /* set to 1 to replace hardcore boundary by medium with different speed */
+#define TWOSPEEDS 0         /* set to 1 to replace hardcore boundary by medium with different speed */
 #define OSCILLATE_LEFT 1    /* set to 1 to add oscilating boundary condition on the left */
 #define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
 #define OSCILLATION_SCHEDULE 42  /* oscillation schedule, see list in global_pdes.c */
-#define OSCIL_YMAX 0.05        /* defines oscilling beam range */
-#define OSCIL_YMID -0.9        /* defines oscilling beam midpoint */
+#define OSCIL_YMAX 0.0375          /* defines oscilling beam range */
+#define OSCIL_YMID 0.0          /* defines oscilling beam midpoint */
 #define INITIAL_SHIFT 20.0          /* time shift of initial wave packet (in oscillation periods) */
 #define WAVE_PACKET_SHIFT 200.0     /* time shift between wave packets (in oscillation periods) */
 
-#define OMEGA 0.01         /* frequency of periodic excitation */
+#define OMEGA 0.006        /* frequency of periodic excitation */
 #define AMPLITUDE 2.0      /* amplitude of periodic excitation */ 
 #define ACHIRP 0.25        /* acceleration coefficient in chirp */
 #define DAMPING 0.0        /* damping of periodic excitation */
-#define COURANT 0.25       /* Courant number in medium B */
-#define COURANTB 0.1       /* Courant number */
-#define GAMMA 5.0e-6          /* damping factor in wave equation */
+#define COURANT 0.08       /* Courant number in medium B */
+#define COURANTB 0.25      /* Courant number */
+#define GAMMA 0.0          /* damping factor in wave equation */
 #define GAMMAB 0.0         /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
 #define GAMMA_TOPBOT 1.0e-7     /* damping factor on boundary */
@@ -150,11 +150,11 @@
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
 #define ADD_OSCILLATING_SOURCE 0        /* set to 1 to add an oscillating wave source */
-#define OSCILLATING_SOURCE_PERIOD 25.0  /* period of oscillating source */
+#define OSCILLATING_SOURCE_PERIOD 6.0   /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
 #define N_SOURCES 1                     /* number of sources, for option draw_sources */
 #define ALTERNATE_SOURCE_PHASES 0       /* set to 1 to alternate initial phases of sources */
-#define MAX_PULSING_TIME 750            /* max time for adding pulses */
+#define MAX_PULSING_TIME 5000           /* max time for adding pulses */
 
 #define ADD_WAVE_PACKET_SOURCES 0       /* set to 1 to add several sources emitting wave packets */
 #define WAVE_PACKET_SOURCE_TYPE 3       /* type of wave packet sources */
@@ -169,10 +169,10 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 2500          /* number of frames of movie */
+#define NSTEPS 2700          /* number of frames of movie */
 #define NVID 12              /* number of iterations between images displayed on screen */
 #define NSEG 1000            /* number of segments of boundary */
-#define INITIAL_TIME 150     /* time after which to start saving frames */
+#define INITIAL_TIME 100      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
 #define PRINT_SPEED 0       /* print speed of moving source */
 #define PRINT_FREQUENCY 0       /* print frequency (for phased array) */
@@ -199,8 +199,8 @@
 
 /* Color schemes */
 
-#define COLOR_PALETTE 11     /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 14   /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 18     /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 18   /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
 
@@ -208,17 +208,17 @@
 
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
-#define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
+#define COLOR_RANGE 0.75    /* max range of color (default: 1.0) */
 #define PHASE_FACTOR 1.0       /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0      /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0   /* exponential attenuation coefficient of contrast with time */
-#define VSHIFT_AMPLITUDE -0.1    /* additional shift for wave amplitude */
+#define VSHIFT_AMPLITUDE -0.5    /* additional shift for wave amplitude */
 #define VSCALE_AMPLITUDE 1.0     /* additional scaling factor for wave amplitude */
-#define E_SCALE 50.0       /* scaling factor for energy representation */
+#define E_SCALE 300.0       /* scaling factor for energy representation */
 #define LOG_SCALE 0.75     /* scaling factor for energy log representation */
 #define LOG_SHIFT 0.75     /* shift of colors on log scale */
 #define FLUX_SCALE 250.0    /* scaling factor for energy flux represtnation */
-#define AVRG_E_FACTOR 0.75   /* controls time window size in P_AVERAGE_ENERGY scheme */
+#define AVRG_E_FACTOR 0.95   /* controls time window size in P_AVERAGE_ENERGY scheme */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
 #define FADE_IN_OBSTACLE 1      /* set to 1 to fade color inside obstacles */
 #define SHADE_2D 1       /* set to 1 to add pseudo-3d shading effect */ 
@@ -233,16 +233,16 @@
 
 #define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
 #define COLORBAR_RANGE 1.7      /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 0.8    /* scale of color scheme bar for 2nd part */
+#define COLORBAR_RANGE_B 4.5    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
 #define CIRC_COLORBAR_B 0       /* set to 1 to draw circular color scheme */
 
-#define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
-#define HORIZONTAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
-#define VERTICAL_WAVE_PROFILE 1 /* set to 1 to draw wave profile vertically */
+#define DRAW_WAVE_PROFILE 1     /* set to 1 to draw a profile of the wave */
+#define HORIZONTAL_WAVE_PROFILE 1 /* set to 1 to draw wave profile vertically */
+#define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define WAVE_PROFILE_X 1.9      /* value of x to sample wave profile */
-#define WAVE_PROFILE_Y 0.12     /* value of y to sample wave profile */
+#define WAVE_PROFILE_Y 0.0     /* value of y to sample wave profile */
 #define PROFILE_AT_BOTTOM 1     /* draw wave profile at bottom instead of top */
 #define AVERAGE_WAVE_PROFILE 0  /* set to 1 to draw time-average of wave profile squared*/
 #define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave, 2 to also draw it at the top */
@@ -691,9 +691,9 @@ void animation()
     /* initialise polyline and similar for drawing some domains */
     npolyline = init_poly(MDEPTH, polyline, polyrect, polyrectrot, polyarc, circles, &npolyrect, &npolyrect_rot, &npolyarc, &ncircles, 1);
     
-    for (i=0; i<ncircles; i++) printf("circle %i: (%.3f, %.3f)\n", i, circles[i].xc, circles[i].yc);
+//     for (i=0; i<ncircles; i++) printf("circle %i: (%.3f, %.3f)\n", i, circles[i].xc, circles[i].yc);
     
-//     for (i=0; i<npolyline; i++) printf("vertex %i: (%.3f, %.3f)\n", i, polyline[i].x, polyline[i].y);
+    for (i=0; i<npolyline; i++) printf("vertex %i: (%.3f, %.3f)\n", i, polyline[i].x, polyline[i].y);
     
 //     for (i=0; i<npolyrect; i++) printf("polyrect vertex %i: (%.3f, %.3f) - (%.3f, %.3f)\n", i, polyrect[i].x1, polyrect[i].y1, polyrect[i].x2, polyrect[i].y2);
     
@@ -878,10 +878,13 @@ void animation()
         if (DRAW_COLOR_SCHEME) draw_color_bar_palette(PLOT, COLORBAR_RANGE, COLOR_PALETTE, CIRC_COLORBAR, fade, fade_value);
         
         /* add oscillating waves */
-        wave_source_x[0] = -1.0;
-        wave_source_y[0] = -0.5;
-        source_periods[0] = OSCILLATING_SOURCE_PERIOD;
-        source_amp[0] = INITIAL_AMP;
+        for (source = 0; source < N_SOURCES; source++)
+        {
+            wave_source_x[source] = polyarc[2*source].xc;
+            wave_source_y[source] = polyarc[2*source].yc;
+            source_periods[source] = OSCILLATING_SOURCE_PERIOD/(1.0 + 0.5*(double)source);
+            source_amp[source] = INITIAL_AMP;
+        }
         for (source = 0; source < N_SOURCES; source++)
         {
             dperiod = source_periods[source];
