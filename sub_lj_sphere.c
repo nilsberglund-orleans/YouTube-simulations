@@ -690,11 +690,11 @@ void compute_all_particle_colors(t_particle particle[NMAXCIRCLES], t_cluster clu
     
 }
 
-void compute_background_color(t_particle particle[NMAXCIRCLES], t_segment segment[NMAXSEGMENTS], t_obstacle obstacle[NMAXOBSTACLES], int bg_color, t_hashgrid hashgrid[HASHX*HASHY])
+void compute_background_color(t_particle particle[NMAXCIRCLES], t_segment segment[NMAXSEGMENTS], t_obstacle obstacle[NMAXOBSTACLES], int bg_color, t_hashgrid hashgrid[HASHX*HASHY], t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
 /* color background according to particle properties */
 {
-    int i, j, k, n, p, q, m, nnb, number, avrg_fact, obs;
-    double rgb[3], hue, value, p1, p2, pp1, pp2, oldhue, valx, valy, lum;
+    int i, j, k, n, p, q, m, nnb, number, avrg_fact, obs, i0, j0, cell, i1, j1, cell1;
+    double rgb[3], hue, value, p1, p2, pp1, pp2, oldhue, valx, valy, lum, nablax, nablay, norm, pscal, ca;
     static int first = 1, counter = 0;
     static double area_factor;
     
@@ -1060,6 +1060,22 @@ void compute_background_color(t_particle particle[NMAXCIRCLES], t_segment segmen
                     hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_DIRECTION);
                     break;
                 }
+                case (BG_POTENTIAL):
+                {
+                    i0 = (int)(0.5*(hashgrid[n].x1+hashgrid[n].x2)*(double)NX_SPHERE/DPI);
+                    j0 = (int)(0.5*(hashgrid[n].y1+hashgrid[n].y2)*(double)NY_SPHERE/PI);
+                    cell = i0*NY_SPHERE+j0;
+                    if (cell < 0) cell = 0;
+                    
+                    value = atan(BG_POTENTIAL_SLOPE*wsphere[cell].potential)/PI + 0.5;
+            
+                    hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*value;
+                    hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+                    
+                    if (SHADE_BG_COLOR_2D)
+                        for (k=0; k<3; k++) rgb[k] *= wsphere[cell].cos_angle_pot;
+                    break;
+                }
                 
             }
             if (DOUBLE_MOVIE)
@@ -1286,6 +1302,7 @@ void init_lj_sphere(t_lj_sphere *wsphere)
             wsphere[i*NY_SPHERE+j].z = -wsphere[i*NY_SPHERE+j].ctheta;
             
             wsphere[i*NY_SPHERE+j].radius = 1.0;
+            wsphere[i*NY_SPHERE+j].initial_radius = 1.0;
             
             wsphere[i*NY_SPHERE+j].cos_angle_sphere = wsphere[i*NY_SPHERE+j].x*light[0] + wsphere[i*NY_SPHERE+j].y*light[1] + wsphere[i*NY_SPHERE+j].z*light[2];
             
@@ -1361,7 +1378,7 @@ double test_distance(double phi, double psi, int i, t_particle* particle)
 }
 
 
-void add_particle_to_sphere(int i, int j, int part, t_particle particle[NMAXCIRCLES], t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
+void add_particle_to_sphere(int i, int j, int i0, int j0, int part, t_particle particle[NMAXCIRCLES], t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
 /* compute the effect at point (i,j) of adding a particle */
 {
     int draw_normal_particle = 1, k;
@@ -1554,7 +1571,8 @@ void add_particle_to_sphere(int i, int j, int part, t_particle particle[NMAXCIRC
                 
         if (dist < r)
         {
-            h = 1.0 + 1.5*sqrt(r*r - dist*dist);
+//             h = wsphere[i*NY_SPHERE+j].initial_radius + 1.5*sqrt(r*r - dist*dist);
+            h = wsphere[i0*NY_SPHERE+j0].initial_radius + 1.5*sqrt(r*r - dist*dist);
             if ((h > wsphere[i*NY_SPHERE+j].radius)&&(!wsphere[i*NY_SPHERE+j].locked))
             {
                 wsphere[i*NY_SPHERE+j].r = particle[part].rgb[0];
@@ -1564,6 +1582,7 @@ void add_particle_to_sphere(int i, int j, int part, t_particle particle[NMAXCIRC
             }
         }
     }
+    
 }
 
 void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], t_hashgrid hashgrid[HASHX*HASHY], int traj_position, int traj_length, t_particle *particle, t_cluster *cluster, t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], int *tracer_n, int plot)
@@ -1758,7 +1777,7 @@ void draw_segments_sphere(t_segment segment[NMAXSEGMENTS], t_lj_sphere wsphere[N
 /* draw the repelling segments on the sphere */
 {
     int s, i, cell, npoints, i0, j0, i1, j1, p, q;
-    double x1, y1, x2, y2, x, y, dt, length;
+    double x1, y1, x2, y2, x, y, dt, length, ca;
     static double dphi, dtheta;
     static int first = 1;
     
@@ -1796,11 +1815,19 @@ void draw_segments_sphere(t_segment segment[NMAXSEGMENTS], t_lj_sphere wsphere[N
                     if (j1 < 0) j1 = 0;
                     if (j1 >= NY_SPHERE) j1 = NY_SPHERE-1;
                     cell = i1*NY_SPHERE+j1;
-                    wsphere[cell].r = 0.0;
-                    wsphere[cell].g = 0.0;
-                    wsphere[cell].b = 0.0;
                     
-                    wsphere[cell].radius += 0.005;
+                    if (wsphere[cell].locked == 0)
+                    {
+                        ca = wsphere[cell].cos_angle_sphere;
+                        ca = (ca + 1.0)*0.4 + 0.2;
+                        
+                        wsphere[cell].r = ca;
+                        wsphere[cell].g = ca;
+                        wsphere[cell].b = ca;
+                        
+                        wsphere[cell].radius += 0.05;
+                        wsphere[cell].locked = 1;
+                    }
                 }
         }
     }
@@ -1840,9 +1867,129 @@ void draw_absorbers_sphere(t_absorber absorber[NMAX_ABSORBERS], t_lj_sphere wsph
                 {
                     cell = i*NY_SPHERE+j;
                     wsphere[cell].locked = 1;
-                    wsphere[cell].radius = 0.95;
+//                     wsphere[cell].radius = 0.95;
+                    wsphere[cell].radius = wsphere[cell].initial_radius - 0.05;
                 }
             }
+}
+
+void compute_gradient_potential_sphere(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
+/* compute the gradient of the potential on the sphere */
+{
+    int i, j, cell;
+    double dphi_inv, dtheta_inv, stheta_inv;
+    
+    dphi_inv = 0.5*(double)NX_SPHERE/DPI;
+    dtheta_inv = 0.5*(double)NY_SPHERE/PI;
+    
+    /* bulk */
+    for (j=1; j<NX_SPHERE-1; j++)
+    {
+        stheta_inv = wsphere[j].stheta;
+        for (i=1; i<NX_SPHERE-1; i++)
+        {
+            cell = i*NY_SPHERE+j;
+            wsphere[cell].nablax = (wsphere[cell+NY_SPHERE].potential - wsphere[cell-NY_SPHERE].potential)*dphi_inv*stheta_inv;
+            wsphere[cell].nablay = (wsphere[cell+1].potential - wsphere[cell-1].potential)*dtheta_inv;
+        }
+        
+        /* i=0 */
+        cell = j;
+        wsphere[cell].nablax = (wsphere[cell+NY_SPHERE].potential - wsphere[(NX_SPHERE-1)+j].potential)*dphi_inv*stheta_inv;
+        wsphere[cell].nablay = (wsphere[cell+1].potential - wsphere[cell-1].potential)*dtheta_inv;
+        
+        /* i=NX_SPHERE-1 */
+        cell = (NX_SPHERE-1)*NY_SPHERE+j;
+        wsphere[cell].nablax = (wsphere[j].potential - wsphere[cell-NY_SPHERE].potential)*dphi_inv*stheta_inv;
+        wsphere[cell].nablay = (wsphere[cell+1].potential - wsphere[cell-1].potential)*dtheta_inv;
+    }
+    
+    /* poles */
+    stheta_inv = wsphere[1].stheta;
+    for (i=0; i<NX_SPHERE; i++)
+    {
+        /* j=0 */
+        cell = i*NY_SPHERE;
+        wsphere[cell].nablax = 0.0;
+        wsphere[cell].nablay = 2.0*(wsphere[cell+1].potential - wsphere[cell].potential)*dtheta_inv;
+        
+        /* j=NY_SPHERE-1 */
+        cell = i*NY_SPHERE + NY_SPHERE - 1;
+        wsphere[cell].nablax = 0.0;
+        wsphere[cell].nablay = 2.0*(wsphere[cell].potential - wsphere[cell-1].potential)*dtheta_inv;
+
+    }
+}
+
+void init_potential_sphere(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], t_absorber wells[NMAX_ABSORBERS])
+/* initialise the potential and its gradient, for option ADD_POTENTIAL_SPHERE */
+{
+    int i, j;
+    double phi, theta, phi1, theta1, dist, pot, x, y, z, max, nablax, nablay, norm, pscal, ca, shade_scale2;
+    
+    printf("Initialising potential on sphere\n");
+    for (i=0; i<NX_SPHERE*NY_SPHERE; i++) wsphere[i].potential = 0.0; 
+    switch(SPHERE_POTENTIAL) {
+        case (SPP_WELLS):
+        {
+            for (i=0; i<NX_SPHERE*NY_SPHERE; i++) 
+            {
+                phi = wsphere[i].phi;
+                theta = wsphere[i].theta;
+                for (j=0; j<nwells; j++)
+                {
+                    phi1 = wells[j].xc;
+                    theta1 = wells[j].yc;
+                    dist = dist_sphere(phi, theta, phi1, theta1)/wells[j].radius;
+                    pot = -POT_SPHERE_AMP/(POT_SPHERE_SMOOTH + dist*dist);
+                    wsphere[i].potential += pot;
+                }
+            }
+            break;
+        }
+        case (SPP_CUBE):
+        {
+            for (i=0; i<NX_SPHERE*NY_SPHERE; i++) 
+            {
+                max = 0.0;
+                x = vabs(wsphere[i].x);
+                y = vabs(wsphere[i].y);
+                z = vabs(wsphere[i].z);
+                
+                if (x > max) max = x;
+                if (y > max) max = y;
+                if (z > max) max = z;
+                wsphere[i].potential = 1.0/max - 1.0; 
+            }
+            break;
+        }
+    }
+    
+    for (i=0; i<NX_SPHERE*NY_SPHERE; i++) 
+    {
+        wsphere[i].initial_radius = 1.0 + RSCALE_POTENTIAL*wsphere[i].potential;
+        if (wsphere[i].initial_radius < 0.5) wsphere[i].initial_radius = 0.5;
+    }
+    
+    compute_gradient_potential_sphere(wsphere);
+    
+    if (SHADE_BG_COLOR_2D)
+    {
+        shade_scale2 = SHADE_SCALE_BG_2D*SHADE_SCALE_BG_2D;
+        for (i=0; i<NX_SPHERE*NY_SPHERE; i++) 
+        {
+            nablax = wsphere[i].nablax;
+            nablay = wsphere[i].nablay;
+            
+            norm = sqrt(shade_scale2 + nablax*nablax + nablay*nablay);
+            pscal = -nablax*light[0] - nablay*light[1] + SHADE_SCALE_BG_2D;
+            ca = pscal/norm;
+                        
+            wsphere[i].cos_angle_pot = (ca + 1.0)*0.4 + 0.2;
+            
+//             printf("cos_angle_pot[%i] = %.3lg\n", i, wsphere[i].cos_angle_pot);
+        }
+    }
 }
 
 void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HASHX*HASHY], t_cluster cluster[NMAXCIRCLES], t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], t_segment segment[NMAXSEGMENTS], int traj_position, int traj_length, t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], int *tracer_n, int plot, int bg_color, t_absorber absorber[NMAX_ABSORBERS])
@@ -1864,7 +2011,7 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
     #pragma omp parallel for private(i)
     for (i=0; i<NX_SPHERE*NY_SPHERE; i++) if (!wsphere[i].locked)
     {
-        wsphere[i].radius = 1.0;
+        wsphere[i].radius = wsphere[i].initial_radius;
         
         if ((COLOR_BACKGROUND)&&(bg_color > 0))
         {
@@ -1885,8 +2032,8 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
     if (TRACER_PARTICLE) 
         draw_trajectory_sphere(trajectory, hashgrid, traj_position, traj_length, particle, cluster, wsphere, tracer_n, plot);
     
-    if (ADD_FIXED_SEGMENTS)
-        draw_segments_sphere(segment, wsphere);
+//     if (ADD_FIXED_SEGMENTS)
+//         draw_segments_sphere(segment, wsphere);
     
 //     if (ADD_ABSORBERS)
 //         draw_absorbers_sphere(absorber, wsphere); 
@@ -1910,13 +2057,14 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
         if (particle[part].active)
         {
             deltaj = (int)(2.5*particle[part].radius/dtheta);
+            i0 = 0;
             j0 = (int)(particle[part].yc/dtheta);
             jmax = j0 + deltaj;
         
             #pragma omp parallel for private(i,j,x,y,dist,r)
             for (j=0; j<jmax; j++)
                 for (i=0; i<NX_SPHERE; i++)
-                    add_particle_to_sphere(i, j, part, particle, wsphere);
+                    add_particle_to_sphere(i, j, i0, j0, part, particle, wsphere);
         }
     }
     
@@ -1929,13 +2077,14 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
         if (particle[part].active)
         {
             deltaj = (int)(2.5*particle[part].radius/dtheta);
+            i0 = 0;
             j0 = (int)(particle[part].yc/dtheta);
             jmin = j0 - deltaj;
         
             #pragma omp parallel for private(i,j,x,y,dist,r)
             for (j=jmin; j<NY_SPHERE; j++)
                 for (i=0; i<NX_SPHERE; i++)
-                    add_particle_to_sphere(i, j, part, particle, wsphere);
+                    add_particle_to_sphere(i, j, i0, j0, part, particle, wsphere);
         }
     }
     
@@ -1971,7 +2120,7 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
                     for (j=jmin; j<jmax; j++)
                         for (i=imin; i<imax; i++)
                         {
-                            add_particle_to_sphere(i, j, part, particle, wsphere);
+                            add_particle_to_sphere(i, j, i0, j0, part, particle, wsphere);
                         }
                 }
             }
@@ -2002,9 +2151,9 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
                 for (j=jmin; j<jmax; j++)
                 {
                     for (i=0; i<imax; i++)
-                        add_particle_to_sphere(i, j, part, particle, wsphere);
+                        add_particle_to_sphere(i, j, i0, j0, part, particle, wsphere);
                     for (i=imin; i<NX_SPHERE; i++)
-                        add_particle_to_sphere(i, j, part, particle, wsphere);
+                        add_particle_to_sphere(i, j, i0, j0, part, particle, wsphere);
                 }
             }
         }
@@ -2034,9 +2183,9 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
                 for (j=jmin; j<jmax; j++)
                 {
                     for (i=imin; i<NX_SPHERE; i++)
-                        add_particle_to_sphere(i, j, part, particle, wsphere);
+                        add_particle_to_sphere(i, j, i0, j0, part, particle, wsphere);
                     for (i=0; i<imax; i++)
-                        add_particle_to_sphere(i, j, part, particle, wsphere);
+                        add_particle_to_sphere(i, j, i0, j0, part, particle, wsphere);
                 }
             }
         }

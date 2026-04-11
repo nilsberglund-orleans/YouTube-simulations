@@ -137,7 +137,7 @@ void init_hashcell_coordinates(t_hashgrid hashgrid[HASHX*HASHY])
                 /* TODO: correct area */
                 hashgrid[n].area = dx_sphere[j]*dy*sin(0.5*(hashgrid[n].y1 + hashgrid[n].y2));
                 
-                printf("Cell %i corners (%.3lg, %.3lg), (%.3lg, %.3lg)\n", n, hashgrid[n].x1, hashgrid[n].y1, hashgrid[n].x2, hashgrid[n].y2); 
+//                 printf("Cell %i corners (%.3lg, %.3lg), (%.3lg, %.3lg)\n", n, hashgrid[n].x1, hashgrid[n].y1, hashgrid[n].x2, hashgrid[n].y2); 
             }
             for (i=hashx_sphere[j]; i<HASHX; i++)
             {
@@ -192,7 +192,7 @@ void init_hashgrid(t_hashgrid hashgrid[HASHX*HASHY])
             if (hashx_sphere[j] > HASHX-1) hashx_sphere[j] = HASHX-1;
             dx_sphere[j] = DPI/(double)hashx_sphere[j];
             
-            printf("hashx_sphere[%i] = %i, dx_sphere[%i] = %.3lg\n", j, hashx_sphere[j], j, dx_sphere[j]);
+//             printf("hashx_sphere[%i] = %i, dx_sphere[%i] = %.3lg\n", j, hashx_sphere[j], j, dx_sphere[j]);
             fprintf(lj_log, "hashx_sphere[%i] = %i, dx_sphere[%i] = %.3lg\n", j, hashx_sphere[j], j, dx_sphere[j]);
         }
         for (j=HASHY/2 + 1; j<HASHY; j++)
@@ -200,7 +200,7 @@ void init_hashgrid(t_hashgrid hashgrid[HASHX*HASHY])
             hashx_sphere[j] = hashx_sphere[HASHY-1-j];
             dx_sphere[j] = dx_sphere[HASHY-1-j];
             
-            printf("hashx_sphere[%i] = %i, dx_sphere[%i] = %.3lg\n", j, hashx_sphere[j], j, dx_sphere[j]);
+//             printf("hashx_sphere[%i] = %i, dx_sphere[%i] = %.3lg\n", j, hashx_sphere[j], j, dx_sphere[j]);
         }
     }
     
@@ -711,19 +711,19 @@ void init_hashgrid(t_hashgrid hashgrid[HASHX*HASHY])
                 }
             }
             
-            for (i=0; i<HASHX*HASHY; i++)
-            {
-                p = hashgrid[i].nneighb;
-                printf("Hash cell %i has %i neighbours: ", i, p);
-                fprintf(lj_log, "Hash cell %i has %i neighbours: ", i, p);
-                for (j=0; j<p; j++)
-                {
-                    printf("%i ", hashgrid[i].neighbour[j]);
-                    fprintf(lj_log, "%i ", hashgrid[i].neighbour[j]);
-                }
-                printf("\n");
-                fprintf(lj_log, "\n");
-            }
+//             for (i=0; i<HASHX*HASHY; i++)
+//             {
+//                 p = hashgrid[i].nneighb;
+//                 printf("Hash cell %i has %i neighbours: ", i, p);
+//                 fprintf(lj_log, "Hash cell %i has %i neighbours: ", i, p);
+//                 for (j=0; j<p; j++)
+//                 {
+//                     printf("%i ", hashgrid[i].neighbour[j]);
+//                     fprintf(lj_log, "%i ", hashgrid[i].neighbour[j]);
+//                 }
+//                 printf("\n");
+//                 fprintf(lj_log, "\n");
+//             }
             
             
             

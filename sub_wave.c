@@ -353,21 +353,21 @@ double gaussian()
 
  
  
-// int in_polygon(double x, double y, double r, int npoly, double apoly)
-// /* test whether (x,y) is in regular polygon of npoly sides inscribed in circle of radious r, turned by apoly Pi/2 */
-// {
-//     int condition = 1, k;
-//     double omega, cw, angle; 
-//     
-//     omega = DPI/((double)npoly);
-//     cw = cos(omega*0.5);
-//     for (k=0; k<npoly; k++)  
-//     {
-//         angle = apoly*PID + ((double)k+0.5)*omega;
-//         condition = condition*(x*cos(angle) + y*sin(angle) < r*cw);
-//     }
-//     return(condition);
-// }
+int in_polygon(double x, double y, double r, int npoly, double apoly)
+/* test whether (x,y) is in regular polygon of npoly sides inscribed in circle of radious r, turned by apoly Pi/2 */
+{
+    int condition = 1, k;
+    double omega, cw, angle; 
+    
+    omega = DPI/((double)npoly);
+    cw = cos(omega*0.5);
+    for (k=0; k<npoly; k++)  
+    {
+        angle = apoly*PID + ((double)k+0.5)*omega;
+        condition = condition*(x*cos(angle) + y*sin(angle) < r*cw);
+    }
+    return(condition);
+}
 
 
 
@@ -3621,6 +3621,85 @@ int compute_circle_pairs_coordinates(t_vertex polyline[NMAXPOLY], t_arc polyarc[
     return(nlines);
 }
 
+int compute_circle_poly_coordinates(t_vertex polyline[NMAXPOLY], t_arc polyarc[NMAXPOLY], t_circle circle[NMAXCIRCLES], int *npolyarc, int *ncircles, short int top)
+/* initialise lines for D_CIRCLE_POLYGON domain */
+{
+    double dx, alpha, alphab, h1, h2, h1b, h2b, x1, y1, pos[2], mu, beta;
+    int i, j, k, nlines, narcs, ncirc;
+    
+    nlines = 0;
+    narcs = 0;
+    ncirc = 0;
+    dx = (XMAX - XMIN)/(double)NGRIDX;
+    
+    h1 = sqrt(MU*MU - 0.25*WALL_WIDTH*WALL_WIDTH);
+    h2 = LAMBDA - h1;
+    alpha = atan(0.5*WALL_WIDTH/h1);
+    
+    h1b = sqrt(MU_B*MU_B - 0.25*WALL_WIDTH*WALL_WIDTH);
+//     h2b = LAMBDA - h1b;
+    h2b = MU_B*cos(PI/(double)NPOLY) - LAMBDA;
+    alphab = atan(0.5*WALL_WIDTH/h1b);
+    
+    for (i=0; i<NGRIDX; i++)
+    {
+        x1 = XMIN + ((double)i+0.5)*dx;
+        y1 = LAMBDA;
+        polyarc[narcs].xc = x1;
+        polyarc[narcs].yc = y1;
+        polyarc[narcs].r  = MU;
+        polyarc[narcs].angle1 = -PID + alpha;
+        polyarc[narcs].dangle = DPI - 2.0*alpha;
+        narcs++;
+                
+        polyline[nlines].x = x1 + 0.5*WALL_WIDTH;
+        polyline[nlines].y = h2;
+        nlines++;
+        polyline[nlines].x = x1 + 0.5*WALL_WIDTH;
+        polyline[nlines].y = h2b;
+        nlines++;
+
+        polyline[nlines].x = x1 + 0.5*WALL_WIDTH;
+        polyline[nlines].y = h2b;
+        nlines++;
+
+        for (j=0; j<NPOLY; j++)
+        {
+            beta = PID + PI*(double)(-1-2*j)/(double)NPOLY;
+            polyline[nlines].x = x1 + MU_B*cos(beta);
+            polyline[nlines].y = -y1 + MU_B*sin(beta);
+            nlines++;
+            
+            polyline[nlines].x = x1 + MU_B*cos(beta);
+            polyline[nlines].y = -y1 + MU_B*sin(beta);
+            nlines++;
+        }
+        
+        polyline[nlines].x = x1 - 0.5*WALL_WIDTH;
+        polyline[nlines].y = h2b;
+        nlines++;
+        
+        polyline[nlines].x = x1 - 0.5*WALL_WIDTH;
+        polyline[nlines].y = h2b;
+        nlines++;
+        polyline[nlines].x = x1 - 0.5*WALL_WIDTH;
+        polyline[nlines].y = h2;
+        nlines++;
+    }
+    
+    for (i=0; i<nlines; i++)
+    {
+        xy_to_pos(polyline[i].x, polyline[i].y, pos);        
+        polyline[i].posi = pos[0];
+        polyline[i].posj = pos[1];
+    }
+    
+    *npolyarc = narcs;
+    *ncircles = ncirc;
+    return(nlines);
+}
+
+
 int compute_disc_honeycomb_lattice_coordinates(t_vertex polyline[NMAXPOLY], t_rect_rotated polyrect[NMAXPOLY], t_arc polyarc[NMAXPOLY], int *npolyrect_rot, int *npolyarc)
 /* initialise lines for D_CIRCLE_LATTICE_HEX domain */
 {
@@ -5059,6 +5138,10 @@ int init_poly(int depth, t_vertex polyline[NMAXPOLY], t_rectangle polyrect[NMAXP
         case (D_CIRCLE_PAIRS):
         {
             return(compute_circle_pairs_coordinates(polyline, polyarc, circles, npolyarc, ncircles, top));
+        }
+        case (D_CIRCLE_POLYGON):
+        {
+            return(compute_circle_poly_coordinates(polyline, polyarc, circles, npolyarc, ncircles, top));
         }
         case (D_TWO_PARABOLAS_ASYM_GUIDE):
         {
@@ -7204,6 +7287,19 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
                 y1 = LAMBDA;
                 if (module2(x-x1, y-y1) < MU) return(1);
                 if (module2(x-x1, y+y1) < MU_B) return(1);
+                if ((vabs(y) < LAMBDA)&&(vabs(x-x1) < 0.5*WALL_WIDTH)) return(1);
+            }
+            return(0);
+        }
+        case (D_CIRCLE_POLYGON):
+        {
+            dx = (XMAX - XMIN)/(double)NGRIDX;
+            for (k=0; k<NGRIDX; k++)
+            {
+                x1 = XMIN + dx*((double)k + 0.5);
+                y1 = LAMBDA;
+                if (module2(x-x1, y-y1) < MU) return(1);
+                if (in_polygon(x-x1, y+y1, MU_B, NPOLY, 1.0 - 2.0/(double)NPOLY)) return(1);
                 if ((vabs(y) < LAMBDA)&&(vabs(x-x1) < 0.5*WALL_WIDTH)) return(1);
             }
             return(0);
@@ -10255,6 +10351,21 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
             break;
         }
         case (D_CIRCLE_PAIRS):
+        {
+            glBegin(GL_LINES);
+            for (i=0; i<npolyline; i++) 
+            {
+                glVertex2d(polyline[i].posi, polyline[i].posj);
+            }
+            glEnd();
+            
+            for (i=0; i<npolyarc; i++)
+            {
+                draw_circle_arc(polyarc[i].xc, polyarc[i].yc, polyarc[i].r, polyarc[i].angle1, polyarc[i].dangle, NSEG);
+            }
+            break;
+        }
+        case (D_CIRCLE_POLYGON):
         {
             glBegin(GL_LINES);
             for (i=0; i<npolyline; i++) 

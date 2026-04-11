@@ -40,7 +40,7 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1           /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
@@ -48,8 +48,8 @@
 
 #define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1150  /* window height */
-#define NX 870           /* number of grid points on x axis */
-#define NY 520           /* number of grid points on y axis */
+#define NX 1600           /* number of grid points on x axis */
+#define NY 960           /* number of grid points on y axis */
 #define HRES 1           /* factor for high resolution plots */
 
 #define XMIN -2.0
@@ -59,7 +59,7 @@
 
 /* Choice of simulated equation */
 
-#define RDE_EQUATION 11  /* choice of reaction term, see list in global_3d.c */
+#define RDE_EQUATION 121  /* choice of reaction term, see list in global_3d.c */
 #define NFIELDS 3       /* number of fields in reaction-diffusion equation */
 #define NLAPLACIANS 0   /* number of fields for which to compute Laplacian */
 
@@ -141,7 +141,7 @@
 
 /* Physical parameters of wave equation */
 
-#define DT 0.000002
+#define DT 0.000007
 
 #define VISCOSITY 0.02
 #define POISSON_STIFFNESS 1.0   /* stiffness of Poisson equation solver for incompressible Euler */
@@ -161,6 +161,8 @@
 #define K_KURAMOTO 20.0 /* constant in Kuramoto model */
 #define NU_KURAMOTO 0.0 /* viscosity in Kuramoto model */
 #define OMEGA_KURAMOTO 0.02  /* frequency in Kuramoto model */
+
+/* Keller-Segel model */
 #define A_KS 0.15        /* coupling constant in Keller-Segel model */
 #define C_KS 3.5         /* coupling constant in Keller-Segel model */
 #define D_KSU 1.0        /* organism diffusion in Keller-Segel model */
@@ -168,6 +170,17 @@
 #define KS_RSCALE 0.07   /* scaling factor for reaction term of Keller-Segel model */
 #define KS_UMAX 100.0    /* max value for u component of Keller-Segel model */
 #define KS_CHIMAX_FACTOR 30.0   /* limiter on the value of chi/D_KSU */
+
+/* Gray-Scott model */
+#define A_GS 0.029       /* coupling constant in Gray-Scott model */
+#define B_GS 0.06        /* coupling constant in Gray-Scott model */
+#define D_GSU 1.0        /* u diffusion in Gray-Scott model */
+#define D_GSV 2.0        /* v diffusion in Gray-Scott model */
+#define GS_RSCALE 0.1    /* scaling factor for reaction term of Gray-Scott model */
+#define GS_DSCALE 0.1    /* scaling factor for diffusion term of Gray-Scott model */
+
+#define PDISC_DISTANCE 0.5  /* constant for Poisson disc initial condition */
+
 #define V_MAZE 0.4      /* potential in walls of maze */
 #define BZQ 0.0008      /* parameter in BZ equation */
 #define BZF 1.2         /* parameter in BZ equation */
@@ -217,6 +230,16 @@
 #define RPSLZB_INITIAL_TIME 0   /* initial time during which rpslzb remains constant */
 #define RPSLZB_FINAL_TIME 500   /* final time during which rpslzb remains constant */
                                       
+#define CHANGE_A_GS 0           /* set to 1 to change first parameter in Gray-Scott model */
+#define A_GS_CHANGE -0.02       /* amount by which to decrease a_gs parameter */
+#define A_GS_INITIAL_TIME 0     /* initial time during which a_gs remains constant */
+#define A_GS_FINAL_TIME 100     /* final time during which a_gs remains constant */
+
+#define CHANGE_B_GS 0           /* set to 1 to change second parameter in Gray-Scott model */
+#define B_GS_CHANGE -0.01       /* amount by which to decrease b_gs parameter */
+#define B_GS_INITIAL_TIME 0     /* initial time during which b_gs remains constant */
+#define B_GS_FINAL_TIME 100     /* final time during which b_gs remains constant */
+
 #define CHANGE_FLOW_SPEED 0     /* set to 1 to change speed of laminar flow */
 #define IN_OUT_FLOW_BC 0          /* type of in-flow/out-flow boundary conditions for Euler equation, 0 for no b.c. */
 #define IN_OUT_BC_FACTOR 0.001    /* factor of convex combination between old and new flow */
@@ -251,7 +274,7 @@
 /* Parameters for length and speed of simulation */
 
 #define NSTEPS 1400       /* number of frames of movie */
-#define NVID 12           /* number of iterations between images displayed on screen */
+#define NVID 30           /* number of iterations between images displayed on screen */
 #define ACCELERATION_FACTOR 1.0 /* factor by which to increase NVID in course of simulation */
 #define DT_ACCELERATION_FACTOR 1.0 /* factor by which to increase time step in course of simulation  */
 #define MAX_DT 0.024     /* maximal value of integration step */
@@ -273,6 +296,8 @@
 #define PLOT_SPHERE 1   /* draws fields on a sphere */
 #define SIMULATION_GRID 1   /* type of simulation grid, for certain equations */
 #define OPTIMIZE_GRID 1     /* set to 1 to optimize grid by evolving grid points */
+#define OPTIMIZE_STEPS 200  /* number of grid optimization steps */
+#define WEIGHT_GRID 1       /* set to 1 to compute correcting weights for Laplacian */
 
 #define ROTATE_VIEW 1       /* set to 1 to rotate position of observer */
 #define ROTATE_ANGLE 360.0   /* total angle of rotation during simulation */
@@ -287,12 +312,12 @@
 /* Plot type - color scheme */
 
 #define CPLOT 0
-#define CPLOT_B 0
+#define CPLOT_B 80
 
 /* Plot type - height of 3D plot */
 
-#define ZPLOT 0    /* z coordinate in 3D plot */
-#define ZPLOT_B 0    /* z coordinate in second 3D plot */
+#define ZPLOT 80    /* z coordinate in 3D plot */
+#define ZPLOT_B 80   /* z coordinate in second 3D plot */
 
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of P_3D_AMPLITUDE plot */
 #define NON_DIRICHLET_BC 0      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
@@ -308,12 +333,15 @@
 #define FLOODING 0              /* set to 1 for drawing water when higher than continents */
 #define FLOODING_VSHIFT -10.0    /* controls when wave is considered higher than land */
 #define FLOODING_VSHIFT_2D 0.56    /* controls when wave is considered higher than land */
+#define TIME_SLICE_THRESHOLD 0.1    /* threshold of field 0 for Z_TIME_SLICE */
 
 #define PLOT_SCALE_ENERGY 0.05      /* vertical scaling in energy plot */
 
 #define PRINT_TIME 0        /* set to 1 to print running time */
 #define PRINT_VISCOSITY 0   /* set to 1 to print viscosity */
 #define PRINT_RPSLZB 0      /* set to 1 to print rpslzb parameter */
+#define PRINT_A_GS 0        /* set to 1 to print a_gs parameter */
+#define PRINT_B_GS 0        /* set to 1 to print b_gs parameter */
 #define PRINT_PROBABILITIES 0   /* set to 1 to print probabilities (for Ehrenfest urn configuration) */
 #define PRINT_NOISE 0       /* set to 1 to print noise intensity */
 #define PRINT_FLOW_SPEED 0      /* set to 1 to print speed of flow */
@@ -337,8 +365,8 @@
 
 /* Color schemes, see list in global_pdes.c  */
 
-#define COLOR_PALETTE 15        /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 11      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 17        /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 14      /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
 #define COLOR_OUT_R 1.0    /* color outside domain */
@@ -352,8 +380,9 @@
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
-#define VSHIFT_AMPLITUDE -0.75   /* additional shift for wave amplitude */
-#define VSCALE_AMPLITUDE 1.5      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSHIFT_AMPLITUDE -0.4    /* additional shift for wave amplitude */
+#define VSCALE_AMPLITUDE 2.5      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
+#define VSCALE_TIMESLICE 1.6      /* additional scaling factor for color scheme Z_TIMESLICE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
 #define CURL_SCALE 1.25   /* scaling factor for curl representation */
 #define RESCALE_COLOR_IN_CENTER 0   /* set to 1 to decrease color intentiy in the center (for wave escaping ring) */
@@ -395,8 +424,8 @@
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_WIDTH 0.04     /* half width of maze walls */
 
-#define DRAW_COLOR_SCHEME 1     /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 2.5      /* scale of color scheme bar */
+#define DRAW_COLOR_SCHEME 0     /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 1.5      /* scale of color scheme bar */
 #define COLORBAR_RANGE_B 2.5    /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0   /* set to 1 to draw color scheme horizontally */
 #define CIRC_COLORBAR 0         /* set to 1 to draw circular color scheme */
@@ -478,16 +507,16 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 #define VENUS_NODATA_FACTOR 0.5     /* altitude to assign to DEM points without data (fraction of mean altitude) */
 
 #define Z_SCALING_FACTOR 0.75   /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define XY_SCALING_FACTOR 1.9  /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define XY_SCALING_FACTOR 1.7  /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0        /* max value of z coordinate for REP_PROJ_3D representation */
-#define XSHIFT_3D -0.0          /* overall x shift for REP_PROJ_3D representation */
-#define YSHIFT_3D -0.0          /* overall y shift for REP_PROJ_3D representation */
+#define XSHIFT_3D 0.0          /* overall x shift for REP_PROJ_3D representation */
+#define YSHIFT_3D 0.0          /* overall y shift for REP_PROJ_3D representation */
 #define BORDER_PADDING 0       /* distance from boundary at which to plot points, to avoid boundary effects due to gradient */
-#define DRAW_ARROW 1           /* set to 1 to draw arrow above sphere */
+#define DRAW_ARROW 0           /* set to 1 to draw arrow above sphere */
 #define ZMAX 3.0             /* maximal value of z coordinate */
 #define ZMIN -3.0            /* maximal value of z coordinate */
 
-#define RSCALE 0.02             /* scaling factor of radial component */
+#define RSCALE 0.25              /* scaling factor of radial component */
 #define RSCALE_B 1.00           /* experimental, additional radial scaling factor in ij_to_sphere */
 #define RSHIFT 0.0              /* shift in radial component */
 #define RMAX 4.0                /* max value of radial component */
@@ -496,13 +525,12 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 
 /* For debugging purposes only */
 #define FLOOR 1         /* set to 1 to limit wave amplitude to VMAX */
-#define VMAX 100.0        /* max value of wave amplitude */
+#define VMAX 10.0        /* max value of wave amplitude */
 #define TEST_GRADIENT 0 /* print norm squared of gradient */
-
 
 #define REFRESH_B (ZPLOT_B != ZPLOT)||(CPLOT_B != CPLOT)    /* to save computing time, to be improved */
 #define COMPUTE_WRAP_ANGLE ((WRAP_ANGLE)&&((cplot == Z_ANGLE_GRADIENT)||(cplot == Z_ANGLE_GRADIENTX)||(cplot == Z_ARGUMENT)||(cplot == Z_ANGLE_GRADIENTX)||(cplot == Z_EULER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED)||(cplot == Z_ANGLE)))
-#define PRINT_PARAMETERS ((PRINT_TIME)||(PRINT_VISCOSITY)||(PRINT_RPSLZB)||(PRINT_PROBABILITIES)||(PRINT_NOISE)||(PRINT_FLOW_SPEED)||(PRINT_AVERAGE_SPEED))
+#define PRINT_PARAMETERS ((PRINT_TIME)||(PRINT_VISCOSITY)||(PRINT_RPSLZB)||(PRINT_A_GS)||(PRINT_B_GS)||(PRINT_PROBABILITIES)||(PRINT_NOISE)||(PRINT_FLOW_SPEED)||(PRINT_AVERAGE_SPEED))
 #define COMPUTE_PRESSURE ((ZPLOT == Z_EULER_PRESSURE)||(CPLOT == Z_EULER_PRESSURE)||(ZPLOT_B == Z_EULER_PRESSURE)||(CPLOT_B == Z_EULER_PRESSURE))
 
 #define ASYM_SPEED_COLOR (VMEAN_SPEED == 0.0)
@@ -1301,6 +1329,8 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
         first = 0;
     }
         
+//     printf("[evolve_wave_half], equation = %i\n", RDE_EQUATION); 
+        
     /* smooth vector fields at poles */
 //     if ((SPHERE)&&(!SMOOTHBLOCKS)) for (k=0; k<NFIELDS; k++) smooth_poles(phi_in[k]);
 //     else for (k=0; k<NFIELDS; k++) block_poles(phi_in[k]);
@@ -1476,6 +1506,15 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
             compute_grad_product_grid(phi_in[2], chi_u, prod_gradients, wsphere, ngridpoints);            
             break;
         }
+        case (E_GRAY_SCOTT_SPHERE):
+        {
+            delta_u = (double *)malloc(NX*NY*sizeof(double));
+            delta_v = (double *)malloc(NX*NY*sizeof(double));
+            
+            compute_laplacian_grid(phi_in[1], delta_u, wsphere, ngridpoints);
+            compute_laplacian_grid(phi_in[2], delta_v, wsphere, ngridpoints);
+            break;
+        }
         default: 
         {
             /* do nothing */
@@ -1493,8 +1532,9 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
     }
     
     
-    if (RDE_EQUATION != E_KURAMOTO_SPHERE) 
+    if ((RDE_EQUATION != E_KURAMOTO_SPHERE)&&(RDE_EQUATION != E_KELLER_SEGEL_SPHERE)&&(RDE_EQUATION != E_GRAY_SCOTT_SPHERE))
     {
+//         printf("[evolve_wave_half], iteration\n");
         #pragma omp parallel for private(i,j,k,x,y,z,deltax,deltay,deltaz,rho)
         for (i=imin; i<imax; i++){
         for (j=0; j<NY; j++){
@@ -1545,6 +1585,19 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
                     phi_out[1][i*NY+j] = y + intstep*(deltay + KS_RSCALE*(x - A_KS*y));
                     break;
                 }
+                case (E_GRAY_SCOTT):
+                {
+//                     printf("[evolve_wave_half], GS iteration\n");
+                    x = phi_in[0][i*NY+j];
+                    y = phi_in[1][i*NY+j];
+                    deltax = GS_DSCALE*D_GSU*delta_phi[0][i*NY+j];
+                    deltay = GS_DSCALE*D_GSV*delta_phi[1][i*NY+j];
+                    phi_out[0][i*NY+j] = x + intstep*(deltax + GS_RSCALE*(x*x*y - (a_gs + b_gs)*x));
+                    phi_out[1][i*NY+j] = y + intstep*(deltay + GS_RSCALE*(-x*x*y + a_gs*(1.0-y)));
+//                     printf("(u,v) = (%.3lg, %.3lg)\n", x, y); 
+                    break;
+                }
+                
 //                 case (E_KURAMOTO_SPHERE):
 //                 {
 //                     x = K_KURAMOTO*kuramoto_int[i*NY+j] + OMEGA_KURAMOTO;
@@ -1806,7 +1859,7 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
             else phi_out[1][i] = x;
         }
         /* convert field 1 on simulation grid to field 0 on longitude_latitude grid */
-        convert_fields_from_grids(phi_out[1], phi_out[0], wsphere);
+        convert_fields_from_grids(phi_out[1], phi_out[0], rde, wsphere);
         
         /* TEST */
 //         for (i=0; i<NX*NY; i++) rde[i].theta = phi_out[0][i];
@@ -1829,7 +1882,22 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
         }
         if (floor_u) printf("u floored to KS_UMAX\n");
         /* convert field 1 on simulation grid to field 0 on longitude_latitude grid */
-        convert_fields_from_grids(phi_out[1], phi_out[0], wsphere);
+        convert_fields_from_grids(phi_out[1], phi_out[0], rde, wsphere);
+    }
+    else if (RDE_EQUATION == E_GRAY_SCOTT_SPHERE)
+    {
+        #pragma omp parallel for private(i,x,y,deltax,deltay)
+        for (i=0; i<ngridpoints; i++)
+        {
+            x = phi_in[1][i];
+            y = phi_in[2][i];
+            deltax = GS_DSCALE*D_GSU*delta_u[i];
+            deltay = GS_DSCALE*D_GSV*delta_v[i];
+            phi_out[1][i] = x + intstep*(deltax + GS_RSCALE*(x*x*y - (a_gs + b_gs)*x));
+            phi_out[2][i] = y + intstep*(deltay + GS_RSCALE*(-x*x*y + a_gs*(1.0-y)));
+        }
+            
+        convert_fields_from_grids(phi_out[1], phi_out[0], rde, wsphere);
     }
     
     /* in-flow/out-flow b.c. for incompressible Euler equation */
@@ -1905,6 +1973,12 @@ double gfield[2*NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
             free(delta_v);
             free(chi_u);
             free(prod_gradients);
+            break;
+        }
+        case (E_GRAY_SCOTT_SPHERE):
+        {
+            free(delta_u);
+            free(delta_v);
             break;
         }
     }
@@ -2097,11 +2171,13 @@ void print_parameters(double *phi[NFIELDS], t_rde rde[NX*NY], short int xy_in[NX
         if (WINWIDTH > 1280)
         {
             boxheight = 0.035;
-            boxwidth = 0.21;
+            boxwidth = 0.15;
+//             boxwidth = 0.21;
             if (left)
             {
                 xbox = XMIN + 0.4;
-                xtext = XMIN + 0.2;
+//                 xtext = XMIN + 0.2;
+                xtext = XMIN + 0.3;
             }
             else
             {
@@ -2159,6 +2235,7 @@ void print_parameters(double *phi[NFIELDS], t_rde rde[NX*NY], short int xy_in[NX
         if (PRINT_TIME) sprintf(message, "Time %.3f", time);
         else if (PRINT_VISCOSITY) sprintf(message, "Viscosity %.3f", viscosity);
         else if (PRINT_RPSLZB) sprintf(message, "b = %.3f", rpslzb);
+        else if (PRINT_A_GS) sprintf(message, "a = %.3f", a_gs);
         else if (PRINT_NOISE) sprintf(message, "noise %.3f", noise);
         else if (PRINT_FLOW_SPEED) sprintf(message, "Speed %.3f", flow_speed);
         else if (PRINT_AVERAGE_SPEED) 
@@ -2179,6 +2256,22 @@ void print_parameters(double *phi[NFIELDS], t_rde rde[NX*NY], short int xy_in[NX
                 glColor3f(1.0, 1.0, 1.0);
                 xy_to_pos(xtext, y, pos);
                 write_text(pos[0], pos[1], message2);
+            }
+        }
+        if (PRINT_B_GS) 
+        {
+            y -= 0.1;
+            erase_area_hsl(xbox, y + 0.02, boxwidth, boxheight, 0.0, 0.9, 0.0);
+            glColor3f(1.0, 1.0, 1.0);
+            sprintf(message, "b = %.3f", b_gs);
+            if (PLOT_3D) 
+            {
+                write_text(xtext, y, message);
+            }
+            else
+            {
+                xy_to_pos(xtext, y, pos);
+                write_text(pos[0], pos[1], message);
             }
         }
     }
@@ -2244,6 +2337,32 @@ double rpslzb_schedule(int i)
     {
         ratio = (double)(i - RPSLZB_INITIAL_TIME)/(double)(NSTEPS - RPSLZB_INITIAL_TIME - RPSLZB_FINAL_TIME);
         return (RPSLZB - ratio*RPSLZB_CHANGE);
+    }
+}
+
+double a_gs_schedule(int i)
+{
+    double ratio;
+    
+    if (i < A_GS_INITIAL_TIME) return (A_GS);
+    else if (i > NSTEPS - A_GS_FINAL_TIME) return(A_GS - A_GS_CHANGE);
+    else 
+    {
+        ratio = (double)(i - A_GS_INITIAL_TIME)/(double)(NSTEPS - A_GS_INITIAL_TIME - A_GS_FINAL_TIME);
+        return (A_GS - ratio*A_GS_CHANGE);
+    }
+}
+
+double b_gs_schedule(int i)
+{
+    double ratio;
+    
+    if (i < B_GS_INITIAL_TIME) return (B_GS);
+    else if (i > NSTEPS - B_GS_FINAL_TIME) return(B_GS - B_GS_CHANGE);
+    else 
+    {
+        ratio = (double)(i - B_GS_INITIAL_TIME)/(double)(NSTEPS - B_GS_INITIAL_TIME - B_GS_FINAL_TIME);
+        return (B_GS - ratio*B_GS_CHANGE);
     }
 }
 
@@ -2395,7 +2514,7 @@ void animation()
 //     if (ADD_TRACERS) tracers = (double *)malloc(2*NSTEPS*N_TRACERS*sizeof(double));
     if (ADD_TRACERS) tracers = (double *)malloc(4*NSTEPS*N_TRACERS*sizeof(double));
     
-    if ((RDE_EQUATION == E_KURAMOTO_SPHERE)||(RDE_EQUATION == E_KELLER_SEGEL_SPHERE))
+    if ((RDE_EQUATION == E_KURAMOTO_SPHERE)||(RDE_EQUATION == E_KELLER_SEGEL_SPHERE)||(RDE_EQUATION == E_GRAY_SCOTT_SPHERE))
         ngridpoints = initialize_simulation_grid_sphere(wsphere);
 
     dx = (XMAX-XMIN)/((double)NX);
@@ -2474,8 +2593,27 @@ void animation()
 
 //     init_linear_blob_sphere(0, 1.3*PI, 0.65*PI, 0.0, 0.0, 0.3, 0.1, 0.1, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
 
-    init_random(0.5, 0.4, phi, xy_in, wsphere);
-//     init_onefield_random(1, 0.2, 0.1, phi, xy_in, wsphere);
+//     init_random(0.5, 0.1, phi, xy_in, wsphere);
+
+//     init_random_zerosum(0.4, 0.4, phi, xy_in, wsphere);
+    
+//     init_gs_blob(0.0, 0.0, 0.0, 1.0, 0.25, phi, xy_in, wsphere);
+//     init_gs_blob(0.0, 0.0, 0.0, 1.0, 0.05, phi, xy_in, wsphere);
+    
+//     init_gs_blob(0.0, 0.0, 0.0, 1.0, 0.25, phi, xy_in, wsphere);
+//     init_gs_blobs_hex(6, 4, 1.0, 0.01, 0.0025, phi, xy_in, wsphere);
+//     init_gs_blobs_square(1, 1, 1.0, 0.01, 0.002, phi, xy_in, wsphere);
+    
+//     init_gs_blobs_poisson(0.5, 100, 1.0, 0.007, 0.0015, phi, xy_in, wsphere);
+    
+//     init_gs_blobs_sphere(1.0, 0.1, 0.1, phi, xy_in, wsphere, C_SPH_CUBE_B);
+    init_gs_blobs_sphere(1.0, 0.05, 0.05, phi, xy_in, wsphere, C_SPH_POISSON);
+
+    //  init_gs_rect_sphere(1.0, PID, PI, PID-0.02, PID+0.02, phi, xy_in, wsphere, 0);
+    
+    
+//     init_onefield_random(0, 0.5, 0.5, phi, xy_in, wsphere);
+//     init_onefield_random(1, 0.5, 0.5, phi, xy_in, wsphere);
 //     init_random_smoothed(0.0, 0.4, phi, xy_in, wsphere);
     
 //     init_expanding_blob_sphere(0, (279.0/180.0)*PI, (115.0/180.0)*PI, 0.75, 0.04, 0.06, SWATER_MIN_HEIGHT, phi, xy_in, wsphere);
@@ -2503,7 +2641,7 @@ void animation()
     if (ADD_MOON_FORCING) compute_forcing_schedule(0, wsphere);
     
     if (RDE_EQUATION == E_KURAMOTO_SPHERE)
-        convert_fields_from_grids(phi[1], phi[0], wsphere);
+        convert_fields_from_grids(phi[1], phi[0], rde, wsphere);
     
     blank();
     glColor3f(0.0, 0.0, 0.0);
@@ -2513,7 +2651,7 @@ void animation()
     
     printf("Drawing wave\n");
     
-    draw_wave_rde(0, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
+    draw_wave_rde(0, 0, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
 //     draw_billiard();
     if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, VISCOSITY, noise);
     if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, CIRC_COLORBAR, 0, 1.0);
@@ -2542,6 +2680,8 @@ void animation()
             }
         }
         if (CHANGE_RPSLZB) rpslzb = rpslzb_schedule(i);
+        if (CHANGE_A_GS) a_gs = a_gs_schedule(i);
+        if (CHANGE_B_GS) b_gs = b_gs_schedule(i);
         if (CHANGE_FLOW_SPEED) flow_speed = flow_speed_schedule(i); 
         else flow_speed = IN_OUT_FLOW_AMP;
         if (ADD_MOON_FORCING) compute_forcing_schedule(i, wsphere);
@@ -2553,7 +2693,7 @@ void animation()
         }
         
         printf("Drawing wave %i\n", i);
-        draw_wave_rde(0, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
+        draw_wave_rde(i, 0, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
         
 //         nvid = (int)((double)NVID*(1.0 + (ACCELERATION_FACTOR - 1.0)*(double)i/(double)NSTEPS));
         /* increase integration step */
@@ -2652,7 +2792,7 @@ void animation()
             
             if ((i >= INITIAL_TIME)&&(DOUBLE_MOVIE))
             {
-                draw_wave_rde(1, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 0, 1.0, REFRESH_B);
+                draw_wave_rde(i, 1, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 0, 1.0, REFRESH_B);
                 if ((ADD_TRACERS)&&(!PLOT_3D)) draw_tracers(phi, tracers, i, 0, 1.0);
 //                 draw_billiard();
                 if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
@@ -2684,7 +2824,7 @@ void animation()
     {
         if (DOUBLE_MOVIE) 
         {
-            draw_wave_rde(0, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
+            draw_wave_rde(NSTEPS, 0, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
             if ((ADD_TRACERS)&&(!PLOT_3D)) draw_tracers(phi, tracers, NSTEPS, 0, 1.0);
 //             draw_billiard();
             if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
@@ -2696,7 +2836,7 @@ void animation()
             else for (i=0; i<MID_FRAMES; i++) 
             {
                 fade_value = 1.0 - (double)i/(double)MID_FRAMES;
-                draw_wave_rde(0, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 1, fade_value, 0);
+                draw_wave_rde(NSTEPS, 0, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 1, fade_value, 0);
                 if ((ADD_TRACERS)&&(!PLOT_3D)) draw_tracers(phi, tracers, NSTEPS, 1, fade_value);
 //                 draw_billiard();
                 if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
@@ -2704,7 +2844,7 @@ void animation()
                 if (!NO_EXTRA_BUFFER_SWAP) glutSwapBuffers();
                 save_frame_counter(NSTEPS + i + 1);
             }
-            draw_wave_rde(1, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 0, 1.0, REFRESH_B);
+            draw_wave_rde(NSTEPS, 1, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 0, 1.0, REFRESH_B);
             if ((ADD_TRACERS)&&(!PLOT_3D)) draw_tracers(phi, tracers, NSTEPS, 0, 1.0);
             if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
             if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, CIRC_COLORBAR_B, 0, 1.0); 
@@ -2714,7 +2854,7 @@ void animation()
             else for (i=0; i<END_FRAMES; i++) 
             {
                 fade_value = 1.0 - (double)i/(double)END_FRAMES;
-                draw_wave_rde(1, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 1, fade_value, 0);
+                draw_wave_rde(NSTEPS, 1, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 1, fade_value, 0);
                 if ((ADD_TRACERS)&&(!PLOT_3D)) draw_tracers(phi, tracers, NSTEPS, 1, fade_value);
                 if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT_B, COLORBAR_RANGE_B, COLOR_PALETTE_B, CIRC_COLORBAR_B, 1, fade_value);   
@@ -2728,8 +2868,9 @@ void animation()
             else for (i=0; i<END_FRAMES; i++) 
             {
                 fade_value = 1.0 - (double)i/(double)END_FRAMES;
-                draw_wave_rde(0, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 1, fade_value, 0);
+                draw_wave_rde(NSTEPS, 0, phi, xy_in, rde, wsphere, wsphere_hr, potential_field, ZPLOT, CPLOT, COLOR_PALETTE, 1, fade_value, 0);
                 if ((ADD_TRACERS)&&(!PLOT_3D)) draw_tracers(phi, tracers, NSTEPS, 1, fade_value);
+                if (PRINT_PARAMETERS) print_parameters(phi, rde, xy_in, time, PRINT_LEFT, viscosity_printed, noise);
                 if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, CIRC_COLORBAR, 1, fade_value); 
                 glutSwapBuffers();
                 save_frame_counter(NSTEPS + 1 + counter + i);

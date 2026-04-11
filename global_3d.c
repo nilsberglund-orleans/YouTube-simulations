@@ -16,6 +16,8 @@
 #define E_KURAMOTO_SPHERE 91    /* Kuramoto on the sphere, with cubic grid */
 #define E_KELLER_SEGEL 10   /* Keller-Segel model */
 #define E_KELLER_SEGEL_SPHERE 11    /* Keller-Segel model on the sphere, cubic grid */
+#define E_GRAY_SCOTT 12     /* Gray-Scott model */
+#define E_GRAY_SCOTT_SPHERE 121  /* Gray-Scott model on the sphere, cubic grid */
 
 /* Choice of potential */
 
@@ -102,7 +104,7 @@
 #define RDE_PLANET (((ADAPT_STATE_TO_BC)&&((OBSTACLE_GEOMETRY == D_SPHERE_EARTH)||(OBSTACLE_GEOMETRY == D_SPHERE_MARS)||(OBSTACLE_GEOMETRY == D_SPHERE_VENUS))))
 // #define RDE_PLANET (((ADAPT_STATE_TO_BC)&&((OBSTACLE_GEOMETRY == D_SPHERE_EARTH)||(OBSTACLE_GEOMETRY == D_SPHERE_MARS)||(OBSTACLE_GEOMETRY == D_SPHERE_VENUS)))||((RDE_EQUATION == E_SHALLOW_WATER)&&(SWATER_DEPTH == SH_EARTH)))
 
-#define NMAXCIRC_SPHERE 100     /* max number of circles on sphere */
+#define NMAXCIRC_SPHERE 1000     /* max number of circles on sphere */
 #define NMAX_TRACER_PTS 20      /* max number of tracer points recorded per cell */
 #define NMAX_SPHERE_NEIGHB 10    /* max number of neighbours in Poisson simulation grid */
 
@@ -157,6 +159,7 @@ typedef struct
     double depth;               /* water depth */
     double cos_depth_angle;     /* cos of angle of depth profile */
     double gradx, grady;        /* gradient of water depth */
+    double time;                /* time when threshold is reached */
     short int tracer;           /* has value 1 if cell contains a tracer */
     short int n_tracer_pts;     /* number of recorded tracer points per cell */
     double tracerx[NMAX_TRACER_PTS], tracery[NMAX_TRACER_PTS];    /* coordinates of tracer */
@@ -195,6 +198,7 @@ typedef struct
     int convert_grid;           /* convert field from simulation grid to longitude-latitude */
     short int edge;             /* has value 1 on edges of cubic simulation grid */
     double cos_grid, sin_grid;  /* cosine and sine of grid angle */
+    double laplace_weight;      /* weight for adjusted Laplacian */
 } t_wave_sphere;
 
 

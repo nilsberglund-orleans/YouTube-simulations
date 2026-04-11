@@ -15,7 +15,7 @@
 
 #define NMAXCIRCLES 200000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define MAXNEIGH 20         /* max number of neighbours kept in memory */
-#define NMAXOBSTACLES 5000  /* max number of obstacles */
+#define NMAXOBSTACLES 10000  /* max number of obstacles */
 #define NMAXSEGMENTS 1200   /* max number of repelling segments */
 #define NMAXGROUPS 100      /* max number of groups of segments */
 #define NMAXCOLLISIONS 200000   /* max number of collisions */
@@ -26,7 +26,7 @@
 #define NMAXSHOVELS 50      /* max number of shovels */
 #define NMAX_TRIANGLES_PER_OBSTACLE 10  /* max number of triangles per obstacle */
 #define NMAX_TRIANGLES_PER_FACET 4  /* max number of triangles per facet between obstacles */
-#define NMAX_ABSORBERS 10   /* max number of absorbing discs */
+#define NMAX_ABSORBERS 100   /* max number of absorbing discs */
 
 #define C_SQUARE 0          /* square grid of circles */
 #define C_HEX 1             /* hexagonal/triangular grid of circles */
@@ -88,6 +88,7 @@
 #define S_RECTANGLE 0       /* segments forming a rectangle */
 #define S_CYLINDRICAL 100   /* two lines at top and bottom */
 #define S_BOTTOM 110        /* one line at bottom */
+#define S_VERTICAL 111      /* vertical double line */
 #define S_CUP 1             /* segments forming a cup (for increasing gravity) */
 #define S_HOURGLASS 2       /* segments forming an hour glass */
 #define S_PENTA 3           /* segments forming a pentagon with 3 angles of 120° and 2 right angles */
@@ -347,6 +348,12 @@
 #define IP_X 0      /* color depends on x coordinate of initial position */
 #define IP_Y 1      /* color depends on y coordinate of initial position */
 
+/* Position-dependent initial conditions (for POSITION_DEPENDENT_TYPE) */
+
+#define PDIC_TWO 1        /* two layers */
+#define PDIC_THREE 2      /* three layers */
+#define PDIC_MASSY 3      /* mass depends on y coordinate*/
+
 /* Space dependence of electric field */
 
 #define EF_CONST 0  /* constant magnetic field */
@@ -396,6 +403,7 @@
 #define BG_POS_OBSTACLES 8  /* background color depends on displacement of obstacles */
 #define BG_CURRENTX 9       /* background color depends on x-component of current */
 #define BG_DIRECTION 10     /* background color depends on particle orientation */
+#define BG_POTENTIAL 12     /* potential added to sphere */
 
 /* Obstacle color schemes */
 
@@ -422,6 +430,18 @@
 #define AP_CUBE 2       /* absorbers on the vertices of a cube */
 #define AP_DODECA 3     /* absorbers on the vertices of a dodecahedron */
 #define AP_ICOSA 4      /* absorbers on the vertices of an icosahedron */
+#define AP_PDISC 9      /* Poisson disc process */
+#define AP_POLES 10     /* absorbers at the North and South pole */
+
+/* Type of sphere potential */
+
+#define SPP_WELLS 0      /* potential wells located at points in table wells[] */
+#define SPP_CUBE 1       /* potential having shape of a cube */
+
+/* Type of sphere gravity */
+
+#define SG_POLAR 1       /* gravity moving from pole to pole */
+#define SG_EQUATOR 2     /* gravity moving along equator */
 
 /* Color schemes */
 
@@ -706,6 +726,7 @@ typedef struct
     double fboundary;           /* boundary force */
     double pressure;            /* pressure */
     double gravity;             /* gravity */
+    double g_angle;             /* angle of gravity (for sphere) */
     double radius;              /* particle radius */
     double angle;               /* orientation of obstacle */
     double omega;               /* angular speed of obstacle */
@@ -714,6 +735,7 @@ typedef struct
     double prop;                /* proportion of types */
     double thermo_radius;       /* radius of thermostat region */
     double current;             /* electrical current */
+    double omega_sphere;        /* angular frequency of rotating sphere */
 } t_lj_parameters;
 
 
@@ -725,12 +747,16 @@ typedef struct
     double reg_cottheta;        /* regularized cotangent of theta */
     double x, y, z;             /* x, y, z coordinates of point on sphere */
     double radius;              /* radius with wave height */
+    double initial_radius;      /* radius before particles are added */
     double r, g, b;             /* RGB values for image */
     double cos_angle;           /* cosine of light angle */
     double cos_angle_sphere;    /* cosine of light angle for perfect sphere */
+    double cos_angle_pot;       /* cosine of light angle for 2D potential */
+    double potential;           /* value of potential */
+    double nablax, nablay;      /* gradient of potential */
     short int locked;           /* has value 1 if color of pixel is fixed */
 } t_lj_sphere;
 
-int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0, nbelts = 0, n_tracers = 0, n_otriangles = 0, n_ofacets = 0, nabsorbers = 0;
+int frame_time = 0, ncircles, nobstacles, nsegments, ngroups = 1, counter = 0, nmolecules = 0, nbelts = 0, n_tracers = 0, n_otriangles = 0, n_ofacets = 0, nabsorbers = 0, nwells = 0;
 FILE *lj_log;
 

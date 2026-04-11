@@ -146,6 +146,7 @@
 #define D_DISC_WAVEGUIDE_ELLIPSE 982     /* an ellipse with a shifted attached waveguide */
 #define D_WAVEGUIDE_ELLIPSE_OBLIQUE 983     /* an ellipse with an angled attached waveguide */
 #define D_CIRCLE_PAIRS 99       /* pairs of circles connected by channels */
+#define D_CIRCLE_POLYGON 991    /* circles connected to polygons by channels */
 
 /* for wave_sphere.c */
 
@@ -208,6 +209,8 @@
 #define C_SPH_ICOSA 31      /* icosahedron (on sphere) */
 #define C_SPH_OCTA 32       /* octahedron (on sphere) */
 #define C_SPH_CUBE 33       /* cube (on sphere) */
+#define C_SPH_CUBE_B 34     /* rotated cube (on sphere) */
+#define C_SPH_POISSON 35    /* Poisson process (on sphere) */
 
 #define C_ONE 97            /* one single circle, as for Sinai */
 #define C_TWO 98            /* two concentric circles of different type */
@@ -414,6 +417,9 @@
 #define Z_SWATER_HEIGHT 70           /* height */
 #define Z_SWATER_SPEED 71            /* speed */
 #define Z_SWATER_DIRECTION_SPEED 74  /* hue for direction of velocity, luminosity for speed */
+
+/* for Gray-Scott model */
+#define Z_TIME_SLICE 80           /* first time field 0 reaches threshold */
 
 /* special boundary conditions for Euler equation */
 #define BCE_TOPBOTTOM 1         /* special flow at top and bottom */

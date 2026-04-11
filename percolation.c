@@ -111,6 +111,7 @@
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
+#define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
 
 #define HUE_CLOSED 350.0   /* color hue of closed cells */
 #define HUE_OPEN 200.0     /* color hue of open (dry) cells */

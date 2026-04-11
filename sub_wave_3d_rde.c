@@ -98,6 +98,303 @@ void init_wave_sphere_rde(t_wave_sphere *wsphere, int res)
     }
 }
 
+double dist_sphere(double phi1, double theta1, double phi2, double theta2)
+/* returns angle between points given in spherical coordinates */
+{
+    double dist;
+    
+    dist = sin(theta1)*sin(theta2)*cos(phi1 - phi2);
+    dist += cos(theta1)*cos(theta2);
+                
+    return(acos(dist));
+}
+
+
+int generate_poisson_sample_sphere(double dpoisson, int nmaxpoints, double *px, double *py)
+/* generate a Poisson disc sample on the sphere */
+{
+    int i, j, k, n_p_active, ncandidates=500, naccepted, p, q, npoints; 
+    double r, phi, x, y, z, x1, y1, z1, x2, y2, distance, dist1, polar_padding;
+    short int active_poisson[NX*NY], far;
+    
+    printf("Generating Poisson disc sample\n");
+    /* generate first point */
+    px[0] = DPI*(double)rand()/RAND_MAX;
+    py[0] = polar_padding + (PI - 2.0*polar_padding)*(double)rand()/RAND_MAX;
+    active_poisson[0] = 1;
+    n_p_active = 1;
+    npoints = 1;
+    
+    polar_padding = dpoisson;
+            
+    while ((n_p_active > 0)&&(npoints < nmaxpoints))
+    {
+        /* randomly select an active circle */
+        i = rand()%(npoints);
+        while (!active_poisson[i]) i = rand()%(npoints);                 
+        /* generate new candidates */
+        naccepted = 0;
+        for (j=0; j<ncandidates; j++)
+        {
+            r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
+            phi = DPI*(double)rand()/RAND_MAX;
+            
+            /* random point centered at north pole */
+            x = sin(r)*cos(phi);
+            y = sin(r)*sin(phi);
+            z = cos(r);
+            
+            /* rotation by theta = py[i] */
+            x1 = x*cos(py[i]) + z*sin(py[i]);
+            y1 = y;
+            z1 = -x*sin(py[i]) + z*cos(py[i]);
+            
+            /* rotation by phi = px[i] */
+            x2 = x1*cos(px[i]) - y1*sin(px[i]);
+            y2 = x1*sin(px[i]) + y1*cos(px[i]);
+            
+            y = acos(z1);
+            x = argument(x2, y2);
+            if (x < 0.0) x += DPI;
+            
+//             printf("current point (%.3lg, %.3lg), new point (%.3lg, %.3lg), distance = %.3lg\n", px[i], py[i], x, y, dist_sphere(x, y, px[i], py[i])); 
+            
+//             x = px[i] + r*cos(phi);
+//             y = py[i] + r*sin(phi);
+//             if (x > DPI) x -= DPI;
+//             if (x < 0.0) x += DPI;
+//             
+//             far = 1;
+//             if (y > PI - polar_padding) far = 0;
+//             if (y < polar_padding) far = 0;
+            
+            far = 1;
+            dist1 = 10.0;
+            for (k=0; k<npoints; k++) /*if ((k!=i))*/
+            {
+                /* new point is far away from point k */
+                distance = dist_sphere(x, y, px[k], py[k]);
+                far = far*(distance >= dpoisson);
+                if (distance < dist1) dist1 = distance;
+            }
+            if ((far)&&(npoints < nmaxpoints))    /* accept new point */
+            {
+                printf("New grid point at (%.3f,%.3f) accepted\n", x, y);
+                printf("Minimal distance = %.3lg\n", dist1); 
+                printf("%i grid points generated\n", npoints);
+                px[npoints] = x;
+                py[npoints] = y;
+                active_poisson[npoints] = 1;
+                npoints++;
+                n_p_active++;
+                naccepted++;
+            }
+        }
+        if (naccepted == 0)    /* inactivate circle i */ 
+        {
+            active_poisson[i] = 0;
+            n_p_active--;
+        }
+         
+        printf("%i active points\n", n_p_active);
+    }
+            
+    printf("Generated %i points\n", npoints);
+    return(npoints);
+}
+
+
+int init_circle_sphere(t_circles_sphere *circles, int circle_pattern)
+/* initialise circles on sphere */
+/* for billiard shape D_SPHERE_CIRCLES */
+{
+    int ncircles, k;
+    double alpha, beta, gamma;
+    double px[NMAXCIRC_SPHERE], py[NMAXCIRC_SPHERE];
+    
+    switch (circle_pattern) {
+        case (C_SPH_DODECA):
+        {
+            alpha = acos(sqrt(5.0)/3.0);
+            beta = acos(1.0/3.0);
+            gamma = asin(sqrt(3.0/8.0));
+            
+            circles[0].theta = 0.0;
+            circles[0].phi = 0.0;
+            
+            for (k=0; k<3; k++)
+            {
+                circles[1+k].theta = alpha;
+                circles[1+k].phi = (double)k*DPI/3.0;
+            }
+
+            for (k=0; k<3; k++)
+            {
+                circles[4+k].theta = beta;
+                circles[4+k].phi = (double)k*DPI/3.0 + gamma;
+                circles[7+k].theta = beta;
+                circles[7+k].phi = (double)k*DPI/3.0 - gamma;
+            }
+            
+            for (k=0; k<3; k++)
+            {
+                circles[10+k].theta = PI - beta;
+                circles[10+k].phi = (double)k*DPI/3.0 + PI/3.0 + gamma;
+                circles[13+k].theta = PI - beta;
+                circles[13+k].phi = (double)k*DPI/3.0 + PI/3.0 - gamma;
+            }
+
+            for (k=0; k<3; k++)
+            {
+                circles[16+k].theta = PI - alpha;
+                circles[16+k].phi = (double)k*DPI/3.0 + PI/3.0;
+            }
+            
+            circles[19].theta = PI;
+            circles[19].phi = 0.0;
+
+            for (k=0; k<20; k++)
+            {
+                circles[k].radius = MU;
+                circles[k].x = sin(circles[k].theta)*cos(circles[k].phi);
+                circles[k].y = sin(circles[k].theta)*sin(circles[k].phi);
+                circles[k].z = cos(circles[k].theta);
+            }
+            
+            ncircles = 20;
+            break;
+        }
+        case (C_SPH_ICOSA):
+        {
+            alpha = acos(1.0/sqrt(5.0));
+            
+            circles[0].theta = 0.0;
+            circles[0].phi = 0.0;
+       
+            for (k=0; k<5; k++)
+            {
+                circles[1+k].theta = alpha;
+                circles[1+k].phi = (double)k*DPI/5.0;
+            }
+            
+            for (k=0; k<5; k++)
+            {
+                circles[6+k].theta = PI - alpha;
+                circles[6+k].phi = (double)k*DPI/5.0 + PI/5.0;
+            }
+
+            circles[11].theta = PI;
+            circles[11].phi = 0.0;
+
+            for (k=0; k<12; k++) 
+            {
+                circles[k].radius = MU;
+                circles[k].x = sin(circles[k].theta)*cos(circles[k].phi);
+                circles[k].y = sin(circles[k].theta)*sin(circles[k].phi);
+                circles[k].z = cos(circles[k].theta);
+            }
+            
+            ncircles = 12;
+            break;
+        }
+        case (C_SPH_OCTA):
+        {
+            circles[0].theta = 0.0;
+            circles[0].phi = 0.0;
+       
+            for (k=0; k<4; k++)
+            {
+                circles[1+k].theta = PID;
+                circles[1+k].phi = (double)k*PID;
+            }
+            
+            circles[5].theta = PI;
+            circles[5].phi = 0.0;
+
+            for (k=0; k<6; k++) 
+            {
+                circles[k].radius = MU;
+                circles[k].x = sin(circles[k].theta)*cos(circles[k].phi);
+                circles[k].y = sin(circles[k].theta)*sin(circles[k].phi);
+                circles[k].z = cos(circles[k].theta);
+            }
+            
+            ncircles = 6;
+            break;
+        }
+        case (C_SPH_CUBE):
+        {
+            alpha = acos(1.0/3.0);
+            
+            circles[0].theta = 0.0;
+            circles[0].phi = 0.0;
+       
+            for (k=0; k<3; k++)
+            {
+                circles[1+k].theta = alpha;
+                circles[1+k].phi = (double)k*DPI/3.0;
+                circles[4+k].theta = PI - alpha;
+                circles[4+k].phi = (double)k*DPI/3.0 + PI/3.0;
+            }
+            
+            circles[7].theta = PI;
+            circles[7].phi = 0.0;
+
+            for (k=0; k<8; k++) 
+            {
+                circles[k].radius = MU;
+                circles[k].x = sin(circles[k].theta)*cos(circles[k].phi);
+                circles[k].y = sin(circles[k].theta)*sin(circles[k].phi);
+                circles[k].z = cos(circles[k].theta);
+            }
+            
+            ncircles = 8;
+            break;
+        }
+        case (C_SPH_CUBE_B):
+        {
+            alpha = acos(1.0/sqrt(3.0));
+                   
+            for (k=0; k<4; k++)
+            {
+                circles[k].theta = alpha;
+                circles[k].phi = ((double)k + 0.5)*PID;
+                circles[4+k].theta = PI - alpha;
+                circles[4+k].phi = ((double)k + 0.5)*PID;
+            }
+            
+            for (k=0; k<8; k++) 
+            {
+                circles[k].radius = MU;
+                circles[k].x = sin(circles[k].theta)*cos(circles[k].phi);
+                circles[k].y = sin(circles[k].theta)*sin(circles[k].phi);
+                circles[k].z = cos(circles[k].theta);
+            }
+            
+            ncircles = 8;
+            break;
+        }
+        case (C_SPH_POISSON):
+        {
+            ncircles = generate_poisson_sample_sphere(PDISC_DISTANCE, NMAXCIRC_SPHERE, px, py);
+            for (k=0; k<ncircles; k++) 
+            {
+                circles[k].phi = px[k];
+                circles[k].theta = py[k];
+                circles[k].radius = MU;
+                circles[k].x = sin(circles[k].theta)*cos(circles[k].phi);
+                circles[k].y = sin(circles[k].theta)*sin(circles[k].phi);
+                circles[k].z = cos(circles[k].theta);
+            }
+            break;
+        }
+        default: 
+        {
+            printf("Function init_circle_sphere not defined for this pattern \n");
+        }
+    }
+    return(ncircles);
+}
 
 void read_negative_dem_values_rde(double *height_values, t_wave_sphere *wsphere)
 /* init bathymetric data */

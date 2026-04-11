@@ -342,6 +342,15 @@ void draw_circle_precomp(double x, double y, double r)
     glEnd();
 }
 
+void draw_ellipse_precomp(double x, double y, double rx, double ry)
+{
+    int i;
+        
+    glBegin(GL_LINE_LOOP);
+    for (i=0; i<=NSEG; i++) glVertex2d(x + rx*cosangle[i], y + ry*sinangle[i]);
+    glEnd();
+}
+
 void draw_colored_circle_precomp(double x, double y, double r, double rgb[3])
 {
     int i;
@@ -565,7 +574,7 @@ int generate_poisson_discs(t_point *point, int nmax, double xmin, double xmax, d
 /* generate a Poisson disc sample in a given rectangle */
 {
     int i, j, k, n_p_active, ncandidates=PDISC_CANDIDATES, naccepted, npoints; 
-    double r, phi, x, y;
+    double r, phi, x, y, z, x1, y1, z1, x2, y2;
     short int active_poisson[nmax], far;
     
     printf("Generating Poisson disc sample\n");
@@ -587,8 +596,32 @@ int generate_poisson_discs(t_point *point, int nmax, double xmin, double xmax, d
         {
             r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
             phi = DPI*(double)rand()/RAND_MAX;
-            x = point[i].xc + r*cos(phi);
-            y = point[i].yc + r*sin(phi);
+            
+            if (sphere)
+            {
+                /* random point centered at north pole */
+                x = sin(r)*cos(phi);
+                y = sin(r)*sin(phi);
+                z = cos(r);
+            
+                /* rotation by theta = point[i].yc */
+                x1 = x*cos(point[i].yc) + z*sin(point[i].yc);
+                y1 = y;
+                z1 = -x*sin(point[i].yc) + z*cos(point[i].yc);
+            
+                /* rotation by phi = point[i].xc */
+                x2 = x1*cos(point[i].xc) - y1*sin(point[i].xc);
+                y2 = x1*sin(point[i].xc) + y1*cos(point[i].xc);
+            
+                y = acos(z1);
+                x = argument(x2, y2);
+                if (x < 0.0) x += DPI;
+            }
+            else
+            {
+                x = point[i].xc + r*cos(phi);
+                y = point[i].yc + r*sin(phi);
+            }
             far = 1;
             for (k=0; k<npoints; k++) if ((k!=i))
             {
@@ -3233,6 +3266,23 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
             }
             break;
         }
+        case (S_VERTICAL):
+        {
+            width = MU;
+            
+            add_rectangle_to_segments(-width, YMAX, width, YMIN, segment, 0); 
+            add_rectangle_to_segments(XMAX-width, YMAX, XMAX+width, YMIN, segment, 0); 
+            
+            cycle = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].concave = 0;
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
         case (S_CUP):
         {
             angle = APOLY*PID;
@@ -5786,7 +5836,7 @@ int compute_particle_interaction(int i, int k, double force[2], double *torque, 
         {
             charge = particle[i].charge*particle[k].charge;
             f = -KCOULOMB_FACTOR*krepel*charge/(1.0e-12 + distance*distance);
-            if (charge <= 0.0) 
+            if ((charge <= 0.0)||(COULOMB_ALWAYS_REPEL))
                 f1 = COULOMB_LJ_FACTOR*krepel*lennard_jones_force(distance, particle[k]);
             else f1 = 0.0;
             force[0] = f1*ca - f*sa;
@@ -8130,7 +8180,12 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     }
     else if (cont) 
     {
-        if (nsides == NSEG) draw_colored_circle_precomp(xc1, yc1, radius, rgb);
+        if (nsides == NSEG) 
+        {
+            if ((SPHERE)&&(DRAW_ELLIPSES_ON_SPHERE))
+                draw_colored_ellipse_precomp(xc1, yc1, radius/(sin(yc1) + SIN_THETA_REG), radius, rgb);
+            else draw_colored_circle_precomp(xc1, yc1, radius, rgb);
+        }
         else draw_colored_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID, rgb);
     }
     
@@ -8193,7 +8248,12 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
     }
     else if (cont) 
     {
-        if (nsides == NSEG) draw_circle_precomp(xc1, yc1, radius);
+        if (nsides == NSEG) 
+        {
+            if ((SPHERE)&&(DRAW_ELLIPSES_ON_SPHERE))
+                draw_ellipse_precomp(xc1, yc1, radius/(sin(yc1) + SIN_THETA_REG), radius);
+            else draw_circle_precomp(xc1, yc1, radius);
+        }
         else draw_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID); 
     }
     
@@ -8786,44 +8846,12 @@ void draw_background(t_particle particle[NMAXCIRCLES], t_segment segment[NMAXSEG
     double rgb[3], hue, value, p1, p2, pp1, pp2, oldhue, valx, valy, lum;
     static int first = 1, counter = 0;
     static double area_factor;
-    
-//     if (first)
-//     {
-//         area_factor = hashgrid[mhash(0,HASHY/2)].area;
-//         first = 0;
-//     }
-    
-//     p1 = 0.75;
-//     p2 = 1.0 - p1;
-// //     pp1 = 0.95;
-//     pp1 = 0.99;
-//     pp2 = 1.0 - pp1;
-   
+      
     glBegin(GL_QUADS);
     for (i=0; i<HASHX; i++)
         for (j=0; j<HASHY; j++)
         {
             n = mhash(i, j);
-//             if (first) 
-//             {
-//                 hashgrid[n].hue1 = 180.0;
-//                 hashgrid[n].hue2 = 180.0;
-//             }
-//             /* set two old values for option DOUBLE_MOVIE */
-//             if (DOUBLE_MOVIE)
-//             {
-//                 if (counter) oldhue = hashgrid[n].hue1;
-//                 else oldhue = hashgrid[n].hue2;
-//             }
-//             else oldhue = hashgrid[n].hue1;
-            
-            
-//             if (DOUBLE_MOVIE)
-//             {
-//                 if (counter) hashgrid[n].hue1 = hue;
-//                 else hashgrid[n].hue2 = hue;
-//             }
-//             else hashgrid[n].hue1 = hue;
             
             glColor3f(hashgrid[n].r, hashgrid[n].g, hashgrid[n].b);
             glVertex2d(hashgrid[n].x1, hashgrid[n].y1);
@@ -8832,10 +8860,51 @@ void draw_background(t_particle particle[NMAXCIRCLES], t_segment segment[NMAXSEG
             glVertex2d(hashgrid[n].x1, hashgrid[n].y2);
         }
     glEnd();
-//     first = 0;
-//     counter = 1 - counter;
 }
 
+void draw_potential(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
+/* color background according to potential on sphere */
+{
+    int i, j, k, cell, res = 3;
+    double pot, value, phi, theta, hue, rgb[3];
+    static double dphi, dtheta, dphi_res, dtheta_res;
+    static int first = 1;
+    
+    if (first)
+    {
+        dphi = (XMAX-XMIN)/(double)NX_SPHERE;
+        dtheta = (YMAX-YMIN)/(double)NY_SPHERE;
+        dphi_res = (double)res*dphi;
+        dtheta_res = (double)res*dtheta;
+        first = 0;
+    }
+    
+    glBegin(GL_QUADS);
+    for (i=0; i<NX_SPHERE; i+=res)
+        for (j=0; j<NY_SPHERE; j+=res)
+        {
+            cell = i*NY_SPHERE + j;
+            pot = wsphere[cell].potential;
+            value = atan(BG_POTENTIAL_SLOPE*pot)/PI + 0.5;
+//             value = 0.5*(tanh(BG_POTENTIAL_SLOPE*pot)/PI + 1.0);
+            hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*value;
+            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+            
+            if (SHADE_BG_COLOR_2D) 
+                for (k=0; k<3; k++) rgb[k] *= wsphere[cell].cos_angle_pot;
+                
+            
+            phi = XMIN + (double)i*dphi;
+            theta = YMIN + (double)j*dtheta;
+            
+            glColor3f(rgb[0], rgb[1], rgb[2]);
+            glVertex2d(phi, theta);
+            glVertex2d(phi + dphi_res, theta);
+            glVertex2d(phi + dphi_res, theta + dtheta_res);
+            glVertex2d(phi, theta + dtheta_res);
+        }
+    glEnd();
+}
 
 void draw_particles(t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRCLES], int plot, double beta, t_collision *collisions, int ncollisions, int bg_color, t_hashgrid hashgrid[HASHX*HASHY], t_lj_parameters params)
 {
@@ -8869,7 +8938,7 @@ void draw_particles(t_particle particle[NMAXCIRCLES], t_cluster cluster[NMAXCIRC
                     else hue = PARTICLE_HUE_MIN - (PARTICLE_HUE_MIN - PARTICLE_HUE_MAX)*logratio;
                 }
                 else hue = 0.25*PARTICLE_HUE_MIN + 0.75*PARTICLE_HUE_MAX;
-                erase_area_hsl_turbo(0.0, YMIN, 2.0*PARTIAL_THERMO_WIDTH, PARTIAL_THERMO_HEIGHT*(YMAX - YMIN),  hue, 0.9, 0.15);
+                erase_area_hsl_turbo(0.5*(XMIN + XMAX), YMIN, 2.0*PARTIAL_THERMO_WIDTH, PARTIAL_THERMO_HEIGHT*(YMAX - YMIN),  hue, 0.9, 0.15);
                 break;
             }
             case(TH_LAYER): 
@@ -10055,6 +10124,13 @@ void print_parameters(t_lj_parameters params, short int left, double pressure[N_
         sprintf(message, "B field = %.2f", 25.0*NVID*DT_PARTICLE*params.bfield);
         write_text(xtext + 0.08, y, message);
     }   
+    if (CHANGE_OMEGA_SPHERE)    /* print angular frequency of sphere */
+    {
+        erase_area_hsl(xbox, y + 0.025*scale, 0.27*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        sprintf(message, "Omega = %.2f", params.omega_sphere);
+        write_text(xtext + 0.08, y, message);
+    }   
     
     if (PRINT_NPARTICLES)   /* print number of particles */
     {
@@ -10135,10 +10211,20 @@ void print_parameters(t_lj_parameters params, short int left, double pressure[N_
         erase_area_hsl(xmid, y + 0.025*scale, 0.22*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
         sprintf(message, "Gravity %.2f", params.gravity/GRAVITY);
-//         write_text(xmidtext + 0.1, y, message);
         write_text(xmidtext, y, message);
+        y -= 0.1;
     } 
     
+    if (SPHERE_GRAVITY > 0)
+    {
+        erase_area_hsl(xmid, y + 0.025*scale, 0.22*scale, 0.05*scale, 0.0, 0.9, 0.0);
+        glColor3f(1.0, 1.0, 1.0);
+        if (SPHERE_GRAVITY == 1)
+            sprintf(message, "g angle %.2f", params.g_angle*180.0/PI - 90.0);
+        else sprintf(message, "g angle %.2f", params.g_angle*180.0/PI);
+        write_text(xmidtext, y, message);
+    } 
+
     if (CHANGE_RADIUS)
     {
         erase_area_hsl(xmid, y + 0.025*scale, 0.3*scale, 0.05*scale, 0.0, 0.9, 0.0);
@@ -11685,7 +11771,7 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
 /* initialize all particles, obstacles, and the hashgrid */
 {
     int i, j, k, n, type, nactive = 0, hashcell;
-    double x, y, h, xx, yy, rnd, angle, dx, dy;
+    double x, y, h, xx, yy, rnd, angle, dx, dy, mratio;
     
     printf("Initializing configuration\n");
     
@@ -11939,13 +12025,57 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
 //     }
     
     /* position-dependent particle type */
-    if (POSITION_DEPENDENT_TYPE) for (i=0; i<ncircles; i++)
-        if (((!POSITION_Y_DEPENDENCE)&&((particle[i].xc - POSITION_DEP_X)*POSITION_DEP_SIGN < 0.0))||((POSITION_Y_DEPENDENCE)&&(particle[i].yc*POSITION_DEP_SIGN < 0.0))) 
+    switch (POSITION_DEPENDENT_TYPE) {
+        case (PDIC_TWO):
         {
-            particle[i].type = 2;
-            particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
-            particle[i].radius = MU_B;
+            for (i=0; i<ncircles; i++)
+            {
+                if (((!POSITION_Y_DEPENDENCE)&&((particle[i].xc - POSITION_DEP_X)*POSITION_DEP_SIGN < 0.0))||((POSITION_Y_DEPENDENCE)&&((particle[i].yc - POSITION_DEP_Y)*POSITION_DEP_SIGN < 0.0))) 
+                {
+                    particle[i].type = 2;
+                    particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
+                    particle[i].radius = MU_B;
+                }
+            }
+            break;
         }
+        case (PDIC_THREE):
+        {
+            for (i=0; i<ncircles; i++)
+            {
+                if (POSITION_Y_DEPENDENCE)
+                {
+                    if (particle[i].yc > POSITION_DEP_Y)
+                    {
+                        particle[i].type = 3;
+                        particle[i].mass_inv = 1.0/PARTICLE_MASS_C;
+                        particle[i].radius = MU_C;
+                    }
+                    else if (particle[i].yc > YMAX - POSITION_DEP_Y)
+                    {
+                        particle[i].type = 2;
+                        particle[i].mass_inv = 1.0/PARTICLE_MASS_B;
+                        particle[i].radius = MU_B;
+                    }
+                }
+                else
+                {
+                    /* TODO */
+                }
+            }
+            break;
+        }
+        case (PDIC_MASSY):
+        {
+            for (i=0; i<ncircles; i++)
+            {
+                mratio = (particle[i].yc - YMIN)/(YMAX - YMIN);
+                particle[i].mass_inv = 1.0/(PARTICLE_MASS*(1.0 + mratio*(POSITION_DEP_MASS_RATIO-1.0)));
+            }
+            break;
+        }
+        
+    }
         
     /* add copies in case of particle pairing */
     if (PAIR_PARTICLES) init_particle_pairs(particle, molecule);
@@ -12386,7 +12516,7 @@ int partial_thermostat_coupling(t_particle particle[NMAXCIRCLES], double xmin, t
 /* only couple particles satisfying condition PARTIAL_THERMO_REGION to thermostat */
 {
     int condition, i, nthermo = 0;
-    double x, y, height, a, b;
+    double x, y, height, a, b, xmid;
     static double maxheight;
     static int first = 1;
     
@@ -12430,7 +12560,8 @@ int partial_thermostat_coupling(t_particle particle[NMAXCIRCLES], double xmin, t
             {
                 x = particle[i].xc;
                 y = particle[i].yc;
-                condition = ((y < YMIN + PARTIAL_THERMO_HEIGHT*(YMAX - YMIN))&&(vabs(x) < PARTIAL_THERMO_WIDTH*XMAX));
+                xmid = 0.5*(XMIN + XMAX);
+                condition = ((y < YMIN + PARTIAL_THERMO_HEIGHT*(YMAX - YMIN))&&(vabs(x - xmid) < PARTIAL_THERMO_WIDTH*XMAX));
                 break;
             }
             case (TH_LAYER):
@@ -16964,6 +17095,23 @@ double efield_schedule(int i)
 }
 
 
+double omega_sphere_schedule(int i)
+{
+    static double omagafactor;
+    static int first = 1;
+    double omega;
+    
+    if (first) 
+    {
+        omagafactor = (OMEGA_SPHERE_FACTOR-1.0)/(double)(NSTEPS);
+        first = 0;
+    }
+    if (i < INITIAL_TIME) omega = OMEGA_SPHERE;
+    else omega = OMEGA_SPHERE*(1.0 + (double)(i-INITIAL_TIME)*omagafactor);
+    return(omega);
+}
+
+
 void draw_current_plot(double *currents, int i)
 /* draw plot of current vs E field */
 {
@@ -17705,18 +17853,19 @@ int wrap_particles_sphere_bc(t_particle particle[NMAXCIRCLES], t_molecule molecu
     return(move);
 }
 
-int init_absorbers(t_absorber absorber[NMAX_ABSORBERS])
+int init_absorbers(t_absorber absorber[NMAX_ABSORBERS], int pattern, double radius)
 /* initialise absorbing discs */
 {
-    int k, nabsorb = 0;
+    int k, nabsorb = 0, ndiscs;
     double alpha, beta, gamma;
+    t_point *point;
     
-    switch (ABSORBER_PATTERN) {
+    switch (pattern) {
         case (AP_ONE):
         {
             absorber[nabsorb].xc = ABSORBER_X;
             absorber[nabsorb].yc = ABSORBER_Y;
-            absorber[nabsorb].radius = ABSORBER_R;
+            absorber[nabsorb].radius = radius;
             nabsorb++;
             break;
         }
@@ -17724,11 +17873,23 @@ int init_absorbers(t_absorber absorber[NMAX_ABSORBERS])
         {
             absorber[nabsorb].xc = ABSORBER_X;
             absorber[nabsorb].yc = ABSORBER_Y;
-            absorber[nabsorb].radius = ABSORBER_R;
+            absorber[nabsorb].radius = radius;
             nabsorb++;
             absorber[nabsorb].xc = ABSORBER_X;
             absorber[nabsorb].yc = YMAX - ABSORBER_Y;
-            absorber[nabsorb].radius = ABSORBER_R;
+            absorber[nabsorb].radius = radius;
+            nabsorb++;
+            break;
+        }
+        case (AP_POLES):
+        {
+            absorber[nabsorb].xc = 0.0;
+            absorber[nabsorb].yc = 0.0;
+            absorber[nabsorb].radius = radius;
+            nabsorb++;
+            absorber[nabsorb].xc = 0.0;
+            absorber[nabsorb].yc = PI;
+            absorber[nabsorb].radius = radius;
             nabsorb++;
             break;
         }
@@ -17739,11 +17900,11 @@ int init_absorbers(t_absorber absorber[NMAX_ABSORBERS])
             {
                 absorber[nabsorb].xc = (double)k*PID;
                 absorber[nabsorb].yc = alpha;
-                absorber[nabsorb].radius = ABSORBER_R;
+                absorber[nabsorb].radius = radius;
                 nabsorb++;
                 absorber[nabsorb].xc = (double)k*PID;
                 absorber[nabsorb].yc = PI - alpha;
-                absorber[nabsorb].radius = ABSORBER_R;
+                absorber[nabsorb].radius = radius;
                 nabsorb++;
             }
             break;
@@ -17798,7 +17959,7 @@ int init_absorbers(t_absorber absorber[NMAX_ABSORBERS])
             
             for (k=0; k<nabsorb; k++) 
             {
-                absorber[k].radius = ABSORBER_R;
+                absorber[k].radius = radius;
                 absorber[k].xc += ABSORBER_X;
                 if (absorber[k].xc > DPI) absorber[k].xc -= DPI;
             }
@@ -17832,10 +17993,29 @@ int init_absorbers(t_absorber absorber[NMAX_ABSORBERS])
             
             for (k=0; k<nabsorb; k++) 
             {
-                absorber[k].radius = ABSORBER_R;
+                absorber[k].radius = radius;
                 absorber[k].xc += ABSORBER_X;
                 if (absorber[k].xc > DPI) absorber[k].xc -= DPI;
             }
+            break;
+        }
+        case (AP_PDISC):
+        {
+            point = (t_point *)malloc(NMAX_ABSORBERS*sizeof(t_point));
+            ndiscs = generate_poisson_discs(point, NMAX_ABSORBERS, PI+0.1, DPI-0.1, 0.1, PI-0.1, ABSORBER_PDIST, 1);
+            
+            for (k=0; k<ndiscs; k++) 
+            {
+                if ((point[k].xc > PI)&&(point[k].xc < DPI))
+                {
+                    absorber[nabsorb].xc = point[k].xc;
+                    absorber[nabsorb].yc = point[k].yc;
+                    absorber[nabsorb].radius = radius;
+                    nabsorb++;
+                }
+            }
+            
+            free(point);
             break;
         }
     }
@@ -17871,7 +18051,7 @@ void draw_frame_2d(int i, int plot, int bg_color, int ncollisions, int traj_posi
                 t_obstacle obstacle[NMAXOBSTACLES], t_segment segment[NMAXSEGMENTS], 
                 t_group_data *group_speeds, t_group_segments *segment_group, 
                 t_belt *conveyor_belt, int *tracer_n,
-                t_otriangle otriangle[NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES], t_ofacet ofacet[NMAXOBSTACLES], t_absorber absorber[NMAX_ABSORBERS])
+                t_otriangle otriangle[NMAX_TRIANGLES_PER_OBSTACLE*NMAXOBSTACLES], t_ofacet ofacet[NMAXOBSTACLES], t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], t_absorber absorber[NMAX_ABSORBERS])
 /* draw a movie frame */
 {
     printf("Drawing frame\n");
@@ -17879,8 +18059,9 @@ void draw_frame_2d(int i, int plot, int bg_color, int ncollisions, int traj_posi
     compute_all_particle_colors(particle, cluster, plot);
     if ((COLOR_BACKGROUND)&&(bg_color > 0)) 
     {
-        compute_background_color(particle, segment, obstacle, bg_color, hashgrid);
-        draw_background(particle, segment, obstacle, bg_color, hashgrid);
+        compute_background_color(particle, segment, obstacle, bg_color, hashgrid, wsphere);
+        if (bg_color == BG_POTENTIAL) draw_potential(wsphere);
+        else draw_background(particle, segment, obstacle, bg_color, hashgrid);
     }
     
 //     else if (!TRACER_PARTICLE) blank();
@@ -17934,7 +18115,7 @@ void draw_frame_3d(int i, int plot, int bg_color, int ncollisions, int traj_posi
     
     /* initialize background colors */
     if ((COLOR_BACKGROUND)&&(bg_color > 0))
-        compute_background_color(particle, segment, obstacle, bg_color, hashgrid);
+        compute_background_color(particle, segment, obstacle, bg_color, hashgrid, wsphere);
     
     /* compute all particle colors */
     compute_all_particle_colors(particle, cluster, plot);
@@ -17970,5 +18151,5 @@ void draw_frame(int i, int plot, int bg_color, int ncollisions, int traj_positio
     if (DRAW_SPHERE) draw_frame_3d(i, plot, bg_color, ncollisions, traj_position,
             traj_length, wall, pressure, pleft, pright, currents, particle_numbers, refresh, params, particle, cluster, collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet, wsphere, absorber);
     else draw_frame_2d(i, plot, bg_color, ncollisions, traj_position, traj_length, 
-            wall, pressure, pleft, pright, currents, particle_numbers, refresh, params, particle, cluster, collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet, absorber);
+            wall, pressure, pleft, pright, currents, particle_numbers, refresh, params, particle, cluster, collisions, hashgrid, trajectory, obstacle, segment, group_speeds, segment_group, conveyor_belt, tracer_n, otriangle, ofacet, wsphere, absorber);
 }

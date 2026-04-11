@@ -4,6 +4,8 @@ double intstep;   /* integration step */
 double intstep1;  /* integration step used in absorbing boundary conditions */
 double viscosity; /* viscosity (parameter in front of Laplacian) */
 double rpslzb = RPSLZB;    /* second parameter in Rock-Paper-Scissors-Lizard-Spock equation */
+double a_gs = A_GS;  /* first parameter in Gray-Scott model */
+double b_gs = B_GS;  /* second parameter in Gray-Scott model */
 double flow_speed;  /* flow speed for laminar boundary conditions in Euler equation */
 
 // double gaussian()
@@ -32,6 +34,7 @@ double flow_speed;  /* flow speed for laminar boundary conditions in Euler equat
 // 
 //     return X;
 // }
+
 
 void init_random(double mean, double amplitude, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* initialise field with gaussian at position (x,y) */
@@ -209,6 +212,48 @@ void add_random_onefield_smoothed(int field, double mean, double amplitude, doub
                 if (xy_in[i*NY+j]) 
                     phi[k][i*NY+j] += mean + random*wsphere[i*NY+j].stheta;
                 else phi[k][i*NY+j] = 0.0;
+            }
+        }
+    }
+    
+    printf("Fields initialised\n");
+}
+
+void init_random_zerosum(double mean, double amplitude, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise two fields randomly with u + v = 1 */
+{
+    int i, j, k, in;
+    double xy[2], dist2, module, phase, scale2;    
+
+    printf("Initialising xy_in\n");
+    #pragma omp parallel for private(i,j)
+    for (i=0; i<NX; i++)
+    {
+        if (i%100 == 0) printf("Column %i of %i\n", i, NX);
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+            if (SPHERE) xy_in[i*NY+j] = xy_in_billiard_sphere(i, j, wsphere);
+            else xy_in[i*NY+j] = xy_in_billiard(xy[0],xy[1]);
+//             xy_in[i*NY+j] = 1;
+        }
+    }
+    
+    printf("Initialising fields\n");
+    for (i=0; i<NX; i++)
+    {
+        if (i%100 == 0) printf("Field %i of %i, column %i of %i\n", k, NFIELDS, i, NX);
+        for (j=0; j<NY; j++)
+        {
+            if (xy_in[i*NY+j]) 
+            {
+                phi[0][i*NY+j] = mean + amplitude*(2.0*(double)rand()/RAND_MAX - 1.0);
+                phi[1][i*NY+j] = 1.0 - phi[0][i*NY+j];
+            }
+            else 
+            {
+                phi[0][i*NY+j] = 0.0;
+                phi[1][i*NY+j] = 1.0;
             }
         }
     }
@@ -1842,6 +1887,329 @@ void init_tidal_state(int add, double amp, double min, double *phi[NFIELDS], sho
     }
     
 }
+
+
+void init_gs_blob(double x, double y, double mean, double amplitude, double scalex, 
+                   double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise field with gaussian at position (x,y) */
+{
+    int i, j, k;
+    double xy[2], dist2, module, phase, scale2;    
+
+    scale2 = scalex*scalex;
+    printf("Initialising field\n");
+        
+    for (i=0; i<NX; i++)
+    {
+        if (i%100 == 0) printf("Field %i of %i, column %i of %i\n", k, NFIELDS, i, NX);
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+	    xy_in[i*NY+j] = 1;
+
+            dist2 = 0.5*(xy[0]-x)*(xy[0]-x) + (xy[1]-y)*(xy[1]-y);
+            
+            if (dist2 < scale2) module = 1.0;
+            else module = 0.0;
+
+            phi[0][i*NY+j] = module;
+            phi[1][i*NY+j] = 1.0 - 0.5*module;
+        }
+    }
+}
+
+void init_gs_blobs_hex(int nx, int ny, double amplitude, double scalex, double scaley, 
+                   double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise Gray-Scott model with grid of ellipses */
+{
+    int i, j, p, q;
+    double x, y, xy[2], distmin, dist2, module, scalex2, scaley2, dx, dy;    
+
+    scalex2 = scalex*scalex;
+    scaley2 = scaley*scaley;
+    dx = (XMAX - XMIN)/(double)nx;
+    dy = (YMAX - YMIN)/(double)ny;
+    printf("Initialising field\n");
+        
+    for (i=0; i<NX; i++)
+    {
+        if (i%100 == 0) printf("Fields, column %i of %i\n", i, NX);
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+	    xy_in[i*NY+j] = 1;
+            
+            distmin = 10.0;
+            for (p=0; p<nx+2; p++)
+                for (q=0; q<ny+2; q++)
+                {
+                    x = XMIN + ((double)p - 0.5)*dx;
+                    y = YMIN + ((double)q - 0.5)*dy;
+                    if (q%2 == 1) x += 0.5*dx;
+                    
+                    dist2 = (xy[0]-x)*(xy[0]-x)/scalex + (xy[1]-y)*(xy[1]-y)/scaley;
+                    if (dist2 < distmin) distmin = dist2;
+                }
+            
+            if (distmin < 1.0) module = 1.0;
+            else module = 0.0;
+
+            phi[0][i*NY+j] = module;
+            phi[1][i*NY+j] = 1.0 - 0.5*module;
+        }
+    }
+}
+
+void init_gs_blobs_square(int nx, int ny, double amplitude, double scalex, double scaley, 
+                   double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise Gray-Scott model with grid of ellipses */
+{
+    int i, j, p, q;
+    double x, y, xy[2], distmin, dist2, module, scalex2, scaley2, dx, dy;    
+
+    scalex2 = scalex*scalex;
+    scaley2 = scaley*scaley;
+    dx = (XMAX - XMIN)/(double)nx;
+    dy = (YMAX - YMIN)/(double)ny;
+    printf("Initialising field\n");
+        
+    for (i=0; i<NX; i++)
+    {
+        if (i%100 == 0) printf("Fields, column %i of %i\n", i, NX);
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+	    xy_in[i*NY+j] = 1;
+            
+            distmin = 10.0;
+            for (p=0; p<nx+2; p++)
+                for (q=0; q<ny+2; q++)
+                {
+                    x = XMIN + ((double)p - 0.5)*dx;
+                    y = YMIN + ((double)q - 0.5)*dy;
+                    
+                    dist2 = (xy[0]-x)*(xy[0]-x)/scalex + (xy[1]-y)*(xy[1]-y)/scaley;
+                    if (dist2 < distmin) distmin = dist2;
+                }
+            
+            if (distmin < 1.0) module = 1.0;
+            else module = 0.0;
+
+            phi[0][i*NY+j] = module;
+            phi[1][i*NY+j] = 1.0 - 0.5*module;
+        }
+    }
+}
+
+int generate_poisson_sample(double xmin, double xmax, double ymin, double ymax, double dpoisson, int nmaxpoints, double *px, double *py)
+/* generate a Poisson disc sample in a given rectangle */
+{
+    int i, j, k, n_p_active, ncandidates=500, naccepted, p, q, npoints; 
+    double r, phi, x, y, x1, y1, distance, dist1;
+    short int active_poisson[NX*NY], far;
+    
+    printf("Generating Poisson disc sample\n");
+    /* generate first point */
+    px[0] = xmin + (xmax - xmin)*(double)rand()/RAND_MAX;
+    py[0] = ymin + (ymax - ymin)*(double)rand()/RAND_MAX;
+    active_poisson[0] = 1;
+    n_p_active = 1;
+    npoints = 1;
+            
+    while ((n_p_active > 0)&&(npoints < nmaxpoints))
+    {
+        /* randomly select an active circle */
+        i = rand()%(npoints);
+        while (!active_poisson[i]) i = rand()%(npoints);                 
+        /* generate new candidates */
+        naccepted = 0;
+        for (j=0; j<ncandidates; j++)
+        {
+            r = dpoisson*(2.0*(double)rand()/RAND_MAX + 1.0);
+            phi = DPI*(double)rand()/RAND_MAX;
+            x = px[i] + r*cos(phi);
+            y = py[i] + r*sin(phi);
+            
+            far = 1;
+            dist1 = 10.0;
+            for (k=0; k<npoints; k++) /*if ((k!=i))*/
+            {
+                for (p=-1; p<2; p++)
+                    for (q=-1; q<2; q++)
+                    {
+                        /* new point is far away from point k */
+                        distance = module2(x - px[k] - (double)p*(XMAX-XMIN), y - py[k] - (double)q*(YMAX-YMIN));
+                        far = far*(distance >= dpoisson);
+                        if (distance < dist1) dist1 = distance;
+                    }
+            }
+            if ((far)&&(npoints < nmaxpoints))    /* accept new point */
+            {
+                printf("New grid point at (%.3f,%.3f) accepted\n", x, y);
+                printf("Minimal distance = %.3lg\n", dist1); 
+                printf("%i grid points generated\n", npoints);
+                px[npoints] = x;
+                py[npoints] = y;
+                active_poisson[npoints] = 1;
+                npoints++;
+                n_p_active++;
+                naccepted++;
+            }
+        }
+        if (naccepted == 0)    /* inactivate circle i */ 
+        {
+            active_poisson[i] = 0;
+            n_p_active--;
+        }
+         
+        printf("%i active points\n", n_p_active);
+    }
+            
+    printf("Generated %i points\n", npoints);
+    return(npoints);
+}
+
+
+
+
+void init_gs_blobs_poisson(double dpoisson, double nmax, double amplitude, double scalex, double scaley, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY])
+/* initialise Gray-Scott model with Poisson disc sample of ellipses */
+{
+    int i, j, k, npoints, p, q;
+    double x, y, xy[2], distmin, dist2, module, scalex2, scaley2, dx, dy;  
+    double *px, *py;
+    
+    px = (double *)malloc(nmax*sizeof(double));
+    py = (double *)malloc(nmax*sizeof(double));
+
+    scalex2 = scalex*scalex;
+    scaley2 = scaley*scaley;
+    printf("Initialising field\n");
+    
+    npoints = generate_poisson_sample(XMIN, XMAX, YMIN, YMAX, dpoisson, nmax, px, py);
+    
+    for (i=0; i<NX; i++)
+    {
+        if (i%100 == 0) printf("Fields, column %i of %i\n", i, NX);
+        for (j=0; j<NY; j++)
+        {
+            ij_to_xy(i, j, xy);
+	    xy_in[i*NY+j] = 1;
+            
+            distmin = 10.0;
+            for (k = 0; k < npoints; k++)
+            {
+                for (p=-1; p<2; p++)
+                    for (q=-1; q<2; q++)
+                    {
+                        x = px[k] + (double)p*(XMAX - XMIN);
+                        y = py[k] + (double)q*(YMAX - YMIN);
+                    
+                        dist2 = (xy[0]-x)*(xy[0]-x)/scalex + (xy[1]-y)*(xy[1]-y)/scaley;
+                        if (dist2 < distmin) distmin = dist2;
+                    }
+            }
+            
+            if (distmin < 1.0) module = 1.0;
+            else module = 0.0;
+
+            phi[0][i*NY+j] = module;
+            phi[1][i*NY+j] = 1.0 - 0.5*module;
+        }
+    }
+    
+    free(px);
+    free(py);
+}
+
+
+void init_gs_blobs_sphere(double amplitude, double scalex, double scaley, 
+                   double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY], int pattern)
+/* initialise Gray-Scott model with grid of ellipses */
+{
+    int i, j, p, q, nircles;
+    double x, y, xy[2], distmin, dist2, module, scalex2, scaley2, dx, dy, phix, thetay;    
+    t_circles_sphere circles[NMAXCIRC_SPHERE];
+
+//     scalex2 = scalex*scalex;
+//     scaley2 = scaley*scaley;
+    printf("Initialising field\n");
+    
+    for (i=0; i<NX*NY; i++)
+        xy_in[i] = 1;
+    
+    nircles = init_circle_sphere(circles, pattern);
+        
+    for (i=0; i<ngridpoints; i++)
+    {
+        if (i%10000 == 0) printf("Fields, point %i of %i\n", i, ngridpoints);
+//         xy_in[i] = 1;
+        
+        phix = wsphere[i].phigrid;
+        thetay = wsphere[i].thetagrid;
+            
+        distmin = 10.0;
+        for (p=0; p<nircles; p++)
+        {
+            x = circles[p].phi;
+            y = circles[p].theta;
+                
+            dist2 = dist_sphere(phix, thetay, x, y)/scalex;
+            if (dist2 < distmin) distmin = dist2;
+        }
+            
+        if (distmin < 1.0) module = 1.0;
+        else module = 0.0;
+
+        phi[0][i] = 0.0;
+        phi[1][i] = module*amplitude;
+        phi[2][i] = 1.0 - 0.5*module*amplitude;
+    }
+}
+
+
+void init_gs_rect_sphere(double amplitude, double phimin, double phimax, double thetamin, double thetamax, double *phi[NFIELDS], short int xy_in[NX*NY], t_wave_sphere wsphere[NX*NY], short int add)
+/* initialise Gray-Scott model with grid of ellipses */
+{
+    int i, j, p, q, nircles;
+    double x, y, xy[2], distmin, dist2, module, scalex2, scaley2, dx, dy, phix, thetay;    
+
+    printf("Initialising field\n");
+    
+    for (i=0; i<NX*NY; i++)
+        xy_in[i] = 1;
+    
+    if (add) for (i=0; i<ngridpoints; i++)
+    {
+        if (i%10000 == 0) printf("Fields, point %i of %i\n", i, ngridpoints);
+        
+        phix = wsphere[i].phigrid;
+        thetay = wsphere[i].thetagrid;
+            
+        if ((phix > phimin)&&(phix < phimax)&&(thetay > thetamin)&&(thetay < thetamax)) 
+        {
+            phi[0][i] = 0.0;
+            phi[1][i] = amplitude;
+            phi[2][i] = 1.0 - 0.5*amplitude;
+        }
+    }
+    else for (i=0; i<ngridpoints; i++)
+    {
+        if (i%10000 == 0) printf("Fields, point %i of %i\n", i, ngridpoints);
+        
+        phix = wsphere[i].phigrid;
+        thetay = wsphere[i].thetagrid;
+            
+        if ((phix > phimin)&&(phix < phimax)&&(thetay > thetamin)&&(thetay < thetamax)) module = 1.0;
+        else module = 0.0;
+        {
+            phi[0][i] = 0.0;
+            phi[1][i] = module*amplitude;
+            phi[2][i] = 1.0 - 0.5*module*amplitude;
+        }
+    }
+}
+
 
 double distance_to_segment(double x, double y, double x1, double y1, double x2, double y2)
 /* distance of (x,y) to segment from (x1,y1) to (x2,y2) */
@@ -4235,6 +4603,27 @@ void adjust_height(double *phi[NFIELDS], t_rde rde[NX*NY])
         }
 }
 
+void update_time_slice(int time, double *phi[NFIELDS], t_rde rde[NX*NY])
+/* adjust height of field */
+{
+    int i, j; 
+    static int first = 1;
+    
+    if (first)
+    {
+        #pragma omp parallel for private(i)
+        for (i=0; i<NX*NY; i++) rde[i].time = 1.0;
+        first = 0;
+    }
+    
+    #pragma omp parallel for private(i,j)
+    for (i=0; i<NX*NY; i++)
+    {
+        if (phi[0][i] < TIME_SLICE_THRESHOLD)
+            rde[i].time = 1.0 - (double)time/(double)NSTEPS;
+    }
+}
+
 void compute_direction(double *phi[NFIELDS], t_rde rde[NX*NY])
 /* compute the direction of a field */
 {
@@ -5958,6 +6347,12 @@ void compute_laplacian_grid(double phi_in[NX*NY], double phi_out[NX*NY], t_wave_
             phi_out[i] += phi_in[n];
         }
     }
+    
+    if (WEIGHT_GRID)
+    {
+        #pragma omp parallel for private(i)
+        for (i=0; i<ngridpoints; i++) phi_out[i] *= wsphere[i].laplace_weight;
+    }
 }
 
 
@@ -6781,7 +7176,11 @@ void compute_field_color_rde(double value, int cplot, int palette, double rgb[3]
             hsl_to_rgb_palette(value, 0.9, 0.5, rgb, palette);
             break;
         }
-        
+        case (Z_TIME_SLICE):
+        {
+            color_scheme_asym_palette(COLOR_SCHEME, palette, VSCALE_TIMESLICE*value, 1.0, 0, rgb);
+            break;
+        }
     }
 }
 
@@ -6923,7 +7322,7 @@ double compute_depth_colors_rde(int i, int j, t_rde rde[NX*NY], double potential
 }
 
 
-void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, int cplot, t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
+void compute_rde_fields(int time, double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, int cplot, t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* compute the necessary auxiliary fields */
 {
     int i, j;
@@ -7041,6 +7440,18 @@ void compute_rde_fields(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot,
                 compute_speed(phi, rde, wsphere);
             if ((zplot == Z_SWATER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED))
                 compute_direction(phi, rde);
+            break;
+        }
+        case (E_GRAY_SCOTT):
+        {
+            if (zplot == Z_TIME_SLICE)
+                update_time_slice(time, phi, rde); 
+            break;
+        }
+        case (E_GRAY_SCOTT_SPHERE):
+        {
+            if (zplot == Z_TIME_SLICE)
+                update_time_slice(time, phi, rde); 
             break;
         }
 //         case (E_KELLER_SEGEl):
@@ -7257,7 +7668,14 @@ void init_zfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int zplot, t_
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].field_norm;
             break;
         }
-        
+        case (Z_TIME_SLICE):
+        {
+//             #pragma omp parallel for private(i,j)
+//             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_zfield[movie] = &rde[i*NY+j].time;
+            #pragma omp parallel for private(i)
+            for (i=0; i<NX*NY; i++) rde[i].p_zfield[movie] = &rde[i].time;
+            break;
+        }
     }
 }
 
@@ -7464,6 +7882,14 @@ void init_cfield_rde(double *phi[NFIELDS], short int xy_in[NX*NY], int cplot, t_
         {
             #pragma omp parallel for private(i,j)
             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].field_arg;
+            break;
+        }
+        case (Z_TIME_SLICE):
+        {
+//             #pragma omp parallel for private(i,j)
+//             for (i=0; i<NX; i++) for (j=0; j<NY; j++) rde[i*NY+j].p_cfield[movie] = &rde[i*NY+j].time;
+            #pragma omp parallel for private(i)
+            for (i=0; i<NX*NY; i++) rde[i].p_cfield[movie] = &rde[i].time;
             break;
         }
     }
@@ -8390,7 +8816,7 @@ void draw_periodicised_wave_3d(int movie, double *phi[NFIELDS], short int xy_in[
 }
 
 
-void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], 
+void draw_wave_rde(int time, int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rde rde[NX*NY], 
                    t_wave_sphere wsphere[NX*NY], t_wave_sphere wsphere_hr[HRES*HRES*NX*NY], 
                    double potential[NX*NY], int zplot, int cplot, int palette, int fade, 
                    double fade_value, int refresh)
@@ -8404,7 +8830,7 @@ void draw_wave_rde(int movie, double *phi[NFIELDS], short int xy_in[NX*NY], t_rd
     if (refresh)
     {
         printf("Computing fields\n");
-        compute_rde_fields(phi, xy_in, zplot, cplot, rde, wsphere);      
+        compute_rde_fields(time, phi, xy_in, zplot, cplot, rde, wsphere);      
         printf("Computed fields\n");
         if ((PLOT_3D)&&(SHADE_3D)) 
         {
@@ -8831,17 +9257,6 @@ void block_poles(double phi[NX*NY])
     
 }
 
-double dist_sphere(double phi1, double theta1, double phi2, double theta2)
-/* returns angle between points given in spherical coordinates */
-{
-    double dist;
-    
-    dist = sin(theta1)*sin(theta2)*cos(phi1 - phi2);
-    dist += cos(theta1)*cos(theta2);
-                
-    return(acos(dist));
-}
-
 int generate_poisson_grid_sphere(t_wave_sphere wsphere[NX*NY], double dpoisson)
 /* generate a Poisson disc sample in a given rectangle */
 {
@@ -8913,6 +9328,7 @@ int generate_poisson_grid_sphere(t_wave_sphere wsphere[NX*NY], double dpoisson)
     printf("Generated %i points\n", npoints);
     return(npoints);
 }
+
 
 int generate_equilatitude_grid_sphere(t_wave_sphere wsphere[NX*NY])
 /* generate simulation gird with equally spaced longitudes and latitudes */
@@ -9506,6 +9922,42 @@ void optimize_cubic_grid_sphere(t_wave_sphere wsphere[NX*NY], int npoints, int n
     free(ftheta);
 }
 
+void compute_cubic_grid_sphere_weights(t_wave_sphere wsphere[NX*NY], int npoints)
+/* compute weights of corrected Laplacian on cubic grid */
+{
+    int i, k, p;
+    double dist, wmax, ratio;
+    
+    printf("Computing grid Laplacian weights\n"); 
+    
+    wmax = 0.0;
+    for (i=0; i<npoints; i++) 
+    {
+        dist = 0.0;
+        for (k=0; k<4; k++)
+        {
+            p = wsphere[i].neighbor[k];
+            dist += dist_sphere(wsphere[i].phigrid, wsphere[i].thetagrid, wsphere[p].phigrid, wsphere[p].thetagrid);
+        }
+        dist *= 0.25;
+        wsphere[i].laplace_weight = 1.0/(dist*dist);
+                
+        if (wsphere[i].laplace_weight > wmax) wmax = wsphere[i].laplace_weight;
+    }
+    
+    ratio = 1.0/wmax;
+    printf("Ratio = %.3lg\n", ratio); 
+        
+    for (i=0; i<npoints; i++) 
+    {
+        wsphere[i].laplace_weight*= ratio;
+//         if (wsphere[i].laplace_weight > 1.5) wsphere[i].laplace_weight = 1.5;
+//         if (wsphere[i].laplace_weight < 0.5) wsphere[i].laplace_weight = 0.5;
+        
+        printf("Grid point %i weight = %.3lg\n", i, wsphere[i].laplace_weight); 
+    }
+}
+
 int initialize_simulation_grid_sphere(t_wave_sphere wsphere[NX*NY])
 /* initialize Poisson random simulation grid on a sphere */
 {
@@ -9526,7 +9978,8 @@ int initialize_simulation_grid_sphere(t_wave_sphere wsphere[NX*NY])
         case (GRID_CUBIC):
         {
             npoints = generate_cubic_grid_sphere(wsphere);
-            if (OPTIMIZE_GRID) optimize_cubic_grid_sphere(wsphere, npoints, 600);
+            if (OPTIMIZE_GRID) optimize_cubic_grid_sphere(wsphere, npoints, OPTIMIZE_STEPS);
+            if (WEIGHT_GRID) compute_cubic_grid_sphere_weights(wsphere, npoints);
             break;
         }
     }
@@ -9541,7 +9994,7 @@ int initialize_simulation_grid_sphere(t_wave_sphere wsphere[NX*NY])
     return(npoints);
 }
 
-void convert_fields_from_grids(double phi_in[NX*NY], double phi_out[NX*NY], t_wave_sphere wsphere[NX*NY])
+void convert_fields_from_grids(double phi_in[NX*NY], double phi_out[NX*NY], t_rde rde[NX*NY], t_wave_sphere wsphere[NX*NY])
 /* convert field phi_in in grid coordinates to field phi_out in latitude-longitude coordinates */
 {
 //     int i;
