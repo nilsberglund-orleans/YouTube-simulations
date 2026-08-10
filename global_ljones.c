@@ -89,6 +89,10 @@
 #define S_CYLINDRICAL 100   /* two lines at top and bottom */
 #define S_BOTTOM 110        /* one line at bottom */
 #define S_VERTICAL 111      /* vertical double line */
+#define S_FOUR_VERTICALS 112 /* four vertical double lines */
+#define S_TWO_VERTICALS 113 /* four vertical double lines */
+#define S_TWO_DIAGONALS 114 /* two slanted rectangles */
+#define S_TWO_DIAGONALS_ROT 115 /* two slanted rectangles, rotated by 90° */
 #define S_CUP 1             /* segments forming a cup (for increasing gravity) */
 #define S_HOURGLASS 2       /* segments forming an hour glass */
 #define S_PENTA 3           /* segments forming a pentagon with 3 angles of 120° and 2 right angles */
@@ -107,6 +111,8 @@
 #define S_DAM_WITH_HOLE_AND_RAMP 14    /* segments forming a dam in which a hole can open */
 #define S_MAZE 15           /* segments forming a maze */
 #define S_MAZE_DIAG 151     /* segments forming a maze with diagonally opposed exits */
+#define S_MAZE_SPHERE 152   /* segments forming a maze on the sphere with fewer cells near poles */
+#define S_MAZE_SPHERE_REG 153   /* segments forming a regular maze on the sphere */
 #define S_EXT_RECTANGLE 16  /* particles outside a rectangle */
 #define S_DAM_BRICKS 17     /* dam made of several bricks */
 #define S_HLINE_HOLE 18    /* horizontal line with a hole in the bottom */
@@ -116,6 +122,8 @@
 #define S_BIN_OPENING 20        /* bin containing particles opening at deactivation time */
 #define S_BIN_LARGE 201         /* larger bin */
 #define S_POLYGON_EXT 21        /* exterior of a regular polygon */
+#define S_TWO_POLYGONS_EXT 211  /* exterior of a regular polygon */
+#define S_TWO_POLYGONS_EXT_SHIFTED 212  /* exterior of a regular polygon */
 #define S_WEDGE_EXT 22          /* exterior of a wedge */ 
 #define S_MIXER 23              /* exterior of a blender made of rectangles */
 #define S_AIRFOIL 24            /* exterior of an air foil */
@@ -404,6 +412,7 @@
 #define BG_CURRENTX 9       /* background color depends on x-component of current */
 #define BG_DIRECTION 10     /* background color depends on particle orientation */
 #define BG_POTENTIAL 12     /* potential added to sphere */
+#define BG_DEM 13           /* color given by DEM */
 
 /* Obstacle color schemes */
 
@@ -437,6 +446,15 @@
 
 #define SPP_WELLS 0      /* potential wells located at points in table wells[] */
 #define SPP_CUBE 1       /* potential having shape of a cube */
+#define SPP_PLANET 2     /* potential depending on planet DEM */
+
+/* Type of planet */
+
+#define PLANET_EARTH 0   /* DEM uses planet Earth */
+#define PLANET_MARS 1    /* DEM uses planet Mars */
+#define PLANET_MOON 2    /* DEM uses the Moon */
+#define PLANET_VENUS 3   /* DEM uses planet Venus */
+#define PLANET_MERCURY 4 /* DEM uses planet Mercury */
 
 /* Type of sphere gravity */
 
@@ -749,6 +767,7 @@ typedef struct
     double radius;              /* radius with wave height */
     double initial_radius;      /* radius before particles are added */
     double r, g, b;             /* RGB values for image */
+    double r0, g0, b0;          /* default RGB values */
     double cos_angle;           /* cosine of light angle */
     double cos_angle_sphere;    /* cosine of light angle for perfect sphere */
     double cos_angle_pot;       /* cosine of light angle for 2D potential */

@@ -189,7 +189,8 @@
 #define OSCILLATION_SCHEDULE 3  /* oscillation schedule, see list in global_pdes.c */
 #define ACHIRP 0.2        /* acceleration coefficient in chirp */
 #define DAMPING 0.0        /* damping of periodic excitation */
-#define OMEGA 0.001       /* frequency of periodic excitation */
+#define OMEGA 0.001        /* frequency of periodic excitation */
+#define OMEGA_B 0.001      /* frequency of periodic excitation */
 #define AMPLITUDE 0.8      /* amplitude of periodic excitation */ 
 /* end of constants only used by wave_billiard and wave_3d */
 

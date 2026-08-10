@@ -40,13 +40,14 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1           /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
 /* General geometrical parameters */
 
-#define WINWIDTH 	1920  /* window width */
+// #define WINWIDTH 	1920  /* window width */
+#define WINWIDTH 	1150  /* window width */
 #define WINHEIGHT 	1150  /* window height */
 #define NX 1600           /* number of grid points on x axis */
 #define NY 960           /* number of grid points on y axis */
@@ -54,8 +55,10 @@
 
 #define XMIN -2.0
 #define XMAX 2.0	/* x interval */
-#define YMIN -1.041666667
-#define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
+#define YMIN -2.0
+#define YMAX 2.0	/* y interval for 9/16 aspect ratio */
+// #define YMIN -1.041666667
+// #define YMAX 1.041666667	/* y interval for 9/16 aspect ratio */
 
 /* Choice of simulated equation */
 
@@ -102,7 +105,7 @@
 
 #define P_PERCOL 0.25       /* probability of having a circle in C_RAND_PERCOL arrangement */
 #define NPOISSON 300        /* number of points for Poisson C_RAND_POISSON arrangement */
-#define PDISC_FACTOR 3.25    /* controls density of Poisson disc process (default: 3.25) */
+#define PDISC_FACTOR 4.0    /* controls density of Poisson disc process (default: 3.25) */
 #define RANDOM_POLY_ANGLE 0 /* set to 1 to randomize angle of polygons */
 #define PDISC_CONNECT_FACTOR 1.5    /* controls which discs are connected for D_CIRCLE_LATTICE_POISSON domain */
 
@@ -172,8 +175,8 @@
 #define KS_CHIMAX_FACTOR 30.0   /* limiter on the value of chi/D_KSU */
 
 /* Gray-Scott model */
-#define A_GS 0.029       /* coupling constant in Gray-Scott model */
-#define B_GS 0.06        /* coupling constant in Gray-Scott model */
+#define A_GS 0.014        /* coupling constant in Gray-Scott model */
+#define B_GS 0.054       /* coupling constant in Gray-Scott model */
 #define D_GSU 1.0        /* u diffusion in Gray-Scott model */
 #define D_GSV 2.0        /* v diffusion in Gray-Scott model */
 #define GS_RSCALE 0.1    /* scaling factor for reaction term of Gray-Scott model */
@@ -226,16 +229,16 @@
 #define VISCOSITY_MAX 2.0        /* max value of viscosity beyond which NVID is increased and integration step is decrase, for numerical stability */
                                         
 #define CHANGE_RPSLZB 0         /* set to 1 to change second parameter in Rock-Paper-Scissors-Lizard-Spock equation */
-#define RPSLZB_CHANGE 0.75      /* factor by which to rpslzb parameter */
+#define RPSLZB_CHANGE 0.75      /* amount by which to rpslzb parameter */
 #define RPSLZB_INITIAL_TIME 0   /* initial time during which rpslzb remains constant */
 #define RPSLZB_FINAL_TIME 500   /* final time during which rpslzb remains constant */
                                       
-#define CHANGE_A_GS 0           /* set to 1 to change first parameter in Gray-Scott model */
+#define CHANGE_A_GS 1           /* set to 1 to change first parameter in Gray-Scott model */
 #define A_GS_CHANGE -0.02       /* amount by which to decrease a_gs parameter */
 #define A_GS_INITIAL_TIME 0     /* initial time during which a_gs remains constant */
 #define A_GS_FINAL_TIME 100     /* final time during which a_gs remains constant */
 
-#define CHANGE_B_GS 0           /* set to 1 to change second parameter in Gray-Scott model */
+#define CHANGE_B_GS 1           /* set to 1 to change second parameter in Gray-Scott model */
 #define B_GS_CHANGE -0.01       /* amount by which to decrease b_gs parameter */
 #define B_GS_INITIAL_TIME 0     /* initial time during which b_gs remains constant */
 #define B_GS_FINAL_TIME 100     /* final time during which b_gs remains constant */
@@ -273,8 +276,8 @@
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 1400       /* number of frames of movie */
-#define NVID 30           /* number of iterations between images displayed on screen */
+#define NSTEPS 1800       /* number of frames of movie */
+#define NVID 20           /* number of iterations between images displayed on screen */
 #define ACCELERATION_FACTOR 1.0 /* factor by which to increase NVID in course of simulation */
 #define DT_ACCELERATION_FACTOR 1.0 /* factor by which to increase time step in course of simulation  */
 #define MAX_DT 0.024     /* maximal value of integration step */
@@ -312,12 +315,12 @@
 /* Plot type - color scheme */
 
 #define CPLOT 0
-#define CPLOT_B 80
+#define CPLOT_B 1
 
 /* Plot type - height of 3D plot */
 
-#define ZPLOT 80    /* z coordinate in 3D plot */
-#define ZPLOT_B 80   /* z coordinate in second 3D plot */
+#define ZPLOT 0    /* z coordinate in 3D plot */
+#define ZPLOT_B 1    /* z coordinate in second 3D plot */
 
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of P_3D_AMPLITUDE plot */
 #define NON_DIRICHLET_BC 0      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
@@ -365,8 +368,8 @@
 
 /* Color schemes, see list in global_pdes.c  */
 
-#define COLOR_PALETTE 17        /* Color palette, see list in global_pdes.c  */
-#define COLOR_PALETTE_B 14      /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 11        /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE_B 11      /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* black background */
 #define COLOR_OUT_R 1.0    /* color outside domain */
@@ -380,7 +383,7 @@
 #define SCALE 0          /* set to 1 to adjust color scheme to variance of field */
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
-#define VSHIFT_AMPLITUDE -0.4    /* additional shift for wave amplitude */
+#define VSHIFT_AMPLITUDE -0.25    /* additional shift for wave amplitude */
 #define VSCALE_AMPLITUDE 2.5      /* additional scaling factor for color scheme P_3D_AMPLITUDE */
 #define VSCALE_TIMESLICE 1.6      /* additional scaling factor for color scheme Z_TIMESLICE */
 #define ATTENUATION 0.0  /* exponential attenuation coefficient of contrast with time */
@@ -438,6 +441,7 @@
 #define IOR_TOTAL_TURNS 1.5 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
 #define OMEGA 0.005        /* frequency of periodic excitation */
+#define OMEGA_B 0.005        /* frequency of periodic excitation */
 #define OSCIL_YMAX 0.2      /* defines oscillation range */
 #define OSCIL_YMID -0.75      /* defines oscilling beam midpoint */
 #define COURANT 0.08       /* Courant number */
@@ -491,7 +495,7 @@ double u_3d[2] = {0.75, -0.45};     /* projections of basis vectors for REP_AXO_
 double v_3d[2] = {-0.75, -0.45};
 double w_3d[2] = {0.0, 0.015};
 double light[3] = {0.40824829, -0.816496581, 0.40824829};      /* vector of "light" direction for P_3D_ANGLE color scheme */
-double observer[3] = {-3.0, -3.0, 2.5};    /* location of observer for REP_PROJ_3D representation */ 
+double observer[3] = {-3.0, -3.0, 4.0};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
 /* constants for simulations on planets */
@@ -506,8 +510,8 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 #define PLANET_SEALEVEL 0.0      /* sea level for flooded planet */
 #define VENUS_NODATA_FACTOR 0.5     /* altitude to assign to DEM points without data (fraction of mean altitude) */
 
-#define Z_SCALING_FACTOR 0.75   /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define XY_SCALING_FACTOR 1.7  /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define Z_SCALING_FACTOR 1.0   /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define XY_SCALING_FACTOR 3.0  /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0        /* max value of z coordinate for REP_PROJ_3D representation */
 #define XSHIFT_3D 0.0          /* overall x shift for REP_PROJ_3D representation */
 #define YSHIFT_3D 0.0          /* overall y shift for REP_PROJ_3D representation */
@@ -516,7 +520,7 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 #define ZMAX 3.0             /* maximal value of z coordinate */
 #define ZMIN -3.0            /* maximal value of z coordinate */
 
-#define RSCALE 0.25              /* scaling factor of radial component */
+#define RSCALE 0.3              /* scaling factor of radial component */
 #define RSCALE_B 1.00           /* experimental, additional radial scaling factor in ij_to_sphere */
 #define RSHIFT 0.0              /* shift in radial component */
 #define RMAX 4.0                /* max value of radial component */
@@ -527,6 +531,7 @@ int reset_view = 0;         /* switch to reset 3D view parameters (for option RO
 #define FLOOR 1         /* set to 1 to limit wave amplitude to VMAX */
 #define VMAX 10.0        /* max value of wave amplitude */
 #define TEST_GRADIENT 0 /* print norm squared of gradient */
+
 
 #define REFRESH_B (ZPLOT_B != ZPLOT)||(CPLOT_B != CPLOT)    /* to save computing time, to be improved */
 #define COMPUTE_WRAP_ANGLE ((WRAP_ANGLE)&&((cplot == Z_ANGLE_GRADIENT)||(cplot == Z_ANGLE_GRADIENTX)||(cplot == Z_ARGUMENT)||(cplot == Z_ANGLE_GRADIENTX)||(cplot == Z_EULER_DIRECTION_SPEED)||(cplot == Z_SWATER_DIRECTION_SPEED)||(cplot == Z_ANGLE)))

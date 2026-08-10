@@ -126,6 +126,7 @@
 #define OSCILLATE_TOPBOT 1  /* set to 1 to enforce a planar wave on top and bottom boundary */
 
 #define OMEGA 0.0125       /* frequency of periodic excitation */
+#define OMEGA_B 0.01       /* frequency of periodic excitation */
 #define AMPLITUDE 0.5      /* amplitude of periodic excitation */ 
 #define COURANT 0.1        /* Courant number */
 #define COURANTB 0.035    /* Courant number in medium B */
@@ -275,6 +276,8 @@
 #define SHADE_SCALE_2D 0.01  /* lower value increases sensitivity of shading */
 #define N_SOURCES 1                     /* number of sources, for option draw_sources */
 #define XYIN_INITIALISED (B_DOMAIN == D_IMAGE)
+#define SYMMETRIC_CIRCLE_PATTERNS 0  /* set to 1 to have symmetric patterns in top and bottom */
+#define NO_CIRCLES_ON_BOUNDARY 0    /* set to 1 to avoid circles overlapping boundary */
 double light[2] = {0.40824829, 0.816496581};   /* location of light source for SHADE_2D option*/
 /* end of constants only used by sub_wave and sub_maze */
 

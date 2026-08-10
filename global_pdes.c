@@ -49,6 +49,7 @@
 
 #define D_CIRCLES 20    /* several circles */
 #define D_CIRCLES_IN_RECT 201   /* several circles in a rectangle */
+#define D_CIRCLES_NEUMANN 202   /* several circles, with Dirichlet b.c. in top halr and Neumann in bottom half */
 
 #define D_FOUR_PARABOLAS 31     /* four parabolas with axes in NSEW directions */
 #define D_POLY_PARABOLAS 32     /* polygon with parabolic sides */
@@ -122,6 +123,10 @@
 #define D_POLYCIRCLES_ANGLED 792    /* variant of D_POLYCIRCLES with angled small cavities */
 #define D_TWOCIRCLES_ELLIPSE 793    /* ellipse with two adjacent circular cavities */
 #define D_CIRCLES_ELLIPSE 794   /* ellipse with NPOLY adjacent circles */
+#define D_TWO_ELLIPSES 795      /* two disjoint ellipses */
+#define D_TWO_RECTANGLES 796    /* two disjoint rectangles */
+#define D_TWO_POLYGONS 797      /* two disjoint polygons */
+#define D_TWO_POLY_PARABOLAS 798    /* two disjoint parabolic resonators */
 
 #define D_CARDIOID 90           /* cardioid */
 #define D_NEPHROID 91           /* nephroid */
@@ -175,7 +180,7 @@
 #define IM_DICKSON_ZOOM 5       /* zoom on Dickson fjord in Greenland */
 #define IM_HAPPY_NEW_YEAR_TWOSIX 6     /* "Happy New Year 2026" */
 
-#define NMAXCIRCLES 10000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
+#define NMAXCIRCLES 1000       /* total number of circles/polygons (must be at least NCX*NCY for square grid) */
 #define NMAXPOLY 50000          /* maximal number of vertices of polygonal lines (for von Koch et al) */
 #define NMAXLINES 1000      /* maximal number of lines (for bounadries) */
 #define NMAXSOURCES 30      /* maximal number of sources */
@@ -186,7 +191,9 @@
 #define C_RAND_PERCOL 3     /* random percolation arrangement */
 #define C_RAND_POISSON 4    /* random Poisson point process */
 #define C_CLOAK 5           /* invisibility cloak */
+#define C_CLOAK_OBJECT 51   /* invisibility cloak with an object inside */
 #define C_CLOAK_A 6         /* first optimized invisibility cloak */
+#define C_CLOAK_AB 61       /* first optimized invisibility cloak with smaller discs */
 #define C_LASER 7           /* laser fight in a room of mirrors */
 #define C_POISSON_DISC 8    /* Poisson disc sampling */
 
@@ -194,6 +201,7 @@
 #define C_GOLDEN_SPIRAL 11  /* spiral pattern based on golden mean */
 #define C_SQUARE_HEX 12     /* alternating between square and hexagonal/triangular */
 #define C_HEX_NONUNIF 13    /* triangular grid with non-constant column distance */
+#define C_SQUARE_TWO_SPACINGS 14    /* square grid but with two spacings */
 
 #define C_RINGS 20          /* obstacles arranged in concentric rings */
 #define C_RINGS_T 201       /* obstacles arranged in concentric rings, triangular lattice */
@@ -264,7 +272,8 @@
 #define BC_ABSORBING 2   /* absorbing boundary conditions (beta version) */
 #define BC_VPER_HABS 3   /* vertically periodic and horizontally absorbing boundary conditions */
 #define BC_ABS_REFLECT 4   /* absorbing boundary conditions, except reflecting at y=0, for comparisons */
-#define BC_LSHAPE 10      /* L-shaped boundary conditions (surface of genus 2) */
+// #define BC_NEUMANN 5     /* Neumann boundary conditions */
+#define BC_LSHAPE 10     /* L-shaped boundary conditions (surface of genus 2) */
 // #define BC_OSCILL_ABSORB 5  /* oscillating boundary condition on the left, absorbing on other walls */ 
 
 
@@ -284,6 +293,7 @@
 #define OSC_BEAM_SINE_TWOPERIODS 51 /* sum of two periodic oscillations modulated by y cut-off */
 #define OSC_TWO_WAVES 6          /* two linear waves at an angle, separate */
 #define OSC_TWO_WAVES_ADDED 61   /* two linear waves at an angle, superimposed */
+#define OSC_TWOFREQ_TOPBOT 7     /* two different frequencies in top and bottom half */
 
 /* Wave packet types */
 
@@ -505,6 +515,19 @@ typedef struct
     int sign;
 } t_wave_source;
 
+typedef struct
+{
+    double nx, ny;            /* coordinates of normal vector */
+    short int signx1, signy1; /* relative position of neighboring grid points */
+    short int signx2, signy2; /* relative position of neighboring grid points */
+    int nbi1, nbj1, nbk1;     /* absolute position of neighboring grid points */
+    int nbi2, nbj2, nbk2;     /* absolute position of neighboring grid points */
+    int i, j, k;              /* grid coordinates of boundary point */
+    short int top;            /* indicates point is in top half, for comparisons */
+    short int active;         /* allows to make problematic points (e.g. corners) inactive */
+} t_neumann_bc;
+
+#define N_NEUMANN_POINTS 80000   /* number of Neumann boundary points */
 
 int ncircles = NMAXCIRCLES;         /* actual number of circles, can be decreased e.g. for random patterns */
 int npolyline = NMAXPOLY;           /* actual length of polyline */
@@ -529,6 +552,7 @@ int npolyline_b = NMAXPOLY;           /* actual length of polyline */
 int npolyrect_b = NMAXPOLY;           /* actual number of polyrect */
 int npolyrect_rot_b = NMAXPOLY;       /* actual number of rotated polyrect */
 int npolyarc_b = NMAXPOLY;            /* actual number of arcs */
+int n_neumann_points = N_NEUMANN_POINTS;    /* actual number of Neumann bc points */
 t_circle circles_b[NMAXCIRCLES];      /* circular scatterers */
 t_polygon polygons_b[NMAXCIRCLES];    /* polygonal scatterers */
 t_vertex polyline_b[NMAXPOLY];        /* vertices of polygonal line */

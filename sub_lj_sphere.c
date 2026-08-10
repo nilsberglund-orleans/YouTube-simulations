@@ -1070,7 +1070,8 @@ void compute_background_color(t_particle particle[NMAXCIRCLES], t_segment segmen
                     value = atan(BG_POTENTIAL_SLOPE*wsphere[cell].potential)/PI + 0.5;
             
                     hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*value;
-                    hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+//                     hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+                    hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_POTENTIAL);
                     
                     if (SHADE_BG_COLOR_2D)
                         for (k=0; k<3; k++) rgb[k] *= wsphere[cell].cos_angle_pot;
@@ -1316,7 +1317,7 @@ double test_distance(double phi, double psi, int i, t_particle* particle)
 /* determine particle shape */
 {
     double d, ca, sa, theta;
-    static double c1, c2, c1inv;
+    static double c1, c2, c1inv, clinvhalf;
     static int first = 1;
     
     if (first)
@@ -1333,6 +1334,22 @@ double test_distance(double phi, double psi, int i, t_particle* particle)
                 c1 = 5.0/DPI;
                 c1inv = DPI/5.0;
                 c2 = 1.0/cos(PI/5.0);
+                break;
+            }
+            case (I_POLYGON):
+            {
+                c1 = (double)NPOLY/DPI;
+                c1inv = DPI/(double)NPOLY;
+                c2 = 1.0/cos(PI/(double)NPOLY);
+                clinvhalf = PI/(double)NPOLY;
+                break;
+            }
+            case (I_POLYGON_ALIGN):
+            {
+                c1 = (double)NPOLY/DPI;
+                c1inv = DPI/(double)NPOLY;
+                c2 = 1.0/cos(PI/(double)NPOLY);
+                clinvhalf = PI/(double)NPOLY;
                 break;
             }
         }
@@ -1363,6 +1380,24 @@ double test_distance(double phi, double psi, int i, t_particle* particle)
             d = dist_point_to_particle_sphere(i, phi, psi, particle, &ca, &sa);
             theta = (argument(ca, sa) - particle[i].angle);
             return(2.0*d*(1.0 - 0.5*cos(2.0*theta)));
+        }
+        case (I_POLYGON): 
+        {
+            d = dist_point_to_particle_sphere(i, phi, psi, particle, &ca, &sa);
+            theta = (argument(ca, sa) - particle[i].angle + 2.0*DPI)*c1;
+            theta -= (double)((int)theta);
+            theta *= c1inv;
+            theta -= clinvhalf;
+            return(d*cos(theta)*c2);
+        }
+        case (I_POLYGON_ALIGN): 
+        {
+            d = dist_point_to_particle_sphere(i, phi, psi, particle, &ca, &sa);
+            theta = (argument(ca, sa) - particle[i].angle + 2.0*DPI)*c1;
+            theta -= (double)((int)theta);
+            theta *= c1inv;
+            theta -= clinvhalf;
+            return(d*cos(theta)*c2);
         }
         default:
         {
@@ -1564,6 +1599,23 @@ void add_particle_to_sphere(int i, int j, int i0, int j0, int part, t_particle p
             }
         }
     }
+    else if (POLYGON_INTERACTION)
+    {
+        dist = test_distance(x, y, part, particle);
+        if (dist < 1.2*r)
+        {
+            h = wsphere[i0*NY_SPHERE+j0].initial_radius;
+            wsphere[i*NY_SPHERE+j].radius = h;
+            if (dist < r) wsphere[i*NY_SPHERE+j].radius += r;
+            if (!wsphere[i*NY_SPHERE+j].locked)
+            {
+                wsphere[i*NY_SPHERE+j].r = particle[part].rgb[0];
+                wsphere[i*NY_SPHERE+j].g = particle[part].rgb[1];
+                wsphere[i*NY_SPHERE+j].b = particle[part].rgb[2];
+                
+            }
+        }
+    }
     
     if (draw_normal_particle)
     {
@@ -1585,7 +1637,7 @@ void add_particle_to_sphere(int i, int j, int i0, int j0, int part, t_particle p
     
 }
 
-void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], t_hashgrid hashgrid[HASHX*HASHY], int traj_position, int traj_length, t_particle *particle, t_cluster *cluster, t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], int *tracer_n, int plot)
+void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTICLES], t_hashgrid hashgrid[HASHX*HASHY], int traj_position, int traj_length, t_particle *particle, t_cluster *cluster, t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], int *tracer_n, int plot, int bg_color)
 /* draw tracer particle trajectory */
 {
     int i, j, i0, j0, time, p, q, width, imin, cell, i1, j1;
@@ -1626,12 +1678,22 @@ void draw_trajectory_sphere(t_tracer trajectory[TRAJECTORY_LENGTH*N_TRACER_PARTI
                 
                 if (COLOR_BACKGROUND)
                 {
-                    cell = hash_cell(x1, y1);
-                    if (!wsphere[cell].locked)
+                    if (BG_COLOR == BG_DEM)
                     {
-                        rgb_bg[0] = hashgrid[cell].r;
-                        rgb_bg[1] = hashgrid[cell].g;
-                        rgb_bg[2] = hashgrid[cell].b;
+                        cell = i0*NY_SPHERE+j0;
+                        rgb_bg[0] = wsphere[cell].r;
+                        rgb_bg[1] = wsphere[cell].g;
+                        rgb_bg[2] = wsphere[cell].b;
+                    }
+                    else
+                    {
+                        cell = hash_cell(x1, y1);
+                        if (!wsphere[cell].locked)
+                        {
+                            rgb_bg[0] = hashgrid[cell].r;
+                            rgb_bg[1] = hashgrid[cell].g;
+                            rgb_bg[2] = hashgrid[cell].b;
+                        }
                     }
                 }
                 
@@ -1777,7 +1839,7 @@ void draw_segments_sphere(t_segment segment[NMAXSEGMENTS], t_lj_sphere wsphere[N
 /* draw the repelling segments on the sphere */
 {
     int s, i, cell, npoints, i0, j0, i1, j1, p, q;
-    double x1, y1, x2, y2, x, y, dt, length, ca;
+    double x1, y1, x2, y2, x, y, dt, length, ca, xtmp;
     static double dphi, dtheta;
     static int first = 1;
     
@@ -1794,6 +1856,7 @@ void draw_segments_sphere(t_segment segment[NMAXSEGMENTS], t_lj_sphere wsphere[N
         y1 = segment[s].y1;
         x2 = segment[s].x2;
         y2 = segment[s].y2;
+        
         
         length = dist_sphere(x1, y1, x2, y2);
         npoints = (int)(length*300.0);
@@ -1924,8 +1987,11 @@ void compute_gradient_potential_sphere(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
 void init_potential_sphere(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], t_absorber wells[NMAX_ABSORBERS])
 /* initialise the potential and its gradient, for option ADD_POTENTIAL_SPHERE */
 {
-    int i, j;
-    double phi, theta, phi1, theta1, dist, pot, x, y, z, max, nablax, nablay, norm, pscal, ca, shade_scale2;
+    int i, j, k, ii, jj, nmaxpixels, rnx, rny, nx, ny, maxrgb, scan, hmin, hmax, rgbval;
+    int *rgb_values;
+    double phi, theta, phi1, theta1, dist, pot, x, y, z, max, nablax, nablay, norm, pscal, ca, shade_scale2, hsea, cratio, rx, ry;
+    double *height_values;
+    FILE *image_file;
     
     printf("Initialising potential on sphere\n");
     for (i=0; i<NX_SPHERE*NY_SPHERE; i++) wsphere[i].potential = 0.0; 
@@ -1963,7 +2029,249 @@ void init_potential_sphere(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], t_absorber 
             }
             break;
         }
+        case (SPP_PLANET):
+        {
+            switch (PLANET_DEM)
+            {
+                case (PLANET_EARTH):
+                {
+                    nmaxpixels = 4915200;
+                    image_file = fopen("digital_elevation_model_large.ppm", "r");
+                    hsea = 12.0;  /* sea level #0c0c0c */
+                    break;
+                }
+                case (PLANET_MARS):
+                {
+                    nmaxpixels = 8388608;
+                    image_file = fopen("marscyl2.ppm", "r");
+//                     hsea = 6.0 + 255.0*PLANET_SEALEVEL/DEM_MAXHEIGHT;
+                    hsea = 6.0;
+                    break;
+                }
+                case (PLANET_MOON):
+                {
+                    nmaxpixels = 2097152;
+                    image_file = fopen("Moon_LRO_LOLA_global_LDEM_1024.ppm", "r");
+                    hsea = 0.0;
+                    break;
+                }
+                case (PLANET_VENUS):
+                {
+                    nmaxpixels = 4096*2048;
+                    image_file = fopen("Venus_Magellan_Topography_Global_4641m_v02_scaled2.ppm", "r");
+                    hsea = 0.0;
+                    break;
+                }
+                case (PLANET_MERCURY):
+                {
+                    nmaxpixels = 1280*380;
+                    image_file = fopen("Mercury_Messenger_DEM_Global_665m_1024_1_cropped.ppm", "r");
+                    hsea = 0.0;
+                    break;
+                }
+            }
+            
+            rnx = NX_SPHERE;
+            rny = NY_SPHERE;
+            
+            printf("Reading digital elevation model\n");
+            
+            rgb_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+            height_values = (double *)malloc(rnx*rny*sizeof(double));
+//             height_values_tmp = (double *)malloc(rnx*rny*sizeof(double));
+            
+            scan = fscanf(image_file,"%i %i\n", &nx, &ny);
+            scan = fscanf(image_file,"%i\n", &maxrgb);
+            
+            hmin = maxrgb;
+            hmax = 0;
+    
+            if (nx*ny > nmaxpixels)
+            {
+                printf("DEM too large, increase nmaxpixels in init_potential_sphere()\n");
+                exit(0);
+            }
+            
+            /* read rgb values */
+            for (j=0; j<ny; j++)
+                for (i=0; i<nx; i++)
+                    for (k=0; k<3; k++)
+                    {
+                        scan = fscanf(image_file,"%i\n", &rgbval);
+                        rgb_values[3*(j*nx+i)+k] = rgbval;
+                        if (rgbval < hmin) hmin = rgbval;
+                        if (rgbval > hmax) hmax = rgbval;
+                    }
+            cratio = 1.0/(double)(hmax-hmin);
+            rx = (double)nx/(double)(rnx);
+            ry = (double)ny/(double)(rny);
+            
+            /* build height table */
+            for (i=0; i<rnx; i++)
+                for (j=0; j<rny; j++)
+                {
+                    ii = nx/2 - (int)(rx*(double)(rnx-1 - i));
+                    if (ii > nx-1) ii -= nx;
+                    if (ii < 0) ii += nx;
+                    jj = (int)(ry*(double)(rny - j));
+                    if (jj > ny-1) jj = ny-1;
+                    if (jj < 0) jj = 0;
+                    height_values[i*rny+j] = ((double)rgb_values[3*(jj*nx+ii)]-hsea)*cratio;
+                    wsphere[i*rny+j].potential = ((double)rgb_values[3*(jj*nx+ii)]-hsea)*cratio;
+//                     wsphere[i*rny+j].r = ((double)rgb_values[3*(jj*nx+ii)])/256.0;
+//                     wsphere[i*rny+j].g = ((double)rgb_values[3*(jj*nx+ii)+1])/256.0;
+//                     wsphere[i*rny+j].b = ((double)rgb_values[3*(jj*nx+ii)+2])/256.0;
+                }
+    
+            /* smooth values in case of high resolution */
+            if ((rnx > nx)||(rny > ny))
+            {
+                for (i=1; i<rnx-1; i++)
+                    for (j=1; j<rny-1; j++)
+                    {
+                        height_values[i*rny+j] *= 0.2; 
+                        height_values[i*rny+j] += 0.2*height_values[(i+1)*rny+j];
+                        height_values[i*rny+j] += 0.2*height_values[(i-1)*rny+j];
+                        height_values[i*rny+j] += 0.2*height_values[i*rny+j-1];
+                        height_values[i*rny+j] += 0.2*height_values[i*rny+j+1];
+                
+                        wsphere[i*rny+j].potential *= 0.2; 
+                        wsphere[i*rny+j].potential += 0.2*wsphere[(i+1)*rny+j].potential;
+                        wsphere[i*rny+j].potential += 0.2*wsphere[(i-1)*rny+j].potential;
+                        wsphere[i*rny+j].potential += 0.2*wsphere[i*rny+j-1].potential;
+                        wsphere[i*rny+j].potential += 0.2*wsphere[i*rny+j+1].potential;
+                    }
+            
+                /* i = 0 */
+                for (j=1; j<rny-1; j++)
+                {
+                    height_values[j] *= 0.2; 
+                    height_values[j] += 0.2*height_values[rny+j];
+                    height_values[j] += 0.2*height_values[(rnx-1)*rny+j];
+                    height_values[j] += 0.2*height_values[j-1];
+                    height_values[j] += 0.2*height_values[j+1];
+                
+                    wsphere[j].potential *= 0.2; 
+                    wsphere[j].potential += 0.2*wsphere[rny+j].potential;
+                    wsphere[j].potential += 0.2*wsphere[(rnx-1)*rny+j].potential;
+                    wsphere[j].potential += 0.2*wsphere[j-1].potential;
+                    wsphere[j].potential += 0.2*wsphere[j+1].potential;
+                }
+        
+                /* i = rny-1 */
+                for (j=1; j<rny-1; j++)
+                {
+                    height_values[(rny-1)*rny+j] *= 0.2; 
+                    height_values[(rny-1)*rny+j] += 0.2*height_values[j];
+                    height_values[(rny-1)*rny+j] += 0.2*height_values[(rny-2)*rny+j];
+                    height_values[(rny-1)*rny+j] += 0.2*height_values[(rny-1)*rny+j-1];
+                    height_values[(rny-1)*rny+j] += 0.2*height_values[(rny-1)*rny+j+1];
+                
+                    wsphere[(rny-1)*rny+j].potential *= 0.2; 
+                    wsphere[(rny-1)*rny+j].potential += 0.2*wsphere[j].potential;
+                    wsphere[(rny-1)*rny+j].potential += 0.2*wsphere[(rny-2)*rny+j].potential;
+                    wsphere[(rny-1)*rny+j].potential += 0.2*wsphere[(rny-1)*rny+j-1].potential;
+                    wsphere[(rny-1)*rny+j].potential += 0.2*wsphere[(rny-1)*rny+j+1].potential;
+                }
+            }
+    
+            printf("Closing rgb_values\n");
+            fclose(image_file);
+            
+            if (BG_COLOR == BG_DEM)
+            {
+                switch (PLANET_DEM)
+                {
+                    case (PLANET_EARTH):
+                    {
+                        printf("Reading Blue Marble map\n");
+                        image_file = fopen("Earth_Map_Blue_Marble_2002_large.ppm", "r");
+                        break;
+                    }
+                    case (PLANET_MARS):
+                    {
+                        printf("Reading Mars map\n");
+                        nmaxpixels = 8388608;
+                        image_file = fopen("Mars_Viking_ClrMosaic_global_925m_scaled.ppm", "r");
+                        break;
+                    }
+                    case (PLANET_MOON):
+                    {
+                        printf("Reading Moon map\n");
+                        nmaxpixels = 2048*1024;
+                        image_file = fopen("Moon_photo_map.ppm", "r");
+                        break;
+                    }
+                    case (PLANET_VENUS):
+                    {
+                        printf("Reading Venus map\n");
+                        nmaxpixels = 1440*720;
+                        image_file = fopen("Venus_map_NASA_JPL_Magellan-Venera-Pioneer.ppm", "r");
+                        break;
+                    }
+                    case (PLANET_MERCURY):
+                    {
+                        printf("Reading Mercury map\n");
+                        nmaxpixels = 2304*1152;
+                        image_file = fopen("Mercury_color_photo.ppm", "r");
+                        break;
+                    }
+                }
+                
+                scan = fscanf(image_file,"%i %i\n", &nx, &ny);
+                scan = fscanf(image_file,"%i\n", &maxrgb);
+                free(rgb_values);
+                rgb_values = (int *)malloc(3*nmaxpixels*sizeof(int));
+
+                if (nx*ny > nmaxpixels)
+                {
+                    printf("Image too large, increase nmaxpixels in init_potential_sphere()\n");
+                    exit(0);
+                }
+                
+                /* read rgb values */
+                for (j=0; j<ny; j++)
+                    for (i=0; i<nx; i++)
+                        for (k=0; k<3; k++)
+                        {
+                            scan = fscanf(image_file,"%i\n", &rgbval);
+                            rgb_values[3*(j*nx+i)+k] = rgbval;
+                        }
+                    
+                cratio = 1.0/(double)maxrgb;
+                rx = (double)nx/(double)(NX_SPHERE);
+                ry = (double)ny/(double)(NY_SPHERE);
+    
+                /* build wave table */
+                for (i=0; i<NX_SPHERE; i++)
+                    for (j=0; j<NY_SPHERE; j++)
+                    {
+                        ii = nx/2 - (int)(rx*(double)(rnx-1 - i));
+                        if (ii > nx-1) ii -= nx;
+                        if (ii < 0) ii += nx;
+                        jj = (int)(ry*(double)(NY_SPHERE - j));
+                        if (jj > ny-1) jj = ny-1;
+                        if (jj < 0) jj = 0;
+                        wsphere[i*NY_SPHERE+j].r0 = (double)rgb_values[3*(jj*nx+ii)]*cratio;
+                        wsphere[i*NY_SPHERE+j].g0 = (double)rgb_values[3*(jj*nx+ii)+1]*cratio;
+                        wsphere[i*NY_SPHERE+j].b0 = (double)rgb_values[3*(jj*nx+ii)+2]*cratio;
+                    }
+                
+                printf("Closing rgb_values\n");
+                fclose(image_file);
+            }
+            
+            printf("1\n"); 
+            
+            free(rgb_values);
+            free(height_values);
+
+            break;
+        }
     }
+    
+    printf("2\n"); 
+
     
     for (i=0; i<NX_SPHERE*NY_SPHERE; i++) 
     {
@@ -2015,10 +2323,19 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
         
         if ((COLOR_BACKGROUND)&&(bg_color > 0))
         {
-            cell = hash_cell(wsphere[i].phi, wsphere[i].theta);
-            wsphere[i].r = hashgrid[cell].r;
-            wsphere[i].g = hashgrid[cell].g;
-            wsphere[i].b = hashgrid[cell].b;
+            if (BG_COLOR == BG_DEM)
+            {
+                wsphere[i].r = wsphere[i].r0;
+                wsphere[i].g = wsphere[i].g0;
+                wsphere[i].b = wsphere[i].b0;
+            }
+            else
+            {
+                cell = hash_cell(wsphere[i].phi, wsphere[i].theta);
+                wsphere[i].r = hashgrid[cell].r;
+                wsphere[i].g = hashgrid[cell].g;
+                wsphere[i].b = hashgrid[cell].b;
+            }
         }
         else
         {
@@ -2030,7 +2347,7 @@ void init_sphere_radius(t_particle particle[NMAXCIRCLES], t_hashgrid hashgrid[HA
     
     /* add tracer trajectories */
     if (TRACER_PARTICLE) 
-        draw_trajectory_sphere(trajectory, hashgrid, traj_position, traj_length, particle, cluster, wsphere, tracer_n, plot);
+        draw_trajectory_sphere(trajectory, hashgrid, traj_position, traj_length, particle, cluster, wsphere, tracer_n, plot, bg_color);
     
 //     if (ADD_FIXED_SEGMENTS)
 //         draw_segments_sphere(segment, wsphere);
@@ -2284,6 +2601,25 @@ void compute_light_angle_sphere(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
     }
 }
 
+void draw_axis(int north)
+{
+    double xyz[3], z;
+    
+    z = (double)north;
+    
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINE_STRIP);
+    xyz[0] = 0.0;
+    xyz[1] = 0.0;
+    xyz[2] = z;
+    draw_vertex_sphere(xyz);
+    xyz[0] = 0.0;
+    xyz[1] = 0.0;
+    xyz[2] = 2.0*z;
+    draw_vertex_sphere(xyz);
+    glEnd();
+}
+
 void draw_lj_sphere_ij(int i, int iplus, int j, int jplus, t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE], int fade, double fade_value)
 /* draw particles at simulation grid point (i,j) */
 {
@@ -2343,6 +2679,7 @@ void draw_lj_sphere_3d(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
     
     if (observer[2] > 0.0)
     {
+        if (DRAW_POLAR_AXIS) draw_axis(-1.0);
         if (imin < imax)
         {
             for (i=imax; i>imid; i--)
@@ -2436,9 +2773,12 @@ void draw_lj_sphere_3d(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
             draw_lj_sphere_ij(i, i+1, NY_SPHERE-3, NY_SPHERE-1, wsphere, fade, fade_value);
         
         draw_lj_sphere_ij(NX_SPHERE-1, 0, NY_SPHERE-3, NY_SPHERE-1, wsphere, fade, fade_value);
+        
+        if (DRAW_POLAR_AXIS) draw_axis(1.0);
     }
     else
     {
+        if (DRAW_POLAR_AXIS) draw_axis(1.0);
         if (imin < imax)
         {
             for (i=imax; i>imid; i--)
@@ -2536,6 +2876,8 @@ void draw_lj_sphere_3d(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
         
         for (j=2; j>0; j--)
             draw_lj_sphere_ij(NX_SPHERE-1, 0, j-1, j, wsphere, fade, fade_value);
+        
+        if (DRAW_POLAR_AXIS) draw_axis(-1.0);
     }
 }
 

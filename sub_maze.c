@@ -8,6 +8,7 @@
 #define MAZE_TYPE_CIRCLE 1      /* circular maze */
 #define MAZE_TYPE_HEX 2         /* honeycomb maze */
 #define MAZE_TYPE_OCT 3         /* maze with octagonal and square cells */
+#define MAZE_TYPE_CYLINDER 4    /* square maze with periodic boundary conditions */
 
 typedef struct
 {
@@ -122,6 +123,128 @@ void init_maze_graph(t_maze maze[NXMAZE*NYMAZE])
     maze[n].neighb[1] = nmaze(NXMAZE-1,NYMAZE-2);
     maze[n].directions[0] = 3;
     maze[n].directions[1] = 2;
+
+    /* initialize other parameters */
+    for (i=0; i<NXMAZE; i++)
+        for (j=0; j<NYMAZE; j++)
+        {
+            n = nmaze(i, j);
+            maze[n].active = 0;
+            maze[n].tested = 0;
+            maze[n].connected = 0;
+            maze[n].closed = 0;
+            maze[n].north = 1;
+            maze[n].east = 1;
+            maze[n].south = 1;
+            maze[n].west = 1;
+        }
+}
+
+void init_cylinder_maze_graph(t_maze maze[NXMAZE*NYMAZE])
+{
+    int i, j, k, n;
+    
+    printf("Initializing maze\n");
+
+    /* initialize neighbours */
+    /* in the bulk */
+    for (i=1; i<NXMAZE-1; i++)
+        for (j=1; j<NYMAZE-1; j++)
+        {
+            n = nmaze(i, j);
+            maze[n].nneighb = 4;
+            maze[n].neighb[0] = nmaze(i, j+1);
+            maze[n].neighb[1] = nmaze(i+1, j);
+            maze[n].neighb[2] = nmaze(i, j-1);
+            maze[n].neighb[3] = nmaze(i-1, j);
+            for (k=0; k<4; k++) maze[n].directions[k] = k;
+        }
+    
+    /* left side */
+    for (j=1; j<NYMAZE-1; j++)
+    {
+        n = nmaze(0, j);
+        maze[n].nneighb = 4;
+        maze[n].neighb[0] = nmaze(0, j+1);
+        maze[n].neighb[1] = nmaze(1, j);
+        maze[n].neighb[2] = nmaze(0, j-1);
+        maze[n].neighb[3] = nmaze(NXMAZE-1, j);
+        for (k=0; k<4; k++) maze[n].directions[k] = k;
+    }
+    /* right side */
+    for (j=1; j<NYMAZE-1; j++)
+    {
+        n = nmaze(NXMAZE-1, j);
+        maze[n].nneighb = 4;
+        maze[n].neighb[0] = nmaze(NXMAZE-1, j+1);
+        maze[n].neighb[1] = nmaze(NXMAZE-2, j);
+        maze[n].neighb[2] = nmaze(NXMAZE-1, j-1);
+        maze[n].neighb[3] = nmaze(0,j);
+        maze[n].directions[0] = 0;
+        maze[n].directions[1] = 3;
+        maze[n].directions[2] = 2;
+        maze[n].directions[3] = 1;
+    }
+    /* bottom side */
+    for (i=1; i<NXMAZE-1; i++)
+    {
+        n = nmaze(i, 0);
+        maze[n].nneighb = 3;
+        maze[n].neighb[0] = nmaze(i, 1);
+        maze[n].neighb[1] = nmaze(i+1, 0);
+        maze[n].neighb[2] = nmaze(i-1, 0);
+        maze[n].directions[0] = 0;
+        maze[n].directions[1] = 1;
+        maze[n].directions[2] = 3;
+    }
+    /* top side */
+    for (i=1; i<NXMAZE-1; i++)
+    {
+        n = nmaze(i, NYMAZE-1);
+        maze[n].nneighb = 3;
+        maze[n].neighb[0] = nmaze(i, NYMAZE-2);
+        maze[n].neighb[1] = nmaze(i+1, NYMAZE-1);
+        maze[n].neighb[2] = nmaze(i-1, NYMAZE-1);
+        maze[n].directions[0] = 2;
+        maze[n].directions[1] = 1;
+        maze[n].directions[2] = 3;
+    }
+    /* corners */
+    n = nmaze(0,0);
+    maze[n].nneighb = 3;
+    maze[n].neighb[0] = nmaze(1,0);
+    maze[n].neighb[1] = nmaze(0,1);
+    maze[n].neighb[2] = nmaze(NXMAZE-1,0);
+    maze[n].directions[0] = 1;
+    maze[n].directions[1] = 0;
+    maze[n].directions[2] = 3;
+    
+    n = nmaze(NXMAZE-1,0);
+    maze[n].nneighb = 3;
+    maze[n].neighb[0] = nmaze(NXMAZE-2,0);
+    maze[n].neighb[1] = nmaze(NXMAZE-1,1);
+    maze[n].neighb[2] = nmaze(0,0);
+    maze[n].directions[0] = 3;
+    maze[n].directions[1] = 0;
+    maze[n].directions[2] = 1;
+
+    n = nmaze(0,NYMAZE-1);
+    maze[n].nneighb = 3;
+    maze[n].neighb[0] = nmaze(1,NYMAZE-1);
+    maze[n].neighb[1] = nmaze(0,NYMAZE-2);
+    maze[n].neighb[2] = nmaze(NXMAZE-1,NYMAZE-1);
+    maze[n].directions[0] = 1;
+    maze[n].directions[1] = 2;
+    maze[n].directions[2] = 3;
+    
+    n = nmaze(NXMAZE-1,NYMAZE-1);
+    maze[n].nneighb = 3;
+    maze[n].neighb[0] = nmaze(NXMAZE-2,NYMAZE-1);
+    maze[n].neighb[1] = nmaze(NXMAZE-1,NYMAZE-2);
+    maze[n].neighb[2] = nmaze(0,NYMAZE-1);
+    maze[n].directions[0] = 3;
+    maze[n].directions[1] = 2;
+    maze[n].directions[2] = 1;
 
     /* initialize other parameters */
     for (i=0; i<NXMAZE; i++)
@@ -738,7 +861,7 @@ int find_maze_path(t_maze maze[NXMAZE*NYMAZE], int n0, int *path, int *pathlengt
             inext = next_table[rand()%nnext];
             nextcell = maze[n].neighb[inext];
             /* square and circular maze */
-            if (mazetype < MAZE_TYPE_HEX) switch(maze[n].directions[inext]){
+            if ((mazetype < MAZE_TYPE_HEX)||(mazetype == MAZE_TYPE_CYLINDER)) switch(maze[n].directions[inext]){
                 case(0): 
                 {
                     printf("Moving north\n");
@@ -957,6 +1080,11 @@ void init_maze_oftype(t_maze maze[NXMAZE*NYMAZE], int type)
             init_oct_maze_graph(maze);
             break;
         }
+        case (MAZE_TYPE_CYLINDER):
+        {
+            init_cylinder_maze_graph(maze);
+            break;
+        }
     }
     
     for (i=0; i<RAND_SHIFT; i++) rand();
@@ -1034,6 +1162,12 @@ void init_oct_maze(t_maze maze[NXMAZE*NYMAZE])
 /* init a maze with hexagonal cells */
 {
     init_maze_oftype(maze, MAZE_TYPE_OCT);
+}
+
+void init_cylinder_maze(t_maze maze[NXMAZE*NYMAZE])
+/* init a maze with hexagonal cells */
+{
+    init_maze_oftype(maze, MAZE_TYPE_CYLINDER);
 }
 
 void init_maze_exit(int nx, int ny, t_maze maze[NXMAZE*NYMAZE])

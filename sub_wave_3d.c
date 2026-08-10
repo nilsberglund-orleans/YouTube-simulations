@@ -1133,7 +1133,7 @@ void compute_field_color(double value, double value2, int cplot, int palette, do
     switch (cplot) {
         case (P_3D_AMP_ANGLE): 
         {
-            color_scheme_palette(COLOR_SCHEME, palette, VSCALE_AMPLITUDE*value, 1.0, 0, rgb);
+            color_scheme_palette(COLOR_SCHEME, palette, VSHIFT_AMPLITUDE + VSCALE_AMPLITUDE*value, 1.0, 0, rgb);
             break;
         }
         case (P_3D_ENERGY):

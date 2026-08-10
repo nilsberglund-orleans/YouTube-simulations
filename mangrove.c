@@ -109,6 +109,7 @@
 #define X_SHIFT -0.9        /* x range on which to apply OSCILLATE_TOPBOT */
 
 #define OMEGA 0.00133333333        /* frequency of periodic excitation */
+#define OMEGA_B 0.001     /* frequency of periodic excitation */
 #define K_BC 3.0             /* spatial period of periodic excitation in y direction */
 #define KX_BC 10.0           /* spatial period of periodic excitation in x direction */
 #define KY_BC 3.3333           /* spatial period of periodic excitation in y direction */

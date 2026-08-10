@@ -409,6 +409,42 @@ void draw_colored_polygon(double x, double y, double r, int nsides, double angle
     glEnd();
 }
 
+void draw_scaled_polygon(double x, double y, double rx, double ry, int nsides, double angle)
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI/(double)nsides;
+    
+    glColor3f(1.0, 1.0, 1.0);
+    glBegin(GL_LINE_LOOP);
+    for (i=0; i<=nsides; i++)
+    {
+        alpha = angle + (double)i*dalpha;
+        glVertex2d(x + rx*cos(alpha), y + ry*sin(alpha));
+    }
+    glEnd();
+}
+
+void draw_scaled_colored_polygon(double x, double y, double rx, double ry, int nsides, double angle, double rgb[3])
+{
+    int i;
+    double pos[2], alpha, dalpha;
+    
+    dalpha = DPI/(double)nsides;
+    
+    glColor3f(rgb[0], rgb[1], rgb[2]);
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2d(x, y);
+    for (i=0; i<=nsides; i++)
+    {
+        alpha = angle + (double)i*dalpha;
+        glVertex2d(x + rx*cos(alpha), y + ry*sin(alpha));
+    }
+    
+    glEnd();
+}
+
 void draw_rhombus(double x, double y, double r, double angle)
 {
     int i;
@@ -2856,6 +2892,302 @@ int init_maze_segments(t_segment segment[NMAXSEGMENTS], int diag)
     free(maze);
 }
 
+
+int init_maze_segments_sphere_reg(t_segment segment[NMAXSEGMENTS])
+/* init segments forming a maze */
+{
+    t_maze* maze;
+    int i, j, n;
+    double x1, y1, x2, y2, dx, dy, padding = 0.5, width = MAZE_WIDTH, phishift;
+    
+    maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+    
+    init_cylinder_maze(maze);
+    
+    /* build walls of maze */
+    dx = DPI/(double)(NXMAZE);
+    dy = (YMAX - YMIN - 2.0*padding)/(double)(NYMAZE);
+    phishift = 0.5*dx;
+    
+    for (i=0; i<NXMAZE; i++)
+        for (j=0; j<NYMAZE; j++)
+        {
+            n = nmaze(i, j);
+            x1 = phishift + (double)i*dx;
+            y1 = YMIN + padding + (double)j*dy;
+            
+            if (maze[n].west) 
+            {
+                x2 = x1 - width;
+                y2 = y1 + dy;
+                
+                add_rectangle_to_segments(x1, y1, x1 - width, y1 + dy, segment, 0);
+                if (x2 > DPI) add_rectangle_to_segments(x1 - DPI, y1, x1 - DPI - width, y1 + dy, segment, 0);
+            }
+            
+            if (((j>0)||(i!=NXMAZE*3/4))&&(maze[n].south)) 
+            {
+                x2 = x1 + dx;
+                y2 = y1 - width;
+                
+                add_rectangle_to_segments(x1, y1, x1 + dx, y1 - width, segment, 0);
+                if (x2 > DPI) add_rectangle_to_segments(x1 - DPI, y1, x1 - DPI + dx, y1 - width, segment, 0);
+            }
+        }
+    
+    /* top side of maze */
+    for (i=0; i<NXMAZE; i++)
+    {
+        x1 = phishift + (double)i*dx;
+        y1 = YMAX - padding;
+        if (i!=NXMAZE/4)
+        {
+            add_rectangle_to_segments(x1, y1, x1 + dx, y1 - width, segment, 0);
+            if (x1 + dx > DPI) add_rectangle_to_segments(x1 - DPI, y1, x1 - DPI + dx, y1 - width, segment, 0);
+        }
+    }
+   
+    free(maze);
+}
+
+
+int init_maze_segments_sphere(t_segment segment[NMAXSEGMENTS])
+/* init segments forming a maze */
+{
+    t_maze* maze;
+    int nblocks, block, i, j, k, n, p, q, np, na, inrect;
+    double x1, y1, x2, y2, dx, dy, padding = 0.02;
+    double rmin, rmax, angle, r, dr, phi, dphi, phi1, ww, width = 0.03, theta, theta1, phaseshift, phishift; 
+    
+    maze = (t_maze *)malloc(NXMAZE*NYMAZE*sizeof(t_maze));
+    
+    init_circular_maze(maze);
+        
+    /* build walls of maze */
+    nblocks = NYMAZE/NXMAZE;
+    rmin = 0.4;
+    rmax = 1.5*PID + 0.2;
+    angle = DPI/(double)nblocks;
+        
+    dr = (rmax - rmin)/(double)(NXMAZE);
+    
+    phishift = 0.1;
+    
+    /* add north-south walls */
+    for (block = 0; block < nblocks; block++)
+    {
+        printf("Block %i\n", block);
+        dphi = angle;
+        
+        /* first circle */
+        n = nmaze(0, block*NXMAZE);
+        r = rmin - 0.5*width;
+        phi = phishift + (double)block*angle;
+        
+        if (maze[n].south)
+        {
+            x1 = phi - 0.5*width;
+            y1 = YMAX - r;
+            x2 = phi + 0.5*width;
+            y2 = YMAX - r - dr - width;
+            
+            if (x1 > XMAX) x1 += XMIN - XMAX;
+            if (x2 > XMAX) x2 += XMIN - XMAX;
+            
+            add_rectangle_to_segments(x1, y1, x2, y2, segment, 0);
+            np++;
+        }
+        
+        /* second circle */
+        r = rmin + dr - 0.5*width;
+        dphi *= 0.5;
+        for (q=0; q<2; q++)
+        {
+            n = nmaze(1, block*NXMAZE + q);
+            phi = phishift + (double)(block)*angle + (double)q*dphi;
+            
+            if (maze[n].south)
+            {
+                x1 = phi - 0.5*width;
+                y1 = YMAX - r;
+                x2 = phi + 0.5*width;
+                y2 = YMAX - r - dr - width;
+                
+                if (x1 > XMAX) x1 += XMIN - XMAX;
+                if (x2 > XMAX) x2 += XMIN - XMAX;
+            
+                add_rectangle_to_segments(x1, y1, x2, y2, segment, 0);
+                np++;
+            }
+        }
+        
+        /* other circles */
+        ww = 2;
+        i = 2;
+        while (ww < NXMAZE)
+        {
+            dphi *= 0.5;
+            for (p = 0; p < ww; p++)
+            {
+                r = rmin + (double)i*dr - 0.5*width;
+                for (q = 0; q < 2*ww; q++)
+                {
+                    j = block*NXMAZE + q;
+                    n = nmaze(i,j);
+                    phi = phishift + (double)(block)*angle + (double)q*dphi;
+                    
+                    if (maze[n].south)
+                    {
+                        x1 = phi - 0.5*width;
+                        y1 = YMAX - r;
+                        x2 = phi + 0.5*width;
+                        y2 = YMAX - r - dr - width;
+
+                        if (x1 > XMAX) x1 += XMIN - XMAX;
+                        if (x2 > XMAX) x2 += XMIN - XMAX;
+            
+                        add_rectangle_to_segments(x1, y1, x2, y2, segment, 0);
+                        np++;
+                    }
+                }
+                i++;
+            }
+            ww *= 2;
+        }
+    }
+    
+    /* add east-west walls */
+    for (block = 0; block < nblocks; block++)
+    {
+        dphi = angle;
+        
+        /* first circle */
+        n = nmaze(0, block*NXMAZE);
+        r = rmin;
+        phi = phishift + (double)block*angle;
+        
+        if ((block > 0)&&(maze[n].west))
+        {
+//             x1 = phi;
+//             y1 = YMAX - (r - 0.5*width);
+//             x2 = phi + dphi + 0.05*width;
+//             y2 = YMAX - (r + 0.5*width);
+//                         
+//             add_rectangle_to_segments(x1, y1, x2, y2, segment, 0);
+//             
+//             if (x2 > XMAX) add_rectangle_to_segments(x1 - DPI, y1, x2 - DPI, y2, segment, 0);
+//             if (x1 < XMIN) add_rectangle_to_segments(x1 + DPI, y1, x2 + DPI, y2, segment, 0);
+//             np++;  
+            
+            y1 = YMAX - (r - 0.5*width);
+            y2 = YMAX - (r + 0.5*width);
+            x1 = phi;
+            while (x1 < phi + dphi + 0.05*width)
+            {
+                x2 = x1 + 0.25*dphi;
+                add_rectangle_to_segments(x1, y1, x2, y2, segment, 0);
+            
+                if (x2 > XMAX) add_rectangle_to_segments(x1 - DPI, y1, x2 - DPI, y2, segment, 0);
+                if (x1 < XMIN) add_rectangle_to_segments(x1 + DPI, y1, x2 + DPI, y2, segment, 0);
+                np++; 
+                x1 += 0.25*dphi;
+            }
+            
+        }
+                
+        /* second circle */
+        r = rmin + dr;
+        dphi *= 0.5;
+        for (q=0; q<2; q++)
+        {
+            n = nmaze(1, block*NXMAZE + q);
+            phi = phishift + (double)(block)*angle + (double)q*dphi;
+            
+            if (maze[n].west)
+            {
+//                 x1 = phi;
+//                 y1 = YMAX - (r - 0.5*width);
+//                 x2 = phi + dphi + 0.05*width;
+//                 y2 = YMAX - (r + 0.5*width);
+//                 
+//                 add_rectangle_to_segments(x1, y1, x2, y2, segment, 0);
+//             
+//                 if (x2 > XMAX) add_rectangle_to_segments(x1 - DPI, y1, x2 - DPI, y2, segment, 0);
+//                 if (x1 < XMIN) add_rectangle_to_segments(x1 + DPI, y1, x2 + DPI, y2, segment, 0);
+//                 
+//                 np++;
+                
+                y1 = YMAX - (r - 0.5*width);
+                y2 = YMAX - (r + 0.5*width);
+                x1 = phi;
+                while (x1 < dphi + 0.05*width)
+                {
+                    x2 = x1 + 0.25*dphi;
+                    add_rectangle_to_segments(x1, y1, x2, y2, segment, 0);
+            
+                    if (x2 > XMAX) add_rectangle_to_segments(x1 - DPI, y1, x2 - DPI, y2, segment, 0);
+                    if (x1 < XMIN) add_rectangle_to_segments(x1 + DPI, y1, x2 + DPI, y2, segment, 0);
+                    np++; 
+                    x1 += 0.25*dphi;
+                }
+            }
+        }
+                
+        /* other circles */
+        ww = 2;
+        i = 2;
+        while (ww < NXMAZE)
+        {
+            dphi *= 0.5;
+            for (p = 0; p < ww; p++)
+            {
+                r = rmin + (double)i*dr;
+                for (q = 0; q < 2*ww; q++)
+                {
+                    j = block*NXMAZE + q;
+                    n = nmaze(i,j);
+                    phi = phishift + (double)(block)*angle + (double)q*dphi;
+                    
+                    if (maze[n].west)
+                    {
+                        x1 = phi;
+                        y1 = YMAX - (r - 0.5*width);
+                        x2 = phi + dphi + 0.05*width;
+                        y2 = YMAX - (r + 0.5*width);
+                        
+                        add_rectangle_to_segments(x1, y1, x2, y2, segment, 0);
+            
+                        if (x2 > XMAX) add_rectangle_to_segments(x1 - DPI, y1, x2 - DPI, y2, segment, 0);
+                        if (x1 < XMIN) add_rectangle_to_segments(x1 + DPI, y1, x2 + DPI, y2, segment, 0);
+                        np++;
+                        
+                    }
+                }
+                i++;
+            }
+            ww *= 2;
+        }
+    }
+    
+    /* outer boundary of maze */
+    y1 = YMAX - (rmax - 0.5*width);
+    y2 = YMAX - (rmax + 0.5*width);
+    x1 = phishift + dphi;
+    while (x1 < DPI)
+    {
+        x2 = x1 + dphi;
+        add_rectangle_to_segments(x1, y1, x2, y2, segment, 0);
+    
+        if (x2 > XMAX) add_rectangle_to_segments(x1 - DPI, y1, x2 - DPI, y2, segment, 0);
+        x1 += dphi;
+    }
+    
+    np++;
+
+    free(maze);
+}
+
+
 void translate_segments(t_segment segment[NMAXSEGMENTS], double deltax[2], double deltay[2])
 /* rotates the repelling segments by given angle */
 {
@@ -3277,6 +3609,100 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
             for (i=0; i<nsegments; i++) 
             {
                 segment[i].concave = 0;
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_FOUR_VERTICALS):
+        {
+            width = 2.0*MU;
+            y = 0.5*(YMIN + YMAX);
+            
+            add_rectangle_to_segments(width, y, -width, YMAX + 0.1, segment, 0); 
+            add_rectangle_to_segments(XMAX+width, y, XMAX-width, YMAX + 0.1, segment, 0); 
+            
+            x = 0.5*(XMIN + XMAX);
+            add_rectangle_to_segments(x+width, y, x-width, YMAX + 0.1, segment, 0); 
+
+            x = 0.25*(3.0*XMIN + XMAX);
+            add_rectangle_to_segments(x+width, YMIN - 0.1, x-width, y, segment, 0); 
+
+            x = 0.25*(XMIN + 3.0*XMAX);
+            add_rectangle_to_segments(x+width, YMIN - 0.1, x-width, y, segment, 0); 
+
+            cycle = 0;
+            concave = 0;    /* add_rectangle_to_segments already deals with concave corners */
+            for (i=0; i<nsegments; i++) 
+            {
+//                 segment[i].concave = 1;
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_TWO_VERTICALS):
+        {
+            width = 2.0*MU;
+            y = 0.5*(YMIN + YMAX);
+            
+            x = 0.25*(3.0*XMIN + XMAX);
+            add_rectangle_to_segments(x+width, YMIN - 0.1, x-width, y, segment, 0); 
+
+            x = 0.25*(XMIN + 3.0*XMAX);
+            add_rectangle_to_segments(x+width, YMIN - 0.1, x-width, y, segment, 0); 
+
+            cycle = 0;
+            concave = 0;    /* add_rectangle_to_segments already deals with concave corners */
+            for (i=0; i<nsegments; i++) 
+            {
+//                 segment[i].concave = 1;
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_TWO_DIAGONALS):
+        {
+            width = 2.0*MU;
+            y = 0.5*(YMIN + YMAX);
+            
+            x = 0.25*(3.0*XMIN + XMAX);
+            add_rotated_angle_to_segments(x, y, x - LAMBDA, y + LAMBDA, width, 1, segment, 0);
+            
+            x = 0.25*(XMIN + 3.0*XMAX);
+            add_rotated_angle_to_segments(x - LAMBDA, y - LAMBDA, x, y, width, 1, segment, 0);
+
+            cycle = 0;
+            concave = 0;    /* add_rectangle_to_segments already deals with concave corners */
+            for (i=0; i<nsegments; i++) 
+            {
+//                 segment[i].concave = 1;
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_TWO_DIAGONALS_ROT):
+        {
+            width = 2.0*MU;
+            y = 0.5*(YMIN + YMAX);
+            
+            x = 0.25*(3.0*XMIN + XMAX);
+            add_rotated_angle_to_segments(x, y, x + LAMBDA, y + LAMBDA, width, 1, segment, 0);
+            
+            x = 0.25*(XMIN + 3.0*XMAX);
+            add_rotated_angle_to_segments(x + LAMBDA, y - LAMBDA, x, y, width, 1, segment, 0);
+
+            cycle = 0;
+            concave = 0;    /* add_rectangle_to_segments already deals with concave corners */
+            for (i=0; i<nsegments; i++) 
+            {
+//                 segment[i].concave = 1;
                 segment[i].group = 0;
                 segment[i].inactivate = 0;
             }
@@ -3778,6 +4204,32 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
             
             break;
         }
+        case (S_MAZE_SPHERE):
+        {
+            init_maze_segments_sphere(segment);
+            
+            cycle = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_MAZE_SPHERE_REG):
+        {
+            init_maze_segments_sphere_reg(segment);
+            
+            cycle = 0;
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].group = 0;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
         case (S_EXT_RECTANGLE):
         {
             width = 0.1*LAMBDA;
@@ -4026,11 +4478,47 @@ void init_segment_config(t_segment segment[NMAXSEGMENTS], t_belt conveyor_belt[N
         }
         case (S_POLYGON_EXT):
         {
-            add_circle_to_segments(0.0, 0.0, LAMBDA, NPOLY, APOLY, segment, 0);
+            add_circle_to_segments(0.5*(XMIN+XMAX), 0.5*(YMIN+YMAX), LAMBDA, NPOLY, APOLY, segment, 0);
                         
             cycle = 0;
             concave = 0;
             nsegments = NPOLY;
+            ngroups = 1;
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].concave = 1;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_TWO_POLYGONS_EXT):
+        {
+            add_circle_to_segments(XMIN + 0.25*(XMAX-XMIN), 0.5*(YMIN+YMAX), LAMBDA, NPOLY, APOLY, segment, 0);
+            add_circle_to_segments(XMIN + 0.75*(XMAX-XMIN), 0.5*(YMIN+YMAX), LAMBDA, NPOLY, APOLY, segment, 0);
+                        
+            cycle = 0;
+            concave = 0;
+            ngroups = 1;
+            
+            for (i=0; i<nsegments; i++) 
+            {
+                segment[i].concave = 1;
+                segment[i].inactivate = 0;
+            }
+            
+            break;
+        }
+        case (S_TWO_POLYGONS_EXT_SHIFTED):
+        {
+            y1 = 0.4*YMIN + 0.6*YMAX;
+            add_circle_to_segments(XMIN + 0.25*(XMAX-XMIN), y1, LAMBDA, NPOLY, APOLY, segment, 0);
+            y1 = 0.6*YMIN + 0.4*YMAX;
+            add_circle_to_segments(XMIN + 0.75*(XMAX-XMIN), y1, LAMBDA, NPOLY, APOLY, segment, 0);
+                        
+            cycle = 0;
+            concave = 0;
             ngroups = 1;
             
             for (i=0; i<nsegments; i++) 
@@ -4675,6 +5163,19 @@ int in_segment_region(double x, double y, t_segment segment[NMAXSEGMENTS])
     if (y <= BCYMIN) return(0);
             
     switch (SEGMENT_PATTERN) {
+        case (S_TWO_VERTICALS):
+        {
+            y1 = 0.5*(YMIN + YMAX);
+            width = 4.0*MU;
+            if (y < y1 + MU)
+            {
+                x1 = 0.25*(3.0*XMIN + XMAX);
+                if (vabs(x - x1) < width) return(0);
+                x1 = 0.25*(XMIN + 3.0*XMAX);
+                if (vabs(x - x1) < width) return(0);
+            }
+            return(1); 
+        }
         case (S_CUP):
         {
             angle = APOLY*PID;
@@ -4682,6 +5183,7 @@ int in_segment_region(double x, double y, t_segment segment[NMAXSEGMENTS])
             
             if (y < BCYMAX - (BCYMAX - BCYMIN)*(x - BCXMIN)/dx) return(0);
             if (y < BCYMAX - (BCYMAX - BCYMIN)*(BCXMAX - x)/dx) return(0);
+            break;
         }
         case (S_HOURGLASS):
         {
@@ -4823,7 +5325,23 @@ int in_segment_region(double x, double y, t_segment segment[NMAXSEGMENTS])
         case (S_POLYGON_EXT):
         {
             padding = 3.0*MU;
-            if (in_polygon(x, y, LAMBDA + padding, NPOLY, APOLY)) return(0);
+            if (in_polygon(x - 0.5*(XMIN+XMAX), y - 0.5*(YMIN+YMAX), LAMBDA + padding, NPOLY, APOLY)) return(0);
+            else return(1);
+        }
+        case (S_TWO_POLYGONS_EXT):
+        {
+            padding = 3.0*MU;
+            if (in_polygon(x - 0.25*XMIN - 0.75*XMAX, y - 0.5*(YMIN+YMAX), LAMBDA + padding, NPOLY, APOLY)) return(0);
+            else if (in_polygon(x - 0.75*XMIN - 0.25*XMAX, y - 0.5*(YMIN+YMAX), LAMBDA + padding, NPOLY, APOLY)) return(0);
+            else return(1);
+        }
+        case (S_TWO_POLYGONS_EXT_SHIFTED):
+        {
+            padding = 3.0*MU;
+            y1 = 0.6*YMIN + 0.4*YMAX;
+            y2 = 0.4*YMIN + 0.6*YMAX;
+            if (in_polygon(x - 0.25*XMIN - 0.75*XMAX, y - y1, LAMBDA + padding, NPOLY, APOLY)) return(0);
+            else if (in_polygon(x - 0.75*XMIN - 0.25*XMAX, y - y2, LAMBDA + padding, NPOLY, APOLY)) return(0);
             else return(1);
         }
         case (S_WEDGE_EXT):
@@ -8186,7 +8704,12 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
                 draw_colored_ellipse_precomp(xc1, yc1, radius/(sin(yc1) + SIN_THETA_REG), radius, rgb);
             else draw_colored_circle_precomp(xc1, yc1, radius, rgb);
         }
-        else draw_colored_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID, rgb);
+        else 
+        {
+            if ((SPHERE)&&(DRAW_ELLIPSES_ON_SPHERE))
+                draw_scaled_colored_polygon(xc1, yc1, radius/(sin(yc1) + SIN_THETA_REG), radius, nsides, angle + APOLY*PID, rgb);
+            else draw_colored_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID, rgb);
+        }
     }
     
     /* draw crosses/bars on charged particles */
@@ -8254,7 +8777,12 @@ void draw_one_particle(t_particle particle, double xc, double yc, double radius,
                 draw_ellipse_precomp(xc1, yc1, radius/(sin(yc1) + SIN_THETA_REG), radius);
             else draw_circle_precomp(xc1, yc1, radius);
         }
-        else draw_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID); 
+        else 
+        {
+            if ((SPHERE)&&(DRAW_ELLIPSES_ON_SPHERE))
+                draw_scaled_polygon(xc1, yc1, radius/(sin(yc1) + SIN_THETA_REG), radius, nsides, angle + APOLY*PID); 
+            else draw_polygon(xc1, yc1, radius, nsides, angle + APOLY*PID); 
+        }
     }
     
     if (particle.interaction == I_LJ_WATER) for (wsign = -1; wsign <= 1; wsign+=2)
@@ -8888,7 +9416,53 @@ void draw_potential(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
             value = atan(BG_POTENTIAL_SLOPE*pot)/PI + 0.5;
 //             value = 0.5*(tanh(BG_POTENTIAL_SLOPE*pot)/PI + 1.0);
             hue = ENERGY_HUE_MIN + (ENERGY_HUE_MAX - ENERGY_HUE_MIN)*value;
-            hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+//             hsl_to_rgb_turbo(hue, 0.9, 0.5, rgb);
+            hsl_to_rgb_palette(hue, 0.9, 0.5, rgb, COLOR_PALETTE_POTENTIAL);
+            
+            if (SHADE_BG_COLOR_2D) 
+                for (k=0; k<3; k++) rgb[k] *= wsphere[cell].cos_angle_pot;
+                
+            
+            phi = XMIN + (double)i*dphi;
+            theta = YMIN + (double)j*dtheta;
+            
+            glColor3f(rgb[0], rgb[1], rgb[2]);
+            glVertex2d(phi, theta);
+            glVertex2d(phi + dphi_res, theta);
+            glVertex2d(phi + dphi_res, theta + dtheta_res);
+            glVertex2d(phi, theta + dtheta_res);
+        }
+    glEnd();
+}
+
+
+void draw_dem(t_lj_sphere wsphere[NX_SPHERE*NY_SPHERE])
+/* color background according to potential on sphere */
+{
+    int i, j, k, cell, res = 3;
+    double pot, value, phi, theta, hue, rgb[3];
+    static double dphi, dtheta, dphi_res, dtheta_res;
+    static int first = 1;
+    
+    if (first)
+    {
+        dphi = (XMAX-XMIN)/(double)NX_SPHERE;
+        dtheta = (YMAX-YMIN)/(double)NY_SPHERE;
+        dphi_res = (double)res*dphi;
+        dtheta_res = (double)res*dtheta;
+        first = 0;
+    }
+    
+    glBegin(GL_QUADS);
+    for (i=0; i<NX_SPHERE; i+=res)
+        for (j=0; j<NY_SPHERE; j+=res)
+        {
+            cell = i*NY_SPHERE + j;
+            rgb[0] = wsphere[cell].r0;
+            rgb[1] = wsphere[cell].g0;
+            rgb[2] = wsphere[cell].b0;
+            
+//             printf("rgb = (%.3f, %.3f, %.3f\n", rgb[0], rgb[1], rgb[2]);
             
             if (SHADE_BG_COLOR_2D) 
                 for (k=0; k<3; k++) rgb[k] *= wsphere[cell].cos_angle_pot;
@@ -9928,7 +10502,7 @@ void print_parameters(t_lj_parameters params, short int left, double pressure[N_
 {
     char message[100];
     int i, j, k;
-    double density, hue, rgb[3], logratio, x, y, meanpress[N_PRESSURES], phi, sphi, dphi, pprint, mean_temp, lengthcontainer, boundary_force, fx, fy, r1, r2;
+    double density, hue, rgb[3], logratio, x, y, meanpress[N_PRESSURES], phi, sphi, dphi, pprint, mean_temp, lengthcontainer, boundary_force, fx, fy, r1, r2, rbox;
     static double xbox, xtext, xmid, xmidtext, xxbox, xxtext, pressures[N_P_AVERAGE], meanpressure = 0.0, maxpressure = 0.0, mean_fx, mean_fy;
     static double press[N_PRESSURES][N_P_AVERAGE], temp[N_T_AVERAGE], scale;
     static int first = 1, i_pressure, i_temp;
@@ -9939,19 +10513,20 @@ void print_parameters(t_lj_parameters params, short int left, double pressure[N_
         if (DRAW_SPHERE)
         {
             scale = 2.0/2.5;
+            rbox = 2.0*(double)WINWIDTH/1760.0;
             if (left)
             {
-                xbox = -2.0 + 0.45*scale;
-                xtext = -2.0 + 0.12*scale;
-                xxbox = 2.0 - 0.39*scale;
-                xxtext = 2.0 - 0.73*scale;
+                xbox = -rbox + 0.45*scale;
+                xtext = -rbox + 0.12*scale;
+                xxbox = rbox - 0.39*scale;
+                xxtext = rbox - 0.73*scale;
             }
             else
             {
-                xbox = 2.0 - 0.45*scale;
-                xtext = 2.0 - 0.73*scale;
-                xxbox = -2.0 + 0.4*scale;
-                xxtext = -2.0 + 0.08*scale;
+                xbox = rbox - 0.45*scale;
+                xtext = rbox - 0.73*scale;
+                xxbox = -rbox + 0.4*scale;
+                xxtext = -rbox + 0.08*scale;
             }
             xmid = xbox;
             xmidtext = xtext;
@@ -10215,7 +10790,7 @@ void print_parameters(t_lj_parameters params, short int left, double pressure[N_
         y -= 0.1;
     } 
     
-    if (SPHERE_GRAVITY > 0)
+    if ((SPHERE_GRAVITY > 0)&&(GRAVITY_DELTA_ANGLE != 0.0))
     {
         erase_area_hsl(xmid, y + 0.025*scale, 0.22*scale, 0.05*scale, 0.0, 0.9, 0.0);
         glColor3f(1.0, 1.0, 1.0);
@@ -11992,7 +12567,7 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
         {
             while (!particle[i].active) i++;
             tracer_n[n_tracers] = i;
-            printf("%i th tracer particle %i\n", n_tracers, i); 
+//             printf("%i th tracer particle %i\n", n_tracers, i); 
             i++;
             n_tracers++;
         }
@@ -12132,7 +12707,6 @@ t_segment segment[NMAXSEGMENTS], t_molecule molecule[NMAXCIRCLES])
             if ((particle[i].xc > 0.0)&&(particle[i].yc > 0.0)) 
                 particle[i].active = 0;
     }
-    
     
     if (ADD_FIXED_OBSTACLES)
     {
@@ -18059,9 +18633,14 @@ void draw_frame_2d(int i, int plot, int bg_color, int ncollisions, int traj_posi
     compute_all_particle_colors(particle, cluster, plot);
     if ((COLOR_BACKGROUND)&&(bg_color > 0)) 
     {
-        compute_background_color(particle, segment, obstacle, bg_color, hashgrid, wsphere);
+//         compute_background_color(particle, segment, obstacle, bg_color, hashgrid, wsphere);
         if (bg_color == BG_POTENTIAL) draw_potential(wsphere);
-        else draw_background(particle, segment, obstacle, bg_color, hashgrid);
+        else if (bg_color == BG_DEM) draw_dem(wsphere);
+        else 
+        {
+            compute_background_color(particle, segment, obstacle, bg_color, hashgrid, wsphere);
+            draw_background(particle, segment, obstacle, bg_color, hashgrid);
+        }
     }
     
 //     else if (!TRACER_PARTICLE) blank();
@@ -18114,16 +18693,20 @@ void draw_frame_3d(int i, int plot, int bg_color, int ncollisions, int traj_posi
 //     }
     
     /* initialize background colors */
-    if ((COLOR_BACKGROUND)&&(bg_color > 0))
+    if ((COLOR_BACKGROUND)&&(bg_color > 0)&&(bg_color != BG_DEM))
         compute_background_color(particle, segment, obstacle, bg_color, hashgrid, wsphere);
+//     printf("1\n");
     
     /* compute all particle colors */
     compute_all_particle_colors(particle, cluster, plot);
+//     printf("2\n");
     /* initialize sphere radius and color */
     init_sphere_radius(particle, hashgrid, cluster, trajectory, segment, traj_position, traj_length, wsphere, tracer_n, plot, bg_color, absorber);
+//     printf("3\n");
     /* initialize light angle (cf compute_light_angle_sphere_rde() in sub_rde.c) */
     compute_light_angle_sphere(wsphere);
     /* draw sphere with particles (cf draw_wave_sphere_3d_rde() in sub_rde.c) */
+//     printf("4\n");
     draw_lj_sphere_3d(wsphere);
     
     if (PRINT_PARAMETERS) print_parameters(params, PRINT_LEFT, pressure, refresh);

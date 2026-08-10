@@ -44,7 +44,7 @@
 #include <time.h>
 
 #define MOVIE 0         /* set to 1 to generate movie */
-#define DOUBLE_MOVIE 1  /* set to 1 to produce movies for wave height and energy simultaneously */
+#define DOUBLE_MOVIE 0  /* set to 1 to produce movies for wave height and energy simultaneously */
 #define SAVE_MEMORY 1   /* set to 1 to save memory when writing tiff images */
 #define NO_EXTRA_BUFFER_SWAP 1    /* some OS require one less buffer swap when recording images */
 
@@ -52,15 +52,15 @@
 
 #define WINWIDTH 	1920  /* window width */
 #define WINHEIGHT 	1150  /* window height */
-// #define NX 1920          /* number of grid points on x axis */
-// #define NY 1150          /* number of grid points on y axis */
+// #define NX 3840          /* number of grid points on x axis */
+// #define NY 2300          /* number of grid points on y axis */
 #define NX 2880          /* number of grid points on x axis */
 #define NY 1725          /* number of grid points on y axis */
-// #define NX 2400          /* number of grid points on x axis */
-// #define NY 1400          /* number of grid points on y axis */
 
-#define XMIN -2.0
-#define XMAX 2.0	/* x interval */
+// #define XMIN -2.0
+// #define XMAX 2.0	/* x interval */
+#define XMIN -0.75
+#define XMAX 3.25	/* x interval */
 #define YMIN -1.197916667
 #define YMAX 1.197916667	/* y interval for 9/16 aspect ratio */
 
@@ -70,17 +70,17 @@
 
 /* Choice of the billiard table */
 
-#define B_DOMAIN 192         /* choice of domain shape, see list in global_pdes.c */
+#define B_DOMAIN 202        /* choice of domain shape, see list in global_pdes.c */
 
-#define CIRCLE_PATTERN 2   /* pattern of circles or polygons, see list in global_pdes.c */
+#define CIRCLE_PATTERN 5   /* pattern of circles or polygons, see list in global_pdes.c */
 
-#define COMPARISON 0        /* set to 1 to compare two different patterns */
-#define B_DOMAIN_B 20       /* second domain shape, for comparisons */
-#define CIRCLE_PATTERN_B 0  /* second pattern of circles or polygons */
+#define COMPARISON 1        /* set to 1 to compare two different patterns */
+#define B_DOMAIN_B 202      /* second domain shape, for comparisons */
+#define CIRCLE_PATTERN_B 5  /* second pattern of circles or polygons */
 #define IMAGE_FILE 5        /* for option D_IMAGE */
 
 #define VARIABLE_IOR 0      /* set to 1 for a variable index of refraction */
-#define IOR 182             /* choice of index of refraction, see list in global_pdes.c */
+#define IOR 17              /* choice of index of refraction, see list in global_pdes.c */
 #define IOR_TOTAL_TURNS 1.0 /* total angle of rotation for IOR_PERIODIC_WELLS_ROTATING */
 #define MANDEL_IOR_SCALE -0.05   /* parameter controlling dependence of IoR on Mandelbrot escape speed */
 
@@ -90,20 +90,20 @@
 #define RANDOM_POLY_ANGLE 1 /* set to 1 to randomize angle of polygons */
 #define PDISC_CONNECT_FACTOR 1.5    /* controls which discs are connected for D_CIRCLE_LATTICE_POISSON domain */
 
-#define LAMBDA 2.3	    /* parameter controlling the dimensions of domain */
-#define MU 1.15             /* parameter controlling the dimensions of domain */
-#define MU_B 1.0            /* parameter controlling the dimensions of domain */
-#define NPOLY 3             /* number of sides of polygon */
-#define APOLY -1.0          /* angle by which to turn polygon, in units of Pi/2 */ 
-#define MDEPTH 6            /* depth of computation of Menger gasket */
+#define LAMBDA 0.4	    /* parameter controlling the dimensions of domain */
+#define MU 0.008  	    /* parameter controlling the dimensions of domain */
+#define MU_B 0.08           /* parameter controlling the dimensions of domain */
+#define NPOLY 5             /* number of sides of polygon */
+#define APOLY 0.2           /* angle by which to turn polygon, in units of Pi/2 */ 
+#define MDEPTH 5            /* depth of computation of Menger gasket */
 #define MRATIO 3            /* ratio defining Menger gasket */
 #define MANDELLEVEL 1000    /* iteration level for Mandelbrot set */
 #define MANDELLIMIT 10.0    /* limit value for approximation of Mandelbrot set */
 #define FOCI 1              /* set to 1 to draw focal points of ellipse */
-#define NGRIDX 12           /* number of grid point for grid of disks */
+#define NGRIDX 4            /* number of grid point for grid of disks */
 #define NGRIDY 8            /* number of grid point for grid of disks */
-#define WALL_WIDTH 0.1      /* width of wall separating lenses */
-#define WALL_WIDTH_B 0.05   /* width of wall separating lenses */
+#define WALL_WIDTH 0.075    /* width of wall separating lenses */
+#define WALL_WIDTH_B 0.1    /* width of wall separating lenses */
 #define WALL_WIDTH_RND 0.0  /* proportion of width of width for random arrangements */
 #define RADIUS_FACTOR 0.3   /* controls inner radius for C_RING arrangements */
 #define WALL_WIDTH_ASYM 0.75      /* asymmetry of wall width (D_CIRCLE_LATTICE_NONISO) */
@@ -128,19 +128,20 @@
 
 #define TWOSPEEDS 0          /* set to 1 to replace hardcore boundary by medium with different speed */
 #define OSCILLATE_LEFT 1     /* set to 1 to add oscilating boundary condition on the left */
-#define OSCILLATE_TOPBOT 0   /* set to 1 to enforce a planar wave on top and bottom boundary */
-#define OSCILLATION_SCHEDULE 42  /* oscillation schedule, see list in global_pdes.c */
-#define OSCIL_YMAX 0.1       /* defines oscilling beam range */
-#define OSCIL_YMID -0.75      /* defines oscilling beam midpoint */
+#define OSCILLATE_TOPBOT 1   /* set to 1 to enforce a planar wave on top and bottom boundary */
+#define OSCILLATION_SCHEDULE 0  /* oscillation schedule, see list in global_pdes.c */
+#define OSCIL_YMAX 0.0375          /* defines oscilling beam range */
+#define OSCIL_YMID 0.0          /* defines oscilling beam midpoint */
 #define INITIAL_SHIFT 20.0          /* time shift of initial wave packet (in oscillation periods) */
 #define WAVE_PACKET_SHIFT 200.0     /* time shift between wave packets (in oscillation periods) */
 
-#define OMEGA 0.02         /* frequency of periodic excitation */
+#define OMEGA 0.007        /* frequency of periodic excitation */
+#define OMEGA_B 0.01       /* frequency of periodic excitation */
 #define AMPLITUDE 1.0      /* amplitude of periodic excitation */ 
 #define ACHIRP 0.2         /* acceleration coefficient in chirp */
 #define DAMPING 0.0        /* damping of periodic excitation */
-#define COURANT 0.15       /* Courant number in medium B */
-#define COURANTB 0.1       /* Courant number */
+#define COURANT 0.09       /* Courant number in medium B */
+#define COURANTB 0.2       /* Courant number */
 #define GAMMA 0.0          /* damping factor in wave equation */
 #define GAMMAB 1.0e-6         /* damping factor in wave equation */
 #define GAMMA_SIDES 1.0e-4      /* damping factor on boundary */
@@ -155,9 +156,9 @@
 /* For similar wave forms, COURANT^2*GAMMA should be kept constant */
 
 #define ADD_OSCILLATING_SOURCE 0        /* set to 1 to add an oscillating wave source */
-#define OSCILLATING_SOURCE_PERIOD 18    /* period of oscillating source */
+#define OSCILLATING_SOURCE_PERIOD 12    /* period of oscillating source */
 #define ALTERNATE_OSCILLATING_SOURCE 1  /* set to 1 to alternate sign of oscillating source */
-#define MAX_PULSING_TIME 1500           /* max time for adding pulses */
+#define MAX_PULSING_TIME 23           /* max time for adding pulses */
 
 #define ADD_WAVE_PACKET_SOURCES 0       /* set to 1 to add several sources emitting wave packets */
 #define WAVE_PACKET_SOURCE_TYPE 1       /* type of wave packet sources */
@@ -166,16 +167,17 @@
 
 /* Boundary conditions, see list in global_pdes.c  */
 
-#define B_COND 2
+#define B_COND 4
+#define BC_NEUMANN 1        /* set to 1 to use Neumann boundary conditions on domain */
 
 #define PRECOMPUTE_BC 0     /* set to 1 to compute neighbours for Laplacian in advance */
 
 /* Parameters for length and speed of simulation */
 
-#define NSTEPS 2000         /* number of frames of movie */
-#define NVID 10              /* number of iterations between images displayed on screen */
+#define NSTEPS 2600         /* number of frames of movie */
+#define NVID 10             /* number of iterations between images displayed on screen */
 #define NSEG 200            /* number of segments of boundary */
-#define INITIAL_TIME 100      /* time after which to start saving frames */
+#define INITIAL_TIME 0      /* time after which to start saving frames */
 #define BOUNDARY_WIDTH 2    /* width of billiard boundary */
 #define PRINT_SPEED 0       /* set to 1 to print speed of moving source */
 
@@ -190,9 +192,9 @@
 
 /* Parameters of initial condition */
 
-#define INITIAL_AMP 0.75             /* amplitude of initial condition */
-#define INITIAL_VARIANCE 0.0005    /* variance of initial condition */
-#define INITIAL_WAVELENGTH  0.025   /* wavelength of initial condition */
+#define INITIAL_AMP 1.0              /* amplitude of initial condition */
+#define INITIAL_VARIANCE 0.001  /* variance of initial condition */
+#define INITIAL_WAVELENGTH  0.007  /* wavelength of initial condition */
 
 /* Plot type, see list in global_pdes.c  */
 
@@ -206,12 +208,12 @@
 #define FLUX_WINDOW 30           /* size of averaging window of flux intensity */
 #define AMPLITUDE_HIGH_RES 1    /* set to 1 to increase resolution of plot */
 #define SHADE_3D 1              /* set to 1 to change luminosity according to normal vector */
-#define NON_DIRICHLET_BC 0      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
+#define NON_DIRICHLET_BC 1      /* set to 1 to draw only facets in domain, if field is not zero on boundary */
 #define FLOOR_ZCOORD 1          /* set to 1 to draw only facets with z not too negative */
 #define DRAW_BILLIARD 0         /* set to 1 to draw boundary */
 #define DRAW_BILLIARD_FRONT 0   /* set to 1 to draw front of boundary after drawing wave */
 #define DRAW_CONSTRUCTION_LINES 0   /* set to 1 to draw construction lines of certain domains */
-#define FADE_IN_OBSTACLE 0      /* set to 1 to fade color inside obstacles */
+#define FADE_IN_OBSTACLE 1      /* set to 1 to fade color inside obstacles */
 #define DRAW_OUTSIDE_GRAY 0     /* experimental, draw outside of billiard in gray */
 
 #define PLOT_SCALE_ENERGY 0.4          /* vertical scaling in energy plot */
@@ -225,11 +227,11 @@
 #define REP_PROJ_3D 1       /* projection on plane orthogonal to observer line of sight */
 
 #define ROTATE_VIEW 0       /* set to 1 to rotate position of observer */
-#define ROTATE_ANGLE 360.0  /* total angle of rotation during simulation */
+#define ROTATE_ANGLE -360.0  /* total angle of rotation during simulation */
 
 /* Color schemes */
 
-#define COLOR_PALETTE 11       /* Color palette, see list in global_pdes.c  */
+#define COLOR_PALETTE 17       /* Color palette, see list in global_pdes.c  */
 #define COLOR_PALETTE_B 13     /* Color palette, see list in global_pdes.c  */
 
 #define BLACK 1          /* background */
@@ -240,12 +242,12 @@
 #define SLOPE 1.0        /* sensitivity of color on wave amplitude */
 #define COLOR_RANGE 1.0    /* max range of color (default: 1.0) */
 #define VSCALE_AMPLITUDE 1.0   /* additional scaling factor for color scheme P_3D_AMPLITUDE */
-#define VSHIFT_AMPLITUDE 0.0   /* additional shift for wave amplitude */
-#define VSCALE_ENERGY 2.5      /* additional scaling factor for color scheme P_3D_ENERGY */
+#define VSHIFT_AMPLITUDE -0.0   /* additional shift for wave amplitude */
+#define VSCALE_ENERGY 0.75      /* additional scaling factor for color scheme P_3D_ENERGY */
 #define PHASE_FACTOR 20.0      /* factor in computation of phase in color scheme P_3D_PHASE */
 #define PHASE_SHIFT 0.0     /* shift of phase in color scheme P_3D_PHASE */
 #define ATTENUATION 0.0     /* exponential attenuation coefficient of contrast with time */
-#define E_SCALE 100.0       /* scaling factor for energy representation */
+#define E_SCALE 150.0       /* scaling factor for energy representation */
 #define LOG_SCALE 1.5       /* scaling factor for energy log representation */
 #define LOG_SHIFT 0.25      /* shift of colors on log scale */
 #define LOG_ENERGY_FLOOR -10.0    /* floor value for log of (total) energy */
@@ -276,9 +278,9 @@
 #define MAZE_XSHIFT 0.0     /* horizontal shift of maze */
 #define MAZE_WIDTH 0.02     /* half width of maze walls */
 
-#define DRAW_COLOR_SCHEME 1       /* set to 1 to plot the color scheme */
-#define COLORBAR_RANGE 3.0      /* scale of color scheme bar */
-#define COLORBAR_RANGE_B 1.5    /* scale of color scheme bar for 2nd part */
+#define DRAW_COLOR_SCHEME 0       /* set to 1 to plot the color scheme */
+#define COLORBAR_RANGE 2.0        /* scale of color scheme bar */
+#define COLORBAR_RANGE_B 8.0      /* scale of color scheme bar for 2nd part */
 #define ROTATE_COLOR_SCHEME 0     /* set to 1 to draw color scheme horizontally */
 
 #define SAVE_TIME_SERIES 0      /* set to 1 to save wave time series at a point */
@@ -287,7 +289,6 @@
 #define POTENTIAL 10
 #define POT_FACT 200.0
 #define DRAW_WAVE_PROFILE 0     /* set to 1 to draw a profile of the wave */
-#define MU_B 1.0           /* parameter controlling the dimensions of domain */
 #define HORIZONTAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define VERTICAL_WAVE_PROFILE 0 /* set to 1 to draw wave profile vertically */
 #define DRAW_WAVE_TIMESERIES 0  /* set to 1 to draw a time series of the wave */
@@ -300,7 +301,8 @@
 #define HRES 1          /* dummy, only used by rde.c */
 #define SHADE_2D 0       /* set to 1 to add pseudo-3d shading effect */ 
 #define SHADE_SCALE_2D 0.05  /* lower value increases sensitivity of shading */
-#define N_SOURCES 1                     /* number of sources, for option draw_sources */
+#define N_SOURCES 4                     /* number of sources, for option draw_sources */
+#define ALTERNATE_SOURCE_PHASES 0       /* set to 1 to alternate initial phases of sources */
 #define XYIN_INITIALISED (B_DOMAIN == D_IMAGE)
 /* end of constants only used by sub_wave and sub_maze */
 
@@ -318,11 +320,12 @@ double light[3] = {0.816496581, -0.40824829, 0.40824829};      /* vector of "lig
 double observer[3] = {8.0, 6.0, 6.0};    /* location of observer for REP_PROJ_3D representation */ 
 int reset_view = 0;         /* switch to reset 3D view parameters (for option ROTATE_VIEW) */
 
-#define Z_SCALING_FACTOR 0.1    /* overall scaling factor of z axis for REP_PROJ_3D representation */
-#define XY_SCALING_FACTOR 2.3   /* overall scaling factor for on-screen (x,y) coordinates after projection */
+#define Z_SCALING_FACTOR 0.07    /* overall scaling factor of z axis for REP_PROJ_3D representation */
+#define XY_SCALING_FACTOR 1.8   /* overall scaling factor for on-screen (x,y) coordinates after projection */
 #define ZMAX_FACTOR 1.0         /* max value of z coordinate for REP_PROJ_3D representation */
-#define XSHIFT_3D 0.0           /* overall x shift for REP_PROJ_3D representation */
-#define YSHIFT_3D -0.25           /* overall y shift for REP_PROJ_3D representation */
+#define XSHIFT_3D 0.2           /* overall x shift for REP_PROJ_3D representation */
+#define YSHIFT_3D 0.6         /* overall y shift for REP_PROJ_3D representation */
+
 
 #define BEAM_BC ((OSCILLATION_SCHEDULE == OSC_BEAM_SINE)||(OSCILLATION_SCHEDULE == OSC_BEAM_SINE_DECREASING)||(OSCILLATION_SCHEDULE == OSC_BEAM_SINE_TWOPERIODS)||(OSCILLATION_SCHEDULE == OSC_BEAM_SINE_CHIRP))
 
@@ -433,6 +436,11 @@ void evolve_wave_half_new(double phi_in[NX*NY], double psi_in[NX*NY], double phi
                     phi_out[j] = x - tc[j]*(x - phi_in[NY+j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
                     break;
                 }
+                case (BC_ABS_REFLECT):
+                {
+                    phi_out[j] = x - tc[j]*(x - phi_in[NY+j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
             }
         }
     }
@@ -460,6 +468,11 @@ void evolve_wave_half_new(double phi_in[NX*NY], double psi_in[NX*NY], double phi
                     break;
                 }
                 case (BC_VPER_HABS):
+                {
+                    phi_out[(NX-1)*NY+j] = x - tc[(NX-1)*NY+j]*(x - phi_in[(NX-2)*NY+j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
+                case (BC_ABS_REFLECT):
                 {
                     phi_out[(NX-1)*NY+j] = x - tc[(NX-1)*NY+j]*(x - phi_in[(NX-2)*NY+j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
                     break;
@@ -504,6 +517,12 @@ void evolve_wave_half_new(double phi_in[NX*NY], double psi_in[NX*NY], double phi
                     else phi_out[i*NY+NY-1] = -y + 2*x + tcc[i*NY+NY-1]*delta[i*NY+NY-1] - KAPPA*x - tgamma[i*NY+NY-1]*(x-y);
                     break;
                 }
+                case (BC_ABS_REFLECT):
+                {
+                    phi_out[i*NY+NY-1] = x - tc[i*NY+NY-1]*(x - phi_in[i*NY+NY-2]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
+                    break;
+                }
+                
             }
         }
     }
@@ -542,6 +561,12 @@ void evolve_wave_half_new(double phi_in[NX*NY], double psi_in[NX*NY], double phi
                     else phi_out[i*NY] = -y + 2*x + tcc[i*NY]*delta[i*NY] - KAPPA*x - tgamma[i*NY]*(x-y);
                     break;
                 }
+                case (BC_ABS_REFLECT):
+                {
+                    phi_out[i*NY] = x - tc[i*NY]*(x - phi_in[i*NY+1]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
+                    break;
+                }
+                
             }
         }
     }
@@ -572,13 +597,12 @@ void evolve_wave_half_new(double phi_in[NX*NY], double psi_in[NX*NY], double phi
 }
 
 
-void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out[NX*NY], 
-                      short int xy_in[NX*NY], double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY])
+void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out[NX*NY], short int xy_in[NX*NY], double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY], t_neumann_bc neumann_bc[N_NEUMANN_POINTS])
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 /* this version of the function has been rewritten in order to minimize the number of if-branches */
 {
-    int i, j, iplus, iminus, jplus, jminus, jtop, jbot;
+    int i, j, k, iplus, iminus, jplus, jminus, jtop, jbot, nc = 0;
     double delta, x, y, c, cc, gamma;
     static long time = 0;
     static short int first = 1;
@@ -597,7 +621,7 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
     /* evolution in the bulk */
     for (i=1; i<NX-1; i++){
         for (j=1; j<NY-1; j++){
-            if ((TWOSPEEDS)||(xy_in[i*NY+j] != 0)){
+            if ((TWOSPEEDS)||(xy_in[i*NY+j] > 0)){
                 x = phi_in[i*NY+j];
 		y = psi_in[i*NY+j];
                 
@@ -609,6 +633,18 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
             }
         }
     }
+    
+    if (BC_NEUMANN)
+    {
+         #pragma omp parallel for private(nc,k)
+        for (nc= 0; nc < n_neumann_points; nc++) if (neumann_bc[nc].active)
+        {
+            k = neumann_bc[nc].k;
+            phi_out[k] = neumann_bc[nc].nx*phi_in[neumann_bc[nc].nbk1];
+            phi_out[k] += neumann_bc[nc].ny*phi_in[neumann_bc[nc].nbk2];
+        }
+    }
+       
     
     /* left boundary */
 //     if (OSCILLATE_LEFT) for (j=1; j<NY-1; j++) phi_out[j] = AMPLITUDE*cos((double)time*OMEGA);
@@ -647,6 +683,12 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
                     phi_out[j] = x - tc[j]*(x - phi_in[NY+j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
                     break;
                 }
+                case (BC_ABS_REFLECT):
+                {
+                    delta = phi_in[NY+j] + phi_in[j+1] + phi_in[j-1] - 3.0*x;
+                    phi_out[j] = x - tc[j]*(x - phi_in[NY+j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
             }
         }
     }
@@ -677,6 +719,12 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
                     break;
                 }
                 case (BC_VPER_HABS):
+                {
+                    delta = phi_in[(NX-2)*NY+j] + phi_in[(NX-1)*NY+j+1] + phi_in[(NX-1)*NY+j-1] - 3.0*x;
+                    phi_out[(NX-1)*NY+j] = x - tc[(NX-1)*NY+j]*(x - phi_in[(NX-2)*NY+j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
+                    break;
+                }
+                case (BC_ABS_REFLECT):
                 {
                     delta = phi_in[(NX-2)*NY+j] + phi_in[(NX-1)*NY+j+1] + phi_in[(NX-1)*NY+j-1] - 3.0*x;
                     phi_out[(NX-1)*NY+j] = x - tc[(NX-1)*NY+j]*(x - phi_in[(NX-2)*NY+j]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
@@ -741,6 +789,15 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
                     else phi_out[i*NY+NY-1] = -y + 2*x + tcc[i*NY+NY-1]*delta - KAPPA*x - tgamma[i*NY+NY-1]*(x-y);
                     break;
                 }
+                case (BC_ABS_REFLECT):
+                {
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                    delta = phi_in[iplus*NY+NY-1] + phi_in[iminus*NY+NY-1] + phi_in[i*NY+NY-2] - 3.0*x;
+                    phi_out[i*NY+NY-1] = x - tc[i*NY+NY-1]*(x - phi_in[i*NY+NY-2]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
+                    break;
+                }
             }
         }
     }
@@ -800,6 +857,15 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
                     else phi_out[i*NY] = -y + 2*x + tcc[i*NY]*delta - KAPPA*x - tgamma[i*NY]*(x-y);
                     break;
                 }
+                case (BC_ABS_REFLECT):
+                {
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                    delta = phi_in[iplus*NY] + phi_in[iminus*NY] + phi_in[i*NY+1] - 3.0*x;
+                    phi_out[i*NY] = x - tc[i*NY]*(x - phi_in[i*NY+1]) - KAPPA_TOPBOT*x - GAMMA_TOPBOT*(x-y);
+                    break;
+                }
             }
         }
     }
@@ -847,6 +913,15 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
                     delta = phi_in[iplus*NY+jtop] + phi_in[iminus*NY+jtop] + phi_in[i*NY+jtop-1] + phi_in[i*NY] - 4.0*x;
                     if (i==0) phi_out[jtop] = x - tc[jtop]*(x - phi_in[1*NY+jtop]) - KAPPA_SIDES*x - GAMMA_SIDES*(x-y);
                     else phi_out[i*NY+jtop] = -y + 2*x + tcc[i*NY+jtop]*delta - KAPPA*x - tgamma[i*NY+jtop]*(x-y);
+                    break;
+                }
+                case (BC_ABS_REFLECT):
+                {
+                    iplus = i+1;   if (iplus == NX) iplus = NX-1;
+                    iminus = i-1;  if (iminus == -1) iminus = 0;
+                    
+                    delta = phi_in[iplus*NY+jtop] + phi_in[iminus*NY+jtop] + phi_in[i*NY+jtop-1] - 3.0*x;
+                    phi_out[i*NY+jtop] = -y + 2*x + tcc[i*NY+jtop]*delta - KAPPA*x - tgamma[i*NY+jtop]*(x-y);
                     break;
                 }
             }
@@ -898,6 +973,14 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
                     else phi_out[i*NY+jbot] = -y + 2*x + tcc[i*NY+jbot]*delta - KAPPA*x - tgamma[i*NY+jbot]*(x-y);
                     break;
                 }
+                case (BC_ABS_REFLECT):
+                {
+                    iplus = (i+1);   if (iplus == NX) iplus = NX-1;
+                    iminus = (i-1);  if (iminus == -1) iminus = 0;
+                    
+                    delta = phi_in[iplus*NY+jbot] + phi_in[iminus*NY+jbot] + phi_in[i*NY+jbot+1] - 3.0*x;
+                    phi_out[i*NY+jbot] = -y + 2*x + tcc[i*NY+jbot]*delta - KAPPA*x - tgamma[i*NY+jbot]*(x-y);
+                }
             }
         }
     }
@@ -925,8 +1008,7 @@ void evolve_wave_half(double phi_in[NX*NY], double psi_in[NX*NY], double phi_out
 
 
 void evolve_wave(double phi[NX*NY], double psi[NX*NY], double tmp[NX*NY], short int xy_in[NX*NY],
-    double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY], t_laplacian laplace[NX*NY], t_laplacian laplace1[NX*NY], 
-    t_laplacian laplace2[NX*NY])
+    double tc[NX*NY], double tcc[NX*NY], double tgamma[NX*NY], t_laplacian laplace[NX*NY], t_laplacian laplace1[NX*NY], t_laplacian laplace2[NX*NY], t_neumann_bc neumann_bc[N_NEUMANN_POINTS])
 /* time step of field evolution */
 /* phi is value of field at time t, psi at time t-1 */
 {
@@ -942,9 +1024,9 @@ void evolve_wave(double phi[NX*NY], double psi[NX*NY], double tmp[NX*NY], short 
     {
 //         evolve_wave_half(phi, psi, phi_tmp, psi_tmp, xy_in, tc, tcc, tgamma);
 //         evolve_wave_half(phi_tmp, psi_tmp, phi, psi, xy_in, tc, tcc, tgamma);
-        evolve_wave_half(phi, psi, tmp, xy_in, tc, tcc, tgamma);
-        evolve_wave_half(tmp, phi, psi, xy_in, tc, tcc, tgamma);
-        evolve_wave_half(psi, tmp, phi, xy_in, tc, tcc, tgamma);
+        evolve_wave_half(phi, psi, tmp, xy_in, tc, tcc, tgamma, neumann_bc);
+        evolve_wave_half(tmp, phi, psi, xy_in, tc, tcc, tgamma, neumann_bc);
+        evolve_wave_half(psi, tmp, phi, xy_in, tc, tcc, tgamma, neumann_bc);
     }
 }
 
@@ -988,15 +1070,16 @@ void viewpoint_schedule(int i)
 
 void animation()
 {
-    double time, scale, ratio, startleft[2], startright[2], sign = 1.0, r2, xy[2], fade_value, yshift, speed = 0.0, a, b, c, angle = 0.0, lambda1, y, x1, sign1, omega, phase_shift, source_amp[N_SOURCES]; 
+    double time, scale, ratio, startleft[2], startright[2], sign[N_SOURCES], r2, xy[2], fade_value, yshift, speed = 0.0, a, b, c, angle = 0.0, lambda1, y, x1, sign1, omega, phase_shift, source_amp[N_SOURCES], source_periods[N_SOURCES], dperiod; 
     double *phi, *psi, *tmp, *color_scale, *tc, *tcc, *tgamma;
 //     double *total_energy;
     short int *xy_in;
-    int i, j, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, k, p, q, source, source_periods[N_SOURCES];
+    int i, j, s, sample_left[2], sample_right[2], period = 0, fade, source_counter = 0, k, p, q, source, phase, add_counter[N_SOURCES];
     static int counter = 0, first_source = 1;
     long int wave_value;
     t_wave *wave;
     t_laplacian *laplace, *laplace1, *laplace2;
+    t_neumann_bc *neumann_bc;
     t_wave_source wave_source[25];
     
     if (SAVE_TIME_SERIES)
@@ -1025,23 +1108,32 @@ void animation()
     /* initialise positions and radii of circles */
     if (COMPARISON)
     {
-        if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT))
+        if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)||(B_DOMAIN == D_CIRCLES_NEUMANN))
             ncircles = init_circle_config_pattern(circles, CIRCLE_PATTERN);
         else if (B_DOMAIN == D_POLYGONS) ncircles = init_polygon_config_pattern(polygons, CIRCLE_PATTERN);
         
-        if ((B_DOMAIN_B == D_CIRCLES)||(B_DOMAIN_B == D_CIRCLES_IN_RECT))
+        if ((B_DOMAIN_B == D_CIRCLES)||(B_DOMAIN_B == D_CIRCLES_IN_RECT)||(B_DOMAIN_B == D_CIRCLES_NEUMANN))
             ncircles_b = init_circle_config_pattern(circles_b, CIRCLE_PATTERN_B);
         else if (B_DOMAIN_B == D_POLYGONS) ncircles_b = init_polygon_config_pattern(polygons_b, CIRCLE_PATTERN_B);
         /* TO DO: adapt to different polygon patterns */
     }
     else
     {
-        if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)) ncircles = init_circle_config(circles);
+        if ((B_DOMAIN == D_CIRCLES)||(B_DOMAIN == D_CIRCLES_IN_RECT)||(B_DOMAIN == D_CIRCLES_NEUMANN)) 
+            ncircles = init_circle_config(circles);
         else if (B_DOMAIN == D_POLYGONS) ncircles = init_polygon_config(polygons);
     }
     printf("Polygons initialized\n");
     
     if (XYIN_INITIALISED) init_xyin_from_image_3d(xy_in);
+    
+    if (BC_NEUMANN) 
+        neumann_bc = (t_neumann_bc *)malloc(N_NEUMANN_POINTS*sizeof(t_neumann_bc));
+    
+    for (i=0; i<N_SOURCES; i++) add_counter[i] = 0; 
+    
+    if (ALTERNATE_SOURCE_PHASES) for (i=0; i<N_SOURCES; i++) sign[i] = pow(-1.0,(double)i);
+    else for (i=0; i<N_SOURCES; i++) sign[i] = 1.0;
     
     /* initialise polyline for von Koch and similar domains */
 //     npolyline = init_polyline(MDEPTH, polyline);
@@ -1118,14 +1210,17 @@ void animation()
 //         add_circular_wave_mod(1.0, lambda1*cos(((double)j+0.5)*angle), lambda1*sin(((double)j+0.5)*angle), phi, psi, xy_in);
         
     init_wave_flat_mod(phi, psi, xy_in);
-//     init_circular_wave_mod(-0.5, 0.0, phi, psi, xy_in);
-//     add_circular_wave_mod(1.0, 1.0, 0.0, phi, psi, xy_in);
-
+    
+    
 //     printf("Wave initialized\n");
 
 
     /* initialize table of wave speeds/dissipation */
     init_speed_dissipation(xy_in, tc, tcc, tgamma);
+    
+    /* initialize Neumann boundary data */
+    if (BC_NEUMANN) 
+        n_neumann_points = init_neumann_bc_flat(xy_in, neumann_bc, circles, COMPARISON);
     
     /* initialze potential to add to z coordinate */ 
     if (ADD_POTENTIAL)
@@ -1181,7 +1276,7 @@ void animation()
         draw_wave_3d(0, phi, psi, xy_in, wave, ZPLOT, CPLOT, COLOR_PALETTE, 0, 1.0, 1);
         for (j=0; j<NVID; j++) 
         {
-            evolve_wave(phi, psi, tmp, xy_in, tc, tcc, tgamma, laplace, laplace1, laplace2);
+            evolve_wave(phi, psi, tmp, xy_in, tc, tcc, tgamma, laplace, laplace1, laplace2, neumann_bc);
             if (SAVE_TIME_SERIES)
             {
                 wave_value = (long int)(phi[sample_left[0]*NY+sample_left[1]]*1.0e16);
@@ -1199,16 +1294,24 @@ void animation()
         if (DRAW_COLOR_SCHEME) draw_color_bar_palette(CPLOT, COLORBAR_RANGE, COLOR_PALETTE, fade, fade_value); 
         
         /* add oscillating waves */
-        wave_source_x[0] = 0.0;
-        wave_source_y[0] = 0.0;
-        source_periods[0] = OSCILLATING_SOURCE_PERIOD;
-        source_amp[0] = INITIAL_AMP;
         for (source = 0; source < N_SOURCES; source++)
         {
-            if ((ADD_OSCILLATING_SOURCE)&&(i%(OSCILLATING_SOURCE_PERIOD) == 1)&&(i<MAX_PULSING_TIME))
+            wave_source_x[source] = (2.0*(double)source - 1.0)*LAMBDA;
+            wave_source_y[source] = 0.0;
+            source_amp[source] = INITIAL_AMP;
+        }
+        source_periods[0] = OSCILLATING_SOURCE_PERIOD;
+        source_periods[1] = OSCILLATING_SOURCE_PERIOD;
+        for (source = 0; source < N_SOURCES; source++)
+        {
+            dperiod = source_periods[source];
+            phase = i - (int)(dperiod*(double)((int)((double)i/dperiod)));
+            if ((ADD_OSCILLATING_SOURCE)&&(phase == 1)&&(i<MAX_PULSING_TIME))
             {
-                if (ALTERNATE_OSCILLATING_SOURCE) sign = -sign;
-                add_circular_wave_mod(-sign*INITIAL_AMP, wave_source_x[source], wave_source_y[source], phi, psi, xy_in);
+                printf("Source %i: Adding pulse %i at (%.3lg, %.3lg)\n", source, add_counter[source], wave_source_x[source], wave_source_y[source]);
+                add_counter[source]++;
+                if (ALTERNATE_OSCILLATING_SOURCE) sign[source] = -sign[source];
+                add_circular_wave_mod(sign[source]*INITIAL_AMP, wave_source_x[source], wave_source_y[source], phi, psi, xy_in);
             }
         }
 
@@ -1270,7 +1373,7 @@ void animation()
             {
                 if ((ROTATE_VIEW)&&(ROTATE_VIEW_WHILE_FADE))
                 {
-                    viewpoint_schedule(NSTEPS - INITIAL_TIME + i);
+                    viewpoint_schedule(NSTEPS + i);
                     reset_view = 1;
                 }
                 fade_value = 1.0 - (double)i/(double)MID_FRAMES;
@@ -1283,7 +1386,7 @@ void animation()
             
             if ((ROTATE_VIEW)&&(ROTATE_VIEW_WHILE_FADE)) 
             {
-                viewpoint_schedule(NSTEPS - INITIAL_TIME);
+                viewpoint_schedule(NSTEPS);
                 reset_view = 1;
             }
             draw_wave_3d(1, phi, psi, xy_in, wave, ZPLOT_B, CPLOT_B, COLOR_PALETTE_B, 0, 1.0, 1);
@@ -1296,7 +1399,8 @@ void animation()
             {
                 if ((ROTATE_VIEW)&&(ROTATE_VIEW_WHILE_FADE)) 
                 {
-                    viewpoint_schedule(NSTEPS - INITIAL_TIME + i);
+//                     viewpoint_schedule(NSTEPS + MID_FRAMES + i);
+                    viewpoint_schedule(NSTEPS + i);
                     reset_view = 1;
                 }
                 fade_value = 1.0 - (double)i/(double)END_FRAMES;
@@ -1314,7 +1418,7 @@ void animation()
             {
                 if ((ROTATE_VIEW)&&(ROTATE_VIEW_WHILE_FADE))
                 {
-                    viewpoint_schedule(NSTEPS - INITIAL_TIME + i);
+                    viewpoint_schedule(NSTEPS + i);
                     reset_view = 1;
                 }
                 fade_value = 1.0 - (double)i/(double)END_FRAMES;
@@ -1343,6 +1447,8 @@ void animation()
     free(laplace); 
     free(laplace1); 
     free(laplace2); 
+    
+    if (BC_NEUMANN) free(neumann_bc); 
 
     
     if (SAVE_TIME_SERIES)

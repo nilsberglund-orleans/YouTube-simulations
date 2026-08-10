@@ -303,6 +303,12 @@ void write_text( double x, double y, char *st)
 	return(alph);
  }
  
+ short int signp(double x)  /* sign with sign(0) = 1 */
+ {
+     if (x >= 0.0) return(1);
+     else return(-1);
+ }
+ 
  double iabs(int i)     /* absolute value */
  {
 	int res;
@@ -890,6 +896,27 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
                 }
             break;
         }
+        case (C_CLOAK_OBJECT):
+        {
+            for (i = 0; i < 40; i++)
+                for (j = 0; j < 5; j++)
+                {
+                    n = 5*i + j;
+                    phi = (double)i*DPI/40.0;
+                    r = LAMBDA*0.5*(1.0 + (double)j/5.0);
+                    circles[n].xc = r*cos(phi);
+                    circles[n].yc = r*sin(phi);
+                    circles[n].radius = MU;
+                    circles[n].active = 1;
+                }
+            n = ncircles;
+            circles[n].xc = 0.0;
+            circles[n].yc = 0.0;
+            circles[n].radius = 0.25*LAMBDA;
+            circles[n].active = 1;
+            ncircles++;
+            break;
+        }
         case (C_CLOAK_A):   /* optimized model A1 by C. Jo et al */
         {
             ncircles = 200;
@@ -907,6 +934,27 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
                     circles[n].xc = r*cos(phi);
                     circles[n].yc = r*sin(phi);
                     circles[n].radius = LAMBDA*ra[j];
+                    circles[n].active = 1;
+                }
+            break;
+        }
+        case (C_CLOAK_AB):   /* optimized model A1 by C. Jo et al with smaller discs */
+        {
+            ncircles = 200;
+            ra[0] = 0.0731;     sa[0] = 1.115;
+            ra[1] = 0.0768;     sa[1] = 1.292;
+            ra[2] = 0.0652;     sa[2] = 1.464;
+            ra[3] = 0.056;      sa[3] = 1.633;
+            ra[4] = 0.0375;     sa[4] = 1.794;
+            for (i = 0; i < 40; i++)
+                for (j = 0; j < 5; j++)
+                {
+                    n = 5*i + j;
+                    phi = (double)i*DPI/40.0;
+                    r = LAMBDA*sa[j];
+                    circles[n].xc = r*cos(phi);
+                    circles[n].yc = r*sin(phi);
+                    circles[n].radius = 0.6*LAMBDA*ra[j];
                     circles[n].active = 1;
                 }
             break;
@@ -977,7 +1025,12 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
                     for (k=0; k<ncircles; k++) if ((k!=i))
                     {
                         /* new circle is far away from circle k */
-                        far = far*((x - circles[k].xc)*(x - circles[k].xc) + (y - circles[k].yc)*(y - circles[k].yc) >=     dpoisson*dpoisson);
+                        far = far*((x - circles[k].xc)*(x - circles[k].xc) + (y - circles[k].yc)*(y - circles[k].yc) >= dpoisson*dpoisson);
+                        if ((B_COND == BC_PERIODIC)||(B_COND == BC_VPER_HABS))
+                        {
+                            far *= ((x - circles[k].xc)*(x - circles[k].xc) + (y + YMAX - YMIN - circles[k].yc)*(y + YMAX - YMIN - circles[k].yc) >= dpoisson*dpoisson);
+                            far *= ((x - circles[k].xc)*(x - circles[k].xc) + (y - YMAX + YMIN - circles[k].yc)*(y - YMAX + YMIN - circles[k].yc) >= dpoisson*dpoisson);                            
+                        }
                         /* new circle is in domain */
                         far = far*(vabs(x) < LAMBDA)*(y < YMAX)*(y > YMIN);
                     }
@@ -1002,6 +1055,33 @@ int init_circle_config_pattern(t_circle circles[NMAXCIRCLES], int circle_pattern
                     n_p_active--;
                 }
                 printf("%i active circles\n", n_p_active);
+            }
+            
+            /* deal with periodic b.c. */
+            if ((B_COND == BC_PERIODIC)||(B_COND == BC_VPER_HABS))
+            {
+                ncirc0 = ncircles;
+                for (i=0; i<ncirc0; i++)
+                {
+                    x = circles[i].xc;
+                    y = circles[i].yc;
+                    if (y > YMAX - MU)
+                    {
+                        circles[ncircles].xc = x;
+                        circles[ncircles].yc = y - YMAX + YMIN;
+                        circles[ncircles].radius = MU;
+                        circles[ncircles].active = 1;
+                        ncircles++;
+                    }
+                    else if (y < YMIN + MU)
+                    {
+                        circles[ncircles].xc = x;
+                        circles[ncircles].yc = y + YMAX - YMIN;
+                        circles[ncircles].radius = MU;
+                        circles[ncircles].active = 1;
+                        ncircles++;
+                    }
+                }
             }
             
             printf("Generated %i circles\n", ncircles);
@@ -6145,6 +6225,18 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
                 }
             return(1);
         }
+        case (D_CIRCLES_NEUMANN):
+        {
+            for (i = 0; i < ncirc; i++)
+                if (circles[i].active) 
+                {
+                    x1 = circles[i].xc;
+                    y1 = circles[i].yc;
+                    r2 = circles[i].radius*circles[i].radius;
+                    if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2) return(0); 
+                }
+            return(1);
+        }
         case (D_CIRCLES_IN_RECT):   /* returns 2 inside circles, 0 outside rectangle */
         {
             for (i = 0; i < ncirc; i++)
@@ -6153,9 +6245,10 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
                     x1 = circles[i].xc;
                     y1 = circles[i].yc;
                     r2 = circles[i].radius*circles[i].radius;
-                    if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2) return(2); 
+                    if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2) return(0); 
+//                     if ((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2) return(2); 
                 }
-            if ((vabs(x) >= LAMBDA)||(vabs(y) >= 1.0)) return(0);
+            if ((vabs(x) >= LAMBDA)||(vabs(y) >= YMAX - XMAX + LAMBDA)) return(0);
             else return(1);
         }
         case (D_POLYGONS):
@@ -6955,6 +7048,37 @@ int xy_in_billiard_single_domain(double x, double y, int b_domain, int ncirc, t_
                 if ((h > -MU)&&(h < 2.0*MU)&&(r*r - h*h < WALL_WIDTH*WALL_WIDTH)) return(1);
             }
             return(0);
+        }
+        case (D_TWO_ELLIPSES):
+        {
+            x1 = vabs(x);
+            return((x1 - LAMBDA)*(x1 - LAMBDA)/(MU*MU) + y*y < 1.0);
+        }
+        case (D_TWO_RECTANGLES):
+        {
+            x1 = vabs(x);
+            return((vabs(x1 - LAMBDA) < MU)&&(vabs(y) < 1.0));
+        }
+        case (D_TWO_POLYGONS):
+        {
+//             if (x < 0.0) y = -y;
+            x1 = vabs(x);
+            return(in_polygon(x1 - LAMBDA, y, MU, NPOLY, APOLY));
+        }   
+        case (D_TWO_POLY_PARABOLAS):
+        {
+            condition = 1;
+            omega = DPI/((double)NPOLY);
+            if (x > 0.0) x -= LAMBDA;
+            else x += LAMBDA;
+            for (k=0; k<NPOLY; k++)  
+            {
+                angle = APOLY*PID + ((double)k+0.5)*omega;
+                x1 = x*cos(angle) + y*sin(angle);
+                y1 = -x*sin(angle) + y*cos(angle);
+                condition = condition*(x1 < MU - 0.25*y1*y1/MU);
+            }
+            return(condition);
         }
         case (D_CARDIOID):
         {
@@ -9350,12 +9474,19 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 if (circles[i].active) draw_circle(circles[i].xc, circles[i].yc, circles[i].radius, NSEG);
             break;
         }
+        case (D_CIRCLES_NEUMANN):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            for (i = 0; i < ncircles; i++) 
+                if (circles[i].active) draw_circle(circles[i].xc, circles[i].yc, circles[i].radius, NSEG);
+            break;
+        }
         case (D_CIRCLES_IN_RECT):
         {
             glLineWidth(BOUNDARY_WIDTH);
             for (i = 0; i < ncircles; i++) 
                 if (circles[i].active) draw_circle(circles[i].xc, circles[i].yc, circles[i].radius, NSEG);
-            draw_rectangle(-LAMBDA, -1.0, LAMBDA, 1.0);
+            draw_rectangle(-LAMBDA, -(YMAX - XMAX + LAMBDA), LAMBDA, YMAX - XMAX + LAMBDA);
             if ((FOCI)&&(CIRCLE_PATTERN == C_LASER))
             {
                 glColor3f(0.3, 0.3, 0.3);
@@ -9972,6 +10103,109 @@ void draw_billiard(int fade, double fade_value)      /* draws the billiard bound
                 
                 draw_circle(x0, 0.0, 0.01, NSEG);
                 draw_circle(-x0, 0.0, 0.01, NSEG);
+            }
+            
+            break;
+        }
+        case (D_TWO_ELLIPSES):
+        {
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<NSEG; i++)
+            {
+                phi = DPI*(double)i/(double)NSEG;
+                xy_to_pos(LAMBDA + MU*cos(phi), sin(phi), pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd();  
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<NSEG; i++)
+            {
+                phi = DPI*(double)i/(double)NSEG;
+                xy_to_pos(-LAMBDA + MU*cos(phi), sin(phi), pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd();  
+            
+            /* draw foci */
+            if (FOCI)
+            {
+                if (fade) glColor3f(0.3*fade_value, 0.3*fade_value, 0.3*fade_value);
+                else glColor3f(0.3, 0.3, 0.3);
+                x0 = sqrt(1.0 - MU*MU);
+
+                glLineWidth(2);
+                glEnable(GL_LINE_SMOOTH);
+                
+                draw_circle(LAMBDA, x0, 0.01, NSEG);
+                draw_circle(LAMBDA, -x0, 0.01, NSEG);
+                draw_circle(-LAMBDA, x0, 0.01, NSEG);
+                draw_circle(-LAMBDA, -x0, 0.01, NSEG);
+            }
+            
+            break;
+        }
+        case (D_TWO_RECTANGLES):
+        {
+            draw_rectangle(LAMBDA - MU, -1.0, LAMBDA + MU, 1.0);
+            draw_rectangle(-LAMBDA - MU, -1.0, -LAMBDA + MU, 1.0);
+            break;
+        }
+        case (D_TWO_POLYGONS):
+        {
+            omega = DPI/((double)NPOLY);
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NPOLY; i++)
+            {
+                x = LAMBDA + MU*cos(i*omega + APOLY*PID);
+                y = MU*sin(i*omega + APOLY*PID);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            glBegin(GL_LINE_LOOP);
+            for (i=0; i<=NPOLY; i++)
+            {
+                x = -LAMBDA + MU*cos(i*omega + APOLY*PID);
+                y = MU*sin(i*omega + APOLY*PID);
+                xy_to_pos(x, y, pos);
+                glVertex2d(pos[0], pos[1]);
+            }
+            glEnd ();
+            break;
+        }
+        case (D_TWO_POLY_PARABOLAS):
+        {
+            omega = PI/((double)NPOLY);
+            a = 0.25/MU;
+            b = 1.0/tan(omega);
+            c = MU;
+            ymax = (-b + sqrt(b*b + 4.0*a*c))/(2.0*a);
+            dy = 2.0*ymax/(double)NSEG; 
+            
+            for (k1 = -1; k1 < 2; k1+=2)
+            {
+                glBegin(GL_LINE_LOOP);
+                for (k=0; k<NPOLY; k++)  
+                {
+                    alpha = APOLY*PID + (2.0*(double)k+1.0)*omega;
+                    for (i = 0; i < NSEG+1; i++) 
+                    {
+                        y1 = -ymax + dy*(double)i;
+                        x1 = MU - 0.25*y1*y1/MU;
+                        x = (double)k1*LAMBDA + x1*cos(alpha) - y1*sin(alpha);
+                        y = x1*sin(alpha) + y1*cos(alpha);
+                        xy_to_pos(x, y, pos);
+                        glVertex2d(pos[0], pos[1]);
+                    }
+                }
+                glEnd ();
+            }
+            
+            if (FOCI)
+            {
+                glColor3f(0.3, 0.3, 0.3);
+                draw_circle(LAMBDA, 0.0, r, NSEG);
+                draw_circle(-LAMBDA, 0.0, r, NSEG);
             }
             
             break;
@@ -11915,6 +12149,15 @@ double oscillating_bc(int time, int j)
             if (t1 > 0.0) amp += cos(t1);
             return(AMPLITUDE*amp);
         }
+        case (OSC_TWOFREQ_TOPBOT): 
+        {
+            if (j > NY/2)
+                t = (double)time*OMEGA + (double)(NY-j)*OSCIL_LEFT_YSHIFT/(double)NY;
+            else 
+                t = (double)time*OMEGA_B + (double)(NY-j)*OSCIL_LEFT_YSHIFT/(double)NY;
+            return(AMPLITUDE*cos(t)*exp(-(double)t*DAMPING));
+        }
+        
     }
 }
 
@@ -13138,5 +13381,610 @@ int init_input_signal()
     printf("Tail frames: %i\n", tailcounter); 
 }
 
+int compute_normal_vector(int i, int j, int n, t_neumann_bc neumann_bc[N_NEUMANN_POINTS], t_circle circles[NMAXCIRCLES])
+/* compute normal vector to domain at boundary point */
+{
+    int on_boundary = 1, side, k, circle;
+    double xy[2], v1, v2, w1, w2, sum, angle, theta, x1, y1, c, w, distance, dist0, dx, dy;
+    
+    dx = (XMAX-XMIN)/(double)NX;
+    dy = (YMAX-YMIN)/(double)NY;
+    /* on_boundary = 0 is used to optionally declare some boundary points as Dirichlet */
+    ij_to_xy(i, j, xy);
+    switch (B_DOMAIN) {
+        case (D_ELLIPSE) :
+        {
+            v1 = 2.0*xy[0]/(LAMBDA*LAMBDA);
+            v2 = 2.0*xy[1];
+            break;
+        }
+        case (D_POLYGON):
+        {
+            theta = DPI/(double)NPOLY;
+            angle = argument(xy[0], xy[1]) - PID*APOLY + DPI;
+            side = (int)(angle/theta);
+            angle = PID*APOLY + 0.5*theta + (double)side*theta;
+            v1 = cos(angle);
+            v2 = sin(angle);
+            break;
+        }
+        case (D_POLY_PARABOLAS):
+        {
+            theta = DPI/(double)NPOLY;
+            angle = argument(xy[0], xy[1]) - PID*APOLY;
+            if (angle < 0.0) angle += DPI;
+            side = (int)((angle+DPI)/theta);
+            side = side%NPOLY;
+            angle = PID*APOLY + 0.5*theta + (double)side*theta;
+            y1 = -(xy[0]-LAMBDA)*sin(angle) + xy[1]*cos(angle);
+            w1 = 1.0;
+            w2 = y1/(2.0*MU);
+            v1 = w1*cos(angle) - w2*sin(angle);
+            v2 = w1*sin(angle) + w2*cos(angle);
+            break;
+        }
+        case (D_PENROSE):
+        {
+            x1 = xy[0];
+            y1 = xy[1];
+            c = sqrt(LAMBDA*LAMBDA - (1.0-MU)*(1.0-MU));
+            w = 0.1*MU;
+            /* upper ellipse */
+            if (y1 > MU)    
+            {
+                v1 = 2.0*x1/(LAMBDA*LAMBDA);
+                v2 = 2.0*(y1-MU)/((1.0-MU)*(1.0-MU));
+            }
+            /* lower ellipse */
+            else if (y1 < -MU)
+            {
+                v1 = 2.0*x1/(LAMBDA*LAMBDA);
+                v2 = 2.0*(y1+MU)/((1.0-MU)*(1.0-MU));                
+            }
+            /* right ellipse */
+            else if ((x1 > 0.0)&&(x1 < LAMBDA))
+            {
+                v1 = -8.0*(x1-c)/(MU*MU);
+                v2 = -2.0*y1/(MU*MU);                
+            }
+            /* left ellipse */
+            else if ((x1 < 0.0)&&(x1 > -LAMBDA))
+            {
+                v1 = -8.0*(x1+c)/(MU*MU);
+                v2 = -2.0*y1/(MU*MU);                
+            }
+            else if (y1 > 0.0)
+            {
+                /* top right straight parts */
+                if (x1 > 0.0)
+                {
+                    if (y1 <= w)
+                    {
+                        v1 = 0.0;
+                        v2 = -1.0;
+                    }    
+                    else if (x1 >= 0.5*(LAMBDA+c))
+                    {
+                        v1 = 1.0;
+                        v2 = 0.0;
+                    }
+                    else
+                    {
+                        v1 = -1.0;
+                        v2 = 0.0;
+                    }
+                }
+                /* top left straight parts */
+                else 
+                {
+                    if (y1 <= w)
+                    {
+                        v1 = 0.0;
+                        v2 = -1.0;
+                    }    
+                    else if (x1 <= -0.5*(LAMBDA+c))
+                    {
+                        v1 = -1.0;
+                        v2 = 0.0;
+                    }
+                    else
+                    {
+                        v1 = 1.0;
+                        v2 = 0.0;
+                    }
+                }
+            }
+            else 
+            {
+                /* bottom right straight parts */
+                if (x1 > 0.0)
+                {
+                    if (y1 >= -w)
+                    {
+                        v1 = 0.0;
+                        v2 = 1.0;
+                    }    
+                    else if (x1 >= 0.5*(LAMBDA+c))
+                    {
+                        v1 = 1.0;
+                        v2 = 0.0;
+                    }
+                    else
+                    {
+                        v1 = -1.0;
+                        v2 = 0.0;
+                    }
+                }
+                /* bottom left straight parts */
+                else 
+                {
+                    if (y1 >= -w)
+                    {
+                        v1 = 0.0;
+                        v2 = 1.0;
+                    }    
+                    else if (x1 <= -0.5*(LAMBDA+c))
+                    {
+                        v1 = -1.0;
+                        v2 = 0.0;
+                    }
+                    else
+                    {
+                        v1 = 1.0;
+                        v2 = 0.0;
+                    }
+                }
+            }
+            break;
+        }
+        case (D_CIRCLES):
+        {
+           /* find closest circle */
+            distance = 10.0;
+            for (k=0; k<ncircles; k++) if (circles[k].active)
+            {
+                dist0 = module2(xy[0] - circles[k].xc, xy[1] - circles[k].yc);
+                if (dist0 < distance)
+                {
+                    distance = dist0;
+                    circle = k;
+                }
+            }
+            v1 = circles[circle].xc - xy[0];
+            v2 = circles[circle].yc - xy[1];
+            break;
+        }
+        case (D_CIRCLES_NEUMANN):
+        {
+            if (xy[1] < 0.0)
+            {
+                /* find closest circle */
+                distance = 10.0;
+                for (k=0; k<ncircles; k++) if (circles[k].active)
+                {
+                    dist0 = module2(xy[0] - circles[k].xc, xy[1] - circles[k].yc);
+                    if (dist0 < distance)
+                    {
+                        distance = dist0;
+                        circle = k;
+                    }
+                }
+                v1 = circles[circle].xc - xy[0];
+                v2 = circles[circle].yc - xy[1];
+            }
+            else on_boundary = 0;
+            break;
+        }
+        case (D_CIRCLES_IN_RECT):
+        {
+            /* points on outer boundary */
+            if (xy[0] <= -LAMBDA + dx)
+            {
+                v1 = -1.0;
+                v2 = 0.0;
+            }
+            else if (xy[0] >= LAMBDA - dx)
+            {
+                v1 = 1.0;
+                v2 = 0.0;
+            }
+            else if (xy[1] <= -(YMAX - XMAX + LAMBDA) + dy)
+            {
+                v1 = 0.0;
+                v2 = -1.0;
+            }
+            else if (xy[1] >= YMAX - XMAX + LAMBDA - dy)
+            {
+                v1 = 0.0;
+                v2 = 1.0;
+            }
+                 
+            else 
+            {
+                /* find closest circle */
+                distance = 10.0;
+                for (k=0; k<ncircles; k++)
+                {
+                    dist0 = module2(xy[0] - circles[k].xc, xy[1] - circles[k].yc);
+                    if (dist0 < distance)
+                    {
+                        distance = dist0;
+                        circle = k;
+                    }
+                }
+                v1 = circles[circle].xc - xy[0];
+                v2 = circles[circle].yc - xy[1];
+            }
+            break;
+        }
+        case (D_TWO_ELLIPSES):
+        {
+            if (xy[0] > 0.0)
+            {
+                v1 = 2.0*(xy[0] - LAMBDA)/(MU*MU);
+                v2 = 2.0*xy[1];
+            }
+            else on_boundary = 0;
+            break;
+        }
+        case (D_TWO_RECTANGLES):
+        {
+            if (xy[0] > 0.0)
+            {
+                if (vabs(xy[1]) < 1.0)
+                {
+                    if (xy[0] > LAMBDA) v1 = 1.0;
+                    else v1 = -1.0;
+                    v2 = 0.0;
+                }
+                else
+                {
+                    v1 = 0.0;
+                    if (xy[1] > 0.0) v2 = 1.0;
+                    else v2 = -1.0;
+                }
+            }
+            else on_boundary = 0;
+            break;         
+        }
+        case (D_TWO_POLYGONS):
+        {
+            if (xy[0] > 0.0)
+            {
+                theta = DPI/(double)NPOLY;
+                angle = argument(xy[0] - LAMBDA, xy[1]) - PID*APOLY + DPI;
+                side = (int)(angle/theta);
+                angle = PID*APOLY + 0.5*theta + (double)side*theta;
+                v1 = cos(angle);
+                v2 = sin(angle);
+            }
+            else on_boundary = 0;
+            break;         
+        }
+        case (D_TWO_POLY_PARABOLAS):
+        {
+            if (xy[0] > 0.0)
+            {
+                theta = DPI/(double)NPOLY;
+                angle = argument(xy[0] - LAMBDA, xy[1]) - PID*APOLY;
+                if (angle < 0.0) angle += DPI;
+                printf("(x,y) = (%.3lg,%.3lg), angle = %.3lg ", xy[0] - LAMBDA, xy[1], angle*180.0/PI);
+                side = (int)((angle+DPI)/theta);
+                side = side%NPOLY;
+                printf("side %i ", side);
+//                 angle += (double)side*theta;
+                angle = PID*APOLY + 0.5*theta + (double)side*theta;
+//                 angle = PID*APOLY + (double)side*theta;
+                printf("angle = %.5lg\n", angle*180.0/PI); 
+//                 theta *= (double)side;
+//                 x1 = (xy[0]-LAMBDA)*cos(angle) + xy[1]*sin(angle);
+                y1 = -(xy[0]-LAMBDA)*sin(angle) + xy[1]*cos(angle);
+                w1 = 1.0;
+                w2 = y1/(2.0*MU);
+                v1 = w1*cos(angle) - w2*sin(angle);
+                v2 = w1*sin(angle) + w2*cos(angle);
+                printf("(w1, w2) = (%.3lg, %.3lg) (v1, v2) = (%.3lg, %.3lg)\n", w1, w2, v1, v2);
+                
+//                 angle = argument(xy[0] - LAMBDA, xy[1]);
+//                 v1 = cos(angle);
+//                 v2 = sin(angle);
+            }
+            else on_boundary = 0;
+            break;   
+        }
+        default: 
+        {
+            printf("Function compute_normal vector not defined for this domain");
+        }
+    }
+    
+    if (on_boundary)
+    {
+        neumann_bc[n].signx1 = -signp(v1);
+        neumann_bc[n].signy1 = 0;
+        neumann_bc[n].signx2 = 0;
+        neumann_bc[n].signy2 = -signp(v2);
+        v1 = vabs(v1);
+        v2 = vabs(v2);
+        sum = v1 + v2;
+        neumann_bc[n].nx = v1/sum;
+        neumann_bc[n].ny = v2/sum;
+//         printf("Point (%.3lg, %.3lg): n = (%.3lg, %.3lg), sign = (%i,%i)\n", xy[0], xy[1], v1/sum, v2/sum, neumann_bc[n].signx, neumann_bc[n].signy); 
+        
+    }
+    
+    neumann_bc[n].top = (xy[1] > 0.0);
+    return (on_boundary);
+}
+
+void build_neumann_data(t_neumann_bc neumann_bc[N_NEUMANN_POINTS], int n)
+/* compute correct values of Neumann boundary data */
+{
+    int p, i, j;
+    short int signx1, signy2;
+    double n1, n2;
+    
+    for (p = 0; p < n; p++)
+    {
+        i = neumann_bc[p].i;
+        j = neumann_bc[p].j;
+        signx1 = neumann_bc[p].signx1;
+        signy2 = neumann_bc[p].signy2;
+        n1 = neumann_bc[p].nx;
+        n2 = neumann_bc[p].ny;
+        
+        if (n1 > n2)    /* boundary is closer to vertical */
+        {
+            neumann_bc[p].nx = (n1-n2)/n1;
+            neumann_bc[p].ny = n2/n1;
+            neumann_bc[p].signx2 = signx1;
+        }
+        else if (n2 > n1) /* boundary is closer to horizontal */
+        {
+            neumann_bc[p].nx = n1/n2;
+            neumann_bc[p].ny = (n2-n1)/n2;
+            neumann_bc[p].signy1 = signy2;
+        }       
+        
+        /* compute absolute coordinates of neighbours */
+        neumann_bc[p].nbi1 = i + neumann_bc[p].signx1;
+        neumann_bc[p].nbj1 = j + neumann_bc[p].signy1;
+        neumann_bc[p].nbi2 = i + neumann_bc[p].signx2;
+        neumann_bc[p].nbj2 = j + neumann_bc[p].signy2;
+        
+        /* make points active */
+        neumann_bc[p].active  = 1;
+        
+//         printf("Neighbouring points in domain: (%i, %i), n = (%.3lg, %.3lg)\n", xy_in[i+signx1][j+signy1], xy_in[i+signx2][j+signy2], neumann_bc[p].nx, neumann_bc[p].ny); 
+        
+    }
+}
 
 
+void adapt_neumann_data_to_bc(t_neumann_bc neumann_bc[N_NEUMANN_POINTS], int n, short int comparison)
+/* adapt Neumann boundary data to boundary conditions */
+{
+    int p, i, j, jmid = NY/2;
+    
+    /* x direction */
+    if (B_COND == BC_PERIODIC) for (p=0; p<n; p++)
+    {
+        if (neumann_bc[p].nbi1 == NX) neumann_bc[p].nbi1 == 0;
+        else if (neumann_bc[p].nbi1 == -1) neumann_bc[p].nbi1 == NX-1;
+        if (neumann_bc[p].nbi2 == NX) neumann_bc[p].nbi2 == 0;
+        else if (neumann_bc[p].nbi2 == -1) neumann_bc[p].nbi2 == NX-1;
+    }
+    else for (p=0; p<n; p++)
+    {
+        if (neumann_bc[p].nbi1 == NX) neumann_bc[p].nbi1 == NX-1;
+        else if (neumann_bc[p].nbi1 == -1) neumann_bc[p].nbi1 == 0;
+        if (neumann_bc[p].nbi2 == NX) neumann_bc[p].nbi2 == NX-1;
+        else if (neumann_bc[p].nbi2 == -1) neumann_bc[p].nbi2 == 0;
+    }
+    
+    /* y direction */
+    if ((B_COND == BC_PERIODIC)||(B_COND == BC_VPER_HABS)||(B_COND == BC_ABS_REFLECT))
+    {
+        if (comparison) for (p=0; p<n; p++)
+        {
+            if (neumann_bc[p].nbj1 == NY) neumann_bc[p].nbj1 == jmid;
+            else if (neumann_bc[p].nbj1 == -1) neumann_bc[p].nbj1 == jmid-1;
+//             else if ((neumann_bc[p].nbj1 == jmid-1)&&(neumann_bc[p].signy1 == -1))
+//                 neumann_bc[p].nbj1 == NY-1;
+//             else if ((neumann_bc[p].nbj1 == jmid)&&(neumann_bc[p].signy1 == 1))
+//                 neumann_bc[p].nbj1 == 0;
+                
+            if (neumann_bc[p].nbj2 == NY) neumann_bc[p].nbj2 == jmid;
+            else if (neumann_bc[p].nbj2 == -1) neumann_bc[p].nbj2 == jmid-1;
+//             else if ((neumann_bc[p].nbj2 == jmid-1)&&(neumann_bc[p].signy1 == -1))
+//                 neumann_bc[p].nbj2 == NY-1;
+//             else if ((neumann_bc[p].nbj2 == jmid)&&(neumann_bc[p].signy1 == 1))
+//                 neumann_bc[p].nbj2 == 0;
+            
+            /* TEST */
+            if ((neumann_bc[p].nbj1 == jmid)||(neumann_bc[p].nbj1 == jmid-1))   
+                neumann_bc[p].active = 0;
+            if ((neumann_bc[p].nbj2 == jmid)||(neumann_bc[p].nbj2 == jmid-1))   
+                neumann_bc[p].active = 0;
+        }
+        else for (p=0; p<n; p++)
+        {
+            if (neumann_bc[p].nbj1 == NY) neumann_bc[p].nbj1 == 0;
+            else if (neumann_bc[p].nbj1 == -1) neumann_bc[p].nbj1 == NY-1;
+            
+            if (neumann_bc[p].nbj2 == NY) neumann_bc[p].nbj2 == 0;
+            else if (neumann_bc[p].nbj2 == -1) neumann_bc[p].nbj2 == NY-1;
+        }
+    }
+    else 
+    {
+        if (neumann_bc[p].nbj1 == NY) neumann_bc[p].nbj1 == NY-1;
+        else if (neumann_bc[p].nbj1 == -1) neumann_bc[p].nbj1 == 0;
+            
+        if (neumann_bc[p].nbj2 == NY) neumann_bc[p].nbj2 == NY-1;
+        else if (neumann_bc[p].nbj2 == -1) neumann_bc[p].nbj2 == 0;
+        
+        if (comparison)
+        {
+            if ((neumann_bc[p].nbj1 == jmid-1)&&(neumann_bc[p].signy1 == -1))
+                neumann_bc[p].nbj1 == jmid;
+            else if ((neumann_bc[p].nbj1 == jmid)&&(neumann_bc[p].signy1 == 1))
+                neumann_bc[p].nbj1 == jmid-1;
+        }
+    }
+}
+
+void extend_neumann_data_flat(t_neumann_bc neumann_bc[N_NEUMANN_POINTS], int n)
+/* extend Neumann boundary data to flat table */
+{
+    int p;
+    
+    for (p=0; p<n; p++)
+    {
+        neumann_bc[p].k = (neumann_bc[p].i)*NY + neumann_bc[p].j;
+        neumann_bc[p].nbk1 = (neumann_bc[p].nbi1)*NY + neumann_bc[p].nbj1;
+        neumann_bc[p].nbk2 = (neumann_bc[p].nbi2)*NY + neumann_bc[p].nbj2;
+    }
+}
+
+void test_neumann_data(short int * xy_in[NX], t_neumann_bc neumann_bc[N_NEUMANN_POINTS], int n)
+/* test values of Neumann boundary data, for debugging */
+{
+    int p, i, j, errors = 0;
+    short int signx1, signy1, signx2, signy2;
+    double xy[2];
+    
+    for (p = 0; p < n; p++)
+    {
+        i = neumann_bc[p].i;
+        j = neumann_bc[p].j;
+        signx1 = neumann_bc[p].signx1;
+        signy1 = neumann_bc[p].signy1;
+        signx2 = neumann_bc[p].signx2;
+        signy2 = neumann_bc[p].signy2;
+        ij_to_xy(i, j, xy);
+//         printf("Signs: (%i, %i), (%i, %i)\n", signx1, signy1, signx2, signy2);
+//         printf("pnt %i of %i, coords = (%.3lg, %.3lg), nbh pts in domain: (%i, %i), n = (%.3lg, %.3lg), sign1 = (%i, %i), sign2 = (%i, %i)\n", p, n, xy[0], xy[1], xy_in[i+signx1][j+signy1], xy_in[i+signx2][j+signy2], neumann_bc[p].nx, neumann_bc[p].ny, signx1, signy1, signx2, signy2);
+        
+        if (xy_in[i+signx1][j+signy1] == -1) 
+        {
+            neumann_bc[p].active = 0;
+            errors++;
+        }
+        if (xy_in[i+signx2][j+signy2] == -1)
+        {
+            neumann_bc[p].active = 0;
+            errors++;
+        }
+
+    }
+    printf("%i errors among %i points\n", errors, n); 
+}
+
+
+void test_neumann_data_flat(short int xy_in[NX*NY], t_neumann_bc neumann_bc[N_NEUMANN_POINTS], int n)
+/* test values of Neumann boundary data, for debugging */
+{
+    int p, i, j, errors = 0;
+    short int signx1, signy1, signx2, signy2;
+    double xy[2];
+    
+    for (p = 0; p < n; p++)
+    {
+        i = neumann_bc[p].i;
+        j = neumann_bc[p].j;
+        signx1 = neumann_bc[p].signx1;
+        signy1 = neumann_bc[p].signy1;
+        signx2 = neumann_bc[p].signx2;
+        signy2 = neumann_bc[p].signy2;
+        ij_to_xy(i, j, xy);
+//         printf("Signs: (%i, %i), (%i, %i)\n", signx1, signy1, signx2, signy2);
+        printf("pnt %i of %i, coords = (%.3lg, %.3lg), nbh pts in domain: (%i, %i), n = (%.3lg, %.3lg), sign1 = (%i, %i), sign2 = (%i, %i)\n", p, n, xy[0], xy[1],  xy_in[(i+signx1)*NY+j+signy1], xy_in[(i+signx2)*NY+j+signy2], neumann_bc[p].nx, neumann_bc[p].ny, signx1, signy1, signx2, signy2);
+        
+        if (xy_in[(i+signx1)*NY+j+signy1] == -1) errors++;
+        if (xy_in[(i+signx2)*NY+j+signy2] == -1) errors++;
+    }
+    printf("%i errors among %i points\n", errors, n); 
+}
+
+int init_neumann_bc(short int * xy_in[NX], t_neumann_bc neumann_bc[N_NEUMANN_POINTS], t_circle circles[NMAXCIRCLES], short int comparison)
+/* initialize data for Neumann boundary conditions */
+/* points are numbered in order of appearance, and treated as such by evolve_wave() */
+{
+    int i, j, n = 0;
+    double vn[2];
+    
+    printf("Building Neumann boundary data\n"); 
+    /* search points in the bulk that are not in the domain */
+    for (i=1; i<NX-1; i++)
+        for (j=1; j<NY-1; j++) if (!xy_in[i][j])
+        {
+            if ((xy_in[i-1][j]==1)||(xy_in[i+1][j]==1)||(xy_in[i][j-1]==1)||(xy_in[i][j+1]==1))
+            /* the point has a neighbour in the domain */
+            {
+                
+                if (compute_normal_vector(i, j, n, neumann_bc, circles))
+                {
+                    xy_in[i][j] = -1;
+                    neumann_bc[n].i = i;
+                    neumann_bc[n].j = j;
+                    n++;
+                }
+                if (n >= N_NEUMANN_POINTS)
+                {
+                    printf("Error: N_NEUMANN_POINTS should be larger than %i\n", n);
+                    exit(0); 
+                }
+            }
+        }
+    printf("Found %i boundary points\n", n); 
+    
+    /* compute the correct coefficients and points */
+    build_neumann_data(neumann_bc, n);
+    adapt_neumann_data_to_bc(neumann_bc, n, comparison);
+    test_neumann_data(xy_in, neumann_bc, n);
+    
+    return(n);
+}
+
+int init_neumann_bc_flat(short int xy_in[NX*NY], t_neumann_bc neumann_bc[N_NEUMANN_POINTS], t_circle circles[NMAXCIRCLES], int comparison)
+/* initialize data for Neumann boundary conditions, version for flat tables */
+/* points are numbered in order of appearance, and treated as such by evolve_wave() */
+{
+    int i, j, n = 0;
+    double vn[2];
+    
+    printf("Building Neumann boundary data\n"); 
+    /* search points in the bulk that are not in the domain */
+    for (i=1; i<NX-1; i++)
+        for (j=1; j<NY-1; j++) if (!xy_in[i*NY+j])
+        {
+            if ((xy_in[(i-1)*NY+j]==1)||(xy_in[(i+1)*NY+j]==1)||(xy_in[i*NY+j-1]==1)||(xy_in[i*NY+j+1]==1))
+            /* the point has a neighbour in the domain */
+            {
+                
+                if (compute_normal_vector(i, j, n, neumann_bc, circles))
+                {
+                    xy_in[i*NY+j] = -1;
+                    neumann_bc[n].i = i;
+                    neumann_bc[n].j = j;
+//                     neumann_bc[n].k = i*NY+j;
+                    n++;
+                }
+                if (n >= N_NEUMANN_POINTS)
+                {
+                    printf("Error: N_NEUMANN_POINTS should be larger than %i\n", n);
+                    exit(0); 
+                }
+            }
+        }
+    printf("Found %i boundary points\n", n); 
+    
+    /* compute the correct coefficients and points */
+    build_neumann_data(neumann_bc, n);
+    adapt_neumann_data_to_bc(neumann_bc, n, comparison);
+    extend_neumann_data_flat(neumann_bc, n);
+    test_neumann_data_flat(xy_in, neumann_bc, n);
+    
+    return(n);
+}

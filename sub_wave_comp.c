@@ -8,11 +8,21 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
-    int i, j, k, n, ncirc0, n_p_active, ncandidates=5000, naccepted, nnew; 
-    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, ymean, ytop, ybottom, dpoisson = 3.05*MU, xmax;
+    int i, j, k, n, ncirc0, n_p_active, ncandidates=5000, naccepted, nnew, ncirc1; 
+    double dx, dy, p, phi, r, r0, ra[5], sa[5], height, x, y = 0.0, gamma, ymean, ytop, ybottom, dpoisson = PDISC_FACTOR*MU, xmax;
     short int active_poisson[NMAXCIRCLES], far;
    
     ymean = 0.5*(YMIN + YMAX);
+    if (top)
+    {
+        ytop = YMAX;
+        ybottom = ymean;
+    }
+    else
+    {
+        ytop = ymean;
+        ybottom = YMIN;
+    }
     switch (pattern) {
         case (C_SQUARE):
         {
@@ -34,6 +44,41 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
             ncircles += NGRIDX*NGRIDY/2;
             break;
         }
+        case (C_SQUARE_TWO_SPACINGS):
+        {
+            dy = (YMAX - YMIN)/((double)NGRIDY);
+            for (i = 0; i < NGRIDX/2; i++)
+                for (j = 0; j < NGRIDY/2; j++)
+                {
+                    printf("i = %i, j = %i, n = %i\n", i, j, n);
+                    n = ncircles;
+                    circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;
+                    y = ((double)j + 0.5)*dy;
+                    if (top) circles[n].yc = ymean + y;
+                    else circles[n].yc = ymean - y;
+                    if (top) circles[n].radius = MU;
+                    else circles[n].radius = MUB;
+                    circles[n].active = 1;
+                    circletop[n] = top;
+                    ncircles++;
+                }
+            for (i = 0; i < NGRIDX/2; i++)
+                for (j = 0; j < NGRIDY*3/2; j++)
+                {
+                    printf("i = %i, j = %i, n = %i\n", i, j, n);
+                    n = ncircles;
+                    circles[n].xc = ((double)i + 0.5)*dy;
+                    y = ((double)j + 0.5)*dy/1.5;
+                    if (top) circles[n].yc = ymean + y;
+                    else circles[n].yc = ymean - y;
+                    if (top) circles[n].radius = MU;
+                    else circles[n].radius = MUB;
+                    circles[n].active = 1;
+                    circletop[n] = top;
+                    ncircles++;
+                }
+            break;
+        }
         case (C_HEX):
         {
             dy = (YMAX - YMIN)/((double)NGRIDY);
@@ -43,7 +88,7 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                 {
                     n = ncircles + (NGRIDY+2)*i/2 + j;
                     circles[n].xc = ((double)(i-NGRIDX/2) + 0.5)*dy;
-                    y = ((double)j - 0.5)*dy;
+                    y = ((double)j - 0.5)*dy + 0.25*dy;
                     if ((i+NGRIDX)%2 == 1) y += 0.5*dy;
                     if (top) circles[n].yc = ymean + 0.5*dy + y;
                     else circles[n].yc = ymean - 0.5*dy - y;
@@ -97,7 +142,37 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                     circletop[n] = top;
                     printf("n = %i, x = %.3lg\n", n, circles[n].xc);
                 }
-            ncircles += NGRIDX*NGRIDY/2;
+            
+            ncirc0 = ncircles + NGRIDX*NGRIDY/2;
+            ncirc1 = 0;
+            /* deal with periodic b.c. */
+            if ((B_COND == BC_PERIODIC)||(B_COND == BC_VPER_HABS))
+            {
+                for (i=0; i<NGRIDX*NGRIDY/2; i++)
+                {
+                    x = circles[ncircles + i].xc;
+                    y = circles[ncircles + i].yc;
+                    r = circles[ncircles + i].radius;
+                    if (y > ytop - r)
+                    {
+                        circles[ncirc0 + ncirc1].xc = x;
+                        circles[ncirc0 + ncirc1].yc = y - ytop + ybottom;
+                        circles[ncirc0 + ncirc1].radius = r;
+                        circles[ncirc0 + ncirc1].active = 1;
+                        ncirc1++;
+                    }
+                    else if (y < ybottom + r)
+                    {
+                        circles[ncirc0 + ncirc1].xc = x;
+                        circles[ncirc0 + ncirc1].yc = y + ytop - ybottom;
+                        circles[ncirc0 + ncirc1].radius = r;
+                        circles[ncirc0 + ncirc1].active = 1;
+                        ncirc1++;
+                    }
+                }
+            }
+            ncircles = ncirc0 + ncirc1;
+            
             break;
         }
         case (C_RAND_PERCOL):
@@ -145,19 +220,51 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
             for (i = 0; i < 40; i++)
                 for (j = 0; j < 5; j++)
                 {
-                    n = ncircles + 5*i + j;
-                    phi = (double)i*DPI/40.0;
+                    n = ncircles;
+                    phi = (0.5 + (double)i)*DPI/40.0;
                     r = LAMBDA*0.5*(1.0 + (double)j/5.0);
                     circles[n].xc = r*cos(phi);
                     y = r*sin(phi);
                     if ( ((top)&&(y > 0.0))||((!top)&&(y <= 0.0)) )
+                    {
                         circles[n].yc = y;
-                    if (top) circles[n].radius = MU;
-                    else circles[n].radius = MUB;
-                    circles[n].active = 1;
-                    circletop[n] = top;
+                        if (top) circles[n].radius = MU;
+                        else circles[n].radius = MUB;
+                        circles[n].active = 1;
+                        circletop[n] = top;
+                        ncircles++;
+                    }
                 }
-            ncircles += 200;
+            break;
+        }
+        case (C_CLOAK_OBJECT):
+        {
+            for (i = 0; i < 40; i++)
+                for (j = 0; j < 5; j++)
+                {
+                    n = ncircles;
+                    phi = (0.5 + (double)i)*DPI/40.0;
+                    r = LAMBDA*0.5*(1.0 + (double)j/5.0);
+                    circles[n].xc = r*cos(phi);
+                    y = r*sin(phi);
+                    if ( ((top)&&(y > 0.0))||((!top)&&(y <= 0.0)) )
+                    {
+                        circles[n].yc = y;
+                        if (top) circles[n].radius = MU;
+                        else circles[n].radius = MUB;
+                        circles[n].active = 1;
+                        circletop[n] = top;
+                        ncircles++;
+                    }
+                }
+            n = ncircles;
+            circles[n].xc = 0.0;
+            if (top) circles[n].yc = MU;
+            else circles[n].yc = -MU;
+            circles[n].radius = 0.25*LAMBDA;
+            circles[n].active = 1;
+            circletop[n] = top;
+            ncircles++;
             break;
         }
         case (C_CLOAK_A):   /* optimized model A1 by C. Jo et al */
@@ -197,14 +304,60 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
             ncircles += 1;
             break;
         }
+        case (C_CLOAK_AB):   /* optimized model A1 by C. Jo et al */
+        {
+            ra[0] = 0.0731;     sa[0] = 1.115;
+            ra[1] = 0.0768;     sa[1] = 1.292;
+            ra[2] = 0.0652;     sa[2] = 1.464;
+            ra[3] = 0.056;      sa[3] = 1.633;
+            ra[4] = 0.0375;     sa[4] = 1.794;
+            for (i = 0; i < 21; i++)
+                for (j = 0; j < 5; j++)
+                {
+                    n = ncircles + 5*i + j;
+                    phi = ((double)i + 0.5)*DPI/40.0;
+                    r = 0.5*LAMBDA*sa[j];
+                    circles[n].xc = r*cos(phi);
+                    circles[n].yc = r*sin(phi);
+                    
+                    if (top) y = r*sin(phi);
+                    else y = -r*sin(phi);
+                        
+                    circles[n].yc = y;
+                    
+                    circles[n].radius = 0.3*LAMBDA*ra[j];
+                    circles[n].active = 1;
+                    circletop[n] = top;
+                }
+            ncircles += 105;
+            
+            /* add circle in the center */
+//             circles[ncircles].xc = 0.0;
+//             circles[ncircles].yc = 0.0;
+//             if (top) circles[ncircles].radius = MU;
+//             else circles[ncircles].radius = MUB;
+//             circles[ncircles].active = 2;
+//             circletop[ncircles] = top; 
+//             ncircles += 1;
+            break;
+        }
         case (C_POISSON_DISC):
         {
             printf("Generating Poisson disc sample\n");
             /* generate first circle */
             n = ncircles;
+            ncirc1 = ncircles;
             circles[n].xc = LAMBDA*(2.0*(double)rand()/RAND_MAX - 1.0);
-            if (top) y = ymean + (YMAX-ymean)*(double)rand()/RAND_MAX;
-            else y = ymean + (YMIN-ymean)*(double)rand()/RAND_MAX;
+            if (NO_CIRCLES_ON_BOUNDARY)
+            {
+                if (top) y = ymean + MU + (YMAX-ymean-2.0*MU)*(double)rand()/RAND_MAX;
+                else y = ymean - MU_B + (YMIN-ymean-2.0*MU_B)*(double)rand()/RAND_MAX;
+            }
+            else
+            {
+                if (top) y = ymean + (YMAX-ymean)*(double)rand()/RAND_MAX;
+                else y = ymean + (YMIN-ymean)*(double)rand()/RAND_MAX;
+            }
             circles[n].yc = y;
             if (top) circles[n].radius = MU;
             else circles[n].radius = MUB;
@@ -235,9 +388,23 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                     {
                         /* new circle is far away from circle k */
                         far = far*((x - circles[k].xc)*(x - circles[k].xc) + (y - circles[k].yc)*(y - circles[k].yc) >= dpoisson*dpoisson);
+                        if ((B_COND == BC_PERIODIC)||(B_COND == BC_VPER_HABS))
+                        {
+                            far *= ((x - circles[k].xc)*(x - circles[k].xc) + (y + ytop - ybottom - circles[k].yc)*(y + ytop - ybottom - circles[k].yc) >= dpoisson*dpoisson);
+                            far *= ((x - circles[k].xc)*(x - circles[k].xc) + (y - ytop + ybottom - circles[k].yc)*(y - ytop + ybottom - circles[k].yc) >= dpoisson*dpoisson);                            
+                        }
                         /* new circle is in domain */
-                        if (top) far = far*(vabs(x) < LAMBDA)*(y < YMAX)*(y > 0.0);
-                        else far = far*(vabs(x) < LAMBDA)*(y > YMIN)*(y < 0.0);
+                         
+                        if (NO_CIRCLES_ON_BOUNDARY)
+                        {
+                            if (top) far = far*(vabs(x) < LAMBDA)*(y < YMAX - MU)*(y > ymean + MU);
+                            else far = far*(vabs(x) < LAMBDA)*(y > YMIN + MU_B)*(y < ymean - MU_B);
+                        }
+                        else
+                        {
+                            if (top) far = far*(vabs(x) < LAMBDA)*(y < YMAX)*(y > 0.0);
+                            else far = far*(vabs(x) < LAMBDA)*(y > YMIN)*(y < 0.0);
+                        }
                     }
                     if (far)    /* accept new circle */
                     {
@@ -265,6 +432,32 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
                 }
                 printf("%i active circles\n", n_p_active);
 //                 sleep(1);
+            }
+            
+            /* deal with periodic b.c. */
+            if ((B_COND == BC_PERIODIC)||(B_COND == BC_VPER_HABS))
+            {
+                for (i=0; i<ncirc0; i++)
+                {
+                    x = circles[ncirc1 + i].xc;
+                    y = circles[ncirc1 + i].yc;
+                    if (y > ytop - MU)
+                    {
+                        circles[ncircles].xc = x;
+                        circles[ncircles].yc = y - ytop + ybottom;
+                        circles[ncircles].radius = MU;
+                        circles[ncircles].active = 1;
+                        ncircles++;
+                    }
+                    else if (y < ybottom + MU)
+                    {
+                        circles[ncircles].xc = x;
+                        circles[ncircles].yc = y + ytop - ybottom;
+                        circles[ncircles].radius = MU;
+                        circles[ncircles].active = 1;
+                        ncircles++;
+                    }
+                }
             }
             
             printf("Already existing: %i circles\n", ncircles);
@@ -415,13 +608,39 @@ void init_circle_config_half(int pattern, int top, t_circle circles[NMAXCIRCLES]
 }
 
 
+void mirror_circle_config(t_circle circles[NMAXCIRCLES])
+/* mirror circles in top half to bottom half */
+{
+    int i, ncircles0 = ncircles;
+    
+    printf("Mirroring circles, ncircles = %i\n", ncircles); 
+    for (i=0; i<ncircles0; i++)
+    {
+//         printf("Mirroring circle %i to %i\n", i, ncircles);
+        circles[ncircles].xc = circles[i].xc;
+        circles[ncircles].yc = -circles[i].yc;
+        circles[ncircles].radius = circles[i].radius;
+        circles[ncircles].active = circles[i].active;
+        circles[ncircles].top = 0;
+//         printf("Circle[%i].top = %i\n", ncircles, circles[ncircles].top);
+        ncircles++;
+    }
+    
+}
+
+
 void init_circle_config_comp(t_circle circles[NMAXCIRCLES])
 /* initialise the arrays circlex, circley, circlerad and circleactive */
 /* for billiard shape D_CIRCLES */
 {
     ncircles = 0;
     init_circle_config_half(CIRCLE_PATTERN, 1, circles);
-    init_circle_config_half(CIRCLE_PATTERN_B, 0, circles);
+    ncircles++;
+    if (SYMMETRIC_CIRCLE_PATTERNS)
+        mirror_circle_config(circles);
+    else init_circle_config_half(CIRCLE_PATTERN_B, 0, circles);
+
+    circles[126].top = 0;
 }
 
 void init_circle_config_energy(t_circle circles[NMAXCIRCLES])
@@ -515,6 +734,23 @@ int xy_in_billiard_half(double x, double y, int domain, int pattern, int top)
             return(1);
         }
         case (D_CIRCLES):
+        {
+            for (i = 0; i < ncircles; i++)
+                if (circles[i].active != 0) 
+                {
+                    /* choose specific type according to value of circles[i].active */
+                    if (circles[i].active == 1) type = 0;
+                    else type = circles[i].active;
+                    
+                    x1 = circles[i].xc;
+                    y1 = circles[i].yc;
+                    r2 = circles[i].radius*circles[i].radius;
+                    if ((top)&&(circletop[i])&&(y > 0.0)&&((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2)) return(type); 
+                    else if ((!top)&&(!circletop[i])&&(y < 0.0)&&((x-x1)*(x-x1) + (y-y1)*(y-y1) < r2)) return(type); 
+                }
+            return(1);
+        }
+        case (D_CIRCLES_NEUMANN):
         {
             for (i = 0; i < ncircles; i++)
                 if (circles[i].active != 0) 
@@ -769,10 +1005,10 @@ void draw_billiard_half(int domain, int pattern, int top, int fade, double fade_
     
     glEnable(GL_SCISSOR_TEST);
 //     if (top) glScissor(0.0, YMID, NX, YMID);
-//     if (top) glScissor(0.0, YMID, NX, YMAX);
+//     if (top) glScissor(0.0, YMID, NX, YMID);
 //     else glScissor(0.0, 0.0, NX, YMID);
     
-    if (top) glScissor(0.0, YMID/(HIGHRES+1), NX, YMID/(HIGHRES+1));
+    if (top) glScissor(0.0, YMID/(HIGHRES+1.0), NX, YMID/(HIGHRES+1.0));
 //     if (top) glScissor(0.0, YMID, NX, YMAX);
     else glScissor(0.0, 0.0, NX, YMID/(HIGHRES+1));
 
@@ -923,6 +1159,13 @@ void draw_billiard_half(int domain, int pattern, int top, int fade, double fade_
                     }
                     glEnd ();
                 }
+            break;
+        }
+        case (D_CIRCLES_NEUMANN):
+        {
+            glLineWidth(BOUNDARY_WIDTH);
+            for (i = 0; i < ncircles; i++) 
+                if (circles[i].active) draw_circle(circles[i].xc, circles[i].yc, circles[i].radius, NSEG);
             break;
         }
         case (D_POLYGONS):
@@ -1413,7 +1656,7 @@ void draw_wave_comp(double *phi[NX], double *psi[NX], short int *xy_in[NX], doub
 }
 
 
-void draw_wave_comp_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], double *average_energy[NX], double *total_flux, double *color_scale[NX], short int *xy_in[NX], double scale, int time, int plot, int palette, int fade, double fade_value)
+void draw_wave_comp_highres_palette(int size, double *phi[NX], double *psi[NX], double *total_energy[NX], double *average_energy[NX], double *total_flux, double *color_scale[NX], short int *xy_in[NX], double scale, int time, int plot, int palette, int pnumber, int fade, double fade_value)
 /* draw the field */
 {
     int i, j, iplus, iminus, jplus, jminus, k;
@@ -1499,6 +1742,8 @@ void draw_wave_comp_highres_palette(int size, double *phi[NX], double *psi[NX], 
     xy_to_pos(XMAX, 0.5*(YMIN+YMAX), pos);
     glVertex2d(pos[0], pos[1]);
     glEnd();
+    
+    if (DRAW_WAVE_PROFILE) draw_wave_profile(values, size, pnumber, fade, fade_value);
     
     free(values);
     free(rgbvals);
